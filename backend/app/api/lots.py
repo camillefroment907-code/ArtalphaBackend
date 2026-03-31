@@ -1,0 +1,585 @@
+from fastapi import APIRouter, Depends, Query, HTTPException, Request
+from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func, and_, or_, desc
+from sqlalchemy.orm import selectinload
+from typing import Optional, List
+from datetime import datetime, timedelta
+import math
+import asyncio
+import json
+
+from app.database import get_db, AsyncSessionLocal
+from app.models.db_models import Lot, Artist, LotStatus, AuctionHouse
+from app.models.schemas import LotOut, LotListResponse, TopDeal, DashboardStats
+from app.api.auth_utils import get_current_user_optional
+from app.models.db_models import User, Subscription
+import os
+
+ADMIN_EMAILS = frozenset({
+    "camillefroment907@gmail.com",
+    "demo@hono.art",
+    "demo@balthus.art",
+    *os.environ.get("ADMIN_EMAILS", "").split(","),
+}) - {""}
+
+
+async def get_user_plan(user: Optional[User], db: AsyncSession) -> str:
+    """Get effective plan — admins always get expert."""
+    if not user:
+        return "free"
+    if user.email.strip() in ADMIN_EMAILS:
+        return "expert"
+    result = await db.execute(select(Subscription).where(Subscription.user_id == user.id))
+    sub = result.scalar_one_or_none()
+    if sub and sub.status.value in ("active", "trialing") and sub.plan.value != "free":
+        return sub.plan.value
+    return "free"
+
+
+router = APIRouter(prefix="/lots", tags=["lots"])
+
+
+# ── SSE: real-time stream ─────────────────────────────────────────────────────
+
+async def _lot_stream_generator(request: Request, min_score: float = 0):
+    last_seen: set = set()
+    heartbeat = 0
+
+    while True:
+        if await request.is_disconnected():
+            break
+
+        heartbeat += 1
+
+        try:
+            async with AsyncSessionLocal() as session:
+                cutoff = datetime.utcnow() - timedelta(seconds=30)
+                stmt = (
+                    select(Lot)
+                    .options(selectinload(Lot.artist))
+                    .where(
+                        and_(
+                            Lot.scored_at >= cutoff,
+                            Lot.deal_score >= min_score,
+                        )
+                    )
+                    .order_by(desc(Lot.deal_score))
+                    .limit(20)
+                )
+                result = await session.execute(stmt)
+                lots = result.scalars().all()
+
+                new_lots = [l for l in lots if str(l.id) not in last_seen]
+
+                for lot in new_lots:
+                    last_seen.add(str(lot.id))
+                    lot_data = {
+                        "id": str(lot.id),
+                        "title": lot.title,
+                        "artist_name_raw": lot.artist_name_raw,
+                        "source": lot.source.value if lot.source else None,
+                        "category": lot.category,
+                        "estimate_low": lot.estimate_low,
+                        "estimate_high": lot.estimate_high,
+                        "current_price": lot.current_price,
+                        "currency": lot.currency,
+                        "deal_score": lot.deal_score,
+                        "is_deal": lot.is_deal,
+                        "pct_below_low_estimate": lot.pct_below_low_estimate,
+                        "pct_below_market_avg": lot.pct_below_market_avg,
+                        "auction_date": lot.auction_date.isoformat() if lot.auction_date else None,
+                        "auction_house_name": lot.auction_house_name,
+                        "image_url": lot.image_url,
+                        "url": lot.url,
+                        "status": lot.status.value if lot.status else None,
+                        "artist": {
+                            "name": lot.artist.name,
+                            "liquidity_score": lot.artist.liquidity_score,
+                            "avg_auction_price": lot.artist.avg_auction_price,
+                            "trend": lot.artist.trend.value if lot.artist.trend else None,
+                        } if lot.artist else None,
+                        "scored_at": lot.scored_at.isoformat() if lot.scored_at else None,
+                    }
+                    yield f"event: lot\ndata: {json.dumps(lot_data)}\n\n"
+
+        except Exception as e:
+            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+
+        if heartbeat % 5 == 0:
+            yield f"event: heartbeat\ndata: {json.dumps({'ts': datetime.utcnow().isoformat()})}\n\n"
+
+        await asyncio.sleep(8)
+
+
+@router.get("/stream")
+async def stream_lots(
+    request: Request,
+    min_score: float = Query(0, ge=0, le=100),
+):
+    """SSE — streams new scored lots every 8s."""
+    return StreamingResponse(
+        _lot_stream_generator(request, min_score),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+# ── REST ──────────────────────────────────────────────────────────────────────
+
+@router.get("", response_model=LotListResponse)
+async def list_lots(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    min_score: Optional[float] = Query(None, ge=0, le=100),
+    max_score: Optional[float] = Query(None, ge=0, le=100),
+    is_deal: Optional[bool] = None,
+    source: Optional[str] = None,
+    category: Optional[str] = None,
+    artist: Optional[str] = None,
+    search: Optional[str] = Query(None),
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    auction_from: Optional[datetime] = None,
+    auction_to: Optional[datetime] = None,
+    status: Optional[str] = None,
+    sort_by: str = Query("deal_score", pattern="^(deal_score|auction_date|created_at|current_price)$"),
+    sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    filters = [
+        # Only show upcoming/live lots in main feed — past lots go to /missed
+        or_(
+            Lot.auction_date.is_(None),
+            Lot.auction_date >= datetime.utcnow(),
+        )
+    ]
+    if min_score is not None:
+        filters.append(Lot.deal_score >= min_score)
+    if max_score is not None:
+        filters.append(Lot.deal_score <= max_score)
+    if is_deal is not None:
+        filters.append(Lot.is_deal == is_deal)
+    if source:
+        try:
+            filters.append(Lot.source == AuctionHouse[source.upper()])
+        except KeyError:
+            filters.append(Lot.source == source)
+    if category:
+        filters.append(Lot.category.ilike(f"%{category}%"))
+    if artist:
+        filters.append(Lot.artist_name_raw.ilike(f"%{artist}%"))
+    if search:
+        filters.append(
+            or_(
+                Lot.title.ilike(f"%{search}%"),
+                Lot.artist_name_raw.ilike(f"%{search}%"),
+                Lot.description.ilike(f"%{search}%"),
+            )
+        )
+    if min_price is not None:
+        filters.append(Lot.current_price >= min_price)
+    if max_price is not None:
+        filters.append(Lot.current_price <= max_price)
+    if auction_from:
+        filters.append(Lot.auction_date >= auction_from)
+    if auction_to:
+        filters.append(Lot.auction_date <= auction_to)
+    if status:
+        filters.append(Lot.status == status)
+
+    count_stmt = select(func.count(Lot.id))
+    if filters:
+        count_stmt = count_stmt.where(and_(*filters))
+    count_result = await db.execute(count_stmt)
+    total = count_result.scalar()
+
+    sort_col = getattr(Lot, sort_by, Lot.deal_score)
+    sort_expr = desc(sort_col) if sort_dir == "desc" else sort_col
+
+    stmt = (
+        select(Lot)
+        .options(selectinload(Lot.artist))
+        .order_by(sort_expr.nullslast() if sort_dir == "desc" else sort_expr)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    if filters:
+        stmt = stmt.where(and_(*filters))
+
+    result = await db.execute(stmt)
+    lots = result.scalars().all()
+
+    return LotListResponse(
+        items=lots,
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=math.ceil(total / page_size) if total > 0 else 0,
+    )
+
+
+@router.get("/hot-deals")
+async def get_hot_deals(
+    limit: int = Query(20, ge=1, le=200),
+    min_score: float = Query(30.0, ge=0, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    """Returns the best deals right now — lots significantly below market value."""
+    now = datetime.utcnow()
+
+    # Top scored lots (ordered by score)
+    stmt = (
+        select(Lot)
+        .options(selectinload(Lot.artist))
+        .where(
+            and_(
+                Lot.deal_score.isnot(None),
+                Lot.deal_score >= min_score,
+                Lot.auction_date >= now,
+                Lot.url.isnot(None),
+                Lot.url != "",
+            )
+        )
+        .order_by(desc(Lot.deal_score))
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    scored_lots = result.scalars().all()
+
+    # Always include real lots (verified lot URLs from actual auction sites)
+    real_stmt = (
+        select(Lot)
+        .options(selectinload(Lot.artist))
+        .where(
+            and_(
+                Lot.deal_score.isnot(None),
+                Lot.auction_date >= now,
+                Lot.url.isnot(None),
+                Lot.url != "",
+                or_(
+                    Lot.url.like("%drouot.com/fr/l/%"),
+                    Lot.url.like("%drouot.com/en/l/%"),
+                ),
+            )
+        )
+        .order_by(desc(Lot.deal_score))
+        .limit(30)
+    )
+    real_result = await db.execute(real_stmt)
+    real_lots = real_result.scalars().all()
+
+    # Build final list: real lots first (always included), then fill with scored lots
+    seen_ids: set = set(lot.id for lot in real_lots)
+    extra = [lot for lot in scored_lots if lot.id not in seen_ids]
+    lots = list(real_lots) + extra[:max(0, limit - len(real_lots))]
+
+    return [
+        {
+            "id": str(lot.id),
+            "title": lot.title,
+            "artist": lot.artist_name_raw,
+            "source": lot.source.value if lot.source else None,
+            "deal_score": lot.deal_score,
+            "deal_class": (
+                "FIRE" if (lot.deal_score or 0) >= 90 else
+                "HOT" if (lot.deal_score or 0) >= 80 else
+                "GOOD"
+            ),
+            "current_price": lot.current_price,
+            "estimate_low": lot.estimate_low,
+            "estimate_high": lot.estimate_high,
+            "pct_below_estimate": lot.pct_below_low_estimate,
+            "pct_below_market": lot.pct_below_market_avg,
+            "currency": lot.currency,
+            "auction_date": lot.auction_date.isoformat() if lot.auction_date else None,
+            "auction_house": lot.auction_house_name,
+            "url": lot.url,
+            "image_url": lot.image_url,
+            "category": lot.category,
+        }
+        for lot in lots
+    ]
+
+
+@router.get("/top-deals", response_model=List[TopDeal])
+async def get_top_deals(
+    limit: int = Query(10, ge=1, le=50),
+    db: AsyncSession = Depends(get_db),
+):
+    today = datetime.utcnow()
+    week_ahead = today + timedelta(days=7)
+
+    stmt = (
+        select(Lot)
+        .options(selectinload(Lot.artist))
+        .where(
+            and_(
+                Lot.is_deal == True,
+                Lot.deal_score.isnot(None),
+                Lot.auction_date >= today,
+                Lot.auction_date <= week_ahead,
+                Lot.status == LotStatus.UPCOMING,
+            )
+        )
+        .order_by(desc(Lot.deal_score))
+        .limit(limit)
+    )
+
+    result = await db.execute(stmt)
+    lots = result.scalars().all()
+
+    top_deals = []
+    for rank, lot in enumerate(lots, 1):
+        saving_eur = None
+        saving_pct = None
+        if lot.current_price and lot.estimate_low:
+            saving_eur = max(0, lot.estimate_low - lot.current_price)
+            saving_pct = saving_eur / lot.estimate_low * 100 if lot.estimate_low > 0 else None
+
+        top_deals.append(TopDeal(
+            lot=lot,
+            rank=rank,
+            estimated_saving_eur=round(saving_eur, 2) if saving_eur else None,
+            estimated_saving_pct=round(saving_pct, 1) if saving_pct else None,
+        ))
+
+    return top_deals
+
+
+@router.get("/stats", response_model=DashboardStats)
+async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    total = await db.execute(select(func.count(Lot.id)))
+    deals_today = await db.execute(
+        select(func.count(Lot.id)).where(
+            and_(Lot.is_deal == True, Lot.created_at >= today_start)
+        )
+    )
+    avg_score = await db.execute(
+        select(func.avg(Lot.deal_score)).where(Lot.deal_score.isnot(None))
+    )
+    top_score = await db.execute(
+        select(func.max(Lot.deal_score)).where(Lot.is_deal == True)
+    )
+
+    from app.models.db_models import Alert
+    alerts_today = await db.execute(
+        select(func.count(Alert.id)).where(Alert.sent_at >= today_start)
+    )
+
+    return DashboardStats(
+        total_lots_tracked=total.scalar() or 0,
+        deals_detected_today=deals_today.scalar() or 0,
+        avg_deal_score=round(avg_score.scalar() or 0, 1),
+        top_deal_score=round(top_score.scalar() or 0, 1),
+        alerts_sent_today=alerts_today.scalar() or 0,
+        sources_active=3,
+    )
+
+
+@router.get("/trending", response_model=LotListResponse)
+async def get_trending_lots(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(24, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    """Lots by blue-chip or trending artists."""
+    from app.engines.artist_trends import BLUE_CHIP_ARTISTS, TRENDING_ARTISTS
+
+    all_artists = list(BLUE_CHIP_ARTISTS | TRENDING_ARTISTS)
+    now = datetime.utcnow()
+
+    # Build OR conditions for partial name matching
+    artist_filters = [
+        func.lower(Lot.artist_name_raw).contains(name)
+        for name in all_artists
+    ]
+
+    base = and_(
+        Lot.auction_date > now,
+        Lot.status == LotStatus.UPCOMING,
+        or_(*artist_filters),
+    )
+
+    total = (await db.execute(select(func.count(Lot.id)).where(base))).scalar() or 0
+    stmt = (
+        select(Lot)
+        .options(selectinload(Lot.artist))
+        .where(base)
+        .order_by(desc(Lot.deal_score))
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    lots = (await db.execute(stmt)).scalars().all()
+    return LotListResponse(
+        items=lots, total=total, page=page, page_size=page_size,
+        pages=math.ceil(total / page_size) if total > 0 else 0,
+    )
+
+
+@router.get("/categories", response_model=List[str])
+async def get_categories(db: AsyncSession = Depends(get_db)):
+    """Returns distinct non-null categories ordered by frequency."""
+    stmt = (
+        select(Lot.category, func.count(Lot.id).label("cnt"))
+        .where(Lot.category.isnot(None))
+        .group_by(Lot.category)
+        .order_by(desc("cnt"))
+        .limit(20)
+    )
+    result = await db.execute(stmt)
+    return [row.category for row in result.all() if row.category]
+
+
+@router.get("/missed", response_model=LotListResponse)
+async def get_missed_deals(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    """Past lots — all sales whose auction date has passed."""
+    now = datetime.utcnow()
+    filters = [
+        Lot.auction_date < now,
+        Lot.auction_date.isnot(None),
+    ]
+    total = (await db.execute(select(func.count(Lot.id)).where(and_(*filters)))).scalar() or 0
+    stmt = (
+        select(Lot)
+        .options(selectinload(Lot.artist))
+        .where(and_(*filters))
+        .order_by(desc(Lot.auction_date))  # Most recently ended first
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    lots = (await db.execute(stmt)).scalars().all()
+    return LotListResponse(
+        items=lots, total=total, page=page, page_size=page_size,
+        pages=math.ceil(total / page_size) if total > 0 else 0,
+    )
+
+
+@router.get("/{lot_id}", response_model=LotOut)
+async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Lot)
+        .options(selectinload(Lot.artist))
+        .where(Lot.id == lot_id)
+    )
+    lot = result.scalar_one_or_none()
+    if not lot:
+        raise HTTPException(status_code=404, detail="Lot not found")
+    return lot
+
+
+@router.get("/{lot_id}/comparables", response_model=List[LotOut])
+async def get_comparables(
+    lot_id: str,
+    limit: int = Query(6, ge=1, le=20),
+    db: AsyncSession = Depends(get_db),
+):
+    """Other lots by the same artist, ordered by deal score."""
+    lot = (await db.execute(
+        select(Lot).where(Lot.id == lot_id)
+    )).scalar_one_or_none()
+    if not lot:
+        raise HTTPException(status_code=404, detail="Lot not found")
+
+    if not lot.artist_id and not lot.artist_name_raw:
+        return []
+
+    filters = [Lot.id != lot_id]
+    if lot.artist_id:
+        filters.append(Lot.artist_id == lot.artist_id)
+    elif lot.artist_name_raw:
+        filters.append(Lot.artist_name_raw.ilike(f"%{lot.artist_name_raw}%"))
+
+    stmt = (
+        select(Lot)
+        .options(selectinload(Lot.artist))
+        .where(and_(*filters))
+        .order_by(desc(Lot.deal_score).nullslast(), desc(Lot.created_at))
+        .limit(limit)
+    )
+    return (await db.execute(stmt)).scalars().all()
+
+
+@router.get("/{lot_id}/similar", response_model=List[LotOut])
+async def get_similar(
+    lot_id: str,
+    limit: int = Query(6, ge=1, le=20),
+    db: AsyncSession = Depends(get_db),
+):
+    """Similar lots by category and price range."""
+    lot = (await db.execute(
+        select(Lot).where(Lot.id == lot_id)
+    )).scalar_one_or_none()
+    if not lot:
+        raise HTTPException(status_code=404, detail="Lot not found")
+
+    filters = [Lot.id != lot_id, Lot.is_deal == True]
+    if lot.category:
+        filters.append(Lot.category.ilike(f"%{lot.category}%"))
+    if lot.current_price:
+        low = lot.current_price * 0.3
+        high = lot.current_price * 3.0
+        filters.append(Lot.current_price.between(low, high))
+
+    stmt = (
+        select(Lot)
+        .options(selectinload(Lot.artist))
+        .where(and_(*filters))
+        .order_by(desc(Lot.deal_score).nullslast())
+        .limit(limit)
+    )
+    results = (await db.execute(stmt)).scalars().all()
+
+    # Fallback: if not enough results, broaden to category only
+    if len(results) < 3 and lot.category:
+        stmt2 = (
+            select(Lot)
+            .options(selectinload(Lot.artist))
+            .where(and_(
+                Lot.id != lot_id,
+                Lot.category.ilike(f"%{lot.category}%"),
+            ))
+            .order_by(desc(Lot.deal_score).nullslast())
+            .limit(limit)
+        )
+        results = (await db.execute(stmt2)).scalars().all()
+
+    return results
+
+
+@router.get("/{lot_id}/projection")
+async def get_lot_projection(
+    lot_id: str,
+    purchase_price: Optional[float] = Query(None, description="Override price for projection (EUR)"),
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    """Value projection for a lot over 5/10/20/30/50 years."""
+    result = await db.execute(
+        select(Lot).options(selectinload(Lot.artist)).where(Lot.id == lot_id)
+    )
+    lot = result.scalar_one_or_none()
+    if not lot:
+        raise HTTPException(404, "Lot not found")
+
+    price = purchase_price or lot.current_price or lot.estimate_low or 1000.0
+
+    from app.engines.projections import project_value
+    return project_value(
+        purchase_price_eur=float(price),
+        artist_name=lot.artist_name_raw,
+        liquidity_score=lot.artist.liquidity_score if lot.artist else 50.0,
+        popularity_score=lot.artist.popularity_score if lot.artist else 50.0,
+        trend=lot.artist.trend.value if lot.artist and lot.artist.trend else "stable",
+    )

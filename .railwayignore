@@ -1,0 +1,11 @@
+frontend/
+frontend/node_modules/
+frontend/.next/
+**/__pycache__/
+**/*.pyc
+**/.env
+.git/
+backup_*.sql
+*.sql
+node_modules/
+.DS_Store

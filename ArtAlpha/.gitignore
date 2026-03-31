@@ -1,0 +1,60 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+*.whl
+.venv/
+venv/
+ENV/
+env/
+.env
+!.env.example
+pip-log.txt
+
+# ── Alembic ───────────────────────────────────────────────────────────────────
+backend/alembic/versions/*.pyc
+
+# ── Node ──────────────────────────────────────────────────────────────────────
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+*.tsbuildinfo
+.npm
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Docker volumes ────────────────────────────────────────────────────────────
+postgres_data/
+redis_data/
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+celerybeat-schedule
+celerybeat.pid
+
+# ── Secrets ───────────────────────────────────────────────────────────────────
+*.pem
+*.key
+*.cert
+secrets/

@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+.env
+.env.local
+
+# Build files
+frontend/.next/
+frontend/out/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
