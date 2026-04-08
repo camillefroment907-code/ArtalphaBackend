@@ -276,9 +276,8 @@ async def fetch_lots(limit: int = 50) -> List[LotNormalized]:
             lots = pw_lots
 
     if len(lots) < 3:
-        logger.info("Drouot: falling back to mock data", real_count=len(lots))
-        await asyncio.sleep(0.1)
-        return [_generate_mock_lot(i) for i in range(limit)]
+        logger.warning("drouot_connector: real scrape returned < 3 lots, returning empty (mock disabled)")
+        return []
 
     logger.info("Drouot: returning real lots", count=len(lots))
     return lots[:limit]

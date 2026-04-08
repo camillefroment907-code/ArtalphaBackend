@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -6,6 +7,7 @@ from app.database import get_db
 from app.models.db_models import User, UserPreference, AlertChannel
 from app.models.schemas import UserRegister, UserLogin, TokenResponse, UserOut
 from app.api.auth_utils import hash_password, verify_password, create_access_token, get_current_user
+from app.services.email_service import send_welcome_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -37,10 +39,19 @@ async def register(body: UserRegister, db: AsyncSession = Depends(get_db)):
         alert_email=body.email,
         auction_houses=[],
         is_alerts_enabled=True,
+        language="fr",
     )
     db.add(prefs)
     await db.commit()
     await db.refresh(user)
+
+    # Fire-and-forget welcome email
+    asyncio.create_task(send_welcome_email(
+        to_email=user.email,
+        name=user.full_name or user.email,
+        plan="free",
+        lang="fr",
+    ))
 
     token = create_access_token({"sub": str(user.id), "email": user.email})
     return TokenResponse(

@@ -114,6 +114,10 @@ async def update_profile(
         "notify_email":       "is_alerts_enabled",
         "notify_sms":         "notify_sms",
         "alert_email":        "alert_email",
+        "language":           "language",
+        "favorite_artists":   "favorite_artists",
+        "auction_houses":     "auction_houses",
+        "alert_channel":      "alert_channel",
     }
 
     for body_key, pref_key in pref_field_map.items():

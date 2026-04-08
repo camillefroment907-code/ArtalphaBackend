@@ -32,9 +32,20 @@ async def get_user_plan(user: Optional[User], db: AsyncSession) -> str:
         return "expert"
     result = await db.execute(select(Subscription).where(Subscription.user_id == user.id))
     sub = result.scalar_one_or_none()
-    if sub and sub.status.value in ("active", "trialing") and sub.plan.value != "free":
-        return sub.plan.value
+    if sub and sub.status.value.lower() in ("active", "trialing") and sub.plan.value.upper() != "FREE":
+        return sub.plan.value.lower()
     return "free"
+
+
+# Max results per page by plan — enforced server-side so API bypass is impossible
+_PLAN_PAGE_LIMIT: dict[str, int] = {
+    "free":     3,
+    "starter":  10,
+    "investor": 9999,
+    "pro":      9999,
+    "elite":    9999,
+    "expert":   9999,   # admin alias
+}
 
 
 router = APIRouter(prefix="/lots", tags=["lots"])
@@ -138,20 +149,39 @@ async def list_lots(
     min_score: Optional[float] = Query(None, ge=0, le=100),
     max_score: Optional[float] = Query(None, ge=0, le=100),
     is_deal: Optional[bool] = None,
+    # Single source (alpha tab) — kept for backward compat
     source: Optional[str] = None,
+    # Multi-source (market tab) — comma-separated: "drouot,invaluable"
+    sources: Optional[str] = Query(None),
     category: Optional[str] = None,
+    medium: Optional[str] = None,
+    auction_house: Optional[str] = Query(None),
     artist: Optional[str] = None,
     search: Optional[str] = Query(None),
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
+    # Both naming conventions accepted (frontend sends auction_date_from)
     auction_from: Optional[datetime] = None,
     auction_to: Optional[datetime] = None,
+    auction_date_from: Optional[datetime] = Query(None),
+    auction_date_to: Optional[datetime] = Query(None),
     status: Optional[str] = None,
     sort_by: str = Query("deal_score", pattern="^(deal_score|auction_date|created_at|current_price)$"),
     sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user_optional),
 ):
+    # ── Plan enforcement ─────────────────────────────────────────────────────
+    # Cap page_size to the caller's plan limit so API bypass is impossible.
+    plan = await get_user_plan(current_user, db)
+    max_per_page = _PLAN_PAGE_LIMIT.get(plan, 3)
+    if page_size > max_per_page:
+        page_size = max_per_page
+
+    # Coalesce date param names — frontend may send either form
+    resolved_from = auction_date_from or auction_from
+    resolved_to   = auction_date_to   or auction_to
+
     filters = [
         # Only show upcoming/live lots in main feed — past lots go to /missed
         or_(
@@ -169,9 +199,25 @@ async def list_lots(
         try:
             filters.append(Lot.source == AuctionHouse[source.upper()])
         except KeyError:
-            filters.append(Lot.source == source)
+            return LotListResponse(items=[], total=0, page=page, page_size=page_size, pages=0)
+    if sources:
+        tokens = [s.strip() for s in sources.split(",") if s.strip()]
+        valid_enums = []
+        for token in tokens:
+            try:
+                valid_enums.append(AuctionHouse[token.upper()])
+            except KeyError:
+                pass
+        if valid_enums:
+            filters.append(or_(*[Lot.source == e for e in valid_enums]))
+        elif tokens:
+            return LotListResponse(items=[], total=0, page=page, page_size=page_size, pages=0)
     if category:
         filters.append(Lot.category.ilike(f"%{category}%"))
+    if medium:
+        filters.append(Lot.medium.ilike(f"%{medium}%"))
+    if auction_house:
+        filters.append(Lot.auction_house_name.ilike(f"%{auction_house}%"))
     if artist:
         filters.append(Lot.artist_name_raw.ilike(f"%{artist}%"))
     if search:
@@ -179,17 +225,17 @@ async def list_lots(
             or_(
                 Lot.title.ilike(f"%{search}%"),
                 Lot.artist_name_raw.ilike(f"%{search}%"),
-                Lot.description.ilike(f"%{search}%"),
+                Lot.auction_house_name.ilike(f"%{search}%"),
             )
         )
     if min_price is not None:
         filters.append(Lot.current_price >= min_price)
     if max_price is not None:
         filters.append(Lot.current_price <= max_price)
-    if auction_from:
-        filters.append(Lot.auction_date >= auction_from)
-    if auction_to:
-        filters.append(Lot.auction_date <= auction_to)
+    if resolved_from:
+        filters.append(Lot.auction_date >= resolved_from)
+    if resolved_to:
+        filters.append(Lot.auction_date <= resolved_to)
     if status:
         filters.append(Lot.status == status)
 
@@ -463,6 +509,142 @@ async def get_missed_deals(
     return LotListResponse(
         items=lots, total=total, page=page, page_size=page_size,
         pages=math.ceil(total / page_size) if total > 0 else 0,
+    )
+
+
+@router.get("/sources")
+async def get_source_stats(db: AsyncSession = Depends(get_db)):
+    """
+    Per-source stats for the World Auctions source health monitor.
+    Returns lot count, last_added datetime, and freshness status per source.
+    Status thresholds: fresh < 30 min, stale < 120 min, offline >= 120 min.
+    """
+    FRESH_MIN = 30
+    STALE_MIN = 120
+
+    now = datetime.utcnow()
+    stmt = (
+        select(
+            Lot.source,
+            func.count(Lot.id).label("lot_count"),
+            func.max(Lot.created_at).label("last_added"),
+        )
+        .where(
+            or_(Lot.auction_date.is_(None), Lot.auction_date >= now)
+        )
+        .group_by(Lot.source)
+        .order_by(desc("lot_count"))
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    out = []
+    for row in rows:
+        last = row.last_added
+        if last:
+            age_min = (now - last).total_seconds() / 60
+            if age_min < FRESH_MIN:
+                status = "fresh"
+            elif age_min < STALE_MIN:
+                status = "stale"
+            else:
+                status = "offline"
+        else:
+            status = "offline"
+            age_min = None
+        out.append({
+            "source": row.source.value if row.source else "unknown",
+            "lot_count": row.lot_count,
+            "last_added": last.isoformat() if last else None,
+            "age_minutes": round(age_min) if age_min is not None else None,
+            "status": status,
+        })
+    return out
+
+
+@router.get("/for-investor", response_model=LotListResponse)
+async def get_lots_for_investor(
+    budget_min: Optional[float] = Query(None, description="Min budget EUR"),
+    budget_max: Optional[float] = Query(None, description="Max budget EUR"),
+    horizon: Optional[str] = Query(None, pattern="^(short|medium|long)$", description="short=<2y, medium=2-5y, long=5y+"),
+    profile: Optional[str] = Query(None, pattern="^(first_time|collector|investor)$"),
+    limit: int = Query(12, ge=1, le=24),
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    """
+    Investor-first endpoint. Returns top N lots curated for a specific budget + profile.
+    This is the main feed for the new onboarding experience.
+    Always returns max `limit` lots (default 12), sorted by relevance score.
+    """
+    plan = await get_user_plan(current_user, db)
+    # Free users get preview of 3
+    effective_limit = min(limit, 3) if plan == "free" else limit
+
+    filters = [
+        or_(Lot.auction_date.is_(None), Lot.auction_date >= datetime.utcnow()),
+        Lot.deal_score >= 45,  # Only Interesting+ lots
+        Lot.deal_score.isnot(None),
+    ]
+
+    # Budget filter
+    if budget_min is not None:
+        filters.append(
+            or_(
+                Lot.current_price >= budget_min,
+                and_(Lot.current_price.is_(None), Lot.estimate_low >= budget_min),
+            )
+        )
+    if budget_max is not None:
+        filters.append(
+            or_(
+                Lot.current_price <= budget_max,
+                and_(Lot.current_price.is_(None), Lot.estimate_low <= budget_max),
+            )
+        )
+
+    # Horizon → liquidity proxy via artist join
+    # short = high liquidity artists (liquidity_score >= 70)
+    # long = any (including lower liquidity = niche/emerging)
+    liquidity_filter = None
+    if horizon == "short":
+        liquidity_filter = Artist.liquidity_score >= 70
+    elif horizon == "medium":
+        liquidity_filter = Artist.liquidity_score >= 40
+
+    stmt = (
+        select(Lot)
+        .options(selectinload(Lot.artist))
+        .outerjoin(Artist, Lot.artist_id == Artist.id)
+        .where(and_(*filters))
+    )
+    if liquidity_filter is not None:
+        stmt = stmt.where(or_(liquidity_filter, Lot.artist_id.is_(None)))
+
+    # Order by deal_score desc — best opportunities first
+    stmt = stmt.order_by(desc(Lot.deal_score)).limit(effective_limit * 3)  # fetch 3x, re-rank below
+
+    lots = (await db.execute(stmt)).scalars().all()
+
+    # Re-rank: penalize lots without image, boost lots with high upside
+    def relevance(lot: Lot) -> float:
+        s = lot.deal_score or 0
+        if not lot.image_url:
+            s -= 10
+        if (lot.pct_below_low_estimate or 0) > 20:
+            s += 5
+        if lot.artist and lot.artist.liquidity_score and lot.artist.liquidity_score > 70:
+            s += 3
+        return s
+
+    lots_sorted = sorted(lots, key=relevance, reverse=True)[:effective_limit]
+
+    return LotListResponse(
+        items=lots_sorted,
+        total=len(lots_sorted),
+        page=1,
+        page_size=effective_limit,
+        pages=1,
     )
 
 

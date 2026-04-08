@@ -2,6 +2,7 @@
 ArtAlpha Billing API — Complete Stripe Integration
 Plans: Free | Starter €9 | Investor €29 | Pro €99 | Elite €299
 """
+import asyncio
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +10,12 @@ from sqlalchemy import select, text
 from typing import Optional
 from datetime import datetime
 import structlog
+
+from app.services.email_service import (
+    send_trial_ending_email,
+    send_payment_failed_email,
+    send_subscription_canceled_email,
+)
 
 from app.database import get_db
 from app.models.db_models import User, Subscription, SubscriptionPlan, SubscriptionStatus
@@ -739,6 +746,21 @@ async def _handle_subscription_canceled(db: AsyncSession, stripe_sub: dict):
         sub.status = SubscriptionStatus.CANCELED
         sub.updated_at = datetime.utcnow()
 
+        user_result = await db.execute(select(User).where(User.id == sub.user_id))
+        canceled_user = user_result.scalar_one_or_none()
+        if canceled_user:
+            period_end_ts = stripe_sub.get("current_period_end")
+            end_date_str = (
+                datetime.fromtimestamp(period_end_ts).strftime("%d %B %Y")
+                if period_end_ts else ""
+            )
+            asyncio.create_task(send_subscription_canceled_email(
+                to_email=canceled_user.email,
+                name=canceled_user.full_name or canceled_user.email,
+                end_date=end_date_str,
+                lang="fr",
+            ))
+
 
 async def _handle_payment_failed(db: AsyncSession, invoice: dict):
     """
@@ -768,6 +790,15 @@ async def _handle_payment_failed(db: AsyncSession, invoice: dict):
         attempt=attempt_count,
         plan=sub.plan.value,
     )
+
+    user_result = await db.execute(select(User).where(User.id == sub.user_id))
+    failed_user = user_result.scalar_one_or_none()
+    if failed_user:
+        asyncio.create_task(send_payment_failed_email(
+            to_email=failed_user.email,
+            name=failed_user.full_name or failed_user.email,
+            lang="fr",
+        ))
 
 
 async def _handle_payment_succeeded(db: AsyncSession, invoice: dict):
@@ -811,4 +842,11 @@ async def _handle_trial_ending(db: AsyncSession, stripe_sub: dict):
         plan=sub.plan.value,
         trial_end=trial_end.isoformat() if trial_end else None,
     )
-    # TODO: trigger email via your email provider
+    trial_end_str = trial_end.strftime("%d %B %Y") if trial_end else ""
+    asyncio.create_task(send_trial_ending_email(
+        to_email=user.email,
+        name=user.full_name or user.email,
+        plan=sub.plan.value.lower(),
+        trial_end_date=trial_end_str,
+        lang="fr",
+    ))

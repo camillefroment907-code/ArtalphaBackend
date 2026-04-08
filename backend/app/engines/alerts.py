@@ -1,6 +1,6 @@
 """
-HONO Alert Engine
-Sends deal alerts via Telegram and Email.
+ArtAlpha Alert Engine
+Sends deal alerts via Telegram and Email (Resend).
 """
 import asyncio
 from typing import Optional, List
@@ -10,6 +10,7 @@ import httpx
 
 from app.config import get_settings
 from app.models.db_models import Lot, User, UserPreference, Alert, AlertChannel
+from app.services.email_service import send_deal_alert_email
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -19,7 +20,7 @@ def _format_alert_message(
     lot: Lot,
     artist_avg_price: Optional[float] = None,
 ) -> str:
-    """Format a deal alert message."""
+    """Format a deal alert message for Telegram."""
     emoji = "🔥" if (lot.deal_score or 0) >= 90 else "⚡"
 
     title = lot.title[:60] + ("..." if len(lot.title) > 60 else "")
@@ -28,7 +29,7 @@ def _format_alert_message(
 
     lines = [
         f"{emoji} DEAL DETECTED — {source}",
-        f"",
+        "",
         f"📌 {title}",
         f"🎨 {artist}",
     ]
@@ -49,7 +50,7 @@ def _format_alert_message(
         lines.append(f"📉 {pct:.0f}% below low estimate")
 
     if lot.deal_score:
-        lines.append(f"")
+        lines.append("")
         lines.append(f"🏆 Score: {lot.deal_score:.0f}/100")
 
     if lot.auction_date:
@@ -59,11 +60,11 @@ def _format_alert_message(
         lines.append(f"🏛️ {lot.auction_house_name}")
 
     if lot.url:
-        lines.append(f"")
+        lines.append("")
         lines.append(f"🔗 {lot.url}")
 
-    lines.append(f"")
-    lines.append(f"— HONO | AI Auction Intelligence")
+    lines.append("")
+    lines.append("— ArtAlpha | AI Auction Intelligence")
 
     return "\n".join(lines)
 
@@ -105,67 +106,6 @@ async def _send_telegram(
         return False
 
 
-async def _send_email(
-    to_email: str,
-    subject: str,
-    body: str,
-) -> bool:
-    """Send email via SendGrid."""
-    if not settings.sendgrid_api_key:
-        logger.warning("SendGrid not configured — skipping email")
-        return False
-
-    headers = {
-        "Authorization": f"Bearer {settings.sendgrid_api_key}",
-        "Content-Type": "application/json",
-    }
-
-    # Simple text + HTML email
-    html_body = body.replace("\n", "<br>").replace("🔥", "🔥").replace("⚡", "⚡")
-    html_body = f"""
-    <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; 
-                background: #0a0a0a; color: #f5f0e8; padding: 32px; border: 1px solid #c9a84c;">
-        <div style="font-size: 11px; letter-spacing: 4px; color: #c9a84c; margin-bottom: 24px;">
-            HONO — AI AUCTION INTELLIGENCE
-        </div>
-        <div style="white-space: pre-line; font-size: 15px; line-height: 1.6;">
-            {html_body}
-        </div>
-        <div style="margin-top: 32px; font-size: 11px; color: #666; border-top: 1px solid #333; padding-top: 16px;">
-            You are receiving this alert because you enabled deal notifications. 
-            <a href="#" style="color: #c9a84c;">Manage preferences</a>
-        </div>
-    </div>
-    """
-
-    payload = {
-        "personalizations": [{"to": [{"email": to_email}]}],
-        "from": {"email": settings.alert_from_email, "name": "HONO Alerts"},
-        "subject": subject,
-        "content": [
-            {"type": "text/plain", "value": body},
-            {"type": "text/html", "value": html_body},
-        ],
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(
-                "https://api.sendgrid.com/v3/mail/send",
-                headers=headers,
-                json=payload,
-            )
-            if resp.status_code in (200, 202):
-                logger.info("Email alert sent", to=to_email)
-                return True
-            else:
-                logger.error("Email send failed", status=resp.status_code)
-                return False
-    except Exception as e:
-        logger.error("Email exception", error=str(e))
-        return False
-
-
 async def send_deal_alert(
     lot: Lot,
     user: User,
@@ -182,16 +122,15 @@ async def send_deal_alert(
     if (lot.deal_score or 0) < prefs.min_deal_score:
         return []
 
-    message = _format_alert_message(lot, artist_avg_price)
-    subject = f"🔥 Deal Score {lot.deal_score:.0f}/100 — {lot.title[:50]}"
-
-    sent_alerts: List[Alert] = []
+    lang = getattr(prefs, "language", "fr") or "fr"
     channel = prefs.alert_channel
+    sent_alerts: List[Alert] = []
 
     # ── Telegram ──────────────────────────────────────────────────────────────
     if channel in (AlertChannel.TELEGRAM, AlertChannel.BOTH):
         chat_id = prefs.telegram_chat_id or settings.telegram_chat_id
         if chat_id:
+            message = _format_alert_message(lot, artist_avg_price)
             delivered = await _send_telegram(chat_id, message)
             sent_alerts.append(Alert(
                 user_id=user.id,
@@ -204,16 +143,27 @@ async def send_deal_alert(
                 is_delivered=delivered,
             ))
 
-    # ── Email ─────────────────────────────────────────────────────────────────
+    # ── Email (Resend) ────────────────────────────────────────────────────────
     if channel in (AlertChannel.EMAIL, AlertChannel.BOTH):
-        email = prefs.alert_email or user.email
-        delivered = await _send_email(email, subject, message)
+        to_email = prefs.alert_email or user.email
+        delivered = await send_deal_alert_email(
+            to_email=to_email,
+            lot_title=lot.title or "Untitled",
+            artist_name=lot.artist_name_raw or "Unknown Artist",
+            price=float(lot.current_price or lot.estimate_low or 0),
+            estimate=float(lot.estimate_high or lot.estimate_low or 0),
+            deal_score=int(lot.deal_score or 0),
+            upside_pct=float(lot.pct_below_low_estimate or 0),
+            lot_url=lot.url or "",
+            lot_id=str(lot.id),
+            lang=lang,
+        )
         sent_alerts.append(Alert(
             user_id=user.id,
             lot_id=lot.id,
             channel=AlertChannel.EMAIL,
-            recipient=email,
-            message=message,
+            recipient=to_email,
+            message=f"[email] {lot.title or 'Untitled'} — score {lot.deal_score:.0f}/100",
             deal_score_at_send=lot.deal_score,
             sent_at=datetime.utcnow(),
             is_delivered=delivered,

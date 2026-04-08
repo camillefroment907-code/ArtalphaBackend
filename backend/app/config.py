@@ -39,8 +39,10 @@ class Settings(BaseSettings):
     # Alerts
     telegram_bot_token: Optional[str] = None
     telegram_chat_id: Optional[str] = None
-    sendgrid_api_key: Optional[str] = None
-    alert_from_email: str = "alerts@hono.art"
+    # Resend (replaces SendGrid)
+    resend_api_key: Optional[str] = None           # RESEND_API_KEY
+    transac_from_email: str = "hello@artalpha.io"  # TRANSAC_FROM_EMAIL
+    alert_from_email: str = "alerts@artalpha.io"   # ALERT_FROM_EMAIL
 
     # Stripe
     stripe_secret_key: Optional[str] = None

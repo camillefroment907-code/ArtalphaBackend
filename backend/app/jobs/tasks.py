@@ -9,6 +9,7 @@ import structlog
 
 from app.jobs.celery_app import celery_app
 from app.config import get_settings
+from app.utils.url_validator import fix_url
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -47,65 +48,84 @@ def poll_and_score_lots(self):
 
 async def _poll_and_score_async():
     from app.connectors.aggregator import fetch_all_lots, get_house_reputation
-    from app.engines.artist_enrichment import enrich_artist
     from app.engines.scoring import compute_deal_score, ScoringInput
     from app.models.db_models import Lot, Artist, LotStatus
-    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-    from sqlalchemy import select
+    from app.engines.artist_enrichment import _find_in_db, _detect_artist_from_title, _generate_heuristic_enrichment
+    from sqlalchemy import select, tuple_
 
-    from app.database import engine, AsyncSessionLocal
+    from app.database import AsyncSessionLocal
 
     logger.info("Starting poll & score pipeline")
     start_time = datetime.utcnow()
 
-    # 1. Fetch lots from all sources
+    # 1. Fetch lots from all sources (parallel)
     raw_lots = await fetch_all_lots(lots_per_source=500)
     logger.info("Lots fetched", count=len(raw_lots))
+
+    # Quality filter + cross-source dedup (before DB lookup)
+    from app.jobs.quality_filter import filter_and_deduplicate
+    raw_lots, filter_stats = filter_and_deduplicate(raw_lots)
+    logger.info("Quality filter applied", **filter_stats)
+
+    if not raw_lots:
+        logger.info("Poll & score complete", processed=0, new_deals=0, elapsed_s=0)
+        return
 
     processed = 0
     new_deals = 0
 
     async with AsyncSessionLocal() as session:
-        for lot_data in raw_lots:
-            try:
-                # 2. Check for duplicate
-                if lot_data.external_id:
-                    existing = await session.execute(
-                        select(Lot).where(
-                            Lot.source == lot_data.source,
-                            Lot.external_id == lot_data.external_id,
-                        )
-                    )
-                    existing_lot = existing.scalar_one_or_none()
-                    if existing_lot:
-                        # Update price only
-                        if lot_data.current_price and existing_lot.current_price != lot_data.current_price:
-                            existing_lot.current_price = lot_data.current_price
-                            existing_lot.updated_at = datetime.utcnow()
-                            # Re-score
-                            lot_obj = existing_lot
-                        else:
-                            continue
-                    else:
-                        lot_obj = None
-                else:
-                    lot_obj = None
-
-                # 3. Enrich artist
-                artist_name, artist_data = await enrich_artist(
-                    lot_data.artist_name_raw,
-                    lot_data.title,
+        # 2. Bulk dedup — ONE query to find all external_ids already in DB
+        candidate_ids = [
+            (lot.source.value, lot.external_id)
+            for lot in raw_lots
+            if lot.external_id
+        ]
+        if candidate_ids:
+            existing_result = await session.execute(
+                select(Lot.source, Lot.external_id).where(
+                    tuple_(Lot.source, Lot.external_id).in_(candidate_ids)
                 )
+            )
+            existing_pairs = {
+                (str(row.source), row.external_id)
+                for row in existing_result.fetchall()
+            }
+        else:
+            existing_pairs = set()
 
-                # 4. Find or create artist record
+        # 3. Filter to only new lots
+        new_lots = [
+            lot for lot in raw_lots
+            if lot.external_id and (lot.source.value, lot.external_id) not in existing_pairs
+        ]
+        logger.info("New lots to insert", new=len(new_lots), duplicates=len(raw_lots) - len(new_lots))
+
+        # 4. Process new lots — score + bulk insert (no per-lot OpenAI, use heuristics)
+        artist_cache: dict = {}  # name_normalized → db_artist | None (in-memory per run)
+        for lot_data in new_lots:
+            try:
+                # Artist enrichment (local DB + heuristics only — no per-lot OpenAI calls)
+                artist_name = lot_data.artist_name_raw
+                if not artist_name and lot_data.title:
+                    artist_name = _detect_artist_from_title(lot_data.title)
+
+                artist_data: dict = {}
+                if artist_name:
+                    artist_data = _find_in_db(artist_name) or _generate_heuristic_enrichment(artist_name)
+
+                # Find or create artist record (cached per run)
                 db_artist = None
                 if artist_name:
-                    artist_result = await session.execute(
-                        select(Artist).where(
-                            Artist.name_normalized == artist_name.lower().strip()
+                    key = artist_name.lower().strip()
+                    if key in artist_cache:
+                        db_artist = artist_cache[key]
+                    else:
+                        artist_result = await session.execute(
+                            select(Artist).where(Artist.name_normalized == key)
                         )
-                    )
-                    db_artist = artist_result.scalar_one_or_none()
+                        db_artist = artist_result.scalar_one_or_none()
+                        artist_cache[key] = db_artist
 
                     if not db_artist and artist_data:
                         db_artist = Artist(
@@ -127,7 +147,8 @@ async def _poll_and_score_async():
                             last_enriched_at=datetime.utcnow(),
                         )
                         session.add(db_artist)
-                        await session.flush()
+                        await session.flush()  # need id for FK
+                        artist_cache[key] = db_artist
 
                 # 5. Score the lot
                 house_rep = get_house_reputation(lot_data.source)
@@ -138,53 +159,59 @@ async def _poll_and_score_async():
                 )
                 score_result = compute_deal_score(scoring_input)
 
-                # 6. Create or update lot record
-                if not lot_obj:
-                    lot_obj = Lot(
-                        external_id=lot_data.external_id,
-                        source=lot_data.source,
-                        url=lot_data.url,
-                        image_url=lot_data.image_url,
-                        title=lot_data.title,
-                        description=lot_data.description,
-                        lot_number=lot_data.lot_number,
-                        category=lot_data.category,
-                        medium=lot_data.medium,
-                        dimensions=lot_data.dimensions,
-                        artist_id=db_artist.id if db_artist else None,
-                        artist_name_raw=artist_name or lot_data.artist_name_raw,
-                        estimate_low=lot_data.estimate_low,
-                        estimate_high=lot_data.estimate_high,
-                        current_price=lot_data.current_price,
-                        currency=lot_data.currency,
-                        auction_date=lot_data.auction_date,
-                        auction_house_name=lot_data.auction_house_name,
-                        auction_sale_title=lot_data.auction_sale_title,
-                        status=LotStatus.UPCOMING,
-                        raw_data=lot_data.raw_data,
-                    )
-                    session.add(lot_obj)
-                    await session.flush()
+                # 6. Ensure URL is valid (fixes relative URLs, filters non-art,
+                #    falls back to verified search URL when direct link is missing)
+                clean_url = fix_url(
+                    url=lot_data.url,
+                    source=str(lot_data.source.value if hasattr(lot_data.source, "value") else lot_data.source),
+                    title=lot_data.title or "",
+                    artist=artist_name or lot_data.artist_name_raw or "",
+                )
 
-                was_deal = lot_obj.is_deal
-                lot_obj.deal_score = score_result.deal_score
-                lot_obj.is_deal = score_result.is_deal
-                lot_obj.pct_below_low_estimate = score_result.pct_below_low_estimate
-                lot_obj.pct_below_market_avg = score_result.pct_below_market_avg
-                lot_obj.score_breakdown = score_result.breakdown.model_dump()
-                lot_obj.scored_at = datetime.utcnow()
-                lot_obj.enriched_at = datetime.utcnow()
+                # 7. Create new lot record
+                lot_obj = Lot(
+                    external_id=lot_data.external_id,
+                    source=lot_data.source,
+                    url=clean_url,
+                    image_url=lot_data.image_url,
+                    title=lot_data.title,
+                    description=lot_data.description,
+                    lot_number=lot_data.lot_number,
+                    category=lot_data.category,
+                    medium=lot_data.medium,
+                    dimensions=lot_data.dimensions,
+                    artist_id=db_artist.id if db_artist else None,
+                    artist_name_raw=artist_name or lot_data.artist_name_raw,
+                    estimate_low=lot_data.estimate_low,
+                    estimate_high=lot_data.estimate_high,
+                    current_price=lot_data.current_price,
+                    currency=lot_data.currency,
+                    auction_date=lot_data.auction_date,
+                    auction_house_name=lot_data.auction_house_name,
+                    auction_sale_title=lot_data.auction_sale_title,
+                    status=LotStatus.UPCOMING,
+                    raw_data=lot_data.raw_data,
+                    deal_score=score_result.deal_score,
+                    is_deal=score_result.is_deal,
+                    pct_below_low_estimate=score_result.pct_below_low_estimate,
+                    pct_below_market_avg=score_result.pct_below_market_avg,
+                    score_breakdown=score_result.breakdown.model_dump(),
+                    scored_at=datetime.utcnow(),
+                    enriched_at=datetime.utcnow(),
+                )
+                session.add(lot_obj)
 
-                if score_result.is_deal and not was_deal:
+                if score_result.is_deal:
                     new_deals += 1
-
                 processed += 1
 
             except Exception as e:
-                logger.error("Failed to process lot", title=lot_data.title[:50], error=str(e))
+                logger.error("Failed to process lot", title=(lot_data.title or "")[:50], error=str(e))
                 continue
 
+        # Commit all at once — much faster than per-lot flush+commit
         await session.commit()
+        logger.info("Committed lots to DB", count=processed)
 
     elapsed = (datetime.utcnow() - start_time).total_seconds()
     logger.info(
@@ -405,5 +432,31 @@ async def _daily_cleanup_async():
         for lot in past_lots_result.scalars().all():
             lot.status = LotStatus.SOLD
 
+        # Purge low-quality lots (score < 20 AND no price AND no estimate)
+        from sqlalchemy import delete
+        purge_stmt = delete(Lot).where(
+            and_(
+                or_(Lot.deal_score.is_(None), Lot.deal_score < 20),
+                Lot.current_price.is_(None),
+                Lot.estimate_low.is_(None),
+                Lot.estimate_high.is_(None),
+                # Only purge if no alerts sent for this lot
+                ~Lot.alerts.any(),
+            )
+        )
+        purge_result = await session.execute(purge_stmt)
+        logger.info("Purged low-quality lots", count=purge_result.rowcount)
+
         await session.commit()
         logger.info("Daily cleanup complete")
+
+
+@celery_app.task(name="app.jobs.tasks.dedup_cleanup")
+def dedup_cleanup():
+    """Weekly DB-level dedup — removes duplicate lots by title+artist+source."""
+    try:
+        from app.jobs.dedup_cleanup import run_dedup_cleanup
+        deleted = run_dedup_cleanup()
+        logger.info("dedup_cleanup task complete", deleted=deleted)
+    except Exception as exc:
+        logger.error("dedup_cleanup failed", error=str(exc))

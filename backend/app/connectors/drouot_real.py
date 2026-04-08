@@ -22,10 +22,9 @@ _USER_AGENT = (
 )
 _BASE_URL = "https://www.drouot.com"
 
-# Base pages — homepage only (categories pages return 0 lots; sale pages discovered dynamically)
-_BASE_SCRAPE_URLS = [
-    "https://www.drouot.com",
-]
+# Base pages — empty; we rely entirely on _discover_sale_urls for upcoming lots.
+# The homepage only shows live countdown lots with garbage titles.
+_BASE_SCRAPE_URLS: list = []
 
 _FUTURE_SALES_URL = "https://www.drouot.com/en/auctions/future"
 
@@ -156,13 +155,16 @@ def _extract_lot_id(href: str) -> Optional[str]:
     return m.group(1) if m else None
 
 
-async def _scrape_page(page, url: str) -> List[LotNormalized]:
+async def _scrape_page(page, url: str, seen_ids: set = None) -> List[LotNormalized]:
     """Load a Drouot page and extract all lot cards."""
     from bs4 import BeautifulSoup
 
+    if seen_ids is None:
+        seen_ids = set()
+
     try:
-        await page.goto(url, wait_until="domcontentloaded", timeout=25000)
-        await page.wait_for_timeout(3000)
+        await page.goto(url, wait_until="domcontentloaded", timeout=15000)
+        await page.wait_for_timeout(2000)
     except Exception as e:
         logger.warning("Failed to load page", url=url, error=str(e))
         return []
@@ -171,7 +173,6 @@ async def _scrape_page(page, url: str) -> List[LotNormalized]:
     soup = BeautifulSoup(html, "lxml")
 
     lots: List[LotNormalized] = []
-    seen_ids: set = set()
 
     # Collect all lot <a> tags globally (deduplicated by lot_id)
     lot_pattern = re.compile(r"/(?:fr|en)/l/\d+")
@@ -206,9 +207,9 @@ async def _scrape_page(page, url: str) -> List[LotNormalized]:
         # The link text contains: date, title, description, estimate
         full_text = a_tag.get_text(separator=" ", strip=True)
 
-        # Strip leading date prefix: "MAR 25 - 13:00 TITLE..." or "25 MARS - 13:00 TITLE..."
+        # Strip leading countdown timer "01h 35m 26s" and/or date prefix "MAR 25 - 13:00"
         title_match = re.sub(
-            r"^(?:[A-Z]{3}\s+\d{1,2}|\d{1,2}\s+[A-ZÉ]{3,4})\s*[-–]\s*\d{2}:\d{2}\s*",
+            r"^(?:\d+h\s*\d+m\s*\d+s\s*)?(?:[A-Z]{3}\s+\d{1,2}|\d{1,2}\s+[A-ZÉ]{3,4})\s*[-–]\s*\d{2}:\d{2}\s*",
             "",
             full_text,
         ).strip()
@@ -225,12 +226,18 @@ async def _scrape_page(page, url: str) -> List[LotNormalized]:
         if not title or len(title) < 3:
             continue
 
-        # Fetch real prices from lot detail page
-        detail = await _fetch_lot_detail(full_url)
-        estimate_low = detail.get("estimate_low")
-        estimate_high = detail.get("estimate_high")
-        description = detail.get("description")
-        await asyncio.sleep(0.35)  # polite rate limit
+        # Try to extract estimate from the card text inline — avoids per-lot HTTP requests
+        estimate_low: Optional[float] = None
+        estimate_high: Optional[float] = None
+        price_m = re.search(r"(\d[\d\s\u202f]{2,10})\s*€\s*[-–]\s*(\d[\d\s\u202f]{2,10})\s*€", full_text)
+        if price_m:
+            estimate_low = _parse_price(price_m.group(1) + "€")
+            estimate_high = _parse_price(price_m.group(2) + "€")
+        else:
+            single_m = re.search(r"Estimation\s+([\d\s\u202f]{2,10})\s*€", full_text, re.IGNORECASE)
+            if single_m:
+                estimate_low = _parse_price(single_m.group(1) + "€")
+                estimate_high = round(estimate_low * 1.5, -1) if estimate_low else None
 
         lot = LotNormalized(
             external_id=f"drouot-real-{lot_id}",
@@ -238,13 +245,12 @@ async def _scrape_page(page, url: str) -> List[LotNormalized]:
             title=title,
             estimate_low=estimate_low,
             estimate_high=estimate_high,
-            current_price=estimate_low,  # start of bidding = low estimate
+            current_price=estimate_low,
             currency="EUR",
             auction_date=auction_date,
             auction_house_name="Hôtel Drouot — Paris",
             url=full_url,
             image_url=img_src,
-            description=description,
             raw_data={"real": True, "lot_id": lot_id, "source_url": url},
         )
         lots.append(lot)
@@ -256,8 +262,8 @@ async def _discover_sale_urls(page) -> List[str]:
     """Fetch /en/auctions/future and return upcoming sale page URLs (max 12)."""
     from bs4 import BeautifulSoup
     try:
-        await page.goto(_FUTURE_SALES_URL, wait_until="domcontentloaded", timeout=20000)
-        await page.wait_for_timeout(2500)
+        await page.goto(_FUTURE_SALES_URL, wait_until="domcontentloaded", timeout=15000)
+        await page.wait_for_timeout(2000)
         html = await page.content()
         soup = BeautifulSoup(html, "lxml")
         sale_pattern = re.compile(r"/(?:fr|en)/v/\d+")
@@ -271,7 +277,7 @@ async def _discover_sale_urls(page) -> List[str]:
                 seen.add(href)
                 urls.append(href)
         logger.info("Discovered Drouot sale pages", count=len(urls))
-        return urls[:50]
+        return urls[:12]
     except Exception as e:
         logger.warning("Could not discover sale URLs", error=str(e))
         return []
@@ -308,6 +314,15 @@ class DrouotRealConnector(RealConnector):
                 finally:
                     await discovery_page.close()
 
+                # Fallback: known art-category pages on Drouot if discovery yields nothing
+                if not sale_urls:
+                    sale_urls = [
+                        "https://www.drouot.com/en/auctions?category=paintings",
+                        "https://www.drouot.com/en/auctions?category=sculptures",
+                        "https://www.drouot.com/en/auctions?category=prints",
+                    ]
+                    logger.warning("No sale URLs discovered — using fallback category pages")
+
                 urls_to_scrape = _BASE_SCRAPE_URLS + sale_urls
 
                 for url in urls_to_scrape:
@@ -315,11 +330,9 @@ class DrouotRealConnector(RealConnector):
                         break
                     page = await ctx.new_page()
                     try:
-                        page_lots = await _scrape_page(page, url)
+                        page_lots = await _scrape_page(page, url, seen_ids=seen_ids)
                         for lot in page_lots:
-                            lot_id = lot.raw_data.get("lot_id")
-                            if lot_id and lot_id not in seen_ids and self.validate_lot(lot):
-                                seen_ids.add(lot_id)
+                            if self.validate_lot(lot):
                                 all_lots.append(lot)
                     finally:
                         await page.close()

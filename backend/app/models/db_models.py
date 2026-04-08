@@ -100,6 +100,7 @@ class UserPreference(Base):
     alert_email = Column(String(255), nullable=True)
     auction_houses = Column(ARRAY(String), default=list)
     is_alerts_enabled = Column(Boolean, default=True)
+    language = Column(String(10), default="fr")  # "fr" or "en"
     notify_sms = Column(Boolean, default=False)
     collector_type = Column(String(50), nullable=True)
     investment_horizon = Column(String(50), nullable=True)
