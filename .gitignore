@@ -13,3 +13,6 @@ frontend/out/
 # IDE
 .vscode/
 .idea/
+
+# Scripts with secrets
+set_railway_vars.sh
