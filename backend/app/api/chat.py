@@ -99,7 +99,54 @@ Voir les opportunités actuelles : https://artalpha.io/app/opportunities"
 
 ## DOMAINE
 Investissement art uniquement. Hors-sujet → "Je me concentre sur l'art et l'investissement."
-LANGUE : réponds toujours dans la langue de l'utilisateur (FR par défaut)."""
+LANGUE : réponds toujours dans la langue de l'utilisateur (FR par défaut).
+Quand tu réponds à une question sur le fonctionnement du site, cite toujours le lien exact et ajoute : Pour plus de détails → artalpha.io/faq#section-concernée"""
+
+
+LARRY_FAQ_CONTEXT = """
+## FAQ ARTALPHA — utilise ces réponses pour les questions sur le fonctionnement du site
+
+COMPTE :
+- Créer un compte → artalpha.io/app/signup
+- Se connecter → artalpha.io/app/login
+- Supprimer compte → artalpha.io/app/portfolio (Danger Zone en bas)
+
+ABONNEMENTS :
+- Voir les plans → artalpha.io/app/pricing
+- Collector €9/mois : 10 lots, alertes simples
+- Investor €29/mois : lots illimités, Agent IA 1 alerte, Larry 30 msg/mois
+- Family Office €99/mois : tout illimité, Agent IA 5 alertes, Larry 200 msg/mois
+- Institutional : custom, tout illimité
+- Upgrade immédiat avec prorata → artalpha.io/app/pricing
+- Downgrade à prochaine échéance
+- Annuler → artalpha.io/app/portfolio section Subscription → Manage
+- Paiement échoué → email automatique, Stripe retente, accès maintenu temporairement
+
+OPPORTUNITÉS :
+- Page principale → artalpha.io/app/opportunities
+- Mise à jour toutes les 15 minutes
+- Deal Score 0-100 : ≥80 EXCEPTIONAL, ≥65 STRONG, ≥45 INTERESTING
+- Sources : Drouot, Interenchères, Invaluable, LiveAuctioneers, Sotheby's, Christie's, Bonhams, eBay, Artsy, Catawiki
+
+AGENT IA :
+- Accès → artalpha.io/app/agent
+- Créer alerte : cliquer "+ Créer une alerte"
+- Investor : 1 alerte | Family Office : 5 alertes | Institutional : illimité
+- Scan toutes les 15 minutes
+- Score conviction GPT-4o : ≥80 forte conviction
+
+PORTFOLIO :
+- Accès → artalpha.io/app/portfolio
+- Ajouter œuvre : bouton "+ Add an artwork"
+- Stats : total investi, valeur estimée, rendement
+
+ALERTES SIMPLES :
+- Accès → artalpha.io/app/alerts
+- Types : Artiste, Catégorie, Prix, Score
+- Gratuit:1 | Collector:5 | Investor:20 | Family Office:illimité
+
+FAQ COMPLÈTE : artalpha.io/faq
+"""
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -355,7 +402,10 @@ async def send_message(
     if body.lot_id:
         lot_context = await _get_lot_context(body.lot_id, db)
 
-    system_content = LARRY_SYSTEM_PROMPT + user_context + lot_context
+    system = LARRY_SYSTEM_PROMPT + "\n\n" + LARRY_FAQ_CONTEXT
+    if user_context:
+        system += f"\n\n{user_context}"
+    system_content = system + lot_context
 
     # Fetch last 10 messages for conversation history
     history_result = await db.execute(
