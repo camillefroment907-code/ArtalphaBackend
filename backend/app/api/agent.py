@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from app.database import get_db
 from app.api.auth_utils import get_current_user
+from app.config import get_settings
 from app.models.db_models import (
     User, AgentConfig, AgentRecommendation,
     Subscription, SubscriptionPlan, SubscriptionStatus,
@@ -20,9 +21,14 @@ router = APIRouter(prefix="/agent", tags=["agent"])
 
 AGENT_PLANS = {"pro", "institutional", "expert"}  # plans with agent access
 
+_settings = get_settings()
+_ADMIN_EMAILS = {e.strip() for e in _settings.admin_emails.split(",")}
+
 
 async def _require_agent_plan(user: User, db: AsyncSession) -> str:
     """Raise 403 if user is not on Pro+ plan. Returns the plan string."""
+    if user.email.strip() in _ADMIN_EMAILS:
+        return "institutional"
     result = await db.execute(
         select(Subscription).where(Subscription.user_id == user.id)
     )
