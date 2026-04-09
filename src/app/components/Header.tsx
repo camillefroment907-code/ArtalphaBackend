@@ -4,12 +4,12 @@ import { Logo } from './Logo';
 import { getUser, logout, getPlanLimits, getToken } from '../../lib/auth';
 
 const NAV_LINKS = [
-  { to: '/app/opportunities', label: 'Opportunities', agentOnly: false },
-  { to: '/app/artists',       label: 'Artists',       agentOnly: false },
-  { to: '/app/market',        label: 'Market',        agentOnly: false },
-  { to: '/app/alerts',        label: 'Alerts',        agentOnly: false },
-  { to: '/app/portfolio',     label: 'Portfolio',     agentOnly: false },
-  { to: '/app/agent',         label: 'Agent IA',      agentOnly: true  },
+  { to: '/app/opportunities', label: 'Auctions'    },
+  { to: '/app/primary',       label: 'Primary'     },
+  { to: '/app/convictions',   label: 'Convictions' },
+  { to: '/app/artists',       label: 'Artists'     },
+  { to: '/app/agent',         label: 'Agent IA'    },
+  { to: '/app/portfolio',     label: 'Portfolio'   },
 ];
 
 const PLAN_LABELS: Record<string, string> = {
@@ -92,9 +92,9 @@ export function Header() {
 
       {/* Nav */}
       <nav style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
-        {NAV_LINKS.filter(({ agentOnly }) => !agentOnly || user).map(({ to, label, agentOnly }) => {
+        {NAV_LINKS.map(({ to, label }) => {
           const active = isActive(to);
-          const isAgent = agentOnly;
+          const isAgent = to === '/app/agent';
           return (
             <Link
               key={to}

@@ -19,6 +19,8 @@ import Portfolio from './pages/Portfolio';
 import Agent from './pages/Agent';
 import FAQ from './pages/FAQ';
 import BillingSuccess from './pages/BillingSuccess';
+import Primary from './pages/Primary';
+import Convictions from './pages/Convictions';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 export const router = createBrowserRouter([
@@ -60,6 +62,8 @@ export const router = createBrowserRouter([
       { path: 'contact', Component: ContactSales },
       { path: 'pricing', Component: Pricing },
       { path: 'opportunities', Component: Opportunities },
+      { path: 'primary', Component: Primary },
+      { path: 'convictions', Component: Convictions },
       { path: 'opportunities/:id', Component: OpportunityDetail },
       { path: 'artists', Component: Artists },
       { path: 'artists/:id', Component: ArtistDetail },

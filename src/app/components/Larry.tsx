@@ -133,14 +133,20 @@ export function Larry({ lotId }: LarryProps) {
     setStreaming(true);
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s
+
       const res = await fetch(`${API}/api/chat/message`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ message: text.trim(), lot_id: lotId || undefined }),
+        body: JSON.stringify({ message: text.trim(), lot_id: lotId }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -165,52 +171,65 @@ export function Larry({ lotId }: LarryProps) {
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
 
-      if (!reader) throw new Error('No reader');
+      if (!reader) throw new Error('No response body');
 
+      let buffer = '';
       while (true) {
-        const { value, done } = await reader.read();
+        const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6).trim();
+          if (!raw) continue;
           try {
-            const data = JSON.parse(line.slice(6));
-            if (data.delta) {
-              // Append delta to the specific message by ID — never touch other messages
+            const parsed = JSON.parse(raw);
+            if (parsed.error) {
               setMessages(prev => prev.map(m =>
                 m.id === tempId
-                  ? { ...m, content: cleanLarry(m.content + data.delta), streaming: true }
+                  ? { ...m, content: 'Une erreur est survenue. Réessayez.', streaming: false }
+                  : m
+              ));
+              return;
+            }
+            if (parsed.delta) {
+              setMessages(prev => prev.map(m =>
+                m.id === tempId
+                  ? { ...m, content: cleanLarry(m.content + parsed.delta) }
                   : m
               ));
             }
-            if (data.done) {
+            if (parsed.done) {
               setMessages(prev => prev.map(m =>
                 m.id === tempId
-                  ? { ...m, content: cleanLarry(data.full || m.content), streaming: false }
+                  ? { ...m, content: cleanLarry(parsed.full || m.content), streaming: false }
                   : m
               ));
-              setUnreadCount(0);
+              setUsage(prev => prev ? { ...prev, used: prev.used + 1 } : prev);
             }
-            if (data.error) {
-              setError(data.error);
-              setMessages(prev => prev.map(m =>
-                m.id === tempId ? { ...m, content: data.error, streaming: false } : m
-              ));
-            }
-          } catch {
-            // ignore malformed SSE line
-          }
+          } catch { continue; }
         }
       }
 
+      // Ensure streaming is marked done
+      setMessages(prev => prev.map(m =>
+        m.id === tempId ? { ...m, streaming: false } : m
+      ));
+
       fetchUsage();
-    } catch {
-      setError('Connexion interrompue. Réessayez.');
-      // Remove the empty assistant placeholder, keep the user message
-      setMessages(prev => prev.filter(m => m.id !== tempId));
+    } catch (err: any) {
+      const msg = err?.name === 'AbortError'
+        ? 'Larry met du temps à répondre. Réessayez dans un instant.'
+        : 'Connexion au serveur impossible. Vérifiez votre connexion.';
+      setMessages(prev => prev.map(m =>
+        m.id === tempId
+          ? { ...m, content: msg, streaming: false }
+          : m
+      ));
     } finally {
       setStreaming(false);
     }

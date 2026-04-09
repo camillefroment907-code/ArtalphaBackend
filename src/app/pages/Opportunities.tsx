@@ -12,6 +12,11 @@ const SOURCE_FLAG: Record<string, string> = {
   invaluable: "🇺🇸", liveauctioneers: "🇺🇸",
   sothebys: "🇬🇧", christies: "🇬🇧", bonhams: "🇬🇧",
   artsy: "🌐", catawiki: "🇳🇱", other: "🌐",
+  phillips: "🇺🇸",
+  artcurial: "🇫🇷",
+  artsper: "🇫🇷",
+  saatchi_art: "🇬🇧",
+  singulart: "🇫🇷",
 };
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -19,6 +24,11 @@ const SOURCE_LABEL: Record<string, string> = {
   invaluable: "Invaluable", liveauctioneers: "LiveAuctioneers",
   sothebys: "Sotheby's", christies: "Christie's", bonhams: "Bonhams",
   artsy: "Artsy", catawiki: "Catawiki", other: "Other",
+  phillips: "Phillips",
+  artcurial: "Artcurial",
+  artsper: "Artsper",
+  saatchi_art: "Saatchi Art",
+  singulart: "Singulart",
 };
 
 // ── Sort maps ────────────────────────────────────────────────
@@ -765,8 +775,8 @@ export default function Opportunities() {
   // Browser tab title
   useEffect(() => {
     document.title = tab === "alpha"
-      ? "Alpha Opportunities · ArtAlpha"
-      : "Live Auctions · ArtAlpha";
+      ? "Best Lots · ArtAlpha"
+      : "All Auctions · ArtAlpha";
   }, [tab]);
 
   // ── Derived values ───────────────────────────────────────
@@ -910,7 +920,7 @@ export default function Opportunities() {
           {/* Title + count */}
           <div style={{ display: "flex", alignItems: "baseline", gap: "10px", flex: 1, minWidth: 0 }}>
             <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "20px", fontWeight: 600, color: "var(--navy)", whiteSpace: "nowrap" }}>
-              {tab === "live" ? "Live Auctions" : "Alpha Opportunities"}
+              {tab === "live" ? "All Auctions" : "Best Lots"}
             </h1>
             <span style={{ fontSize: "12px", color: "var(--text-3)" }}>
               {loading ? "…" : `${total.toLocaleString()} lots`}
@@ -962,8 +972,8 @@ export default function Opportunities() {
           background: "white", flexShrink: 0, paddingLeft: "20px",
         }}>
           {([
-            { id: "alpha" as const, label: "Alpha Opportunities", desc: "AI-detected undervalued artworks", icon: "◆" },
-            { id: "live"  as const, label: "Live Auctions",       desc: "All upcoming lots worldwide",      icon: "◉" },
+            { id: "alpha" as const, label: "Best Lots",    desc: "AI-detected undervalued artworks", icon: "◆" },
+            { id: "live"  as const, label: "All Auctions", desc: "All upcoming lots worldwide",      icon: "◉" },
           ] as const).map(({ id, label, desc, icon }) => (
             <button
               key={id}
