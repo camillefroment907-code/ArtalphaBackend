@@ -1,0 +1,9 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+@import './custom.css';
+
+img {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}

@@ -1,18 +1,7 @@
-# Dependencies
-node_modules/
+node_modules
+dist/
 .env
-.env.local
-
-# Build files
-frontend/.next/
-frontend/out/
-
-# Logs
-*.log
-
-# IDE
-.vscode/
-.idea/
-
-# Scripts with secrets
-set_railway_vars.sh
+.DS_Store
+src/.DS_Store
+src/app/.DS_Store
+package-lock.json
