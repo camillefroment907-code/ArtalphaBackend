@@ -530,19 +530,6 @@ async def _run_ai_agents_async():
         total_recs = 0
         for config, user in eligible:
             lang = "fr"
-            try:
-                prefs_result = await session.execute(
-                    select(Lot).where(False)  # dummy, replaced below
-                )
-                from app.models.db_models import UserPreference
-                prefs_res = await session.execute(
-                    select(UserPreference).where(UserPreference.user_id == user.id)
-                )
-                prefs = prefs_res.scalar_one_or_none()
-                if prefs:
-                    lang = getattr(prefs, "language", "fr") or "fr"
-            except Exception:
-                pass
 
             created = await run_agent_for_user(
                 user_id=user.id,
