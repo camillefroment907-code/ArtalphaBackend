@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { getUser, getPlanLimits, getToken, logout, PLAN_LIMITS } from '../../lib/auth';
+import { AlertsContent } from './Alerts';
 import { getSubscription } from '../../lib/api';
 import { getUsageStatus, PLAN_LIMITS as USAGE_LIMITS } from '../../lib/analysisUsage';
 
@@ -431,6 +432,15 @@ export default function Portfolio() {
   const billingInterval = sub?.billing_interval || 'monthly';
   const isFreePlan = plan === 'free' || plan === 'starter';
 
+  type PortfolioTab = 'portfolio' | 'alerts' | 'abonnement';
+  const [portfolioTab, setPortfolioTab] = useState<PortfolioTab>('portfolio');
+
+  const PORTFOLIO_TABS: { id: PortfolioTab; label: string }[] = [
+    { id: 'portfolio',   label: 'Mon Portfolio' },
+    { id: 'alerts',      label: 'Mes Alertes'   },
+    { id: 'abonnement',  label: 'Abonnement'    },
+  ];
+
   // Input style helper
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '10px 12px', fontSize: '13px',
@@ -487,6 +497,93 @@ export default function Portfolio() {
             </button>
           </div>
         </div>
+
+        {/* ── TAB BAR ────────────────────────────────────────── */}
+        <div style={{
+          display: 'flex', borderBottom: '2px solid var(--border)',
+          marginBottom: '32px', gap: '0',
+        }}>
+          {PORTFOLIO_TABS.map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => setPortfolioTab(id)}
+              style={{
+                padding: '10px 20px', background: 'transparent', border: 'none',
+                borderBottom: portfolioTab === id ? '2px solid var(--navy)' : '2px solid transparent',
+                marginBottom: '-2px', cursor: 'pointer',
+                fontSize: '13px', fontWeight: portfolioTab === id ? 600 : 400,
+                color: portfolioTab === id ? 'var(--navy)' : 'var(--text-2)',
+                transition: 'all 0.15s',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── ALERTS TAB ─────────────────────────────────────── */}
+        {portfolioTab === 'alerts' && <AlertsContent />}
+
+        {/* ── ABONNEMENT TAB ─────────────────────────────────── */}
+        {portfolioTab === 'abonnement' && (
+          <div>
+            {/* Plan features */}
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 600, color: 'var(--text)', margin: '0 0 24px' }}>
+              Your Plan — {planLabel}
+            </h2>
+            <div style={{ background: 'var(--bg-card)', border: '2px solid var(--border)', borderRadius: '10px', padding: '28px 32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 48px' }}>
+              <div>
+                <FeatureRow label="Opportunities" value={limits.maxOpportunities >= 9999 ? 'Unlimited' : String(limits.maxOpportunities)} active={true} />
+                <FeatureRow label="AI Analyses / month" value={usageLimit === 0 ? '—' : usageLimit >= 999 ? 'Unlimited' : String(usageLimit)} active={usageLimit > 0} />
+                <FeatureRow label="Investment Analysis" value={limits.hasFullAnalysis ? '✓' : '—'} active={limits.hasFullAnalysis} />
+                <FeatureRow label="AI Investment Advisor" value={limits.hasAIVerdict ? '✓' : '—'} active={limits.hasAIVerdict} />
+              </div>
+              <div>
+                <FeatureRow label="Price Projections" value={limits.projectionYears.length > 0 ? limits.projectionYears.map((y: number) => `${y}y`).join(', ') : '—'} active={limits.projectionYears.length > 0} />
+                <FeatureRow label="Real-time Alerts" value={limits.hasAlerts ? '✓' : '—'} active={limits.hasAlerts} />
+                <FeatureRow label="Portfolio Tracking" value={limits.hasPortfolio ? '✓' : '—'} active={limits.hasPortfolio} />
+                <FeatureRow label="Full Artist Profiles" value={limits.hasFullArtistProfile ? '✓' : '—'} active={limits.hasFullArtistProfile} />
+              </div>
+            </div>
+            {isFreePlan && (
+              <div style={{ marginTop: '24px', background: 'var(--navy)', borderRadius: '10px', padding: '40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', fontWeight: 600, color: 'white', margin: '0 0 8px' }}>Unlock the full platform</h3>
+                  <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', margin: 0, maxWidth: '420px' }}>Get unlimited opportunities, AI analyses, price projections, and real-time alerts.</p>
+                </div>
+                <Link to="/app/pricing" style={{ padding: '14px 28px', background: 'var(--gold)', color: 'white', borderRadius: '7px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none', flexShrink: 0, marginLeft: '32px' }}>
+                  Upgrade Now
+                </Link>
+              </div>
+            )}
+            {/* Danger zone */}
+            <div style={{ marginTop: '40px', border: '1px solid rgba(192,57,43,0.2)', borderRadius: '10px', padding: '28px 32px', background: 'rgba(192,57,43,0.02)' }}>
+              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, color: '#C0392B', margin: '0 0 8px' }}>Danger Zone</h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: '0 0 20px' }}>Permanently delete your account and all associated data.</p>
+              {!deleteConfirm ? (
+                <button onClick={() => setDeleteConfirm(true)} style={{ padding: '10px 20px', background: 'transparent', border: '1px solid rgba(192,57,43,0.4)', borderRadius: '6px', color: '#C0392B', fontSize: '12px', fontWeight: 600, cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  Delete Account
+                </button>
+              ) : (
+                <div>
+                  <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '12px' }}>Type <strong>DELETE</strong> to confirm:</p>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <input type="text" value={deleteInput} onChange={e => setDeleteInput(e.target.value)} placeholder="DELETE" style={{ padding: '10px 14px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '13px', fontFamily: 'var(--font-mono)', background: 'var(--bg-card)', color: 'var(--text)', outline: 'none', width: '160px' }} />
+                    <button disabled={deleteInput !== 'DELETE'} style={{ padding: '10px 20px', background: deleteInput === 'DELETE' ? '#C0392B' : 'var(--bg-subtle)', border: 'none', borderRadius: '6px', color: deleteInput === 'DELETE' ? 'white' : 'var(--text-3)', fontSize: '12px', fontWeight: 600, cursor: deleteInput === 'DELETE' ? 'pointer' : 'not-allowed', letterSpacing: '0.04em', textTransform: 'uppercase' }} onClick={() => { if (deleteInput === 'DELETE') { logout(); navigate('/'); } }}>
+                      Confirm Delete
+                    </button>
+                    <button onClick={() => { setDeleteConfirm(false); setDeleteInput(''); }} style={{ padding: '10px 16px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-2)', fontSize: '12px', cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── PORTFOLIO TAB ──────────────────────────────────── */}
+        {portfolioTab === 'portfolio' && <>
 
         {/* ── 2. ACCOUNT OVERVIEW STRIP ──────────────────────── */}
         <div style={{
@@ -992,8 +1089,11 @@ export default function Portfolio() {
           )}
         </div>
 
+        {/* Close portfolio tab */}
+        </>}
+
         {/* ── 5. PLAN FEATURES PANEL ─────────────────────────── */}
-        <div style={{ marginTop: '56px' }}>
+        {false && <div style={{ marginTop: '56px' }}>
           <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 600, color: 'var(--text)', margin: '0 0 24px' }}>
             Your Plan — {planLabel}
           </h2>
@@ -1079,8 +1179,9 @@ export default function Portfolio() {
           )}
         </div>
 
-        {/* ── 6. DANGER ZONE ─────────────────────────────────── */}
-        <div style={{ marginTop: '56px' }}>
+        }
+        {/* ── 6. DANGER ZONE (moved to Abonnement tab) ────────── */}
+        {false && <div style={{ marginTop: '56px' }}>
           <div style={{
             border: '1px solid rgba(192,57,43,0.2)', borderRadius: '10px',
             padding: '28px 32px', background: 'rgba(192,57,43,0.02)',
@@ -1155,7 +1256,7 @@ export default function Portfolio() {
               </div>
             )}
           </div>
-        </div>
+        </div>}
 
       </div>
     </div>

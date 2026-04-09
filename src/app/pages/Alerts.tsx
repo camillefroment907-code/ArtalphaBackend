@@ -43,7 +43,7 @@ function saveAlerts(alerts: Alert[]): void {
 }
 
 // ── Component ────────────────────────────────────────────────
-export default function Alerts() {
+export function AlertsContent() {
   const navigate = useNavigate();
   const user = getUser();
   const plan = user?.email === 'camillefroment907@gmail.com' ? 'elite' : getUserPlan();
@@ -373,4 +373,8 @@ export default function Alerts() {
       </div>
     </div>
   );
+}
+
+export default function Alerts() {
+  return <AlertsContent />;
 }

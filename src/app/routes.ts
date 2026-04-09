@@ -10,6 +10,7 @@ import Signup from './pages/Signup';
 import Onboarding from './pages/Onboarding';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
+import Explore from './pages/Explore';
 import Opportunities from './pages/Opportunities';
 import OpportunityDetail from './pages/OpportunityDetail';
 import Artists from './pages/Artists';
@@ -59,7 +60,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, loader: () => redirect('/app/dashboard') },
       { path: 'dashboard', Component: Dashboard },
-      { path: 'explore', loader: () => redirect('/app/opportunities') },
+      { path: 'explore', Component: Explore },
       { path: 'login', Component: Login },
       { path: 'signup', Component: Signup },
       { path: 'contact', Component: ContactSales },
