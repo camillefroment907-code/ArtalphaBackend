@@ -4,13 +4,19 @@ import { Logo } from './Logo';
 import { getUser, logout, getPlanLimits, getToken } from '../../lib/auth';
 
 const NAV_LINKS = [
-  { to: '/app/opportunities', label: 'Auctions'    },
-  { to: '/app/primary',       label: 'Primary'     },
-  { to: '/app/convictions',   label: 'Convictions' },
-  { to: '/app/artists',       label: 'Artists'     },
-  { to: '/app/agent',         label: 'Agent IA'    },
-  { to: '/app/portfolio',     label: 'Portfolio'   },
+  { to: '/app/dashboard',  label: 'Dashboard',    icon: '◆' },
+  { to: '/app/explore',    label: 'Explorer',     icon: '◎' },
+  { to: '/app/agent',      label: 'Intelligence', icon: '◈' },
+  { to: '/app/portfolio',  label: 'Mon compte',   icon: '◇' },
 ];
+
+// Paths that activate each nav item
+const ACTIVE_PATHS: Record<string, string[]> = {
+  '/app/dashboard':  ['/app/dashboard'],
+  '/app/explore':    ['/app/explore', '/app/opportunities', '/app/primary', '/app/convictions', '/app/artists'],
+  '/app/agent':      ['/app/agent', '/app/intelligence'],
+  '/app/portfolio':  ['/app/portfolio', '/app/alerts'],
+};
 
 const PLAN_LABELS: Record<string, string> = {
   free:     'Free',
@@ -41,7 +47,8 @@ export function Header() {
       .catch(() => {});
   }, [hasAgentAccess]);
 
-  const isActive = (to: string) => location.pathname.startsWith(to);
+  const isActive = (to: string) =>
+    (ACTIVE_PATHS[to] ?? [to]).some(p => location.pathname.startsWith(p));
 
   const plan = user?.email === ADMIN_EMAIL ? 'elite' : (user?.plan ?? 'free');
   const planLabel = PLAN_LABELS[plan] ?? plan;
@@ -86,15 +93,15 @@ export function Header() {
       }}
     >
       {/* Logo */}
-      <Link to="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
+      <Link to="/app/dashboard" style={{ textDecoration: 'none', flexShrink: 0 }}>
         <Logo variant="horizontal" color="dark" size={26} />
       </Link>
 
       {/* Nav */}
       <nav style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
-        {NAV_LINKS.map(({ to, label }) => {
+        {NAV_LINKS.map(({ to, label, icon }) => {
           const active = isActive(to);
-          const isAgent = to === '/app/agent';
+          const isIntelligence = to === '/app/agent';
           return (
             <Link
               key={to}
@@ -124,8 +131,11 @@ export function Header() {
                 }
               }}
             >
+              <span style={{ fontSize: '10px', color: 'var(--gold-dim)', marginRight: '2px' }}>
+                {icon}
+              </span>
               {label}
-              {isAgent && agentUnread > 0 && (
+              {isIntelligence && agentUnread > 0 && (
                 <span style={{
                   width: '6px', height: '6px', borderRadius: '50%',
                   background: 'var(--gold)',

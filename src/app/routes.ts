@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router';
+import { createBrowserRouter, redirect } from 'react-router';
 import Root from './Root';
 import Landing from './pages/Landing';
 import Pricing from './pages/Pricing';
@@ -9,6 +9,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Onboarding from './pages/Onboarding';
 import Home from './pages/Home';
+import Dashboard from './pages/Dashboard';
 import Opportunities from './pages/Opportunities';
 import OpportunityDetail from './pages/OpportunityDetail';
 import Artists from './pages/Artists';
@@ -56,7 +57,9 @@ export const router = createBrowserRouter([
     path: '/app',
     Component: Root,
     children: [
-      { index: true, Component: Home },
+      { index: true, loader: () => redirect('/app/dashboard') },
+      { path: 'dashboard', Component: Dashboard },
+      { path: 'explore', loader: () => redirect('/app/opportunities') },
       { path: 'login', Component: Login },
       { path: 'signup', Component: Signup },
       { path: 'contact', Component: ContactSales },
