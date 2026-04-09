@@ -403,3 +403,21 @@ class AgentRecommendation(Base):
         Index("ix_agent_recs_created_at", "created_at"),
         UniqueConstraint("alert_id", "lot_id", name="uq_agent_rec_alert_lot"),
     )
+
+
+class ChatMessage(Base):
+    """Larry chat history — kept 30 days then purged by daily_cleanup."""
+    __tablename__ = "chat_messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    role = Column(String(20), nullable=False)   # "user" | "assistant"
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", backref="chat_messages")
+
+    __table_args__ = (
+        Index("ix_chat_messages_user_id", "user_id"),
+        Index("ix_chat_messages_created_at", "created_at"),
+    )

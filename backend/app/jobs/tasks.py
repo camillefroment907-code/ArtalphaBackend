@@ -450,6 +450,13 @@ async def _daily_cleanup_async():
         purge_result = await session.execute(purge_stmt)
         logger.info("Purged low-quality lots", count=purge_result.rowcount)
 
+        # Purge old chat messages (30-day retention)
+        from app.models.db_models import ChatMessage
+        cutoff_chat = datetime.utcnow() - timedelta(days=30)
+        chat_purge = delete(ChatMessage).where(ChatMessage.created_at < cutoff_chat)
+        chat_result = await session.execute(chat_purge)
+        logger.info("Purged old chat messages", count=chat_result.rowcount)
+
         await session.commit()
         logger.info("Daily cleanup complete")
 
