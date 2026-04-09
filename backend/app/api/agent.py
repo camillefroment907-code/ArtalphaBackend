@@ -1,9 +1,9 @@
 """
-AI Agent API — Pro (Family Office) plan only.
+AI Agent API — Investor plan and above.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_, func, delete
 from sqlalchemy.orm import selectinload
 from typing import Optional, List
 from datetime import datetime
@@ -13,148 +13,263 @@ from app.database import get_db
 from app.api.auth_utils import get_current_user
 from app.config import get_settings
 from app.models.db_models import (
-    User, AgentConfig, AgentRecommendation,
-    Subscription, SubscriptionPlan, SubscriptionStatus,
+    User, AgentAlert, AgentRecommendation,
+    Subscription, SubscriptionStatus,
 )
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
-AGENT_PLANS = {"pro", "institutional", "expert"}  # plans with agent access
-
 _settings = get_settings()
 _ADMIN_EMAILS = {e.strip() for e in _settings.admin_emails.split(",")}
 
+AGENT_ALERT_LIMITS: dict[str, int] = {
+    "free":          0,
+    "starter":       0,
+    "investor":      1,
+    "pro":           5,
+    "institutional": 9999,
+    "expert":        9999,
+}
 
-async def _require_agent_plan(user: User, db: AsyncSession) -> str:
-    """Raise 403 if user is not on Pro+ plan. Returns the plan string."""
+AGENT_PLANS = set(k for k, v in AGENT_ALERT_LIMITS.items() if v > 0)
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+async def _get_user_plan(user: User, db: AsyncSession) -> str:
     if user.email.strip() in _ADMIN_EMAILS:
         return "institutional"
     result = await db.execute(
         select(Subscription).where(Subscription.user_id == user.id)
     )
     sub = result.scalar_one_or_none()
-    plan = sub.plan.value.lower() if sub and sub.status.value.lower() in ("active", "trialing") else "free"
+    if sub and sub.status.value.lower() in ("active", "trialing"):
+        return sub.plan.value.lower()
+    return "free"
+
+
+async def _require_agent_plan(user: User, db: AsyncSession) -> str:
+    plan = await _get_user_plan(user, db)
     if plan not in AGENT_PLANS:
         raise HTTPException(
             status_code=403,
-            detail="AI Agent is available on Family Office plan (€99/month) and above."
+            detail="L'Agent IA est disponible à partir du plan Investor (€29/mois).",
         )
     return plan
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
-class AgentConfigCreate(BaseModel):
+class AgentAlertCreate(BaseModel):
+    name: str
+    artist_name: Optional[str] = None
+    category: Optional[str] = None
+    subcategory: Optional[str] = None
+    keywords: Optional[List[str]] = []
     budget_min_eur: Optional[float] = None
     budget_max_eur: Optional[float] = None
     investment_horizon: Optional[str] = None
-    collector_type: Optional[str] = None
-    favorite_artists: Optional[List[str]] = []
-    preferred_categories: Optional[List[str]] = []
     risk_tolerance: Optional[str] = "medium"
-    min_conviction_score: Optional[int] = 70
-    max_recommendations_per_day: Optional[int] = 3
+    min_conviction_score: Optional[int] = 65
     notify_email: Optional[bool] = True
-    notify_in_app: Optional[bool] = True
 
 
-class AgentConfigUpdate(AgentConfigCreate):
+class AgentAlertUpdate(BaseModel):
+    name: Optional[str] = None
     is_active: Optional[bool] = None
+    artist_name: Optional[str] = None
+    category: Optional[str] = None
+    subcategory: Optional[str] = None
+    keywords: Optional[List[str]] = None
+    budget_min_eur: Optional[float] = None
+    budget_max_eur: Optional[float] = None
+    investment_horizon: Optional[str] = None
+    risk_tolerance: Optional[str] = None
+    min_conviction_score: Optional[int] = None
+    notify_email: Optional[bool] = None
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
-@router.get("/config")
-async def get_agent_config(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    await _require_agent_plan(current_user, db)
-    result = await db.execute(
-        select(AgentConfig).where(AgentConfig.user_id == current_user.id)
-    )
-    config = result.scalar_one_or_none()
-    if not config:
-        return {"configured": False}
+_TARGETING_FIELDS = {
+    "artist_name", "category", "subcategory", "keywords",
+    "budget_min_eur", "budget_max_eur",
+}
+
+
+def _serialize_alert(alert: AgentAlert, rec_count: int = 0) -> dict:
     return {
-        "configured": True,
-        "is_active": config.is_active,
-        "budget_min_eur": config.budget_min_eur,
-        "budget_max_eur": config.budget_max_eur,
-        "investment_horizon": config.investment_horizon,
-        "collector_type": config.collector_type,
-        "favorite_artists": config.favorite_artists or [],
-        "preferred_categories": config.preferred_categories or [],
-        "risk_tolerance": config.risk_tolerance,
-        "min_conviction_score": config.min_conviction_score,
-        "max_recommendations_per_day": config.max_recommendations_per_day,
-        "notify_email": config.notify_email,
-        "notify_in_app": config.notify_in_app,
+        "id": str(alert.id),
+        "name": alert.name,
+        "is_active": alert.is_active,
+        "artist_name": alert.artist_name,
+        "category": alert.category,
+        "subcategory": alert.subcategory,
+        "keywords": alert.keywords or [],
+        "budget_min_eur": alert.budget_min_eur,
+        "budget_max_eur": alert.budget_max_eur,
+        "investment_horizon": alert.investment_horizon,
+        "risk_tolerance": alert.risk_tolerance,
+        "min_conviction_score": alert.min_conviction_score,
+        "notify_email": alert.notify_email,
+        "created_at": alert.created_at.isoformat(),
+        "recommendation_count": rec_count,
     }
 
 
-@router.post("/config")
-async def create_or_update_agent_config(
-    body: AgentConfigCreate,
+@router.get("/limits")
+async def get_limits(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = await _get_user_plan(current_user, db)
+    max_alerts = AGENT_ALERT_LIMITS.get(plan, 0)
+    result = await db.execute(
+        select(func.count(AgentAlert.id)).where(AgentAlert.user_id == current_user.id)
+    )
+    used = result.scalar() or 0
+    return {
+        "plan": plan,
+        "used": used,
+        "max": max_alerts,
+        "can_create": used < max_alerts,
+    }
+
+
+@router.get("/alerts")
+async def list_alerts(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     await _require_agent_plan(current_user, db)
-    result = await db.execute(
-        select(AgentConfig).where(AgentConfig.user_id == current_user.id)
+
+    alerts_result = await db.execute(
+        select(AgentAlert)
+        .where(AgentAlert.user_id == current_user.id)
+        .order_by(AgentAlert.created_at.desc())
     )
-    config = result.scalar_one_or_none()
+    alerts = alerts_result.scalars().all()
 
-    if not config:
-        config = AgentConfig(user_id=current_user.id)
-        db.add(config)
+    # Rec counts per alert
+    counts_result = await db.execute(
+        select(AgentRecommendation.alert_id, func.count(AgentRecommendation.id))
+        .where(AgentRecommendation.user_id == current_user.id)
+        .group_by(AgentRecommendation.alert_id)
+    )
+    counts = {str(row[0]): row[1] for row in counts_result.all()}
 
-    for field, value in body.model_dump(exclude_none=True).items():
-        setattr(config, field, value)
+    return [_serialize_alert(a, counts.get(str(a.id), 0)) for a in alerts]
 
-    config.updated_at = datetime.utcnow()
+
+@router.post("/alerts", status_code=201)
+async def create_alert(
+    body: AgentAlertCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = await _require_agent_plan(current_user, db)
+    limit = AGENT_ALERT_LIMITS.get(plan, 0)
+
+    count_result = await db.execute(
+        select(func.count(AgentAlert.id)).where(AgentAlert.user_id == current_user.id)
+    )
+    used = count_result.scalar() or 0
+    if used >= limit:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Votre plan permet {limit} alerte(s). Passez à un plan supérieur pour en créer davantage.",
+        )
+
+    alert = AgentAlert(user_id=current_user.id, **body.model_dump())
+    db.add(alert)
     await db.commit()
-    return {"status": "ok", "is_active": config.is_active}
+    await db.refresh(alert)
+    return _serialize_alert(alert)
 
 
-@router.patch("/config")
-async def patch_agent_config(
-    body: AgentConfigUpdate,
+@router.patch("/alerts/{alert_id}")
+async def update_alert(
+    alert_id: str,
+    body: AgentAlertUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     await _require_agent_plan(current_user, db)
+
     result = await db.execute(
-        select(AgentConfig).where(AgentConfig.user_id == current_user.id)
+        select(AgentAlert).where(
+            and_(AgentAlert.id == alert_id, AgentAlert.user_id == current_user.id)
+        )
     )
-    config = result.scalar_one_or_none()
-    if not config:
-        raise HTTPException(404, "Agent not configured yet. Call POST /agent/config first.")
+    alert = result.scalar_one_or_none()
+    if not alert:
+        raise HTTPException(404, "Alerte introuvable.")
 
-    for field, value in body.model_dump(exclude_none=True).items():
-        setattr(config, field, value)
+    updates = body.model_dump(exclude_none=True)
+    targeting_changed = bool(_TARGETING_FIELDS & set(updates.keys()))
 
-    config.updated_at = datetime.utcnow()
+    for field, value in updates.items():
+        setattr(alert, field, value)
+    alert.updated_at = datetime.utcnow()
+
+    # Clear unread recs so agent re-evaluates with new criteria
+    if targeting_changed:
+        await db.execute(
+            delete(AgentRecommendation).where(
+                and_(
+                    AgentRecommendation.alert_id == alert.id,
+                    AgentRecommendation.is_read == False,  # noqa: E712
+                )
+            )
+        )
+
     await db.commit()
-    return {"status": "ok"}
+    return _serialize_alert(alert)
+
+
+@router.delete("/alerts/{alert_id}", status_code=204)
+async def delete_alert(
+    alert_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await _require_agent_plan(current_user, db)
+
+    result = await db.execute(
+        select(AgentAlert).where(
+            and_(AgentAlert.id == alert_id, AgentAlert.user_id == current_user.id)
+        )
+    )
+    alert = result.scalar_one_or_none()
+    if not alert:
+        raise HTTPException(404, "Alerte introuvable.")
+
+    await db.delete(alert)
+    await db.commit()
 
 
 @router.get("/recommendations")
 async def get_recommendations(
+    alert_id: Optional[str] = None,
     unread_only: bool = False,
-    limit: int = 20,
+    limit: int = 50,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     await _require_agent_plan(current_user, db)
 
     filters = [AgentRecommendation.user_id == current_user.id]
+    if alert_id:
+        filters.append(AgentRecommendation.alert_id == alert_id)
     if unread_only:
         filters.append(AgentRecommendation.is_read == False)  # noqa: E712
 
     result = await db.execute(
         select(AgentRecommendation)
-        .options(selectinload(AgentRecommendation.lot))
+        .options(
+            selectinload(AgentRecommendation.lot),
+            selectinload(AgentRecommendation.alert),
+        )
         .where(and_(*filters))
         .order_by(AgentRecommendation.created_at.desc())
         .limit(limit)
@@ -181,6 +296,8 @@ async def get_recommendations(
             }
         out.append({
             "id": str(rec.id),
+            "alert_id": str(rec.alert_id),
+            "alert_name": rec.alert.name if rec.alert else None,
             "lot_id": str(rec.lot_id) if rec.lot_id else None,
             "verdict": rec.verdict,
             "conviction_score": rec.conviction_score,
@@ -199,7 +316,7 @@ async def get_recommendations(
 
 
 @router.patch("/recommendations/{rec_id}/read")
-async def mark_recommendation_read(
+async def mark_read(
     rec_id: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -214,14 +331,14 @@ async def mark_recommendation_read(
     )
     rec = result.scalar_one_or_none()
     if not rec:
-        raise HTTPException(404, "Recommendation not found")
+        raise HTTPException(404, "Recommandation introuvable.")
     rec.is_read = True
     await db.commit()
     return {"status": "ok"}
 
 
 @router.patch("/recommendations/{rec_id}/acted")
-async def mark_recommendation_acted(
+async def mark_acted(
     rec_id: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -236,7 +353,7 @@ async def mark_recommendation_acted(
     )
     rec = result.scalar_one_or_none()
     if not rec:
-        raise HTTPException(404, "Recommendation not found")
+        raise HTTPException(404, "Recommandation introuvable.")
     rec.is_acted_on = True
     await db.commit()
     return {"status": "ok"}

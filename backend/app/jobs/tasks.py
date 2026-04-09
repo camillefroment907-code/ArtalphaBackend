@@ -466,10 +466,9 @@ def run_ai_agents(self):
 
 async def _run_ai_agents_async():
     from app.models.db_models import (
-        AgentConfig, AgentRecommendation, User, Lot, LotStatus,
-        Subscription, SubscriptionStatus,
+        AgentAlert, AgentRecommendation, User, Lot, LotStatus, Subscription,
     )
-    from app.engines.agent import run_agent_for_user
+    from app.engines.agent import run_agent_for_alert
     from app.services.email_service import send_deal_alert_email
     from sqlalchemy import select, and_, desc as sa_desc
     from sqlalchemy.orm import selectinload
@@ -478,12 +477,12 @@ async def _run_ai_agents_async():
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(AgentConfig, User, Subscription)
-            .join(User, AgentConfig.user_id == User.id)
+            select(AgentAlert, User, Subscription)
+            .join(User, AgentAlert.user_id == User.id)
             .join(Subscription, User.id == Subscription.user_id, isouter=True)
             .where(
                 and_(
-                    AgentConfig.is_active == True,  # noqa: E712
+                    AgentAlert.is_active == True,  # noqa: E712
                     User.is_active == True,          # noqa: E712
                 )
             )
@@ -493,13 +492,13 @@ async def _run_ai_agents_async():
         admin_emails = {e.strip() for e in settings.admin_emails.split(",")}
 
         eligible = []
-        for config, user, sub in rows:
+        for alert, user, sub in rows:
             if user.email.strip() in admin_emails:
                 plan = "institutional"
             else:
                 plan = sub.plan.value.lower() if sub and sub.status.value.lower() in ("active", "trialing") else "free"
-            if plan in ("pro", "institutional", "expert"):
-                eligible.append((config, user))
+            if plan in ("investor", "pro", "institutional", "expert"):
+                eligible.append((alert, user))
 
         if not eligible:
             logger.debug("No eligible agents to run")
@@ -517,7 +516,7 @@ async def _run_ai_agents_async():
                 )
             )
             .order_by(Lot.deal_score.desc())
-            .limit(100)
+            .limit(200)
         )
         new_lots = lots_result.scalars().all()
 
@@ -525,26 +524,28 @@ async def _run_ai_agents_async():
             logger.debug("No new lots for agents")
             return
 
-        logger.info("Running AI agents", agents=len(eligible), lots=len(new_lots))
+        logger.info("Running AI agents", alerts=len(eligible), lots=len(new_lots))
 
         total_recs = 0
-        for config, user in eligible:
-            lang = "fr"
-
-            created = await run_agent_for_user(
-                user_id=user.id,
-                config=config,
+        for alert, user in eligible:
+            created = await run_agent_for_alert(
+                alert=alert,
                 new_lots=new_lots,
                 session=session,
-                lang=lang,
+                lang="fr",
             )
             total_recs += created
 
-            if created > 0 and config.notify_email:
+            if created > 0 and alert.notify_email:
                 top_rec_result = await session.execute(
                     select(AgentRecommendation)
                     .options(selectinload(AgentRecommendation.lot))
-                    .where(AgentRecommendation.user_id == user.id)
+                    .where(
+                        and_(
+                            AgentRecommendation.alert_id == alert.id,
+                            AgentRecommendation.user_id == user.id,
+                        )
+                    )
                     .order_by(sa_desc(AgentRecommendation.created_at))
                     .limit(1)
                 )
@@ -560,7 +561,7 @@ async def _run_ai_agents_async():
                         upside_pct=float(top_rec.lot.pct_below_low_estimate or 0),
                         lot_url=top_rec.lot.url or "",
                         lot_id=str(top_rec.lot.id),
-                        lang=lang,
+                        lang="fr",
                     )
 
         await session.commit()
