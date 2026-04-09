@@ -31,6 +31,12 @@ class LotStatus(str, enum.Enum):
     WITHDRAWN = "withdrawn"
 
 
+class MarketType(str, enum.Enum):
+    AUCTION = "auction"
+    PRIMARY = "primary"
+    GALLERY = "gallery"
+
+
 class AlertChannel(str, enum.Enum):
     TELEGRAM = "telegram"
     EMAIL = "email"
@@ -190,6 +196,13 @@ class Lot(Base):
     auction_sale_title = Column(String(500), nullable=True)
     status = Column(Enum(LotStatus), default=LotStatus.UPCOMING)
 
+    # Market type — auction vs primary/gallery market
+    market_type = Column(Enum(MarketType), default=MarketType.AUCTION, nullable=True)
+    is_buy_now = Column(Boolean, default=False, nullable=True)
+    gallery_name = Column(String(300), nullable=True)
+    artist_website = Column(Text, nullable=True)
+    primary_score = Column(Float, nullable=True)
+
     # Deal intelligence — no index=True, indexes in __table_args__
     deal_score = Column(Float, nullable=True)
     pct_below_low_estimate = Column(Float, nullable=True)
@@ -214,6 +227,7 @@ class Lot(Base):
         Index("ix_lots_deal_score", "deal_score"),
         Index("ix_lots_is_deal", "is_deal"),
         Index("ix_lots_created_at", "created_at"),
+        Index("ix_lots_market_type", "market_type"),
         # Partial unique index — prevents duplicate (source, external_id) pairs.
         # WHERE external_id IS NOT NULL: lots ingested without an id are still allowed.
         Index(

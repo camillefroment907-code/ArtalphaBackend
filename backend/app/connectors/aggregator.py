@@ -151,6 +151,36 @@ async def fetch_all_lots(lots_per_source: int = 500) -> List[LotNormalized]:
     except Exception as e:
         logger.warning("Artsper connector skipped", error=str(e))
 
+    # --- Saatchi Art — primary market ---
+    try:
+        from app.connectors.saatchiart_connector import fetch_lots as saatchi_fetch
+        saatchi_lots = await saatchi_fetch(lots_per_source)
+        added = 0
+        for lot in saatchi_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("Saatchi Art: fetched", count=added)
+    except Exception as e:
+        logger.warning("Saatchi Art connector skipped", error=str(e))
+
+    # --- Singulart — primary market ---
+    try:
+        from app.connectors.singulart_connector import fetch_lots as singulart_fetch
+        singulart_lots = await singulart_fetch(lots_per_source)
+        added = 0
+        for lot in singulart_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("Singulart: fetched", count=added)
+    except Exception as e:
+        logger.warning("Singulart connector skipped", error=str(e))
+
     logger.info("Aggregation complete — real lots only", total=len(real_lots))
     return real_lots
 

@@ -10,7 +10,7 @@ import asyncio
 import json
 
 from app.database import get_db, AsyncSessionLocal
-from app.models.db_models import Lot, Artist, LotStatus, AuctionHouse
+from app.models.db_models import Lot, Artist, LotStatus, AuctionHouse, MarketType
 from app.models.schemas import LotOut, LotListResponse, TopDeal, DashboardStats
 from app.api.auth_utils import get_current_user_optional
 from app.models.db_models import User, Subscription
@@ -165,6 +165,7 @@ async def list_lots(
     auction_date_from: Optional[datetime] = Query(None),
     auction_date_to: Optional[datetime] = Query(None),
     status: Optional[str] = None,
+    market_type: Optional[str] = Query(None, pattern="^(auction|primary|gallery)$"),
     sort_by: str = Query("deal_score", pattern="^(deal_score|auction_date|created_at|current_price)$"),
     sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
     db: AsyncSession = Depends(get_db),
@@ -237,6 +238,11 @@ async def list_lots(
         filters.append(Lot.auction_date <= resolved_to)
     if status:
         filters.append(Lot.status == status)
+    if market_type:
+        try:
+            filters.append(Lot.market_type == MarketType[market_type.upper()])
+        except KeyError:
+            pass
 
     count_stmt = select(func.count(Lot.id))
     if filters:
@@ -601,6 +607,72 @@ async def get_source_stats(db: AsyncSession = Depends(get_db)):
         })
 
     return out
+
+
+@router.get("/primary", response_model=LotListResponse)
+async def get_primary_lots(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(24, ge=1, le=100),
+    sort_by: str = Query("deal_score", pattern="^(deal_score|created_at|current_price)$"),
+    sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    category: Optional[str] = None,
+    search: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    """Primary market feed — galleries, emerging artists, direct sales."""
+    plan = await get_user_plan(current_user, db)
+    max_per_page = _PLAN_PAGE_LIMIT.get(plan, 3)
+    page_size = min(page_size, max_per_page)
+
+    filters = [
+        or_(
+            Lot.market_type == MarketType.PRIMARY,
+            Lot.market_type == MarketType.GALLERY,
+            Lot.auction_house_name.in_(["Artsper", "Saatchi Art", "Singulart"]),
+        )
+    ]
+    if min_price is not None:
+        filters.append(Lot.current_price >= min_price)
+    if max_price is not None:
+        filters.append(Lot.current_price <= max_price)
+    if category:
+        filters.append(Lot.category.ilike(f"%{category}%"))
+    if search:
+        filters.append(or_(
+            Lot.title.ilike(f"%{search}%"),
+            Lot.artist_name_raw.ilike(f"%{search}%"),
+        ))
+
+    sort_col = {
+        "deal_score":    Lot.deal_score,
+        "created_at":    Lot.created_at,
+        "current_price": Lot.current_price,
+    }.get(sort_by, Lot.deal_score)
+    order = desc(sort_col) if sort_dir == "desc" else sort_col
+
+    total = (await db.execute(
+        select(func.count(Lot.id)).where(and_(*filters))
+    )).scalar() or 0
+
+    lots = (await db.execute(
+        select(Lot)
+        .options(selectinload(Lot.artist))
+        .where(and_(*filters))
+        .order_by(order)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )).scalars().all()
+
+    return LotListResponse(
+        items=lots,
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=math.ceil(total / page_size) if total > 0 else 0,
+    )
 
 
 @router.get("/for-investor", response_model=LotListResponse)
