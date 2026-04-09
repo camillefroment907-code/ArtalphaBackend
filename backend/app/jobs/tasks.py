@@ -490,9 +490,14 @@ async def _run_ai_agents_async():
         )
         rows = result.all()
 
+        admin_emails = {e.strip() for e in settings.admin_emails.split(",")}
+
         eligible = []
         for config, user, sub in rows:
-            plan = sub.plan.value.lower() if sub and sub.status.value.lower() in ("active", "trialing") else "free"
+            if user.email.strip() in admin_emails:
+                plan = "institutional"
+            else:
+                plan = sub.plan.value.lower() if sub and sub.status.value.lower() in ("active", "trialing") else "free"
             if plan in ("pro", "institutional", "expert"):
                 eligible.append((config, user))
 
@@ -500,13 +505,13 @@ async def _run_ai_agents_async():
             logger.debug("No eligible agents to run")
             return
 
-        one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+        lookback = datetime.utcnow() - timedelta(hours=24)
         lots_result = await session.execute(
             select(Lot)
             .options(selectinload(Lot.artist))
             .where(
                 and_(
-                    Lot.scored_at >= one_hour_ago,
+                    Lot.scored_at >= lookback,
                     Lot.deal_score >= 45,
                     Lot.status == LotStatus.UPCOMING,
                 )
