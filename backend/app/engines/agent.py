@@ -4,13 +4,13 @@ Analyzes lots against a user's investment profile using GPT-4o.
 Available for Pro (Family Office) plan and above.
 """
 import json
-import logging
 from typing import Optional
+import structlog
 from openai import AsyncOpenAI
 from app.config import get_settings
 from app.models.db_models import Lot, AgentConfig, AgentRecommendation
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 settings = get_settings()
 
 
@@ -124,7 +124,7 @@ async def analyze_lot_for_user(
         # Validate required fields
         required = ["verdict", "conviction_score", "reasoning", "bear_case"]
         if not all(k in result for k in required):
-            logger.error("agent_response_missing_fields", raw=raw)
+            logger.error("agent_response_missing_fields", raw=raw[:200])
             return None
 
         result["conviction_score"] = max(0, min(100, int(result["conviction_score"])))
