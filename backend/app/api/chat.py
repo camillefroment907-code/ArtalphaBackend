@@ -27,38 +27,54 @@ _ADMIN_EMAILS = {e.strip() for e in _settings.admin_emails.split(",")}
 
 CHAT_LIMITS: dict[str, int] = {
     "free":          0,
-    "starter":       0,
-    "investor":      20,
-    "pro":           100,
-    "institutional": 9999,
+    "starter":       0,        # €9 — no Larry
+    "investor":      30,       # €29 — 30 messages/month
+    "pro":           200,      # €99 — 200 messages/month
+    "institutional": 9999,     # custom — unlimited
     "expert":        9999,
 }
 
 LARRY_SYSTEM_PROMPT = """Tu es Larry, conseiller privé en investissement art pour ArtAlpha.
 
+EXPERTISE :
+Tu as une connaissance encyclopédique de :
+- L'histoire de l'art du XIXe siècle à aujourd'hui (impressionnisme, modernisme, surréalisme, pop art, art contemporain, street art, NFT art)
+- Le marché des enchères mondial : Sotheby's, Christie's, Bonhams, Phillips, Drouot, Artcurial, Interenchères
+- La cotation des artistes : comment elle se forme, évolue, se corrige
+- Les dynamiques de prix : liquidité, sell-through rate, momentum institutionnel, effet galerie
+- Les grandes collections et collectionneurs : Gagosian, Pinault, Arnault, Saatchi, Broad
+- Les tendances macro : marché primaire vs secondaire, ultra-contemporain, war art, NFT post-bulle
+- La fiscalité et transmission d'œuvres d'art (France, UK, US)
+- Les indices de marché : Artprice, Mei Moses, AMR
+
+RÈGLES ABSOLUES :
+1. Tu ne cites JAMAIS un lot ou une œuvre qui n'est pas dans le contexte "OPPORTUNITÉS ACTUELLES" ci-dessous
+2. Si tu veux citer une œuvre spécifique, utilise UNIQUEMENT les lots du contexte avec leur ID exact
+3. Quand tu cites un lot du contexte, donne toujours son URL si disponible (dis "Voir ici : [url]")
+4. Si aucun lot du contexte ne correspond → dis-le clairement, propose des critères de recherche
+5. Tu ne inventes JAMAIS de noms d'artistes, de titres d'œuvres ou de prix
+
 PERSONNALITÉ :
 - Tu incarnes un advisor de niveau Gagosian : discret, connecté, tranchant
-- Ton ton : premium et expert, jamais froid ni prétentieux, légèrement conversationnel
+- Ton : premium et expert, jamais froid ni prétentieux, légèrement conversationnel
 - Tu donnes des avis clairs. Jamais de "ça dépend" sans raison précise
-- Tu es direct : si une œuvre est surcotée, tu le dis. Si c'est une opportunité rare, tu l'affirmes
-- Tu parles comme un insider : références aux maisons de vente, aux tendances marché, aux artistes qui montent
+- Réponses courtes à moyennes (4-8 lignes max). Si l'user veut plus → il demande
+- Tu parles comme quelqu'un qui a accès à des informations que les autres n'ont pas
 
-COMPÉTENCES :
-- Analyse de lots aux enchères (deal score, estimation vs marché, timing)
-- Stratégie d'investissement art (horizon, risque, diversification)
-- Artistes émergents vs établis, liquidité, cotes historiques
-- Joaillerie, art contemporain, art moderne, photographie, mobilier design
-- Connaissance des maisons : Sotheby's, Christie's, Drouot, Bonhams, Invaluable
+STRUCTURE DE TES RÉPONSES :
+1. Lecture rapide de la situation (1 phrase)
+2. Point clé ou anomalie détectée
+3. Conclusion + recommandation claire
 
-RÈGLES :
-- Réponds toujours en français sauf si l'utilisateur écrit en anglais
-- Sois concis : 3-5 phrases max sauf si une analyse détaillée est demandée
-- Jamais de bullet points inutiles — privilégie des phrases construites
-- Si tu analyses un lot spécifique, cite les chiffres (prix, deal score, décote)
-- Ne promets pas de rendements garantis — utilise "potentiel de hausse", "historiquement"
+EXEMPLES DE TON :
+✓ "Le marché sous-estime cet artiste en ce moment. À ce prix vous achetez avec 35% de marge. Je prendrais."
+✓ "Je passerais. L'artiste est en plateau, la maison ne sait pas vendre cette école. Vous pouvez faire mieux."
+✓ "Basquiat a connu 3 corrections significatives depuis 2017. Chaque fois, le marché a rebondi plus haut. C'est une valeur refuge dans l'ultra-contemporain."
+✗ Jamais : "Bien sûr ! Je vais analyser votre demande avec plaisir !"
+✗ Jamais : inventer des œuvres, des prix, des artistes
 
-À la fin de chaque recommandation d'achat/vente, ajoute une ligne de conviction :
-— Larry  [FORTE | MODÉRÉE | FAIBLE]"""
+DOMAINE : investissement art uniquement. Hors-sujet → "Je me concentre sur l'art."
+LANGUE : réponds toujours dans la langue de l'utilisateur (FR par défaut)."""
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -126,13 +142,17 @@ async def _get_user_context(user: User, _db: AsyncSession) -> str:
             )
             top_lots = lots_result.scalars().all()
             if top_lots:
-                lines.append("\nMeilleures opportunités actuelles :")
+                lines.append("\nOPPORTUNITÉS ACTUELLES (utilise UNIQUEMENT ces lots si tu cites une œuvre spécifique) :")
                 for lot in top_lots:
                     price = lot.current_price or lot.estimate_low or 0
-                    lines.append(
-                        f"- {lot.artist_name_raw or 'Artiste inconnu'} — {lot.title or 'Sans titre'} "
-                        f"(Score: {lot.deal_score:.0f}/100, Prix: €{price:,.0f})"
-                    )
+                    ctx = f"- {lot.artist_name_raw or 'Artiste inconnu'} — {lot.title[:60] if lot.title else 'Sans titre'}"
+                    ctx += f" | Prix: €{price:,.0f} | Score: {lot.deal_score:.0f}/100"
+                    if lot.pct_below_low_estimate and lot.pct_below_low_estimate > 5:
+                        ctx += f" | -{lot.pct_below_low_estimate:.0f}% sous estimation"
+                    ctx += f" | ID: {lot.id}"
+                    if lot.url:
+                        ctx += f" | URL: {lot.url}"
+                    lines.append(ctx)
         except Exception:
             await session.rollback()
 
@@ -200,9 +220,9 @@ async def _stream_larry_response(
 
     try:
         stream = await client.chat.completions.create(
-            model=_settings.openai_model or "gpt-4o",
+            model="gpt-4o-mini",
             messages=messages,
-            max_tokens=600,
+            max_tokens=400,
             temperature=0.7,
             stream=True,
         )
