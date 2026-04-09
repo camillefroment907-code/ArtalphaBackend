@@ -90,56 +90,68 @@ async def _get_monthly_usage(user_id, db: AsyncSession) -> int:
     return result.scalar() or 0
 
 
-async def _get_user_context(user: User, db: AsyncSession) -> str:
+async def _get_user_context(user: User, _db: AsyncSession) -> str:
+    """Build user context for Larry. Uses its own isolated session so schema
+    mismatches on stale tables cannot abort the main request session."""
     lines = []
 
-    # User preferences
-    pref_result = await db.execute(
-        select(UserPreference).where(UserPreference.user_id == user.id)
-    )
-    prefs = pref_result.scalar_one_or_none()
-    if prefs:
-        if prefs.favorite_artists:
-            lines.append(f"Artistes favoris : {', '.join(prefs.favorite_artists[:5])}")
-        if prefs.categories:
-            lines.append(f"Catégories préférées : {', '.join(prefs.categories[:5])}")
-        if prefs.budget_max:
-            lines.append(f"Budget max par lot : €{prefs.budget_max:,.0f}")
-        if prefs.investment_horizon:
-            lines.append(f"Horizon d'investissement : {prefs.investment_horizon}")
-        if prefs.collector_type:
-            lines.append(f"Profil collecteur : {prefs.collector_type}")
-
-    # Top deals currently available
-    lots_result = await db.execute(
-        select(Lot)
-        .where(Lot.deal_score >= 65)
-        .order_by(Lot.deal_score.desc())
-        .limit(5)
-    )
-    top_lots = lots_result.scalars().all()
-    if top_lots:
-        lines.append("\nMeilleures opportunités actuelles :")
-        for lot in top_lots:
-            price = lot.current_price or lot.estimate_low or 0
-            lines.append(
-                f"- {lot.artist_name_raw or 'Artiste inconnu'} — {lot.title or 'Sans titre'} "
-                f"(Score: {lot.deal_score:.0f}/100, Prix: €{price:,.0f})"
+    async with AsyncSessionLocal() as session:
+        # User preferences — may fail if preferences table schema is stale
+        try:
+            pref_result = await session.execute(
+                select(UserPreference).where(UserPreference.user_id == user.id)
             )
+            prefs = pref_result.scalar_one_or_none()
+            if prefs:
+                if prefs.favorite_artists:
+                    lines.append(f"Artistes favoris : {', '.join(prefs.favorite_artists[:5])}")
+                if prefs.categories:
+                    lines.append(f"Catégories préférées : {', '.join(prefs.categories[:5])}")
+                if prefs.budget_max:
+                    lines.append(f"Budget max par lot : €{prefs.budget_max:,.0f}")
+                if getattr(prefs, 'investment_horizon', None):
+                    lines.append(f"Horizon d'investissement : {prefs.investment_horizon}")
+                if getattr(prefs, 'collector_type', None):
+                    lines.append(f"Profil collecteur : {prefs.collector_type}")
+        except Exception:
+            await session.rollback()
 
-    # Portfolio summary
-    portfolio_result = await db.execute(
-        select(PortfolioItem).where(PortfolioItem.user_id == user.id).limit(10)
-    )
-    portfolio = portfolio_result.scalars().all()
-    if portfolio:
-        total_value = sum(
-            (p.estimated_current_value_eur or p.purchase_price_eur) for p in portfolio
-        )
-        lines.append(f"\nPortfolio : {len(portfolio)} œuvre(s), valeur estimée €{total_value:,.0f}")
-        artists_in_portfolio = list({p.artist_name for p in portfolio if p.artist_name})[:5]
-        if artists_in_portfolio:
-            lines.append(f"Artistes en portefeuille : {', '.join(artists_in_portfolio)}")
+        # Top deals currently available
+        try:
+            lots_result = await session.execute(
+                select(Lot)
+                .where(Lot.deal_score >= 65)
+                .order_by(Lot.deal_score.desc())
+                .limit(5)
+            )
+            top_lots = lots_result.scalars().all()
+            if top_lots:
+                lines.append("\nMeilleures opportunités actuelles :")
+                for lot in top_lots:
+                    price = lot.current_price or lot.estimate_low or 0
+                    lines.append(
+                        f"- {lot.artist_name_raw or 'Artiste inconnu'} — {lot.title or 'Sans titre'} "
+                        f"(Score: {lot.deal_score:.0f}/100, Prix: €{price:,.0f})"
+                    )
+        except Exception:
+            await session.rollback()
+
+        # Portfolio summary
+        try:
+            portfolio_result = await session.execute(
+                select(PortfolioItem).where(PortfolioItem.user_id == user.id).limit(10)
+            )
+            portfolio = portfolio_result.scalars().all()
+            if portfolio:
+                total_value = sum(
+                    (p.estimated_current_value_eur or p.purchase_price_eur) for p in portfolio
+                )
+                lines.append(f"\nPortfolio : {len(portfolio)} œuvre(s), valeur estimée €{total_value:,.0f}")
+                artists_in_portfolio = list({p.artist_name for p in portfolio if p.artist_name})[:5]
+                if artists_in_portfolio:
+                    lines.append(f"Artistes en portefeuille : {', '.join(artists_in_portfolio)}")
+        except Exception:
+            await session.rollback()
 
     if not lines:
         return ""
