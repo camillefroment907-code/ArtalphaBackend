@@ -1,6 +1,6 @@
 """
 ArtAlpha Billing API — Complete Stripe Integration
-Plans: Free | Starter €9 | Investor €29 | Pro €99 | Elite €299
+Plans: Free | Starter €9 | Investor €29 | Pro €99 | Institutional (Contact Sales)
 """
 import asyncio
 import stripe
@@ -155,23 +155,22 @@ PLANS = [
         "price_keys": {"monthly": "pro_monthly", "yearly": "pro_yearly"},
     },
     {
-        "id": "elite",
-        "name": "Elite",
-        "tagline": "For galleries & funds",
-        "monthly": 299,
-        "yearly": 2990,
-        "yearly_saving": 598,
+        "id": "institutional",
+        "name": "Institutional",
+        "tagline": "For galleries & family offices",
+        "monthly": None,
+        "yearly": None,
         "badge": None,
         "highlighted": False,
         "features": [
             {"label": "Everything in Pro", "ok": True},
-            {"label": "Before-everyone access", "ok": True},
-            {"label": "Ultra-priority alerts", "ok": True},
-            {"label": "Exclusive data", "ok": True},
+            {"label": "White-glove onboarding", "ok": True},
+            {"label": "Dedicated analyst", "ok": True},
+            {"label": "Custom integrations", "ok": True},
             {"label": "Full API access", "ok": True},
-            {"label": "New sources first", "ok": True},
-            {"label": "Direct support", "ok": True},
             {"label": "SLA guarantee", "ok": True},
+            {"label": "Volume licensing", "ok": True},
+            {"label": "On-site training", "ok": True},
         ],
         "limits": {
             "deals_per_day": -1,
@@ -182,8 +181,8 @@ PLANS = [
             "portfolio": True,
             "api": True,
         },
-        "cta": "Contact us",
-        "price_keys": {"monthly": "elite_monthly", "yearly": "elite_yearly"},
+        "cta": "Contact Sales",
+        "price_keys": None,
     },
 ]
 
@@ -202,8 +201,9 @@ _PLAN_VALUE_TO_ID = {
     "STARTER": "starter",
     "INVESTOR": "investor",
     "PRO": "pro",
-    "ELITE": "elite",
-    "EXPERT": "pro",  # legacy → map to pro
+    "INSTITUTIONAL": "institutional",
+    "ELITE": "institutional",    # legacy → maps to institutional
+    "EXPERT": "institutional",   # legacy → maps to institutional
 }
 
 
@@ -229,8 +229,7 @@ def _price_id(price_key: str) -> str:
         "investor_yearly":  settings.stripe_price_investor_yearly,
         "pro_monthly":      settings.stripe_price_pro_monthly,
         "pro_yearly":       settings.stripe_price_pro_yearly,
-        "elite_monthly":    settings.stripe_price_elite_monthly,
-        "elite_yearly":     settings.stripe_price_elite_yearly,
+        # institutional has no Stripe price — contact sales
     }
     pid = mapping.get(price_key)
     if not pid:
@@ -258,10 +257,7 @@ def _plan_from_price_id(price_id: str) -> SubscriptionPlan:
         mapping[settings.stripe_price_pro_monthly] = SubscriptionPlan.PRO
     if settings.stripe_price_pro_yearly:
         mapping[settings.stripe_price_pro_yearly] = SubscriptionPlan.PRO
-    if settings.stripe_price_elite_monthly:
-        mapping[settings.stripe_price_elite_monthly] = SubscriptionPlan.ELITE
-    if settings.stripe_price_elite_yearly:
-        mapping[settings.stripe_price_elite_yearly] = SubscriptionPlan.ELITE
+    # institutional has no Stripe price (contact sales)
     return mapping.get(price_id, SubscriptionPlan.FREE)
 
 
@@ -286,12 +282,12 @@ async def get_subscription(
 ):
     if current_user.email in ADMIN_EMAILS:
         return {
-            "plan": "elite",
+            "plan": "institutional",
             "status": "active",
             "billing_interval": "yearly",
             "current_period_end": "2125-01-01T00:00:00",
             "cancel_at_period_end": False,
-            "limits": PLAN_LIMITS["elite"],
+            "limits": PLAN_LIMITS["institutional"],
             "is_admin": True,
         }
 
@@ -339,7 +335,7 @@ async def create_checkout_session(
     sub = result.scalar_one_or_none()
 
     # ── SERVER-SIDE PLAN ENFORCEMENT ──────────────────────────────
-    PLAN_ORDER = ["free", "starter", "investor", "pro", "elite"]
+    PLAN_ORDER = ["free", "starter", "investor", "pro", "institutional"]
     if sub and sub.plan.value.lower() != "free" and sub.status.value.lower() in ("active", "trialing"):
         current_plan_id = sub.plan.value.lower()
         target_plan = _plan_from_price_id(price_id)

@@ -5,7 +5,7 @@ from typing import Optional
 
 class Settings(BaseSettings):
     # App
-    app_name: str = "Balthus"
+    app_name: str = "ArtAlpha"
     environment: str = "development"
     backend_url: str = "http://localhost:8000"
     frontend_url: str = "http://localhost:3000"
@@ -68,7 +68,7 @@ class Settings(BaseSettings):
     n8n_api_key: Optional[str] = None
 
     # Admin
-    admin_emails: str = "demo@hono.art"
+    admin_emails: str = "demo@artalpha.io"
 
     # Business Logic
     deal_score_threshold: int = 75

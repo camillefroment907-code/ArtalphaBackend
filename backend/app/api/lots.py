@@ -25,11 +25,11 @@ ADMIN_EMAILS = frozenset({
 
 
 async def get_user_plan(user: Optional[User], db: AsyncSession) -> str:
-    """Get effective plan — admins always get expert."""
+    """Get effective plan — admins always get institutional."""
     if not user:
         return "free"
     if user.email.strip() in ADMIN_EMAILS:
-        return "expert"
+        return "institutional"
     result = await db.execute(select(Subscription).where(Subscription.user_id == user.id))
     sub = result.scalar_one_or_none()
     if sub and sub.status.value.lower() in ("active", "trialing") and sub.plan.value.upper() != "FREE":
@@ -39,12 +39,11 @@ async def get_user_plan(user: Optional[User], db: AsyncSession) -> str:
 
 # Max results per page by plan — enforced server-side so API bypass is impossible
 _PLAN_PAGE_LIMIT: dict[str, int] = {
-    "free":     3,
-    "starter":  10,
-    "investor": 9999,
-    "pro":      9999,
-    "elite":    9999,
-    "expert":   9999,   # admin alias
+    "free":          3,
+    "starter":       10,
+    "investor":      9999,
+    "pro":           9999,
+    "institutional": 9999,
 }
 
 

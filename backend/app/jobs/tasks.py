@@ -225,6 +225,9 @@ async def _poll_and_score_async():
     if new_deals > 0:
         process_pending_alerts.delay()
 
+    # Trigger AI agents after scoring
+    run_ai_agents.delay()
+
 
 @celery_app.task(name="app.jobs.tasks.rescore_live_lots", bind=True)
 def rescore_live_lots(self):
@@ -433,7 +436,7 @@ async def _daily_cleanup_async():
             lot.status = LotStatus.SOLD
 
         # Purge low-quality lots (score < 20 AND no price AND no estimate)
-        from sqlalchemy import delete
+        from sqlalchemy import delete, or_
         purge_stmt = delete(Lot).where(
             and_(
                 or_(Lot.deal_score.is_(None), Lot.deal_score < 20),
@@ -449,6 +452,127 @@ async def _daily_cleanup_async():
 
         await session.commit()
         logger.info("Daily cleanup complete")
+
+
+@celery_app.task(name="app.jobs.tasks.run_ai_agents", bind=True)
+def run_ai_agents(self):
+    """Run AI agent for all active Pro+ users. Called after poll_and_score_lots."""
+    try:
+        asyncio.run(_run_ai_agents_async())
+    except Exception as exc:
+        logger.error("run_ai_agents failed", error=str(exc))
+        raise self.retry(exc=exc, countdown=60)
+
+
+async def _run_ai_agents_async():
+    from app.models.db_models import (
+        AgentConfig, AgentRecommendation, User, Lot, LotStatus,
+        Subscription, SubscriptionStatus,
+    )
+    from app.engines.agent import run_agent_for_user
+    from app.services.email_service import send_deal_alert_email
+    from sqlalchemy import select, and_, desc as sa_desc
+    from sqlalchemy.orm import selectinload
+
+    from app.database import AsyncSessionLocal
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(AgentConfig, User, Subscription)
+            .join(User, AgentConfig.user_id == User.id)
+            .join(Subscription, User.id == Subscription.user_id, isouter=True)
+            .where(
+                and_(
+                    AgentConfig.is_active == True,  # noqa: E712
+                    User.is_active == True,          # noqa: E712
+                )
+            )
+        )
+        rows = result.all()
+
+        eligible = []
+        for config, user, sub in rows:
+            plan = sub.plan.value.lower() if sub and sub.status.value.lower() in ("active", "trialing") else "free"
+            if plan in ("pro", "institutional", "expert"):
+                eligible.append((config, user))
+
+        if not eligible:
+            logger.debug("No eligible agents to run")
+            return
+
+        one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+        lots_result = await session.execute(
+            select(Lot)
+            .options(selectinload(Lot.artist))
+            .where(
+                and_(
+                    Lot.scored_at >= one_hour_ago,
+                    Lot.deal_score >= 45,
+                    Lot.status == LotStatus.UPCOMING,
+                )
+            )
+            .order_by(Lot.deal_score.desc())
+            .limit(100)
+        )
+        new_lots = lots_result.scalars().all()
+
+        if not new_lots:
+            logger.debug("No new lots for agents")
+            return
+
+        logger.info("Running AI agents", agents=len(eligible), lots=len(new_lots))
+
+        total_recs = 0
+        for config, user in eligible:
+            lang = "fr"
+            try:
+                prefs_result = await session.execute(
+                    select(Lot).where(False)  # dummy, replaced below
+                )
+                from app.models.db_models import UserPreference
+                prefs_res = await session.execute(
+                    select(UserPreference).where(UserPreference.user_id == user.id)
+                )
+                prefs = prefs_res.scalar_one_or_none()
+                if prefs:
+                    lang = getattr(prefs, "language", "fr") or "fr"
+            except Exception:
+                pass
+
+            created = await run_agent_for_user(
+                user_id=user.id,
+                config=config,
+                new_lots=new_lots,
+                session=session,
+                lang=lang,
+            )
+            total_recs += created
+
+            if created > 0 and config.notify_email:
+                top_rec_result = await session.execute(
+                    select(AgentRecommendation)
+                    .options(selectinload(AgentRecommendation.lot))
+                    .where(AgentRecommendation.user_id == user.id)
+                    .order_by(sa_desc(AgentRecommendation.created_at))
+                    .limit(1)
+                )
+                top_rec = top_rec_result.scalar_one_or_none()
+                if top_rec and top_rec.lot:
+                    await send_deal_alert_email(
+                        to_email=user.email,
+                        lot_title=top_rec.lot.title or "Untitled",
+                        artist_name=top_rec.lot.artist_name_raw or "Unknown",
+                        price=float(top_rec.lot.current_price or top_rec.lot.estimate_low or 0),
+                        estimate=float(top_rec.lot.estimate_high or top_rec.lot.estimate_low or 0),
+                        deal_score=int(top_rec.lot.deal_score or 0),
+                        upside_pct=float(top_rec.lot.pct_below_low_estimate or 0),
+                        lot_url=top_rec.lot.url or "",
+                        lot_id=str(top_rec.lot.id),
+                        lang=lang,
+                    )
+
+        await session.commit()
+        logger.info("AI agents complete", total_recommendations=total_recs)
 
 
 @celery_app.task(name="app.jobs.tasks.dedup_cleanup")
