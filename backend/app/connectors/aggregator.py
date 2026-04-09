@@ -106,6 +106,51 @@ async def fetch_all_lots(lots_per_source: int = 500) -> List[LotNormalized]:
     except Exception as e:
         logger.warning("Artsy connector skipped", error=str(e))
 
+    # --- Phillips — public JSON API ---
+    try:
+        from app.connectors.phillips_connector import fetch_lots as phillips_fetch
+        phillips_lots = await phillips_fetch(lots_per_source)
+        added = 0
+        for lot in phillips_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("Phillips: fetched", count=added)
+    except Exception as e:
+        logger.warning("Phillips connector skipped", error=str(e))
+
+    # --- Artcurial — public JSON API ---
+    try:
+        from app.connectors.artcurial_connector import fetch_lots as artcurial_fetch
+        artcurial_lots = await artcurial_fetch(lots_per_source)
+        added = 0
+        for lot in artcurial_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("Artcurial: fetched", count=added)
+    except Exception as e:
+        logger.warning("Artcurial connector skipped", error=str(e))
+
+    # --- Artsper — gallery platform ---
+    try:
+        from app.connectors.artsper_connector import fetch_lots as artsper_fetch
+        artsper_lots = await artsper_fetch(lots_per_source)
+        added = 0
+        for lot in artsper_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("Artsper: fetched", count=added)
+    except Exception as e:
+        logger.warning("Artsper connector skipped", error=str(e))
+
     logger.info("Aggregation complete — real lots only", total=len(real_lots))
     return real_lots
 

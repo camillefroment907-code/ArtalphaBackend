@@ -11,6 +11,7 @@ import structlog
 import httpx
 
 from app.config import get_settings
+from app.engines.artist_wikipedia import fetch_artist_from_wikipedia
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -267,7 +268,15 @@ async def enrich_artist(
         logger.debug("Artist found in local DB", artist=resolved_name)
         return resolved_name, db_data
 
-    # 2. Try OpenAI enrichment
+    # 2. Try Wikipedia/Wikidata (free, no API key needed)
+    wiki_data = await fetch_artist_from_wikipedia(resolved_name)
+    if wiki_data:
+        logger.debug("artist_enriched_from_wikipedia", artist=resolved_name)
+        if db_data:
+            wiki_data = {**wiki_data, **{k: v for k, v in db_data.items() if v is not None}}
+        return resolved_name, wiki_data
+
+    # 3. Try OpenAI enrichment
     ai_data = await _enrich_with_openai(resolved_name)
     if ai_data and ai_data.get("confidence", 0) > 0.4:
         logger.debug("Artist enriched via OpenAI", artist=resolved_name)

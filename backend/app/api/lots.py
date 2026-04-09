@@ -558,6 +558,48 @@ async def get_source_stats(db: AsyncSession = Depends(get_db)):
             "age_minutes": round(age_min) if age_min is not None else None,
             "status": status,
         })
+
+    # For OTHER sources, break down by auction_house_name
+    other_breakdown_stmt = (
+        select(
+            Lot.auction_house_name,
+            func.count(Lot.id).label("lot_count"),
+            func.max(Lot.created_at).label("last_added"),
+        )
+        .where(
+            and_(
+                Lot.source == AuctionHouse.OTHER,
+                Lot.auction_house_name.isnot(None),
+                or_(Lot.auction_date.is_(None), Lot.auction_date >= now)
+            )
+        )
+        .group_by(Lot.auction_house_name)
+        .order_by(desc("lot_count"))
+    )
+    other_result = await db.execute(other_breakdown_stmt)
+    other_rows = other_result.all()
+
+    for row in other_rows:
+        if not row.auction_house_name:
+            continue
+        last = row.last_added
+        age_min = (now - last).total_seconds() / 60 if last else None
+        if age_min is None:
+            status = "offline"
+        elif age_min < FRESH_MIN:
+            status = "fresh"
+        elif age_min < STALE_MIN:
+            status = "stale"
+        else:
+            status = "offline"
+        out.append({
+            "source": row.auction_house_name.lower().replace(" ", "_"),
+            "lot_count": row.lot_count,
+            "last_added": last.isoformat() if last else None,
+            "age_minutes": round(age_min) if age_min else None,
+            "status": status,
+        })
+
     return out
 
 
