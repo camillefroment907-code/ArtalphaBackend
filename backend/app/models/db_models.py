@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, String, Integer, Float, Boolean, DateTime, Text,
-    ForeignKey, JSON, Enum, Index, ARRAY, UniqueConstraint
+    ForeignKey, JSON, Enum, Index, ARRAY, UniqueConstraint, text
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.dialects.postgresql import UUID
@@ -214,7 +214,14 @@ class Lot(Base):
         Index("ix_lots_deal_score", "deal_score"),
         Index("ix_lots_is_deal", "is_deal"),
         Index("ix_lots_created_at", "created_at"),
-        Index("ix_lots_source_external", "source", "external_id"),
+        # Partial unique index — prevents duplicate (source, external_id) pairs.
+        # WHERE external_id IS NOT NULL: lots ingested without an id are still allowed.
+        Index(
+            "uq_lots_source_external",
+            "source", "external_id",
+            unique=True,
+            postgresql_where=text("external_id IS NOT NULL"),
+        ),
     )
 
 

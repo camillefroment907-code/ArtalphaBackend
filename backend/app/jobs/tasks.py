@@ -10,6 +10,7 @@ import structlog
 from app.jobs.celery_app import celery_app
 from app.config import get_settings
 from app.utils.url_validator import fix_url
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -199,7 +200,45 @@ async def _poll_and_score_async():
                     scored_at=datetime.utcnow(),
                     enriched_at=datetime.utcnow(),
                 )
-                session.add(lot_obj)
+                # INSERT ... ON CONFLICT DO NOTHING — idempotent at DB level.
+                # The unique index uq_lots_source_external (source, external_id WHERE NOT NULL)
+                # guarantees concurrent workers can never produce duplicates.
+                stmt = pg_insert(Lot).values(
+                    id=lot_obj.id,
+                    external_id=lot_obj.external_id,
+                    source=lot_obj.source,
+                    url=lot_obj.url,
+                    image_url=lot_obj.image_url,
+                    title=lot_obj.title,
+                    description=lot_obj.description,
+                    lot_number=lot_obj.lot_number,
+                    category=lot_obj.category,
+                    medium=lot_obj.medium,
+                    dimensions=lot_obj.dimensions,
+                    artist_id=lot_obj.artist_id,
+                    artist_name_raw=lot_obj.artist_name_raw,
+                    estimate_low=lot_obj.estimate_low,
+                    estimate_high=lot_obj.estimate_high,
+                    current_price=lot_obj.current_price,
+                    currency=lot_obj.currency,
+                    auction_date=lot_obj.auction_date,
+                    auction_house_name=lot_obj.auction_house_name,
+                    auction_sale_title=lot_obj.auction_sale_title,
+                    status=lot_obj.status,
+                    raw_data=lot_obj.raw_data,
+                    deal_score=lot_obj.deal_score,
+                    is_deal=lot_obj.is_deal,
+                    pct_below_low_estimate=lot_obj.pct_below_low_estimate,
+                    pct_below_market_avg=lot_obj.pct_below_market_avg,
+                    score_breakdown=lot_obj.score_breakdown,
+                    scored_at=lot_obj.scored_at,
+                    enriched_at=lot_obj.enriched_at,
+                    created_at=lot_obj.created_at,
+                    updated_at=lot_obj.updated_at,
+                ).on_conflict_do_nothing(
+                    index_elements=["source", "external_id"]
+                )
+                await session.execute(stmt)
 
                 if score_result.is_deal:
                     new_deals += 1
