@@ -33,6 +33,18 @@ AUCTION_HOUSE_BLACKLIST = {
     "adam's fine art",
 }
 
+# Title keyword blacklist — exact substring matches (lowercase)
+TITLE_BLACKLIST_KEYWORDS = [
+    "diamond ring", "cocktail ring", "pearl ring", "sapphire ring",
+    "ruby ring", "emerald ring", "diamond pendant", "diamond necklace",
+    "diamond brooch", "cultured pearl", "diamond earring", "gold ring",
+    "silver ring", "engagement ring", "wedding ring", "signet ring",
+    "dress ring", "cluster ring", "solitaire ring", "band ring",
+    "diamond bracelet", "tennis bracelet", "charm bracelet",
+    "pocket watch", "wristwatch", "rolex", "cartier watch",
+    "gold coin", "silver coin", "postage stamp", "first day cover",
+]
+
 # Art-specific categories we WANT to keep (if category is set, it must match)
 CATEGORY_ALLOWLIST = {
     "peinture", "painting", "tableau", "dessin", "drawing", "gravure",
@@ -89,6 +101,11 @@ def _is_blacklisted(lot: LotNormalized) -> bool:
     auction_house = (lot.auction_house_name or "").lower()
     for blocked_house in AUCTION_HOUSE_BLACKLIST:
         if blocked_house in auction_house:
+            return True
+
+    title_lower = (lot.title or "").lower()
+    for keyword in TITLE_BLACKLIST_KEYWORDS:
+        if keyword in title_lower:
             return True
 
     return False

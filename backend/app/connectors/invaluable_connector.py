@@ -17,16 +17,16 @@ API_URL = f"{BASE_URL}/api/search"
 HOUSE_REPUTATION = 0.78
 
 SEARCH_QUERIES = [
-    "fine art",
-    "oil painting",
-    "contemporary art",
-    "modern art",
-    "impressionist",
-    "abstract",
-    "acrylic",
-    "mixed media",
-    "painting",
-    "artwork",
+    "oil on canvas",
+    "acrylic on canvas",
+    "contemporary painting",
+    "modern art painting",
+    "abstract painting",
+    "impressionist painting",
+    "figurative painting",
+    "landscape painting",
+    "portrait painting",
+    "street art",
 ]
 
 HEADERS = {
@@ -186,6 +186,7 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
                             "size": page_size,
                             "upcoming": "true",
                             "page": page,
+                            "keyword": "Paintings",  # Invaluable category filter
                         },
                     )
                     if resp.status_code != 200:

@@ -12,7 +12,7 @@ import json
 from app.database import get_db, AsyncSessionLocal
 from app.models.db_models import Lot, Artist, LotStatus, AuctionHouse, MarketType
 from app.models.schemas import LotOut, LotListResponse, TopDeal, DashboardStats
-from app.api.auth_utils import get_current_user_optional
+from app.api.auth_utils import get_current_user_optional, get_current_user
 from app.models.db_models import User, Subscription
 import os
 
@@ -836,6 +836,79 @@ async def get_lots_for_investor(
         page_size=effective_limit,
         pages=1,
     )
+
+
+@router.delete("/admin/cleanup-non-art")
+async def cleanup_non_art_lots(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Admin only — remove non-art lots from DB."""
+    if current_user.email not in ADMIN_EMAILS:
+        raise HTTPException(403, "Admin only")
+
+    from sqlalchemy import delete
+
+    total_before = (await db.execute(select(func.count(Lot.id)))).scalar()
+
+    # Delete Adam's lots
+    r1 = await db.execute(
+        delete(Lot).where(
+            or_(
+                Lot.auction_house_name.ilike('%adam%'),
+                Lot.auction_house_name.ilike('%adams%'),
+            )
+        )
+    )
+
+    # Delete jewelry/non-art categories
+    r2 = await db.execute(
+        delete(Lot).where(
+            or_(
+                Lot.category.ilike('%ring%'),
+                Lot.category.ilike('%jewel%'),
+                Lot.category.ilike('%watch%'),
+                Lot.category.ilike('%coin%'),
+                Lot.category.ilike('%stamp%'),
+                Lot.category.ilike('%brooch%'),
+                Lot.category.ilike('%necklace%'),
+                Lot.category.ilike('%bracelet%'),
+                Lot.category.ilike('%pendant%'),
+                Lot.category.ilike('%earring%'),
+            )
+        )
+    )
+
+    # Delete lots with jewelry keywords in title
+    r3 = await db.execute(
+        delete(Lot).where(
+            or_(
+                Lot.title.ilike('%diamond ring%'),
+                Lot.title.ilike('%cocktail ring%'),
+                Lot.title.ilike('%pearl ring%'),
+                Lot.title.ilike('%sapphire ring%'),
+                Lot.title.ilike('%ruby ring%'),
+                Lot.title.ilike('%emerald ring%'),
+                Lot.title.ilike('%diamond pendant%'),
+                Lot.title.ilike('%diamond necklace%'),
+                Lot.title.ilike('%diamond brooch%'),
+                Lot.title.ilike('%cultured pearl%'),
+            )
+        )
+    )
+
+    await db.commit()
+
+    total_after = (await db.execute(select(func.count(Lot.id)))).scalar()
+
+    return {
+        "deleted_adams": r1.rowcount,
+        "deleted_jewelry_category": r2.rowcount,
+        "deleted_jewelry_title": r3.rowcount,
+        "total_before": total_before,
+        "total_after": total_after,
+        "freed": total_before - total_after,
+    }
 
 
 @router.get("/{lot_id}", response_model=LotOut)
