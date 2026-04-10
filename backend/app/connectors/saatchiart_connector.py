@@ -84,7 +84,7 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
                         url=str(url) if url else None,
                         category=item.get("category") or item.get("medium"),
                         medium=item.get("medium") or item.get("materials"),
-                        market_type="primary",
+                        market_type="PRIMARY",
                         is_buy_now=True,
                         raw_data=item,
                     ))

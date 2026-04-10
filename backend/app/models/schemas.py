@@ -114,7 +114,7 @@ class LotNormalized(BaseModel):
     url: Optional[str] = None
     image_url: Optional[str] = None
     raw_data: Optional[Dict[str, Any]] = None
-    market_type: Optional[str] = "auction"
+    market_type: Optional[str] = "AUCTION"
     is_buy_now: Optional[bool] = False
     gallery_name: Optional[str] = None
     artist_website: Optional[str] = None
