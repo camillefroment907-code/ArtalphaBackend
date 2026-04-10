@@ -897,6 +897,17 @@ async def cleanup_non_art_lots(
         )
     )
 
+    # Delete lots with no price at all
+    r4 = await db.execute(
+        delete(Lot).where(
+            and_(
+                Lot.current_price.is_(None),
+                Lot.estimate_low.is_(None),
+                Lot.estimate_high.is_(None),
+            )
+        )
+    )
+
     await db.commit()
 
     total_after = (await db.execute(select(func.count(Lot.id)))).scalar()
@@ -905,6 +916,7 @@ async def cleanup_non_art_lots(
         "deleted_adams": r1.rowcount,
         "deleted_jewelry_category": r2.rowcount,
         "deleted_jewelry_title": r3.rowcount,
+        "deleted_no_price": r4.rowcount,
         "total_before": total_before,
         "total_after": total_after,
         "freed": total_before - total_after,

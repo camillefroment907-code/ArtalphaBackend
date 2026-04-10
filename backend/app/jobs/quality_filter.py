@@ -112,11 +112,11 @@ def _is_blacklisted(lot: LotNormalized) -> bool:
 
 
 def _has_minimum_data(lot: LotNormalized) -> bool:
-    """Reject lots with no price AND no estimate."""
-    has_price = lot.current_price and lot.current_price > 0
-    has_estimate = (lot.estimate_low and lot.estimate_low > 0) or \
-                   (lot.estimate_high and lot.estimate_high > 0)
-    return bool(has_price or has_estimate)
+    """Reject lots where ALL of current_price, estimate_low, estimate_high are None or 0."""
+    price = lot.current_price or 0
+    est_low = lot.estimate_low or 0
+    est_high = lot.estimate_high or 0
+    return not (price == 0 and est_low == 0 and est_high == 0)
 
 
 def _compute_similarity(a: LotNormalized, b: LotNormalized) -> float:
