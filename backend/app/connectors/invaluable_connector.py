@@ -76,24 +76,7 @@ def _extract_image_url(photos: list) -> Optional[str]:
 
 
 def _upgrade_image_quality(url: str) -> str:
-    """Upgrade thumbnail URLs to higher resolution on Invaluable CDN."""
-    if not url:
-        return url
-    for low_res, high_res in [
-        # Invaluable CDN: _thz = thumbnail → _lrg = large
-        ("_thz.", "_lrg."),
-        ("_sml.", "_lrg."),
-        ("_med.", "_lrg."),
-        # Generic patterns
-        ("/thumb/", "/large/"),
-        ("/thumbnail/", "/large/"),
-        ("_thumb.", "_large."),
-        ("_thumbnail.", "_large."),
-        ("size=small", "size=large"),
-        ("size=thumb", "size=large"),
-    ]:
-        if low_res in url:
-            return url.replace(low_res, high_res)
+    """Return URL as-is — Invaluable CDN only serves _thz variant reliably."""
     return url
 
 
