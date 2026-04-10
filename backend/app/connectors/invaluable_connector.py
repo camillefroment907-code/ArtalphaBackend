@@ -121,9 +121,11 @@ def _parse_item(item: dict) -> Optional[LotNormalized]:
 
         currency = str(item.get("currency") or "USD").upper()
 
-        # Auction house
+        # Auction house — skip known non-art houses at source
         seller = item.get("sellerView") or {}
         house_name = str(seller.get("sellerName") or "Invaluable")
+        if any(blocked in house_name.lower() for blocked in ["adam's", "adams"]):
+            return None
 
         # Category
         categories = item.get("categories") or []
