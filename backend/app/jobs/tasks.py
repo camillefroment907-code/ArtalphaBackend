@@ -160,6 +160,30 @@ async def _poll_and_score_async():
                 )
                 score_result = compute_deal_score(scoring_input)
 
+                # Compute confidence score
+                from app.engines.confidence import compute_confidence_score
+                confidence = compute_confidence_score(lot_data, artist_data)
+
+                # Generate rationale for meaningful opportunities (async, non-blocking)
+                from app.engines.rationale import generate_rationale
+                rationale = None
+                if score_result.deal_score >= 45 and confidence >= 40 and settings.openai_api_key:
+                    rationale = await generate_rationale(
+                        title=lot_data.title or "",
+                        artist_name=artist_name or lot_data.artist_name_raw or "Unknown",
+                        current_price=lot_data.current_price,
+                        estimate_low=lot_data.estimate_low,
+                        estimate_high=lot_data.estimate_high,
+                        deal_score=score_result.deal_score,
+                        pct_below_estimate=score_result.pct_below_low_estimate,
+                        pct_below_market=score_result.pct_below_market_avg,
+                        artist_avg_price=artist_data.get("avg_price"),
+                        artist_liquidity=artist_data.get("liquidity"),
+                        auction_house=lot_data.auction_house_name,
+                        category=lot_data.category,
+                        lang="fr",
+                    )
+
                 # 6. Ensure URL is valid (fixes relative URLs, filters non-art,
                 #    falls back to verified search URL when direct link is missing)
                 clean_url = fix_url(
@@ -203,6 +227,8 @@ async def _poll_and_score_async():
                     score_breakdown=score_result.breakdown.model_dump(),
                     scored_at=datetime.utcnow(),
                     enriched_at=datetime.utcnow(),
+                    confidence_score=confidence,
+                    score_rationale=rationale,
                 )
                 # INSERT ... ON CONFLICT DO NOTHING — idempotent at DB level.
                 # The unique index uq_lots_source_external (source, external_id WHERE NOT NULL)
@@ -241,6 +267,8 @@ async def _poll_and_score_async():
                     score_breakdown=lot_obj.score_breakdown,
                     scored_at=lot_obj.scored_at,
                     enriched_at=lot_obj.enriched_at,
+                    confidence_score=lot_obj.confidence_score,
+                    score_rationale=lot_obj.score_rationale,
                     created_at=lot_obj.created_at,
                     updated_at=lot_obj.updated_at,
                 ).on_conflict_do_nothing(

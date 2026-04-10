@@ -251,3 +251,108 @@ async def fetch_lots(limit: int = 500) -> List[LotNormalized]:
 
     logger.info(f"Artsy: {len(lots)} lots fetched")
     return lots[:limit]
+
+
+async def fetch_primary_lots(limit: int = 100) -> List[LotNormalized]:
+    """
+    Fetch primary market artworks from Artsy galleries.
+    Uses Artsy public API v2 — no key needed for public data.
+    """
+    lots = []
+    try:
+        async with httpx.AsyncClient(timeout=20, headers={
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            "Accept": "application/json",
+            "X-Xapp-Token": "",  # public access
+        }) as client:
+            endpoints = [
+                "https://api.artsy.net/api/artworks?for_sale=true&size=50&sort=-published_at",
+                "https://api.artsy.net/api/artworks?for_sale=true&size=50&sort=-created_at&gene_id=emerging-art",
+            ]
+
+            for endpoint in endpoints:
+                try:
+                    resp = await client.get(endpoint, timeout=10)
+                    if resp.status_code != 200:
+                        continue
+
+                    data = resp.json()
+                    items = data.get("_embedded", {}).get("artworks", [])
+
+                    for item in items:
+                        try:
+                            artwork_id = item.get("id") or item.get("slug", "")
+                            if not artwork_id:
+                                continue
+
+                            title = item.get("title", "Untitled")
+
+                            artist = ""
+                            artists = item.get("_embedded", {}).get("artists", [])
+                            if artists:
+                                artist = artists[0].get("name", "")
+
+                            # Price
+                            price = None
+                            price_str = item.get("price", "") or item.get("price_listed", "")
+                            if price_str:
+                                try:
+                                    clean = str(price_str).replace(",", "").replace("$", "").replace("€", "").replace("£", "").strip()
+                                    if " - " in clean:
+                                        parts = clean.split(" - ")
+                                        price = float(parts[0].strip())
+                                    else:
+                                        price = float(clean)
+                                except Exception:
+                                    pass
+
+                            currency = item.get("price_currency", "USD") or "USD"
+
+                            image_url = None
+                            images = item.get("_links", {}).get("image", {})
+                            if images:
+                                image_url = images.get("href", "").replace("{image_version}", "large")
+                            if not image_url:
+                                thumbnail = item.get("_links", {}).get("thumbnail", {})
+                                image_url = thumbnail.get("href") if thumbnail else None
+
+                            url = f"https://www.artsy.net/artwork/{artwork_id}"
+
+                            gallery_name = ""
+                            partners = item.get("_embedded", {}).get("partner", {})
+                            if partners:
+                                gallery_name = partners.get("name", "")
+
+                            lots.append(LotNormalized(
+                                external_id=f"artsy-primary-{artwork_id}",
+                                source=AuctionHouseEnum.OTHER,
+                                title=str(title)[:500],
+                                artist_name_raw=str(artist)[:500] if artist else None,
+                                estimate_low=price,
+                                estimate_high=price,
+                                current_price=price,
+                                currency=currency.upper(),
+                                auction_date=None,
+                                auction_house_name=gallery_name or "Artsy",
+                                image_url=str(image_url) if image_url else None,
+                                url=url,
+                                category=item.get("category"),
+                                medium=item.get("medium"),
+                                market_type="primary",
+                                is_buy_now=True,
+                                gallery_name=gallery_name,
+                                raw_data=item,
+                            ))
+                        except Exception as e:
+                            logger.debug("artsy_primary_parse_error", error=str(e))
+                            continue
+
+                except Exception as e:
+                    logger.warning("artsy_primary_endpoint_failed", url=endpoint, error=str(e))
+                    continue
+
+    except Exception as e:
+        logger.warning("artsy_primary_fetch_failed", error=str(e))
+
+    logger.info("artsy_primary_fetched", count=len(lots))
+    return lots

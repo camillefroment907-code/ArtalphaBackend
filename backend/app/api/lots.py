@@ -166,6 +166,7 @@ async def list_lots(
     auction_date_to: Optional[datetime] = Query(None),
     status: Optional[str] = None,
     market_type: Optional[str] = Query(None, pattern="^(auction|primary|gallery)$"),
+    min_confidence: Optional[float] = Query(None, ge=0, le=100),
     sort_by: str = Query("deal_score", pattern="^(deal_score|auction_date|created_at|current_price)$"),
     sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
     db: AsyncSession = Depends(get_db),
@@ -243,6 +244,13 @@ async def list_lots(
             filters.append(Lot.market_type == MarketType[market_type.upper()])
         except KeyError:
             pass
+    if min_confidence is not None:
+        filters.append(
+            or_(
+                Lot.confidence_score >= min_confidence,
+                Lot.confidence_score.is_(None),  # don't filter out unscored lots
+            )
+        )
 
     count_stmt = select(func.count(Lot.id))
     if filters:
@@ -609,6 +617,70 @@ async def get_source_stats(db: AsyncSession = Depends(get_db)):
     return out
 
 
+@router.get("/coverage")
+async def get_market_coverage(db: AsyncSession = Depends(get_db)):
+    """
+    Global market coverage metrics for the dashboard status bar.
+    Returns coverage score, total lots, fresh sources count, avg confidence.
+    """
+    now = datetime.utcnow()
+    FRESH_MIN = 30
+
+    # Active sources
+    sources_stmt = (
+        select(
+            Lot.source,
+            func.count(Lot.id).label("lot_count"),
+            func.max(Lot.created_at).label("last_added"),
+            func.avg(Lot.confidence_score).label("avg_confidence"),
+        )
+        .where(or_(Lot.auction_date.is_(None), Lot.auction_date >= now))
+        .group_by(Lot.source)
+    )
+    sources_result = await db.execute(sources_stmt)
+    sources = sources_result.all()
+
+    total_sources = 10  # known total sources
+    fresh_sources = 0
+    total_lots = 0
+    confidence_sum = 0.0
+    confidence_count = 0
+
+    for row in sources:
+        total_lots += row.lot_count
+        if row.last_added:
+            age_min = (now - row.last_added).total_seconds() / 60
+            if age_min < FRESH_MIN:
+                fresh_sources += 1
+        if row.avg_confidence:
+            confidence_sum += float(row.avg_confidence)
+            confidence_count += 1
+
+    coverage_pct = round((fresh_sources / total_sources) * 100)
+    avg_confidence = round(confidence_sum / confidence_count) if confidence_count > 0 else 0
+
+    # Count lots with rationale
+    rationale_count = (await db.execute(
+        select(func.count(Lot.id)).where(
+            and_(
+                Lot.score_rationale.isnot(None),
+                or_(Lot.auction_date.is_(None), Lot.auction_date >= now),
+            )
+        )
+    )).scalar() or 0
+
+    return {
+        "coverage_pct": coverage_pct,
+        "fresh_sources": fresh_sources,
+        "total_sources": total_sources,
+        "total_lots": total_lots,
+        "avg_confidence": avg_confidence,
+        "lots_with_rationale": rationale_count,
+        "status": "live",
+        "updated_at": now.isoformat(),
+    }
+
+
 @router.get("/primary", response_model=LotListResponse)
 async def get_primary_lots(
     page: int = Query(1, ge=1),
@@ -698,6 +770,11 @@ async def get_lots_for_investor(
         or_(Lot.auction_date.is_(None), Lot.auction_date >= datetime.utcnow()),
         Lot.deal_score >= 45,  # Only Interesting+ lots
         Lot.deal_score.isnot(None),
+        # Only show high-confidence lots in investor feed
+        or_(
+            Lot.confidence_score >= 50,
+            Lot.confidence_score.is_(None),
+        ),
     ]
 
     # Budget filter

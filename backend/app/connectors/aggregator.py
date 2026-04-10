@@ -181,6 +181,21 @@ async def fetch_all_lots(lots_per_source: int = 500) -> List[LotNormalized]:
     except Exception as e:
         logger.warning("Singulart connector skipped", error=str(e))
 
+    # --- Artsy primary market — for sale artworks ---
+    try:
+        from app.connectors.artsy_connector import fetch_primary_lots as artsy_primary_fetch
+        artsy_primary_lots = await artsy_primary_fetch(min(100, lots_per_source))
+        added = 0
+        for lot in artsy_primary_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("Artsy primary: fetched", count=added)
+    except Exception as e:
+        logger.warning("Artsy primary connector skipped", error=str(e))
+
     logger.info("Aggregation complete — real lots only", total=len(real_lots))
     return real_lots
 

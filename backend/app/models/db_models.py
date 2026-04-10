@@ -212,6 +212,10 @@ class Lot(Base):
     enriched_at = Column(DateTime, nullable=True)
     scored_at = Column(DateTime, nullable=True)
 
+    # Intelligence layer
+    score_rationale = Column(Text, nullable=True)        # GPT-4o-mini explanation
+    confidence_score = Column(Float, nullable=True)       # 0-100 data quality score
+
     # Meta
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -228,6 +232,7 @@ class Lot(Base):
         Index("ix_lots_is_deal", "is_deal"),
         Index("ix_lots_created_at", "created_at"),
         Index("ix_lots_market_type", "market_type"),
+        Index("ix_lots_confidence_score", "confidence_score"),
         # Partial unique index — prevents duplicate (source, external_id) pairs.
         # WHERE external_id IS NOT NULL: lots ingested without an id are still allowed.
         Index(

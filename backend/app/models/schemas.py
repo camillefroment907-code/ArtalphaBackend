@@ -166,6 +166,8 @@ class LotOut(BaseModel):
     ai_insight: Optional[str] = None
     time_left_hours: Optional[float] = None
     fomo_level: Optional[str] = None
+    score_rationale: Optional[str] = None
+    confidence_score: Optional[float] = None
 
     class Config:
         from_attributes = True
