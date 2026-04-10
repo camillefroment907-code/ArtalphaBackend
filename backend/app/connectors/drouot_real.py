@@ -191,6 +191,8 @@ async def _scrape_page(page, url: str, seen_ids: set = None) -> List[LotNormaliz
     for img in soup.find_all("img"):
         src = img.get("src") or img.get("data-src") or ""
         if "cdn.drouot.com/d/image/lot" in src:
+            # Upgrade to full resolution (ftall/small → full, 86KB vs 18KB)
+            src = src.replace("size=ftall", "size=full").replace("size=small", "size=full")
             cdn_imgs.append(src)
 
     for idx, a_tag in enumerate(all_a_tags):
