@@ -239,10 +239,6 @@ function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => vo
             style={{
               position: "absolute", inset: 0, width: "100%", height: "100%",
               objectFit: "cover", objectPosition: "center top",
-              imageRendering: "auto",
-              WebkitBackfaceVisibility: "hidden" as const,
-              backfaceVisibility: "hidden" as const,
-              willChange: "transform",
               transition: "transform 0.5s ease",
             }}
             loading="lazy"
@@ -380,10 +376,6 @@ function LiveCard({ lot, onClick }: { lot: MappedLot; onClick: () => void }) {
             style={{
               position: "absolute", inset: 0, width: "100%", height: "100%",
               objectFit: "cover", objectPosition: "center top",
-              imageRendering: "auto",
-              WebkitBackfaceVisibility: "hidden" as const,
-              backfaceVisibility: "hidden" as const,
-              willChange: "transform",
               transition: "transform 0.4s ease",
             }}
             loading="lazy"
