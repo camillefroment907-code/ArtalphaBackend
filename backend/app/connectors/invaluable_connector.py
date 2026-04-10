@@ -55,6 +55,41 @@ def _safe_date(ms_timestamp) -> Optional[datetime]:
         return None
 
 
+def _extract_image_url(photos: list) -> Optional[str]:
+    """Extract highest quality image URL from Invaluable photos array."""
+    if not photos:
+        return None
+    photo = photos[0] if photos else {}
+    links = photo.get("_links", photo.get("links", {}))
+    # Priority: large > medium > small > thumbnail
+    for size in ["large", "medium", "small", "thumbnail"]:
+        url = links.get(size, {}).get("href") or links.get(size, {}).get("url")
+        if url and url.startswith("http"):
+            return url
+    # Fallback: direct url field
+    for field in ["url", "src", "href", "imageUrl", "image_url"]:
+        if photo.get(field) and str(photo[field]).startswith("http"):
+            return str(photo[field])
+    return None
+
+
+def _upgrade_image_quality(url: str) -> str:
+    """Upgrade thumbnail URLs to higher resolution on Invaluable CDN."""
+    if not url:
+        return url
+    for low_res, high_res in [
+        ("/thumb/", "/large/"),
+        ("/thumbnail/", "/large/"),
+        ("_thumb.", "_large."),
+        ("_thumbnail.", "_large."),
+        ("size=small", "size=large"),
+        ("size=thumb", "size=large"),
+    ]:
+        if low_res in url:
+            return url.replace(low_res, high_res)
+    return url
+
+
 def _parse_item(item: dict) -> Optional[LotNormalized]:
     try:
         ref = item.get("ref")
@@ -65,13 +100,10 @@ def _parse_item(item: dict) -> Optional[LotNormalized]:
         if not title or len(title) < 3:
             return None
 
-        # Image
-        image_url = None
+        # Image — prefer high-res
         photos = item.get("photos") or []
-        if photos and isinstance(photos, list):
-            links = photos[0].get("_links") or {}
-            thumb = links.get("thumbnail") or links.get("medium") or {}
-            image_url = thumb.get("href")
+        raw_image_url = _extract_image_url(photos) if isinstance(photos, list) else None
+        image_url = _upgrade_image_quality(raw_image_url) if raw_image_url else None
 
         # Lot URL — invaluable provides a full URL
         lot_url = item.get("url") or f"{BASE_URL}/auction-lot/_{ref}/"

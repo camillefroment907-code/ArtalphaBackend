@@ -53,6 +53,15 @@ async def lifespan(app: FastAPI):
     await create_tables()
     logger.info("Database ready")
 
+    # Start Celery beat scheduler in background thread
+    # (single-process deployment: beat runs embedded alongside the API)
+    try:
+        from app.jobs.startup_beat import start_beat_in_background
+        start_beat_in_background()
+        logger.info("Celery beat scheduler started")
+    except Exception as e:
+        logger.warning("Celery beat failed to start — tasks must be triggered manually", error=str(e))
+
     yield
 
     logger.info("HONO API shutting down")

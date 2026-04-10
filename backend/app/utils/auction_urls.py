@@ -32,6 +32,13 @@ def build_url(source: str, artist_name: Optional[str] = None) -> str:
             "christies":     "https://www.christies.com/search?tab=objects",
             "sothebys":      "https://www.sothebys.com/en/results",
             "bonhams":       "https://www.bonhams.com/auction-results/",
+            "phillips":      "https://www.phillips.com/search",
+            "artcurial":     "https://www.artcurial.com/en/results",
+            "artsper":       "https://www.artsper.com/en/contemporary-artworks",
+            "saatchi_art":   "https://www.saatchiart.com/paintings",
+            "singulart":     "https://www.singulart.com/en/artworks/",
+            "artsy":         "https://www.artsy.net/collect",
+            "catawiki":      "https://www.catawiki.com/en/l/art",
         }
         return fallbacks.get(source, "https://www.invaluable.com/search/?upcoming=true")
 
@@ -59,6 +66,34 @@ def build_url(source: str, artist_name: Optional[str] = None) -> str:
     elif source == "bonhams":
         encoded = _encode(artist_name)
         return f"https://www.bonhams.com/auction-results/?keyword={encoded}"
+
+    elif source == "phillips":
+        encoded = _encode(artist_name)
+        return f"https://www.phillips.com/search#/search?query={encoded}"
+
+    elif source == "artcurial":
+        encoded = _encode(artist_name)
+        return f"https://www.artcurial.com/en/results?query={encoded}"
+
+    elif source == "artsper":
+        encoded = _encode(artist_name)
+        return f"https://www.artsper.com/en/contemporary-artworks?search={encoded}"
+
+    elif source == "saatchi_art":
+        encoded = _encode(artist_name)
+        return f"https://www.saatchiart.com/paintings?query={encoded}"
+
+    elif source == "singulart":
+        encoded = _encode(artist_name, remove_accents=True)
+        return f"https://www.singulart.com/en/artworks/?search={encoded}"
+
+    elif source == "artsy":
+        encoded = _encode(artist_name)
+        return f"https://www.artsy.net/search?query={encoded}"
+
+    elif source == "catawiki":
+        encoded = _encode(artist_name)
+        return f"https://www.catawiki.com/en/l/art?query={encoded}"
 
     else:
         encoded = _encode(artist_name)

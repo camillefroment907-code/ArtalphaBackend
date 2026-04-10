@@ -27,27 +27,27 @@ celery_app.conf.update(
     task_time_limit=600,       # 10 minutes hard limit
     beat_schedule={
         # Poll all auction sources every 15 minutes
-        "poll-all-auctions": {
+        "poll-and-score-every-15min": {
             "task": "app.jobs.tasks.poll_and_score_lots",
-            "schedule": crontab(minute=f"*/{settings.poll_interval_minutes}"),
+            "schedule": crontab(minute="*/15"),
             "options": {"queue": "default"},
         },
-        # Re-score existing lots every hour (prices change)
-        "rescore-live-lots": {
+        # Re-score existing lots every hour (prices change) — offset 5min from poll
+        "rescore-live-lots-every-hour": {
             "task": "app.jobs.tasks.rescore_live_lots",
-            "schedule": crontab(minute=0),  # every hour
+            "schedule": crontab(minute="5", hour="*/1"),
             "options": {"queue": "scoring"},
         },
-        # Send pending alerts every 5 minutes
-        "process-alerts": {
-            "task": "app.jobs.tasks.process_pending_alerts",
-            "schedule": crontab(minute="*/5"),
-            "options": {"queue": "alerts"},
-        },
-        # Daily cleanup
+        # Daily cleanup at 3am UTC
         "daily-cleanup": {
             "task": "app.jobs.tasks.daily_cleanup",
-            "schedule": crontab(hour=2, minute=0),
+            "schedule": crontab(minute="0", hour="3"),
+            "options": {"queue": "maintenance"},
+        },
+        # Weekly dedup every Monday at 2am UTC
+        "dedup-cleanup-weekly": {
+            "task": "app.jobs.tasks.dedup_cleanup",
+            "schedule": crontab(minute="0", hour="2", day_of_week="1"),
             "options": {"queue": "maintenance"},
         },
     },

@@ -28,6 +28,11 @@ SOURCE_DOMAINS: dict[str, str] = {
     "catawiki":        "catawiki.com",
     "artnet":          "artnet.com",
     "mutualart":       "mutualart.com",
+    "phillips":        "phillips.com",
+    "artcurial":       "artcurial.com",
+    "artsper":         "artsper.com",
+    "saatchi_art":     "saatchiart.com",
+    "singulart":       "singulart.com",
 }
 
 # Substrings that signal the lot belongs to a non-art category.
@@ -70,6 +75,12 @@ def validate_url(url: Optional[str], source: str) -> bool:
     expected = SOURCE_DOMAINS.get(source.lower(), "")
     if expected and expected not in parsed.netloc:
         return False
+
+    # Invaluable: require a direct lot or auction path (not just the homepage/search)
+    if source.lower() == "invaluable":
+        path = parsed.path.lower()
+        if not any(seg in path for seg in ["/lot/", "/auction-lot/", "/auction/"]):
+            return False
 
     return True
 
