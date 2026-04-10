@@ -80,6 +80,11 @@ def _upgrade_image_quality(url: str) -> str:
     if not url:
         return url
     for low_res, high_res in [
+        # Invaluable CDN: _thz = thumbnail → _lrg = large
+        ("_thz.", "_lrg."),
+        ("_sml.", "_lrg."),
+        ("_med.", "_lrg."),
+        # Generic patterns
         ("/thumb/", "/large/"),
         ("/thumbnail/", "/large/"),
         ("_thumb.", "_large."),
