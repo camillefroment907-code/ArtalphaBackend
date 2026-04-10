@@ -119,6 +119,44 @@ def _has_minimum_data(lot: LotNormalized) -> bool:
     return not (price == 0 and est_low == 0 and est_high == 0)
 
 
+PRICE_ON_REQUEST_KEYWORDS = [
+    "prix sur demande",
+    "price on request",
+    "price upon request",
+    "sur demande",
+    "on request",
+    "contact for price",
+    "contact gallery",
+    "inquire",
+    "ask for price",
+    "p.o.r",
+    "estimate on request",
+    "estimation sur demande",
+]
+
+
+def _is_price_on_request(lot: LotNormalized) -> bool:
+    """Reject lots where price is 'on request' rather than a real number."""
+    for field in [lot.title, lot.category, getattr(lot, "description", None)]:
+        if not field:
+            continue
+        field_lower = field.lower()
+        for keyword in PRICE_ON_REQUEST_KEYWORDS:
+            if keyword in field_lower:
+                return True
+
+    raw = lot.raw_data or {}
+    for field in ["priceOnRequest", "price_on_request", "isPriceOnRequest", "priceHidden"]:
+        if raw.get(field) is True:
+            return True
+
+    price_str = str(raw.get("price", "") or raw.get("currentPrice", "") or "").lower().strip()
+    if price_str and not any(c.isdigit() for c in price_str):
+        return True
+
+    return False
+
+
 def _compute_similarity(a: LotNormalized, b: LotNormalized) -> float:
     """
     Cross-source similarity score 0.0–1.0.
@@ -225,7 +263,7 @@ def filter_and_deduplicate(lots: List[LotNormalized]) -> tuple[List[LotNormalize
         "output": int,
     }
     """
-    stats = {"input": len(lots), "blacklisted": 0, "no_price": 0, "intra_source_dupes": 0, "cross_source_dupes": 0, "output": 0}
+    stats = {"input": len(lots), "blacklisted": 0, "no_price": 0, "price_on_request": 0, "intra_source_dupes": 0, "cross_source_dupes": 0, "output": 0}
 
     # Step 1 & 2: basic quality filters
     qualified = []
@@ -235,6 +273,9 @@ def filter_and_deduplicate(lots: List[LotNormalized]) -> tuple[List[LotNormalize
             continue
         if not _has_minimum_data(lot):
             stats["no_price"] += 1
+            continue
+        if _is_price_on_request(lot):
+            stats["price_on_request"] += 1
             continue
         qualified.append(lot)
 

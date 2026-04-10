@@ -897,6 +897,19 @@ async def cleanup_non_art_lots(
         )
     )
 
+    # Delete lots with "price on request" in title
+    r5 = await db.execute(
+        delete(Lot).where(
+            or_(
+                Lot.title.ilike('%prix sur demande%'),
+                Lot.title.ilike('%price on request%'),
+                Lot.title.ilike('%price upon request%'),
+                Lot.title.ilike('%sur demande%'),
+                Lot.title.ilike('%on request%'),
+            )
+        )
+    )
+
     # Delete lots with no price at all
     r4 = await db.execute(
         delete(Lot).where(
@@ -916,6 +929,7 @@ async def cleanup_non_art_lots(
         "deleted_adams": r1.rowcount,
         "deleted_jewelry_category": r2.rowcount,
         "deleted_jewelry_title": r3.rowcount,
+        "deleted_price_on_request": r5.rowcount,
         "deleted_no_price": r4.rowcount,
         "total_before": total_before,
         "total_after": total_after,
