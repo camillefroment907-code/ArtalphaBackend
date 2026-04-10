@@ -296,12 +296,17 @@ async def _poll_and_score_async():
         elapsed_s=round(elapsed, 2),
     )
 
-    # 7. Trigger alerts for new deals
+    # 7. Trigger alerts + AI agents directly (no Redis broker needed)
     if new_deals > 0:
-        process_pending_alerts.delay()
+        try:
+            await _process_alerts_async()
+        except Exception as e:
+            logger.warning("alerts pipeline failed", error=str(e))
 
-    # Trigger AI agents after scoring
-    run_ai_agents.delay()
+    try:
+        await _run_ai_agents_async()
+    except Exception as e:
+        logger.warning("ai agents pipeline failed", error=str(e))
 
 
 @celery_app.task(name="app.jobs.tasks.rescore_live_lots", bind=True)
