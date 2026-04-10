@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, delete
 from sqlalchemy.orm import selectinload
 from typing import Any, Dict, Optional
 from datetime import datetime, timedelta
@@ -11,12 +12,28 @@ from app.models.db_models import Lot, User, Alert, LotStatus
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 ADMIN_KEY = "hono-admin-2024"
+ADMIN_EMAILS = {"camillefroment907@gmail.com"}
+
+_bearer = HTTPBearer(auto_error=False)
 
 
-def verify_admin(x_admin_key: Optional[str] = Header(None)):
-    if x_admin_key != ADMIN_KEY:
-        raise HTTPException(status_code=403, detail="Admin access denied")
-    return True
+def verify_admin(
+    x_admin_key: Optional[str] = Header(None),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+):
+    # Accept X-Admin-Key header
+    if x_admin_key == ADMIN_KEY:
+        return True
+    # Accept Bearer JWT from known admin emails
+    if credentials:
+        try:
+            from app.api.auth_utils import decode_token
+            payload = decode_token(credentials.credentials)
+            if payload.get("email") in ADMIN_EMAILS:
+                return True
+        except Exception:
+            pass
+    raise HTTPException(status_code=403, detail="Admin access denied")
 
 
 @router.get("/stats")
@@ -98,4 +115,55 @@ async def admin_stats(
             for lot in top_lots
         ],
         "generated_at": datetime.utcnow().isoformat(),
+    }
+
+
+# Keywords that identify non-art lots (jewelry, watches, silverware, etc.)
+_JEWELRY_KEYWORDS = [
+    "adam's", "adams fine art",
+    "diamond", "brillant", "bague", "ring",
+    "bracelet", "collier", "necklace",
+    "montre", "watch", "rolex", "cartier watch",
+    "silver", "argent", "vermeil", "goldsmith",
+    "bijou", "bijoux", "jewelry", "jewellery",
+    "sapphire", "ruby", "emerald", "pearl",
+    "saphir", "rubis", "émeraude", "perle",
+]
+
+_JEWELRY_HOUSES = ["adam's", "adams"]
+
+
+@router.delete("/cleanup-jewelry")
+async def cleanup_jewelry(
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_admin),
+) -> Dict[str, Any]:
+    """Delete non-art lots: jewelry, watches, and Adam's auction house lots."""
+    from sqlalchemy import or_
+    from app.models.db_models import Lot as LotModel
+
+    conditions = []
+
+    # Auction house blacklist
+    for house in _JEWELRY_HOUSES:
+        conditions.append(func.lower(LotModel.auction_house_name).contains(house))
+
+    # Title/category keyword blacklist
+    for kw in _JEWELRY_KEYWORDS:
+        conditions.append(func.lower(LotModel.title).contains(kw))
+
+    if not conditions:
+        return {"deleted": 0}
+
+    stmt = select(func.count(LotModel.id)).where(or_(*conditions))
+    count_before = (await db.execute(stmt)).scalar() or 0
+
+    del_stmt = delete(LotModel).where(or_(*conditions))
+    await db.execute(del_stmt)
+    await db.commit()
+
+    return {
+        "deleted": count_before,
+        "message": f"Removed {count_before} non-art lots",
+        "timestamp": datetime.utcnow().isoformat(),
     }
