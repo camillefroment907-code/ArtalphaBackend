@@ -28,13 +28,18 @@ def _utcnow() -> datetime:
 
 
 def _run(coro_factory, name: str):
-    """Run an async coroutine in a fresh event loop, log errors."""
+    """Run an async coroutine in a dedicated event loop, isolated from uvicorn's loop."""
     try:
         logger.info(f"[scheduler] starting {name}")
-        asyncio.run(coro_factory())
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(coro_factory())
+        finally:
+            loop.close()
         logger.info(f"[scheduler] {name} complete")
     except Exception as e:
-        logger.error(f"[scheduler] {name} failed: {e}")
+        logger.error(f"[scheduler] {name} failed: {e}", exc_info=True)
 
 
 def _poll_loop():
