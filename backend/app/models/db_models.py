@@ -32,9 +32,9 @@ class LotStatus(str, enum.Enum):
 
 
 class MarketType(str, enum.Enum):
-    AUCTION = "auction"
-    PRIMARY = "primary"
-    GALLERY = "gallery"
+    AUCTION = "AUCTION"
+    PRIMARY = "PRIMARY"
+    GALLERY = "GALLERY"
 
 
 class AlertChannel(str, enum.Enum):
