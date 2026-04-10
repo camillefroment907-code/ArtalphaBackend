@@ -27,16 +27,52 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _make_bg_session_factory():
+    """
+    Create a fresh SQLAlchemy async engine + session factory using NullPool.
+    NullPool never holds open connections, so there is no event-loop binding —
+    safe to call from any background thread with its own event loop.
+    """
+    from sqlalchemy.pool import NullPool
+    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+    from app.database import _make_async_url
+    from app.config import get_settings
+
+    settings = get_settings()
+    url, connect_args = _make_async_url(settings.database_url)
+    bg_engine = create_async_engine(url, poolclass=NullPool, connect_args=connect_args)
+    return bg_engine, async_sessionmaker(bg_engine, class_=AsyncSession, expire_on_commit=False)
+
+
 def _run(coro_factory, name: str):
-    """Run an async coroutine in a dedicated event loop, isolated from uvicorn's loop."""
+    """
+    Run an async coroutine in a dedicated event loop, isolated from uvicorn's loop.
+    Patches app.database.AsyncSessionLocal with a NullPool-backed factory for
+    the duration of the call, then restores it.
+    """
+    import app.database as _db_mod
+
     try:
         logger.info(f"[scheduler] starting {name}")
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+
+        bg_engine, bg_session = _make_bg_session_factory()
+        original_session = _db_mod.AsyncSessionLocal
+        _db_mod.AsyncSessionLocal = bg_session
+
+        async def _run_and_dispose():
+            try:
+                await coro_factory()
+            finally:
+                await bg_engine.dispose()
+
         try:
-            loop.run_until_complete(coro_factory())
+            loop.run_until_complete(_run_and_dispose())
         finally:
+            _db_mod.AsyncSessionLocal = original_session
             loop.close()
+
         logger.info(f"[scheduler] {name} complete")
     except Exception as e:
         logger.error(f"[scheduler] {name} failed: {e}", exc_info=True)
