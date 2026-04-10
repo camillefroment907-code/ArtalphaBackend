@@ -17,14 +17,16 @@ API_URL = f"{BASE_URL}/api/search"
 HOUSE_REPUTATION = 0.78
 
 SEARCH_QUERIES = [
+    "fine art",
+    "oil painting",
+    "contemporary art",
+    "modern art",
+    "impressionist",
+    "abstract",
+    "acrylic",
+    "mixed media",
     "painting",
-    "sculpture",
-    "print",
-    "drawing",
-    "photograph",
     "artwork",
-    "bronze",
-    "watercolor",
 ]
 
 HEADERS = {
@@ -182,33 +184,43 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
             if len(lots) >= limit:
                 break
             try:
-                resp = await client.get(
-                    API_URL,
-                    params={
-                        "query": query,
-                        "size": min(48, limit - len(lots)),
-                        "upcoming": "true",
-                    },
-                )
-                if resp.status_code != 200:
-                    logger.warning("Non-200 response", query=query, status=resp.status_code)
-                    continue
+                page_size = min(48, limit - len(lots))
+                # Fetch up to 2 pages per query
+                for page in range(1, 3):
+                    if len(lots) >= limit:
+                        break
+                    resp = await client.get(
+                        API_URL,
+                        params={
+                            "query": query,
+                            "size": page_size,
+                            "upcoming": "true",
+                            "page": page,
+                        },
+                    )
+                    if resp.status_code != 200:
+                        logger.warning("Non-200 response", query=query, status=resp.status_code)
+                        break
 
-                data = resp.json()
-                items = data.get("itemViewList") or []
-                batch = 0
-                for entry in items:
-                    item_view = entry.get("itemView") or entry
-                    lot = _parse_item(item_view)
-                    if lot and lot.external_id not in seen:
-                        seen.add(lot.external_id)
-                        lots.append(lot)
-                        batch += 1
-                        if len(lots) >= limit:
-                            break
+                    data = resp.json()
+                    items = data.get("itemViewList") or []
+                    batch = 0
+                    for entry in items:
+                        item_view = entry.get("itemView") or entry
+                        lot = _parse_item(item_view)
+                        if lot and lot.external_id not in seen:
+                            seen.add(lot.external_id)
+                            lots.append(lot)
+                            batch += 1
+                            if len(lots) >= limit:
+                                break
 
-                logger.info("Invaluable query done", query=query, batch=batch, total=len(lots))
-                await asyncio.sleep(0.5)
+                    logger.info("Invaluable query done", query=query, page=page, batch=batch, total=len(lots))
+                    await asyncio.sleep(1.5)
+
+                    # Stop paginating if we got fewer results than requested
+                    if len(items) < page_size:
+                        break
 
             except Exception as e:
                 logger.warning("Query failed", query=query, error=str(e))

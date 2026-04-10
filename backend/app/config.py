@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     admin_emails: str = "demo@artalpha.io"
 
     # Business Logic
-    deal_score_threshold: int = 75
+    deal_score_threshold: int = 60
     poll_interval_minutes: int = 15
 
     # Scoring weights (must sum to 1.0)

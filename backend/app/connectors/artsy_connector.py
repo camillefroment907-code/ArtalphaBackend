@@ -141,115 +141,159 @@ async def _get_token(client: httpx.AsyncClient) -> Optional[str]:
     return None
 
 
-async def fetch_lots(limit: int = 500) -> List[LotNormalized]:
+async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
+    """Fetch auction lots from Artsy public API. Handles 401 gracefully."""
     lots: List[LotNormalized] = []
     seen: set = set()
 
-    headers = {**HEADERS}
-
-    async with httpx.AsyncClient(
-        headers=headers, timeout=30.0, follow_redirects=True, verify=False
-    ) as client:
-
-        # Try to get auth token
-        token = await _get_token(client)
-        if token:
-            client.headers["X-Access-Token"] = token
-
-        # Strategy 1: Get active auction sales, then their lots
-        try:
-            sales_resp = await client.get(
-                f"{BASE_URL}/sales",
-                params={"is_auction": "true", "live": "true", "size": 20},
-            )
-            if sales_resp.status_code == 200:
-                sales_data = sales_resp.json()
-                sales = sales_data.get("_embedded", {}).get("sales", [])
-                logger.info(f"Artsy: {len(sales)} active sales found")
-
-                for sale in sales[:10]:
-                    if len(lots) >= limit:
-                        break
-                    sale_id = sale.get("id")
-                    sale_name = sale.get("name", "Artsy")
-                    if not sale_id:
-                        continue
-
-                    try:
-                        lots_resp = await client.get(
-                            f"{BASE_URL}/sale_artworks",
-                            params={
-                                "sale_id": sale_id,
-                                "size": min(100, limit - len(lots)),
-                            },
-                        )
-                        if lots_resp.status_code == 200:
-                            items = lots_resp.json().get("_embedded", {}).get(
-                                "sale_artworks", []
-                            )
-                            for item in items:
-                                artwork = item.get("_embedded", {}).get("artwork", item)
-                                lot = _parse_artwork(artwork)
-                                if lot and lot.external_id not in seen:
-                                    lot.auction_house_name = sale_name
-                                    # Add estimate from sale_artwork level
-                                    if not lot.estimate_low:
-                                        cents = item.get("low_estimate_cents")
-                                        lot.estimate_low = (
-                                            _f(cents) / 100 if cents else None
-                                        )
-                                        hi_cents = item.get("high_estimate_cents")
-                                        lot.estimate_high = (
-                                            _f(hi_cents) / 100 if hi_cents else None
-                                        )
-                                    seen.add(lot.external_id)
-                                    lots.append(lot)
-                        await asyncio.sleep(0.3)
-                    except Exception as e:
-                        logger.warning("sale lots failed", sale_id=sale_id, error=str(e))
-
-        except Exception as e:
-            logger.warning("Artsy sales failed", error=str(e))
-
-        # Strategy 2: Direct artwork search if not enough lots
-        if len(lots) < limit:
-            search_terms = [
-                "painting", "sculpture", "photograph",
-                "print", "drawing", "artwork",
+    try:
+        async with httpx.AsyncClient(
+            timeout=20,
+            follow_redirects=True,
+            verify=False,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                "Accept": "application/json",
+            },
+        ) as client:
+            endpoints_to_try = [
+                f"{BASE_URL}/sales?is_auction=true&live=true&size=50",
+                f"{BASE_URL}/artworks?for_sale=true&sort=-created_at&size=50&at_auction=true",
             ]
-            for term in search_terms:
+
+            for endpoint in endpoints_to_try:
                 if len(lots) >= limit:
                     break
                 try:
-                    resp = await client.get(
-                        f"{BASE_URL}/search",
-                        params={
-                            "q": term,
-                            "type": "artwork",
-                            "size": min(50, limit - len(lots)),
-                        },
-                    )
-                    if resp.status_code == 200:
-                        items = resp.json().get("_embedded", {}).get("results", [])
-                        for item in items:
-                            artwork_href = (
-                                item.get("_links", {}).get("self", {}).get("href")
-                            )
-                            if artwork_href:
-                                try:
-                                    art_resp = await client.get(artwork_href)
-                                    if art_resp.status_code == 200:
-                                        lot = _parse_artwork(art_resp.json())
-                                        if lot and lot.external_id not in seen:
-                                            seen.add(lot.external_id)
-                                            lots.append(lot)
-                                except Exception:
-                                    pass
-                    await asyncio.sleep(0.5)
-                except Exception as e:
-                    logger.warning("Artsy search failed", term=term, error=str(e))
+                    resp = await client.get(endpoint, timeout=10)
+                    if resp.status_code == 401:
+                        logger.warning("artsy_auth_required", endpoint=endpoint)
+                        continue
+                    if resp.status_code != 200:
+                        logger.warning("artsy_endpoint_failed", status=resp.status_code, endpoint=endpoint)
+                        continue
 
-    logger.info(f"Artsy: {len(lots)} lots fetched")
+                    data = resp.json()
+                    items = (
+                        data.get("_embedded", {}).get("artworks", [])
+                        or data.get("_embedded", {}).get("sales", [])
+                        or data.get("results", [])
+                        or (data if isinstance(data, list) else [])
+                    )
+
+                    if not items:
+                        continue
+
+                    for item in items[:limit]:
+                        try:
+                            artwork_id = item.get("id") or item.get("slug", "")
+                            if not artwork_id:
+                                continue
+
+                            ext_id = f"artsy-{artwork_id}"
+                            if ext_id in seen:
+                                continue
+
+                            title = item.get("title", "Untitled")
+
+                            # Artist
+                            artist = ""
+                            for field in ["artistNames", "artist_names", "artist"]:
+                                val = item.get(field)
+                                if val:
+                                    artist = val if isinstance(val, str) else val.get("name", "")
+                                    if artist:
+                                        break
+                            if not artist:
+                                artists = item.get("_embedded", {}).get("artists", [])
+                                if artists:
+                                    artist = artists[0].get("name", "")
+
+                            # Price
+                            price = None
+                            for price_field in ["price", "listPrice", "list_price", "internalDisplayPrice"]:
+                                val = item.get(price_field, "")
+                                if val:
+                                    try:
+                                        clean = str(val).replace(",", "").replace("$", "").replace("€", "").replace("£", "").strip()
+                                        if clean and clean.replace(".", "").isdigit():
+                                            price = float(clean)
+                                            break
+                                    except Exception:
+                                        pass
+
+                            # Estimates
+                            estimate_low = None
+                            estimate_high = None
+                            try:
+                                if item.get("lowEstimate"):
+                                    estimate_low = float(item["lowEstimate"])
+                                if item.get("highEstimate"):
+                                    estimate_high = float(item["highEstimate"])
+                            except Exception:
+                                pass
+
+                            # Image
+                            image_url = None
+                            links = item.get("_links", {})
+                            img = links.get("image", {})
+                            if img:
+                                href = img.get("href", "")
+                                for size in ["large", "medium", "square"]:
+                                    candidate = href.replace("{image_version}", size)
+                                    if candidate.startswith("http"):
+                                        image_url = candidate
+                                        break
+                            if not image_url:
+                                thumbnail = links.get("thumbnail", {})
+                                image_url = thumbnail.get("href") if thumbnail else None
+
+                            # Sale date
+                            auction_date = None
+                            for date_field in ["end_at", "start_at", "live_start_at"]:
+                                date_str = item.get(date_field)
+                                if date_str:
+                                    try:
+                                        auction_date = datetime.fromisoformat(str(date_str)[:19])
+                                        break
+                                    except Exception:
+                                        pass
+
+                            lot = LotNormalized(
+                                external_id=ext_id,
+                                source=AuctionHouseEnum.OTHER,
+                                title=str(title)[:500],
+                                artist_name_raw=str(artist)[:500] if artist else None,
+                                estimate_low=estimate_low,
+                                estimate_high=estimate_high,
+                                current_price=price or estimate_low,
+                                currency="USD",
+                                auction_date=auction_date,
+                                auction_house_name="Artsy",
+                                image_url=str(image_url) if image_url else None,
+                                url=f"https://www.artsy.net/artwork/{artwork_id}",
+                                category=item.get("category") or item.get("medium"),
+                                medium=item.get("medium"),
+                                raw_data={"real": True, "source": "artsy", "id": artwork_id},
+                            )
+                            seen.add(ext_id)
+                            lots.append(lot)
+
+                        except Exception as e:
+                            logger.debug("artsy_lot_parse_error", error=str(e))
+                            continue
+
+                    if lots:
+                        break  # Got results — stop trying other endpoints
+
+                except Exception as e:
+                    logger.warning("artsy_endpoint_error", endpoint=endpoint, error=str(e))
+                    continue
+
+    except Exception as e:
+        logger.warning("artsy_fetch_failed", error=str(e))
+
+    logger.info("artsy_fetched", count=len(lots))
     return lots[:limit]
 
 

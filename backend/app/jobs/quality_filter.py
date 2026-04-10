@@ -23,6 +23,14 @@ CATEGORY_BLACKLIST = {
     "jouet", "toy", "poupee", "doll",
     "instrument", "guitare", "violin",
     "militaria", "arme", "weapon", "sword",
+    # Non-art auction houses known to pollute the feed
+    "adam's",
+}
+
+AUCTION_HOUSE_BLACKLIST = {
+    "adam's",
+    "adams",
+    "adam's fine art",
 }
 
 # Art-specific categories we WANT to keep (if category is set, it must match)
@@ -77,6 +85,12 @@ def _is_blacklisted(lot: LotNormalized) -> bool:
     for word in CATEGORY_BLACKLIST:
         if word in cat or word in title:
             return True
+
+    auction_house = (lot.auction_house_name or "").lower()
+    for blocked_house in AUCTION_HOUSE_BLACKLIST:
+        if blocked_house in auction_house:
+            return True
+
     return False
 
 
