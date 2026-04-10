@@ -389,8 +389,16 @@ export default function OpportunityDetail() {
 
             {/* Score bar */}
             {lot.deal_score > 0 && (
-              <div style={{ marginBottom: '28px', paddingBottom: '28px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ marginBottom: lot.score_rationale ? '16px' : '28px', paddingBottom: lot.score_rationale ? '16px' : '28px', borderBottom: lot.score_rationale ? 'none' : '1px solid var(--border)' }}>
                 <ScoreBar score={lot.deal_score} />
+              </div>
+            )}
+
+            {/* AI Rationale */}
+            {lot.score_rationale && (
+              <div style={{ background: 'var(--navy)', borderRadius: '6px', padding: '12px 16px', marginBottom: '28px' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>AI Analysis</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.55, fontStyle: 'italic' }}>{lot.score_rationale}</div>
               </div>
             )}
 

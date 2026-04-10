@@ -165,6 +165,8 @@ function mapLot(lot: any) {
     auctionDate: lot.auction_date || "",
     upsidePercent: upside,
     source: lot.source || "",
+    score_rationale: lot.score_rationale || null,
+    confidence_score: lot.confidence_score || null,
   };
 }
 
@@ -316,6 +318,13 @@ function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => vo
             </div>
           )}
         </div>
+
+        {/* AI Rationale */}
+        {lot.score_rationale && (
+          <div style={{ fontSize: "10px", color: "var(--text-3)", fontStyle: "italic", marginBottom: "10px", lineHeight: 1.45, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+            {lot.score_rationale}
+          </div>
+        )}
 
         {/* Footer */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "10px", borderTop: "1px solid var(--border-light)" }}>
@@ -775,8 +784,8 @@ export default function Opportunities() {
   // Browser tab title
   useEffect(() => {
     document.title = tab === "alpha"
-      ? "Best Lots · ArtAlpha"
-      : "All Auctions · ArtAlpha";
+      ? "Best Lots · Nautilus"
+      : "All Auctions · Nautilus";
   }, [tab]);
 
   // ── Derived values ───────────────────────────────────────
