@@ -236,6 +236,42 @@ def generate_ai_insight(
     return " ".join(parts)
 
 
+def _score_primary_lot(lot: LotNormalized, artist_data: dict) -> float:
+    """
+    Primary market scoring — no estimate available.
+    Score based on: artist quality + gallery tier + price accessibility.
+    """
+    score = 40.0  # Base score for primary lots (curated by galleries)
+
+    # Artist quality signal
+    liquidity = artist_data.get("liquidity", 50)
+    score += (liquidity / 100) * 20  # Max +20pts
+
+    # Gallery tier bonus
+    gallery_tier = artist_data.get("gallery_tier", 3)
+    if gallery_tier == 1:
+        score += 20
+    elif gallery_tier == 2:
+        score += 12
+    else:
+        score += 4
+
+    # Price accessibility (lower price = more accessible = higher score for emerging)
+    price = lot.current_price or 0
+    if 200 <= price <= 2000:
+        score += 15   # Sweet spot for emerging art
+    elif 2000 < price <= 10000:
+        score += 10
+    elif price > 10000:
+        score += 5
+
+    # Has image bonus
+    if lot.image_url:
+        score += 5
+
+    return min(round(score, 1), 100.0)
+
+
 def compute_deal_score(inp: ScoringInput) -> ScoringResult:
     """
     Main scoring function. Returns a ScoringResult with deal_score 0-100.
@@ -246,6 +282,26 @@ def compute_deal_score(inp: ScoringInput) -> ScoringResult:
     lot = inp.lot
     artist = inp.artist_data
     reputation = inp.house_reputation
+
+    # ── Primary market early return ──────────────────────────────────────────
+    if getattr(lot, "market_type", None) == "primary":
+        deal_score = _score_primary_lot(lot, artist)
+        return ScoringResult(
+            deal_score=deal_score,
+            is_deal=deal_score >= 55,
+            is_upcoming=False,
+            pct_below_low_estimate=None,
+            pct_below_market_avg=None,
+            breakdown=ScoreBreakdown(
+                below_estimate_score=0.0,
+                below_market_score=0.0,
+                liquidity_score=round((artist.get("liquidity", 50) / 100) * 100, 2),
+                house_reputation_score=0.0,
+                confidence_score=0.0,
+                rationale="Primary market listing — scored on artist quality and gallery tier.",
+                ai_insight=None,
+            ),
+        )
 
     avg_market_price = artist.get("avg_price")
     liquidity = artist.get("liquidity")

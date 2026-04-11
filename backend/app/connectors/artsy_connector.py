@@ -4,6 +4,7 @@ Public API — no key required for basic access.
 Lot URL: https://www.artsy.net/artwork/{slug}
 """
 import asyncio
+import re
 import httpx
 from datetime import datetime
 from typing import List, Optional
@@ -315,6 +316,7 @@ async def fetch_primary_lots(limit: int = 100) -> List[LotNormalized]:
       artworksConnection(
         forSale: true,
         atAuction: false,
+        priceRange: "100-1000000",
         first: 50,
         after: $cursor,
         sort: "-published_at"
@@ -325,20 +327,29 @@ async def fetch_primary_lots(limit: int = 100) -> List[LotNormalized]:
             internalID
             slug
             title
-            date
             medium
             category
             image { url(version: "large") }
             artists { name }
+            saleMessage
+            availability
             listPrice {
-              ... on Money { amount currencyCode }
+              __typename
+              ... on Money {
+                amount
+                currencyCode
+                display
+              }
               ... on PriceRange {
-                minPrice { amount currencyCode }
-                maxPrice { amount currencyCode }
+                minPrice { amount currencyCode display }
+                maxPrice { amount currencyCode display }
               }
             }
-            partner { name type }
-            isForSale
+            partner {
+              name
+              type
+              profile { followers { totalCount } }
+            }
           }
         }
       }
@@ -380,24 +391,41 @@ async def fetch_primary_lots(limit: int = 100) -> List[LotNormalized]:
                         artists = node.get("artists", [])
                         artist = artists[0].get("name", "") if artists else ""
 
-                        # Price from listPrice union type
+                        # Price extraction — listPrice union type
                         price = None
                         currency = "USD"
                         list_price = node.get("listPrice") or {}
-                        if list_price.get("amount") is not None:
+                        lp_type = list_price.get("__typename", "")
+
+                        if lp_type == "Money":
                             try:
-                                price = float(list_price["amount"])
+                                price = float(list_price.get("amount", 0))
                                 currency = list_price.get("currencyCode", "USD")
                             except Exception:
                                 pass
-                        elif list_price.get("minPrice"):
+                        elif lp_type == "PriceRange":
                             try:
-                                price = float(list_price["minPrice"]["amount"])
-                                currency = list_price["minPrice"].get("currencyCode", "USD")
+                                min_p = list_price.get("minPrice") or {}
+                                price = float(min_p.get("amount", 0))
+                                currency = min_p.get("currencyCode", "USD")
                             except Exception:
                                 pass
 
+                        # Fallback: parse saleMessage like "$1,200" or "€850"
                         if not price:
+                            sale_msg = node.get("saleMessage", "") or ""
+                            match = re.search(r'[\$€£]?\s?([\d,]+)', sale_msg.replace(",", ""))
+                            if match:
+                                try:
+                                    price = float(match.group(1))
+                                    if "€" in sale_msg:
+                                        currency = "EUR"
+                                    elif "£" in sale_msg:
+                                        currency = "GBP"
+                                except Exception:
+                                    pass
+
+                        if not price or price <= 0:
                             continue
 
                         image = node.get("image") or {}
