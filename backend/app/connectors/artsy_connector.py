@@ -204,12 +204,12 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
             headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
         ) as client:
             cursor = None
-            for page in range(4):  # max 4 pages × 50 = 200 lots
+            for page in range(2):  # max 2 pages × 50 = 100 lots
                 if len(lots) >= limit:
                     break
 
                 if page > 0:
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(0.5)
 
                 resp = await client.post(
                     _GRAPHQL_URL,
