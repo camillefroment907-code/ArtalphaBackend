@@ -399,31 +399,35 @@ async def fetch_primary_lots(limit: int = 100) -> List[LotNormalized]:
 
                         if lp_type == "Money":
                             try:
-                                price = float(list_price.get("amount", 0))
+                                # amount can be null — fall back to parsing display
+                                amt = list_price.get("amount")
+                                if amt is not None:
+                                    price = float(amt)
+                                else:
+                                    price = _parse_display_price(list_price.get("display"))
                                 currency = list_price.get("currencyCode", "USD")
                             except Exception:
                                 pass
                         elif lp_type == "PriceRange":
                             try:
                                 min_p = list_price.get("minPrice") or {}
-                                price = float(min_p.get("amount", 0))
+                                amt = min_p.get("amount")
+                                if amt is not None:
+                                    price = float(amt)
+                                else:
+                                    price = _parse_display_price(min_p.get("display"))
                                 currency = min_p.get("currencyCode", "USD")
                             except Exception:
                                 pass
 
-                        # Fallback: parse saleMessage like "$1,200" or "€850"
+                        # Fallback: parse saleMessage like "$1,200", "US$3,600", "€850"
                         if not price:
                             sale_msg = node.get("saleMessage", "") or ""
-                            match = re.search(r'[\$€£]?\s?([\d,]+)', sale_msg.replace(",", ""))
-                            if match:
-                                try:
-                                    price = float(match.group(1))
-                                    if "€" in sale_msg:
-                                        currency = "EUR"
-                                    elif "£" in sale_msg:
-                                        currency = "GBP"
-                                except Exception:
-                                    pass
+                            price = _parse_display_price(sale_msg)
+                            if price and "€" in sale_msg:
+                                currency = "EUR"
+                            elif price and "£" in sale_msg:
+                                currency = "GBP"
 
                         if not price or price <= 0:
                             continue
