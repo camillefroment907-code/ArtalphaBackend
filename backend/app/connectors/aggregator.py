@@ -181,6 +181,21 @@ async def fetch_all_lots(lots_per_source: int = 500) -> List[LotNormalized]:
     except Exception as e:
         logger.warning("Singulart connector skipped", error=str(e))
 
+    # --- Heritage Auctions — public fine art lots ---
+    try:
+        from app.connectors.heritage_connector import fetch_lots as heritage_fetch
+        heritage_lots = await heritage_fetch(lots_per_source)
+        added = 0
+        for lot in heritage_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("Heritage Auctions: fetched", count=added)
+    except Exception as e:
+        logger.warning("Heritage Auctions connector skipped", error=str(e))
+
     # --- Artsy primary market — for sale artworks ---
     try:
         from app.connectors.artsy_connector import fetch_primary_lots as artsy_primary_fetch
