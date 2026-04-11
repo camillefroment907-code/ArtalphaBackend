@@ -447,3 +447,70 @@ class ChatMessage(Base):
         Index("ix_chat_messages_user_id", "user_id"),
         Index("ix_chat_messages_created_at", "created_at"),
     )
+
+
+class GalleryTier(Base):
+    """
+    Gallery credibility score derived from Artsy data.
+    Updated weekly. Used to enrich lot scoring.
+    """
+    __tablename__ = "gallery_tiers"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    artsy_id = Column(String(200), unique=True, nullable=False)
+    name = Column(String(500), nullable=False)
+    tier = Column(Integer, default=3)  # 1=top, 2=mid, 3=emerging
+    followers = Column(Integer, default=0)
+    location_count = Column(Integer, default=1)
+    fair_count = Column(Integer, default=0)  # art fairs participated
+    artsy_url = Column(Text, nullable=True)
+    raw_data = Column(JSON, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_gallery_tiers_artsy_id", "artsy_id"),
+        Index("ix_gallery_tiers_tier", "tier"),
+    )
+
+
+class ArtistProfile(Base):
+    """
+    Enriched artist profile from Artsy.
+    Core intelligence layer for Nautilus investment decisions.
+    """
+    __tablename__ = "artist_profiles"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    artsy_id = Column(String(200), unique=True, nullable=True)
+    name = Column(String(500), nullable=False, index=True)
+    nationality = Column(String(100), nullable=True)
+    birth_year = Column(Integer, nullable=True)
+    death_year = Column(Integer, nullable=True)
+    biography = Column(Text, nullable=True)
+
+    # Market signals
+    gallery_tier_avg = Column(Float, nullable=True)  # avg tier of representing galleries
+    gallery_count = Column(Integer, default=0)
+    top_gallery_name = Column(String(300), nullable=True)
+    public_collections_count = Column(Integer, default=0)  # MoMA, Tate, etc.
+    shows_last_12m = Column(Integer, default=0)
+    shows_prev_12m = Column(Integer, default=0)
+
+    # Computed scores
+    momentum_score = Column(Float, nullable=True)        # 0-100
+    liquidity_score = Column(Float, nullable=True)       # 0-100
+    institutional_score = Column(Float, nullable=True)   # 0-100
+    is_pre_auction = Column(Boolean, default=False)      # in gallery but not yet at auction
+    investment_tier = Column(String(20), nullable=True)  # "blue_chip", "mid_career", "emerging"
+
+    # Meta
+    artsy_url = Column(Text, nullable=True)
+    image_url = Column(Text, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+    raw_data = Column(JSON, nullable=True)
+
+    __table_args__ = (
+        Index("ix_artist_profiles_name", "name"),
+        Index("ix_artist_profiles_momentum", "momentum_score"),
+        Index("ix_artist_profiles_investment_tier", "investment_tier"),
+    )

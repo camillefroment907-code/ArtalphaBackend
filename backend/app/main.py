@@ -15,6 +15,7 @@ from app.api.auth import router as auth_router
 from app.api.lots import router as lots_router
 from app.api.alerts_prefs import alerts_router, prefs_router
 from app.api.artists_external import artists_router, external_router
+from app.api.artists import router as artist_profiles_router
 from app.api.billing import router as billing_router
 from app.api.wishlist import router as wishlist_router
 from app.api.admin import router as admin_router
@@ -107,7 +108,8 @@ app.include_router(portfolio_router, prefix="/api")
 app.include_router(profile_router,  prefix="/api")
 app.include_router(n8n_router,      prefix="/api")
 app.include_router(agent_router,    prefix="/api")
-app.include_router(chat_router,     prefix="/api")
+app.include_router(chat_router,           prefix="/api")
+app.include_router(artist_profiles_router, prefix="/api")
 
 
 @app.get("/")

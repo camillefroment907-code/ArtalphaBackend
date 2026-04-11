@@ -122,13 +122,23 @@ def _rationale_loop():
         time.sleep(RATIONALE_INTERVAL_S)
 
 
+def _artist_enrichment_loop():
+    """Enrich artist profiles from Artsy every 6 hours, starting 2 min after launch."""
+    from app.jobs.artist_enrichment_job import run_artist_enrichment
+    time.sleep(120)  # Start 2 min after launch
+    while True:
+        _run(lambda: run_artist_enrichment(max_artists=20), "artist_enrichment")
+        time.sleep(6 * 3600)  # Every 6 hours
+
+
 def start_beat_in_background():
     """Start all scheduler loops as daemon threads."""
     threads = [
-        threading.Thread(target=_poll_loop,      daemon=True, name="sched-poll"),
-        threading.Thread(target=_rescore_loop,   daemon=True, name="sched-rescore"),
-        threading.Thread(target=_cleanup_loop,   daemon=True, name="sched-cleanup"),
-        threading.Thread(target=_rationale_loop, daemon=True, name="sched-rationale"),
+        threading.Thread(target=_poll_loop,              daemon=True, name="sched-poll"),
+        threading.Thread(target=_rescore_loop,           daemon=True, name="sched-rescore"),
+        threading.Thread(target=_cleanup_loop,           daemon=True, name="sched-cleanup"),
+        threading.Thread(target=_rationale_loop,         daemon=True, name="sched-rationale"),
+        threading.Thread(target=_artist_enrichment_loop, daemon=True, name="sched-artist-enrich"),
     ]
     for t in threads:
         t.start()
