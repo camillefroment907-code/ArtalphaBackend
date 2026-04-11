@@ -11,10 +11,6 @@ from sqlalchemy import select, func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 import uuid
 
-from app.database import AsyncSessionLocal
-from app.models.db_models import Lot, ArtistProfile
-from app.engines.artsy_intelligence import fetch_artist_from_artsy
-
 logger = structlog.get_logger()
 
 
@@ -24,6 +20,10 @@ async def run_artist_enrichment(max_artists: int = 20):
     2. Fetch their Artsy intelligence data
     3. Store in artist_profiles
     """
+    from app.database import AsyncSessionLocal
+    from app.models.db_models import Lot, ArtistProfile
+    from app.engines.artsy_intelligence import fetch_artist_from_artsy
+
     logger.info("artist_enrichment_starting", max=max_artists)
     enriched = 0
 
