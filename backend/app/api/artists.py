@@ -84,6 +84,35 @@ async def get_artist(
         .limit(1)
     )
     artist = result.scalar_one_or_none()
+
+    # If not in DB, fetch from Artsy on-demand
+    if not artist:
+        from app.engines.artsy_intelligence import fetch_artist_from_artsy
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+        import uuid
+        from datetime import datetime
+
+        artsy_data = await fetch_artist_from_artsy(artist_name)
+        if artsy_data:
+            stmt = pg_insert(ArtistProfile).values(
+                id=uuid.uuid4(),
+                **{k: v for k, v in artsy_data.items() if k != 'raw_data'},
+                raw_data=artsy_data.get('raw_data'),
+                updated_at=datetime.utcnow(),
+            ).on_conflict_do_update(
+                index_elements=["artsy_id"],
+                set_={"updated_at": datetime.utcnow()}
+            )
+            await db.execute(stmt)
+            await db.commit()
+
+            result2 = await db.execute(
+                select(ArtistProfile)
+                .where(ArtistProfile.name.ilike(f"%{artist_name}%"))
+                .limit(1)
+            )
+            artist = result2.scalar_one_or_none()
+
     if not artist:
         from fastapi import HTTPException
         raise HTTPException(404, f"Artist '{artist_name}' not found")
