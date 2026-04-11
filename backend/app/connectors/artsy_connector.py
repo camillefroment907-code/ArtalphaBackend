@@ -144,13 +144,18 @@ async def _get_token(client: httpx.AsyncClient) -> Optional[str]:
 _GRAPHQL_URL = "https://metaphysics-production.artsy.net/v2"
 
 _GRAPHQL_QUERY = """
-{
+query FetchLots($cursor: String) {
   artworksConnection(
     forSale: true,
     atAuction: true,
     first: 50,
+    after: $cursor,
     sort: "-published_at"
   ) {
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
     edges {
       node {
         internalID
@@ -198,82 +203,95 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
             timeout=20,
             headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
         ) as client:
-            resp = await client.post(
-                _GRAPHQL_URL,
-                json={"query": _GRAPHQL_QUERY},
-                timeout=15,
-            )
+            cursor = None
+            for page in range(4):  # max 4 pages × 50 = 200 lots
+                if len(lots) >= limit:
+                    break
 
-            if resp.status_code != 200:
-                logger.warning("artsy_graphql_failed", status=resp.status_code)
-                return []
+                if page > 0:
+                    await asyncio.sleep(1)
 
-            edges = (
-                resp.json()
-                .get("data", {})
-                .get("artworksConnection", {})
-                .get("edges", [])
-            )
+                resp = await client.post(
+                    _GRAPHQL_URL,
+                    json={"query": _GRAPHQL_QUERY, "variables": {"cursor": cursor}},
+                    timeout=15,
+                )
 
-            for edge in edges:
-                node = edge.get("node") or {}
-                try:
-                    artwork_id = node.get("slug") or node.get("internalID", "")
-                    title = (node.get("title") or "").strip()
-                    if not title or not artwork_id:
+                if resp.status_code != 200:
+                    logger.warning("artsy_graphql_failed", status=resp.status_code)
+                    break
+
+                connection = (
+                    resp.json()
+                    .get("data", {})
+                    .get("artworksConnection", {})
+                )
+                edges = connection.get("edges", [])
+                page_info = connection.get("pageInfo", {})
+
+                for edge in edges:
+                    node = edge.get("node") or {}
+                    try:
+                        artwork_id = node.get("slug") or node.get("internalID", "")
+                        title = (node.get("title") or "").strip()
+                        if not title or not artwork_id:
+                            continue
+
+                        artists = node.get("artists") or []
+                        artist = artists[0].get("name", "") if artists else ""
+
+                        sale_artwork = node.get("saleArtwork") or {}
+                        low = _parse_display_price((sale_artwork.get("lowEstimate") or {}).get("display"))
+                        high = _parse_display_price((sale_artwork.get("highEstimate") or {}).get("display"))
+                        bid = _parse_display_price((sale_artwork.get("currentBid") or {}).get("display"))
+                        currency = (sale_artwork.get("currency") or "USD").upper()
+
+                        sale = node.get("sale") or {}
+                        auction_date = None
+                        if sale.get("endAt"):
+                            try:
+                                auction_date = datetime.fromisoformat(str(sale["endAt"])[:19])
+                            except Exception:
+                                pass
+
+                        image = node.get("image") or {}
+                        image_url = image.get("url")
+
+                        partner = node.get("partner") or {}
+                        gallery_name = partner.get("name", "")
+                        house_name = sale.get("name") or gallery_name or "Artsy"
+                        is_auction = sale.get("isAuction", True)
+
+                        lots.append(LotNormalized(
+                            external_id=f"artsy-{artwork_id}",
+                            source=AuctionHouseEnum.OTHER,
+                            title=str(title)[:500],
+                            artist_name_raw=str(artist)[:300] if artist else None,
+                            estimate_low=low,
+                            estimate_high=high,
+                            current_price=bid or low,
+                            currency=currency,
+                            auction_date=auction_date,
+                            auction_house_name=house_name[:300],
+                            image_url=str(image_url) if image_url else None,
+                            url=f"https://www.artsy.net/artwork/{artwork_id}",
+                            category=node.get("category") or node.get("medium"),
+                            medium=node.get("medium"),
+                            market_type="AUCTION" if is_auction else "PRIMARY",
+                            is_buy_now=not is_auction,
+                            gallery_name=gallery_name[:300] if gallery_name else None,
+                            raw_data={"real": True, "source": "artsy", "slug": artwork_id},
+                        ))
+                        if len(lots) >= limit:
+                            break
+
+                    except Exception as e:
+                        logger.debug("artsy_graphql_parse_error", error=str(e))
                         continue
 
-                    artists = node.get("artists") or []
-                    artist = artists[0].get("name", "") if artists else ""
-
-                    sale_artwork = node.get("saleArtwork") or {}
-                    low = _parse_display_price((sale_artwork.get("lowEstimate") or {}).get("display"))
-                    high = _parse_display_price((sale_artwork.get("highEstimate") or {}).get("display"))
-                    bid = _parse_display_price((sale_artwork.get("currentBid") or {}).get("display"))
-                    currency = (sale_artwork.get("currency") or "USD").upper()
-
-                    sale = node.get("sale") or {}
-                    auction_date = None
-                    if sale.get("endAt"):
-                        try:
-                            auction_date = datetime.fromisoformat(str(sale["endAt"])[:19])
-                        except Exception:
-                            pass
-
-                    image = node.get("image") or {}
-                    image_url = image.get("url")
-
-                    partner = node.get("partner") or {}
-                    gallery_name = partner.get("name", "")
-                    house_name = sale.get("name") or gallery_name or "Artsy"
-                    is_auction = sale.get("isAuction", True)
-
-                    lots.append(LotNormalized(
-                        external_id=f"artsy-{artwork_id}",
-                        source=AuctionHouseEnum.OTHER,
-                        title=str(title)[:500],
-                        artist_name_raw=str(artist)[:300] if artist else None,
-                        estimate_low=low,
-                        estimate_high=high,
-                        current_price=bid or low,
-                        currency=currency,
-                        auction_date=auction_date,
-                        auction_house_name=house_name[:300],
-                        image_url=str(image_url) if image_url else None,
-                        url=f"https://www.artsy.net/artwork/{artwork_id}",
-                        category=node.get("category") or node.get("medium"),
-                        medium=node.get("medium"),
-                        market_type="AUCTION" if is_auction else "PRIMARY",
-                        is_buy_now=not is_auction,
-                        gallery_name=gallery_name[:300] if gallery_name else None,
-                        raw_data={"real": True, "source": "artsy", "slug": artwork_id},
-                    ))
-                    if len(lots) >= limit:
-                        break
-
-                except Exception as e:
-                    logger.debug("artsy_graphql_parse_error", error=str(e))
-                    continue
+                if not page_info.get("hasNextPage"):
+                    break
+                cursor = page_info.get("endCursor")
 
     except Exception as e:
         logger.warning("artsy_graphql_fetch_failed", error=str(e))
