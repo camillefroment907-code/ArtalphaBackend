@@ -213,6 +213,21 @@ async def fetch_all_lots(lots_per_source: int = 500) -> List[LotNormalized]:
         except Exception as e:
             logger.warning("Catawiki connector skipped", error=str(e))
 
+    # --- Barnebys — European auction aggregator ---
+    try:
+        from app.connectors.barnebys_connector import fetch_lots as barnebys_fetch
+        barnebys_lots = await barnebys_fetch(lots_per_source)
+        added = 0
+        for lot in barnebys_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("Barnebys: fetched", count=added)
+    except Exception as e:
+        logger.warning("Barnebys connector skipped", error=str(e))
+
     # --- Artsy primary market — for sale artworks ---
     try:
         from app.connectors.artsy_connector import fetch_primary_lots as artsy_primary_fetch
