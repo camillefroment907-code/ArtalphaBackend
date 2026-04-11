@@ -468,7 +468,6 @@ class GalleryTier(Base):
     updated_at = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (
-        Index("ix_gallery_tiers_artsy_id", "artsy_id"),
         Index("ix_gallery_tiers_tier", "tier"),
     )
 
@@ -482,7 +481,7 @@ class ArtistProfile(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     artsy_id = Column(String(200), unique=True, nullable=True)
-    name = Column(String(500), nullable=False, index=True)
+    name = Column(String(500), nullable=False)
     nationality = Column(String(100), nullable=True)
     birth_year = Column(Integer, nullable=True)
     death_year = Column(Integer, nullable=True)
