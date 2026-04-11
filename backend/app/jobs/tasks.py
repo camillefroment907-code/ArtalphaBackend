@@ -405,32 +405,6 @@ async def _rescore_live_async():
                 lot.score_breakdown = score_result.breakdown.model_dump()
                 lot.scored_at = datetime.utcnow()
 
-                # Generate rationale if missing
-                if (
-                    lot.score_rationale is None
-                    and lot.deal_score >= 45
-                    and settings.openai_api_key
-                ):
-                    from app.engines.rationale import generate_rationale
-                    rationale = await generate_rationale(
-                        title=lot.title or "",
-                        artist_name=lot.artist_name_raw or "Unknown",
-                        current_price=lot.current_price,
-                        estimate_low=lot.estimate_low,
-                        estimate_high=lot.estimate_high,
-                        deal_score=lot.deal_score or 0,
-                        pct_below_estimate=lot.pct_below_low_estimate,
-                        pct_below_market=lot.pct_below_market_avg,
-                        artist_avg_price=None,
-                        artist_liquidity=None,
-                        auction_house=lot.auction_house_name,
-                        category=lot.category,
-                        lang="fr",
-                    )
-                    if rationale:
-                        lot.score_rationale = rationale
-                    await asyncio.sleep(0.5)
-
             except Exception as e:
                 logger.warning("Re-score failed for lot", lot_id=str(lot.id), error=str(e))
 
@@ -714,3 +688,66 @@ def dedup_cleanup():
         logger.info("dedup_cleanup task complete", deleted=deleted)
     except Exception as exc:
         logger.error("dedup_cleanup failed", error=str(exc))
+
+
+async def _generate_rationales_async(max_lots: int = 30):
+    """
+    Separate task: generate GPT rationales for lots missing them.
+    Runs independently from the main scan to avoid timeout pressure.
+    Max 30 lots per run at 0.5s sleep = ~15s total.
+    """
+    from app.engines.rationale import generate_rationale
+    from app.database import AsyncSessionLocal
+    from sqlalchemy import select, and_
+    from app.models.db_models import Lot
+
+    logger.info("rationale_generation_starting")
+    generated = 0
+
+    try:
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                select(Lot)
+                .where(
+                    and_(
+                        Lot.score_rationale.is_(None),
+                        Lot.deal_score >= 45,
+                    )
+                )
+                .order_by(Lot.deal_score.desc())
+                .limit(max_lots)
+            )
+            lots = result.scalars().all()
+
+            for lot in lots:
+                try:
+                    rationale = await generate_rationale(
+                        title=lot.title or "",
+                        artist_name=lot.artist_name_raw or "Unknown",
+                        current_price=lot.current_price,
+                        estimate_low=lot.estimate_low,
+                        estimate_high=lot.estimate_high,
+                        deal_score=lot.deal_score or 0,
+                        pct_below_estimate=lot.pct_below_low_estimate,
+                        pct_below_market=lot.pct_below_market_avg,
+                        artist_avg_price=None,
+                        artist_liquidity=None,
+                        auction_house=lot.auction_house_name,
+                        category=lot.category,
+                        lang="fr",
+                    )
+                    if rationale:
+                        lot.score_rationale = rationale
+                        generated += 1
+                    await asyncio.sleep(0.5)
+                except Exception as e:
+                    logger.debug("rationale_skip", error=str(e))
+                    continue
+
+            await session.commit()
+
+    except Exception as e:
+        logger.error("rationale_generation_failed", error=str(e))
+
+    logger.info("rationale_generation_done", generated=generated)
+    return generated

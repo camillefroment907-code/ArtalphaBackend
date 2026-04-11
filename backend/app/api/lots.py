@@ -920,6 +920,20 @@ async def cleanup_non_art_lots(
     }
 
 
+@router.post("/admin/generate-rationales")
+async def trigger_rationale_generation(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Admin only — generate GPT rationales for lots missing them."""
+    if current_user.email not in ADMIN_EMAILS:
+        raise HTTPException(403, "Admin only")
+
+    from app.jobs.tasks import _generate_rationales_async
+    generated = await _generate_rationales_async(max_lots=30)
+    return {"generated": generated, "status": "done"}
+
+
 @router.get("/{lot_id}", response_model=LotOut)
 async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(

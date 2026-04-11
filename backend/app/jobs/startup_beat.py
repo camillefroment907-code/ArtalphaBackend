@@ -18,9 +18,11 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 
 # ── schedule config ───────────────────────────────────────────
-POLL_INTERVAL_S   = 15 * 60   # 15 min
-RESCORE_INTERVAL_S = 60 * 60  # 60 min
-RESCORE_OFFSET_S   =  5 * 60  # start rescore 5 min after first poll
+POLL_INTERVAL_S      = 15 * 60   # 15 min
+RESCORE_INTERVAL_S   = 60 * 60   # 60 min
+RESCORE_OFFSET_S     =  5 * 60   # start rescore 5 min after first poll
+RATIONALE_INTERVAL_S = 30 * 60   # 30 min
+RATIONALE_OFFSET_S   = 60 * 60   # start rationale 60s after launch
 
 
 def _utcnow() -> datetime:
@@ -111,12 +113,22 @@ def _cleanup_loop():
         _run(_daily_cleanup_async, "daily_cleanup")
 
 
+def _rationale_loop():
+    """Generate GPT rationales every 30 min, starting 60s after launch."""
+    from app.jobs.tasks import _generate_rationales_async
+    time.sleep(RATIONALE_OFFSET_S)
+    while True:
+        _run(_generate_rationales_async, "generate_rationales")
+        time.sleep(RATIONALE_INTERVAL_S)
+
+
 def start_beat_in_background():
     """Start all scheduler loops as daemon threads."""
     threads = [
-        threading.Thread(target=_poll_loop,    daemon=True, name="sched-poll"),
-        threading.Thread(target=_rescore_loop, daemon=True, name="sched-rescore"),
-        threading.Thread(target=_cleanup_loop, daemon=True, name="sched-cleanup"),
+        threading.Thread(target=_poll_loop,      daemon=True, name="sched-poll"),
+        threading.Thread(target=_rescore_loop,   daemon=True, name="sched-rescore"),
+        threading.Thread(target=_cleanup_loop,   daemon=True, name="sched-cleanup"),
+        threading.Thread(target=_rationale_loop, daemon=True, name="sched-rationale"),
     ]
     for t in threads:
         t.start()
