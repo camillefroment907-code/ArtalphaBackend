@@ -3,6 +3,7 @@ HONO Background Tasks
 All async operations are wrapped with asyncio.run() for Celery compatibility.
 """
 import asyncio
+import uuid as _uuid_mod
 from datetime import datetime, timedelta
 from typing import List, Optional
 import structlog
@@ -252,7 +253,7 @@ async def _poll_and_score_async():
                 # The unique index uq_lots_source_external (source, external_id WHERE NOT NULL)
                 # guarantees concurrent workers can never produce duplicates.
                 stmt = pg_insert(Lot).values(
-                    id=lot_obj.id,
+                    id=_uuid_mod.uuid4(),  # explicit: ORM default runs at flush, not at instantiation
                     external_id=lot_obj.external_id,
                     source=lot_obj.source,
                     url=lot_obj.url,
