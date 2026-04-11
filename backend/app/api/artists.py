@@ -6,7 +6,6 @@ from typing import Optional
 
 from app.database import get_db
 from app.models.db_models import ArtistProfile, Lot
-from app.api.auth_utils import get_current_user_optional
 
 router = APIRouter(prefix="/artist-profiles", tags=["artist-profiles"])
 
@@ -31,13 +30,10 @@ async def list_artists(
     if search:
         filters.append(ArtistProfile.name.ilike(f"%{search}%"))
 
-    from sqlalchemy import and_
-    stmt = (
-        select(ArtistProfile)
-        .where(and_(*filters) if filters else True)
-        .order_by(desc(ArtistProfile.momentum_score))
-        .limit(limit)
-    )
+    from sqlalchemy import and_, true
+    stmt = select(ArtistProfile).order_by(desc(ArtistProfile.momentum_score)).limit(limit)
+    if filters:
+        stmt = stmt.where(and_(*filters))
     result = await db.execute(stmt)
     artists = result.scalars().all()
 
