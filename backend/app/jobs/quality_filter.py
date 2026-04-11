@@ -46,6 +46,9 @@ AUCTION_HOUSE_BLACKLIST = {
     "adam's",
     "adams",
     "adam's fine art",
+    "ej's auction",
+    "ej auction",
+    "ej's auction & appraisal",
 }
 
 # Title keyword blacklist — exact substring matches (lowercase)
