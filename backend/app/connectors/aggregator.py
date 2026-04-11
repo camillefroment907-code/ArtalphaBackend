@@ -182,34 +182,36 @@ async def fetch_all_lots(lots_per_source: int = 500) -> List[LotNormalized]:
         logger.warning("Singulart connector skipped", error=str(e))
 
     # --- Heritage Auctions — public fine art lots ---
-    try:
-        from app.connectors.heritage_connector import fetch_lots as heritage_fetch
-        heritage_lots = await heritage_fetch(lots_per_source)
-        added = 0
-        for lot in heritage_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("Heritage Auctions: fetched", count=added)
-    except Exception as e:
-        logger.warning("Heritage Auctions connector skipped", error=str(e))
+    if False:  # Blocked by Railway IP — re-enable if proxy added
+        try:
+            from app.connectors.heritage_connector import fetch_lots as heritage_fetch
+            heritage_lots = await heritage_fetch(lots_per_source)
+            added = 0
+            for lot in heritage_lots:
+                if lot.external_id not in seen_ids:
+                    seen_ids.add(lot.external_id)
+                    real_lots.append(lot)
+                    added += 1
+            if added:
+                logger.info("Heritage Auctions: fetched", count=added)
+        except Exception as e:
+            logger.warning("Heritage Auctions connector skipped", error=str(e))
 
     # --- Catawiki — fine art auction lots ---
-    try:
-        from app.connectors.catawiki_connector import fetch_lots as catawiki_fetch
-        catawiki_lots = await catawiki_fetch(lots_per_source)
-        added = 0
-        for lot in catawiki_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("Catawiki: fetched", count=added)
-    except Exception as e:
-        logger.warning("Catawiki connector skipped", error=str(e))
+    if False:  # Blocked by Railway IP — re-enable if proxy added
+        try:
+            from app.connectors.catawiki_connector import fetch_lots as catawiki_fetch
+            catawiki_lots = await catawiki_fetch(lots_per_source)
+            added = 0
+            for lot in catawiki_lots:
+                if lot.external_id not in seen_ids:
+                    seen_ids.add(lot.external_id)
+                    real_lots.append(lot)
+                    added += 1
+            if added:
+                logger.info("Catawiki: fetched", count=added)
+        except Exception as e:
+            logger.warning("Catawiki connector skipped", error=str(e))
 
     # --- Artsy primary market — for sale artworks ---
     try:
