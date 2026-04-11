@@ -368,8 +368,13 @@ export default function OpportunityDetail() {
 
             {/* Artist name */}
             {lot.artist_name_raw && (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '10px' }}>
-                {lot.artist_name_raw}
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px' }}>
+                <span
+                  onClick={() => navigate(`/app/artists/${encodeURIComponent(lot.artist_name_raw)}`)}
+                  style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'var(--electric)', color: 'var(--electric)' }}
+                >
+                  {lot.artist_name_raw}
+                </span>
               </div>
             )}
 
