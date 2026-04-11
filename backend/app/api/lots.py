@@ -852,7 +852,7 @@ async def cleanup_non_art_lots(
     total_before = (await db.execute(select(func.count(Lot.id)))).scalar()
 
     # Delete Adam's lots
-    r1 = await db.execute(
+    r_adams = await db.execute(
         delete(Lot).where(
             or_(
                 Lot.auction_house_name.ilike('%adam%'),
@@ -862,7 +862,7 @@ async def cleanup_non_art_lots(
     )
 
     # Delete jewelry/non-art categories
-    r2 = await db.execute(
+    r_cat = await db.execute(
         delete(Lot).where(
             or_(
                 Lot.category.ilike('%ring%'),
@@ -879,44 +879,28 @@ async def cleanup_non_art_lots(
         )
     )
 
-    # Delete lots with jewelry keywords in title
-    r3 = await db.execute(
-        delete(Lot).where(
-            or_(
-                Lot.title.ilike('%diamond ring%'),
-                Lot.title.ilike('%cocktail ring%'),
-                Lot.title.ilike('%pearl ring%'),
-                Lot.title.ilike('%sapphire ring%'),
-                Lot.title.ilike('%ruby ring%'),
-                Lot.title.ilike('%emerald ring%'),
-                Lot.title.ilike('%diamond pendant%'),
-                Lot.title.ilike('%diamond necklace%'),
-                Lot.title.ilike('%diamond brooch%'),
-                Lot.title.ilike('%cultured pearl%'),
-            )
-        )
-    )
-
-    # Delete lots with "price on request" in title
-    r5 = await db.execute(
-        delete(Lot).where(
-            or_(
-                Lot.title.ilike('%prix sur demande%'),
-                Lot.title.ilike('%price on request%'),
-                Lot.title.ilike('%price upon request%'),
-                Lot.title.ilike('%sur demande%'),
-                Lot.title.ilike('%on request%'),
-            )
-        )
+    # Delete lots with jewelry/non-art keywords in title
+    jewelry_patterns = [
+        '%diamond ring%', '%cocktail ring%', '%pearl ring%',
+        '%ruby ring%', '%emerald ring%', '%diamond pendant%',
+        '%diamond necklace%', '%diamond brooch%', '%cultured pearl%',
+        '%gold ring%', '%silver ring%', '%engagement ring%',
+        '%wedding band%', '%signet ring%', '%diamond bracelet%',
+        '%pocket watch%', '%wristwatch%', '%gold coin%',
+        '%silver coin%', '%postage stamp%', '%medal for%',
+        '%médaille%', '%monnaie de%', '%prix sur demande%',
+        '%price on request%', '%price upon request%',
+    ]
+    r_jewelry = await db.execute(
+        delete(Lot).where(or_(*[Lot.title.ilike(p) for p in jewelry_patterns]))
     )
 
     # Delete lots with no price at all
-    r4 = await db.execute(
+    r_no_price = await db.execute(
         delete(Lot).where(
             and_(
                 Lot.current_price.is_(None),
                 Lot.estimate_low.is_(None),
-                Lot.estimate_high.is_(None),
             )
         )
     )
@@ -926,11 +910,10 @@ async def cleanup_non_art_lots(
     total_after = (await db.execute(select(func.count(Lot.id)))).scalar()
 
     return {
-        "deleted_adams": r1.rowcount,
-        "deleted_jewelry_category": r2.rowcount,
-        "deleted_jewelry_title": r3.rowcount,
-        "deleted_price_on_request": r5.rowcount,
-        "deleted_no_price": r4.rowcount,
+        "deleted_adams": r_adams.rowcount,
+        "deleted_jewelry_category": r_cat.rowcount,
+        "deleted_jewelry_titles": r_jewelry.rowcount,
+        "deleted_no_price": r_no_price.rowcount,
         "total_before": total_before,
         "total_after": total_after,
         "freed": total_before - total_after,

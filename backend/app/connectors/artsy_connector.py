@@ -141,157 +141,142 @@ async def _get_token(client: httpx.AsyncClient) -> Optional[str]:
     return None
 
 
+_GRAPHQL_URL = "https://metaphysics-production.artsy.net/v2"
+
+_GRAPHQL_QUERY = """
+{
+  artworksConnection(
+    forSale: true,
+    atAuction: true,
+    first: 50,
+    sort: "-published_at"
+  ) {
+    edges {
+      node {
+        internalID
+        slug
+        title
+        medium
+        category
+        image { url(version: "large") }
+        artists { name }
+        saleArtwork {
+          currency
+          lowEstimate { display }
+          highEstimate { display }
+          currentBid { display }
+        }
+        sale {
+          name
+          endAt
+          isAuction
+        }
+        partner { name }
+      }
+    }
+  }
+}
+"""
+
+
+def _parse_display_price(display: Optional[str]) -> Optional[float]:
+    if not display:
+        return None
+    clean = "".join(c for c in str(display) if c.isdigit() or c == ".")
+    try:
+        return float(clean) if clean else None
+    except ValueError:
+        return None
+
+
 async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
-    """Fetch auction lots from Artsy public API. Handles 401 gracefully."""
+    """Fetch auction lots from Artsy via public GraphQL (no auth required)."""
     lots: List[LotNormalized] = []
-    seen: set = set()
 
     try:
         async with httpx.AsyncClient(
             timeout=20,
-            follow_redirects=True,
-            verify=False,
-            headers={
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                "Accept": "application/json",
-            },
+            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
         ) as client:
-            endpoints_to_try = [
-                f"{BASE_URL}/sales?is_auction=true&live=true&size=50",
-                f"{BASE_URL}/artworks?for_sale=true&sort=-created_at&size=50&at_auction=true",
-            ]
+            resp = await client.post(
+                _GRAPHQL_URL,
+                json={"query": _GRAPHQL_QUERY},
+                timeout=15,
+            )
 
-            for endpoint in endpoints_to_try:
-                if len(lots) >= limit:
-                    break
+            if resp.status_code != 200:
+                logger.warning("artsy_graphql_failed", status=resp.status_code)
+                return []
+
+            edges = (
+                resp.json()
+                .get("data", {})
+                .get("artworksConnection", {})
+                .get("edges", [])
+            )
+
+            for edge in edges:
+                node = edge.get("node") or {}
                 try:
-                    resp = await client.get(endpoint, timeout=10)
-                    if resp.status_code == 401:
-                        logger.warning("artsy_auth_required", endpoint=endpoint)
-                        continue
-                    if resp.status_code != 200:
-                        logger.warning("artsy_endpoint_failed", status=resp.status_code, endpoint=endpoint)
+                    artwork_id = node.get("slug") or node.get("internalID", "")
+                    title = (node.get("title") or "").strip()
+                    if not title or not artwork_id:
                         continue
 
-                    data = resp.json()
-                    items = (
-                        data.get("_embedded", {}).get("artworks", [])
-                        or data.get("_embedded", {}).get("sales", [])
-                        or data.get("results", [])
-                        or (data if isinstance(data, list) else [])
-                    )
+                    artists = node.get("artists") or []
+                    artist = artists[0].get("name", "") if artists else ""
 
-                    if not items:
-                        continue
+                    sale_artwork = node.get("saleArtwork") or {}
+                    low = _parse_display_price((sale_artwork.get("lowEstimate") or {}).get("display"))
+                    high = _parse_display_price((sale_artwork.get("highEstimate") or {}).get("display"))
+                    bid = _parse_display_price((sale_artwork.get("currentBid") or {}).get("display"))
+                    currency = (sale_artwork.get("currency") or "USD").upper()
 
-                    for item in items[:limit]:
+                    sale = node.get("sale") or {}
+                    auction_date = None
+                    if sale.get("endAt"):
                         try:
-                            artwork_id = item.get("id") or item.get("slug", "")
-                            if not artwork_id:
-                                continue
+                            auction_date = datetime.fromisoformat(str(sale["endAt"])[:19])
+                        except Exception:
+                            pass
 
-                            ext_id = f"artsy-{artwork_id}"
-                            if ext_id in seen:
-                                continue
+                    image = node.get("image") or {}
+                    image_url = image.get("url")
 
-                            title = item.get("title", "Untitled")
+                    partner = node.get("partner") or {}
+                    gallery_name = partner.get("name", "")
+                    house_name = sale.get("name") or gallery_name or "Artsy"
+                    is_auction = sale.get("isAuction", True)
 
-                            # Artist
-                            artist = ""
-                            for field in ["artistNames", "artist_names", "artist"]:
-                                val = item.get(field)
-                                if val:
-                                    artist = val if isinstance(val, str) else val.get("name", "")
-                                    if artist:
-                                        break
-                            if not artist:
-                                artists = item.get("_embedded", {}).get("artists", [])
-                                if artists:
-                                    artist = artists[0].get("name", "")
-
-                            # Price
-                            price = None
-                            for price_field in ["price", "listPrice", "list_price", "internalDisplayPrice"]:
-                                val = item.get(price_field, "")
-                                if val:
-                                    try:
-                                        clean = str(val).replace(",", "").replace("$", "").replace("€", "").replace("£", "").strip()
-                                        if clean and clean.replace(".", "").isdigit():
-                                            price = float(clean)
-                                            break
-                                    except Exception:
-                                        pass
-
-                            # Estimates
-                            estimate_low = None
-                            estimate_high = None
-                            try:
-                                if item.get("lowEstimate"):
-                                    estimate_low = float(item["lowEstimate"])
-                                if item.get("highEstimate"):
-                                    estimate_high = float(item["highEstimate"])
-                            except Exception:
-                                pass
-
-                            # Image
-                            image_url = None
-                            links = item.get("_links", {})
-                            img = links.get("image", {})
-                            if img:
-                                href = img.get("href", "")
-                                for size in ["large", "medium", "square"]:
-                                    candidate = href.replace("{image_version}", size)
-                                    if candidate.startswith("http"):
-                                        image_url = candidate
-                                        break
-                            if not image_url:
-                                thumbnail = links.get("thumbnail", {})
-                                image_url = thumbnail.get("href") if thumbnail else None
-
-                            # Sale date
-                            auction_date = None
-                            for date_field in ["end_at", "start_at", "live_start_at"]:
-                                date_str = item.get(date_field)
-                                if date_str:
-                                    try:
-                                        auction_date = datetime.fromisoformat(str(date_str)[:19])
-                                        break
-                                    except Exception:
-                                        pass
-
-                            lot = LotNormalized(
-                                external_id=ext_id,
-                                source=AuctionHouseEnum.OTHER,
-                                title=str(title)[:500],
-                                artist_name_raw=str(artist)[:500] if artist else None,
-                                estimate_low=estimate_low,
-                                estimate_high=estimate_high,
-                                current_price=price or estimate_low,
-                                currency="USD",
-                                auction_date=auction_date,
-                                auction_house_name="Artsy",
-                                image_url=str(image_url) if image_url else None,
-                                url=f"https://www.artsy.net/artwork/{artwork_id}",
-                                category=item.get("category") or item.get("medium"),
-                                medium=item.get("medium"),
-                                raw_data={"real": True, "source": "artsy", "id": artwork_id},
-                            )
-                            seen.add(ext_id)
-                            lots.append(lot)
-
-                        except Exception as e:
-                            logger.debug("artsy_lot_parse_error", error=str(e))
-                            continue
-
-                    if lots:
-                        break  # Got results — stop trying other endpoints
+                    lots.append(LotNormalized(
+                        external_id=f"artsy-{artwork_id}",
+                        source=AuctionHouseEnum.OTHER,
+                        title=str(title)[:500],
+                        artist_name_raw=str(artist)[:300] if artist else None,
+                        estimate_low=low,
+                        estimate_high=high,
+                        current_price=bid or low,
+                        currency=currency,
+                        auction_date=auction_date,
+                        auction_house_name=house_name[:300],
+                        image_url=str(image_url) if image_url else None,
+                        url=f"https://www.artsy.net/artwork/{artwork_id}",
+                        category=node.get("category") or node.get("medium"),
+                        medium=node.get("medium"),
+                        market_type="AUCTION" if is_auction else "PRIMARY",
+                        is_buy_now=not is_auction,
+                        gallery_name=gallery_name[:300] if gallery_name else None,
+                        raw_data={"real": True, "source": "artsy", "slug": artwork_id},
+                    ))
+                    if len(lots) >= limit:
+                        break
 
                 except Exception as e:
-                    logger.warning("artsy_endpoint_error", endpoint=endpoint, error=str(e))
+                    logger.debug("artsy_graphql_parse_error", error=str(e))
                     continue
 
     except Exception as e:
-        logger.warning("artsy_fetch_failed", error=str(e))
+        logger.warning("artsy_graphql_fetch_failed", error=str(e))
 
     logger.info("artsy_fetched", count=len(lots))
     return lots[:limit]

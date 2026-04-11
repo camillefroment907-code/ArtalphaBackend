@@ -18,15 +18,13 @@ HOUSE_REPUTATION = 0.78
 
 SEARCH_QUERIES = [
     "oil on canvas",
-    "acrylic on canvas",
     "contemporary painting",
-    "modern art painting",
+    "modern art",
     "abstract painting",
-    "impressionist painting",
-    "figurative painting",
-    "landscape painting",
-    "portrait painting",
+    "figurative art",
     "street art",
+    "mixed media art",
+    "watercolor painting",
 ]
 
 HEADERS = {
@@ -186,7 +184,7 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
                             "size": page_size,
                             "upcoming": "true",
                             "page": page,
-                            "keyword": "Paintings",  # Invaluable category filter
+                            "categoryId": "3",  # Fine Art category on Invaluable
                         },
                     )
                     if resp.status_code != 200:

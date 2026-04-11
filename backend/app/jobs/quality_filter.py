@@ -7,25 +7,40 @@ import unicodedata
 from typing import List
 from app.models.schemas import LotNormalized
 
-# ── Category blacklist ────────────────────────────────────────────────────────
-# Lots whose category OR title contains any of these are rejected
+# ── Category whitelist ───────────────────────────────────────────────────────
+# If a category is present, it must contain at least one of these to pass.
+# Lots with no category fall back to title/medium heuristics.
 
-CATEGORY_BLACKLIST = {
-    "vehicule", "vehicle", "voiture", "automobile", "moto", "motorcycle",
-    "bicycle", "velo", "bateau", "boat", "yacht",
-    "electromenager", "appliance", "cuisine", "kitchen", "ixina",
-    "vin", "wine", "whisky", "whiskey", "champagne", "spiritueux", "spirits",
-    "bijou", "jewel", "jewelry", "bijoux", "montre", "watch", "watches",
-    "mobilier", "furniture", "meuble", "chaise", "table", "armoire",
-    "tapis", "carpet", "rug",
-    "livre", "book", "manuscrit", "manuscript",
-    "timbre", "stamp", "coin", "monnaie",
-    "jouet", "toy", "poupee", "doll",
-    "instrument", "guitare", "violin",
-    "militaria", "arme", "weapon", "sword",
-    # Non-art auction houses known to pollute the feed
-    "adam's",
+CATEGORY_WHITELIST = {
+    "painting", "paintings", "peinture", "tableau",
+    "huile sur toile", "oil on canvas", "oil on board", "oil on panel",
+    "acrylic on canvas", "acrylic on board", "acrylic",
+    "watercolor", "watercolour", "aquarelle", "gouache",
+    "tempera", "pastel", "fresco",
+    "drawing", "drawings", "dessin", "sketch",
+    "pencil", "charcoal", "crayon", "ink", "encre",
+    "sculpture", "bronze", "marble", "resin", "terracotta",
+    "photography", "photograph", "photographie", "photo",
+    "print", "lithograph", "etching", "screenprint", "woodcut",
+    "serigraph", "lithographie", "gravure", "estampe",
+    "mixed media", "media mixtes", "technique mixte",
+    "street art", "urban art", "graffiti",
+    "contemporary art", "modern art", "fine art",
+    "installation", "video", "digital art",
+    "collage", "assemblage",
 }
+
+# Art indicators used when no category is present
+_ART_INDICATORS = [
+    "painting", "peinture", "oil", "huile", "acrylic", "acrylique",
+    "watercolor", "aquarelle", "drawing", "dessin", "sculpture",
+    "photography", "photographie", "print", "lithograph", "gravure",
+    "mixed media", "canvas", "toile", "paper", "pastel",
+    "street art", "urban art", "contemporary",
+]
+
+# Generic/empty categories that don't disqualify a lot
+_GENERIC_CATS = {"other", "divers", "miscellaneous", "various", "unknown"}
 
 AUCTION_HOUSE_BLACKLIST = {
     "adam's",
@@ -43,19 +58,10 @@ TITLE_BLACKLIST_KEYWORDS = [
     "diamond bracelet", "tennis bracelet", "charm bracelet",
     "pocket watch", "wristwatch", "rolex", "cartier watch",
     "gold coin", "silver coin", "postage stamp", "first day cover",
+    "medal for", "médaille", "monnaie", "numismatic",
+    "prix sur demande", "price on request", "price upon request",
+    "furniture", "meuble", "armoire", "commode", "table basse",
 ]
-
-# Art-specific categories we WANT to keep (if category is set, it must match)
-CATEGORY_ALLOWLIST = {
-    "peinture", "painting", "tableau", "dessin", "drawing", "gravure",
-    "print", "estampe", "lithographie", "lithograph", "aquarelle",
-    "watercolor", "sculpture", "ceramique", "ceramic", "porcelaine",
-    "photographie", "photography", "photo", "art contemporain",
-    "contemporary art", "art moderne", "modern art", "art africain",
-    "art asiatique", "asian art", "antiquite", "antiquity",
-    "tapisserie", "tapestry", "collage", "mixed media",
-    "installation", "video art", "numismatique",  # keep if explicitly art
-}
 
 
 def normalize_artist_name(name: str) -> str:
@@ -90,14 +96,7 @@ def normalize_title(title: str) -> str:
 
 
 def _is_blacklisted(lot: LotNormalized) -> bool:
-    """Return True if lot should be rejected."""
-    cat = (lot.category or "").lower()
-    title = (lot.title or "").lower()
-
-    for word in CATEGORY_BLACKLIST:
-        if word in cat or word in title:
-            return True
-
+    """Return True if lot should be rejected based on house or title keywords."""
     auction_house = (lot.auction_house_name or "").lower()
     for blocked_house in AUCTION_HOUSE_BLACKLIST:
         if blocked_house in auction_house:
@@ -109,6 +108,23 @@ def _is_blacklisted(lot: LotNormalized) -> bool:
             return True
 
     return False
+
+
+def _passes_category_whitelist(lot: LotNormalized) -> bool:
+    """
+    Returns True if the lot belongs to a fine art category.
+    If no category is provided, falls back to title+medium heuristic.
+    """
+    category = (lot.category or "").lower().strip()
+    medium = (lot.medium or "").lower().strip()
+    title = (lot.title or "").lower().strip()
+
+    if category and category not in _GENERIC_CATS:
+        return any(w in category for w in CATEGORY_WHITELIST)
+
+    # No category (or generic) → require at least one art indicator in title+medium
+    combined = f"{title} {medium}"
+    return any(ind in combined for ind in _ART_INDICATORS)
 
 
 def _has_minimum_data(lot: LotNormalized) -> bool:
@@ -263,9 +279,9 @@ def filter_and_deduplicate(lots: List[LotNormalized]) -> tuple[List[LotNormalize
         "output": int,
     }
     """
-    stats = {"input": len(lots), "blacklisted": 0, "no_price": 0, "price_on_request": 0, "intra_source_dupes": 0, "cross_source_dupes": 0, "output": 0}
+    stats = {"input": len(lots), "blacklisted": 0, "no_price": 0, "price_on_request": 0, "category_rejected": 0, "intra_source_dupes": 0, "cross_source_dupes": 0, "output": 0}
 
-    # Step 1 & 2: basic quality filters
+    # Step 1–4: basic quality filters
     qualified = []
     for lot in lots:
         if _is_blacklisted(lot):
@@ -276,6 +292,9 @@ def filter_and_deduplicate(lots: List[LotNormalized]) -> tuple[List[LotNormalize
             continue
         if _is_price_on_request(lot):
             stats["price_on_request"] += 1
+            continue
+        if not _passes_category_whitelist(lot):
+            stats["category_rejected"] += 1
             continue
         qualified.append(lot)
 
