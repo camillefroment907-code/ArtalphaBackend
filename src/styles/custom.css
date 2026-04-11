@@ -2,49 +2,38 @@
 
 /* ── DESIGN TOKENS ──────────────────────────────────────────── */
 :root {
-  --bg:           #FAFAF8;
-  --bg-card:      #FFFFFF;
-  --bg-subtle:    #F4F4F1;
-  --bg-hover:     #EFEDE8;
+  --bg: #FAFAFA; --bg-card: #FFFFFF; --bg-subtle: #F5F5F7; --bg-hover: #EFEFEF;
+  --text: #0A0F1E; --text-2: #4A5568; --text-3: #8A95A3; --text-ghost: #C8CDD4;
+  --border: #E2E8F0; --border-light: #EDF2F7;
 
-  --text:         #111111;
-  --text-2:       #555555;
-  --text-3:       #999999;
-  --text-ghost:   #CCCCCC;
+  /* Navy — primary */
+  --navy: #0A1628; --navy-bright: #1A2A44; --navy-muted: #2D4A6E;
+  --navy-subtle: rgba(10,22,40,0.06); --navy-glow: rgba(10,22,40,0.14);
 
-  --border:       #E8E6E1;
-  --border-light: #F0EEE9;
-
-  /* Navy — primary accent */
-  --navy:         #1A2A44;
-  --navy-bright:  #243858;
-  --navy-muted:   #2E4A6E;
-  --navy-subtle:  rgba(26,42,68,0.06);
-  --navy-glow:    rgba(26,42,68,0.12);
+  /* Electric — interactive accent */
+  --electric: #2563EB; --electric-dim: #1D4ED8;
+  --electric-subtle: rgba(37,99,235,0.08); --electric-border: rgba(37,99,235,0.2);
 
   /* Gold — luxury accent */
-  --gold:         #C6A85A;
-  --gold-bright:  #D4B96B;
-  --gold-dim:     #9E8440;
-  --gold-subtle:  rgba(198,168,90,0.08);
-  --gold-border:  rgba(198,168,90,0.2);
+  --gold: #C6A85A; --gold-bright: #D4B96B; --gold-dim: #9E8440;
+  --gold-subtle: rgba(198,168,90,0.08); --gold-border: rgba(198,168,90,0.2);
 
   /* Semantic */
-  --green:  var(--navy);
-  --red:    #C0392B;
+  --green: var(--electric); --red: #DC2626; --red-subtle: rgba(220,38,38,0.08);
 
   /* Typography */
   --font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
-  --font-sans:  'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono:  'JetBrains Mono', 'Fira Code', monospace;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
   /* Shadows */
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md:   0 4px 16px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
-  --shadow-lg:   0 12px 40px rgba(0,0,0,0.10), 0 3px 10px rgba(0,0,0,0.05);
-  --shadow-navy: 0 8px 32px rgba(26,42,68,0.18);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.12), 0 3px 10px rgba(0,0,0,0.05);
+  --shadow-navy: 0 8px 32px rgba(10,22,40,0.2);
+  --shadow-blue: 0 8px 32px rgba(37,99,235,0.2);
 
-  --ease:        cubic-bezier(0.4, 0, 0.2, 1);
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -140,7 +129,7 @@ body {
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 6px;
   box-shadow: var(--shadow-sm);
   transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), border-color 0.25s var(--ease);
 }
@@ -153,7 +142,7 @@ body {
 .artwork-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 6px;
   overflow: hidden;
   cursor: pointer;
   transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease), border-color 0.25s var(--ease);
@@ -216,17 +205,29 @@ body {
 }
 .btn-navy {
   background: var(--navy); color: white;
-  padding: 10px 22px; border-radius: 7px; font-size: 12px;
-  box-shadow: 0 2px 8px rgba(26,42,68,0.2);
+  padding: 10px 22px; border-radius: 6px; font-size: 12px;
+  box-shadow: 0 2px 8px rgba(10,22,40,0.2);
 }
 .btn-navy:hover {
   background: var(--navy-bright);
   box-shadow: var(--shadow-navy);
   transform: translateY(-1px);
 }
+.btn-electric {
+  background: var(--electric); color: white; padding: 10px 22px;
+  border-radius: 6px; font-size: 12px; font-family: var(--font-sans); font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase; border: none; cursor: pointer;
+  box-shadow: var(--shadow-blue); transition: all 0.2s var(--ease);
+  display: inline-flex; align-items: center; gap: 8px; text-decoration: none; white-space: nowrap;
+}
+.btn-electric:hover {
+  background: var(--electric-dim);
+  box-shadow: 0 8px 24px rgba(37,99,235,0.3);
+  transform: translateY(-1px);
+}
 .btn-gold {
   background: var(--gold); color: white;
-  padding: 10px 22px; border-radius: 7px; font-size: 12px;
+  padding: 10px 22px; border-radius: 6px; font-size: 12px;
   box-shadow: 0 2px 8px rgba(198,168,90,0.25);
 }
 .btn-gold:hover {
@@ -236,7 +237,7 @@ body {
 }
 .btn-outline {
   background: transparent; color: var(--text);
-  padding: 9px 20px; border-radius: 7px; font-size: 12px;
+  padding: 9px 20px; border-radius: 6px; font-size: 12px;
   border: 1px solid var(--border);
 }
 .btn-outline:hover {
@@ -271,10 +272,10 @@ body {
 .input {
   width: 100%; padding: 11px 14px;
   background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: 8px; color: var(--text); font-size: 14px;
+  border-radius: 6px; color: var(--text); font-size: 14px;
   font-family: var(--font-sans); outline: none;
   transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
   box-sizing: border-box;
 }
-.input:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(26,42,68,0.08); }
+.input:focus { border-color: var(--electric); box-shadow: 0 0 0 3px var(--electric-subtle); }
 .input::placeholder { color: var(--text-3); }

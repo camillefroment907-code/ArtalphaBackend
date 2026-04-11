@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { getUser, getPlanLimits, getToken, logout, PLAN_LIMITS } from '../../lib/auth';
 import { AlertsContent } from './Alerts';
-import { getSubscription } from '../../lib/api';
+import { getSubscription, cancelSubscription } from '../../lib/api';
 import { getUsageStatus, PLAN_LIMITS as USAGE_LIMITS } from '../../lib/analysisUsage';
 
 // ── Types ────────────────────────────────────────────────────
@@ -247,7 +247,7 @@ function FeatureRow({ label, value, active }: { label: string; value: string; ac
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border-light)' }}>
       <span style={{ fontSize: '13px', color: 'var(--text-2)' }}>{label}</span>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: active ? 'var(--navy)' : 'var(--text-3)' }}>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: active ? 'var(--electric)' : 'var(--text-3)' }}>
         {value}
       </span>
     </div>
@@ -269,6 +269,11 @@ export default function Portfolio() {
   const [lotsError, setLotsError] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState('');
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelStep, setCancelStep] = useState<1 | 2>(1);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelFeedback, setCancelFeedback] = useState('');
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   // Portfolio state
   const [portfolioStats, setPortfolioStats] = useState<PortfolioStats | null>(null);
@@ -432,13 +437,13 @@ export default function Portfolio() {
   const billingInterval = sub?.billing_interval || 'monthly';
   const isFreePlan = plan === 'free' || plan === 'starter';
 
-  type PortfolioTab = 'portfolio' | 'alerts' | 'abonnement';
-  const [portfolioTab, setPortfolioTab] = useState<PortfolioTab>('portfolio');
+  type PortfolioTab = 'collection' | 'alerts' | 'billing';
+  const [portfolioTab, setPortfolioTab] = useState<PortfolioTab>('collection');
 
   const PORTFOLIO_TABS: { id: PortfolioTab; label: string }[] = [
-    { id: 'portfolio',   label: 'Mon Portfolio' },
-    { id: 'alerts',      label: 'Mes Alertes'   },
-    { id: 'abonnement',  label: 'Abonnement'    },
+    { id: 'collection', label: 'My Collection' },
+    { id: 'alerts',     label: 'Alerts'        },
+    { id: 'billing',    label: 'Plan & Billing' },
   ];
 
   // Input style helper
@@ -459,9 +464,12 @@ export default function Portfolio() {
           padding: '40px 0 32px',
           borderBottom: '2px solid var(--border)',
         }}>
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '36px', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
-            Portfolio
-          </h1>
+          <div>
+            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--text)', margin: '0 0 4px' }}>
+              Portfolio
+            </h1>
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-2)' }}>Track your collection and manage your account</p>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {user?.email && (
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-3)' }}>
@@ -470,21 +478,12 @@ export default function Portfolio() {
             )}
             <span style={{
               padding: '4px 12px', borderRadius: '4px',
-              background: 'rgba(198,168,90,0.12)', border: '1px solid var(--gold-border)',
+              background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)',
               fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700,
-              color: 'var(--navy)', letterSpacing: '0.08em', textTransform: 'uppercase',
+              color: 'var(--electric)', letterSpacing: '0.08em', textTransform: 'uppercase',
             }}>
               {planLabel}
             </span>
-            {isFreePlan && (
-              <Link to="/app/pricing" style={{
-                padding: '8px 16px', background: 'var(--gold)', color: 'white',
-                borderRadius: '6px', fontSize: '11px', fontWeight: 700,
-                letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none',
-              }}>
-                Upgrade
-              </Link>
-            )}
             <button
               onClick={handleSignOut}
               style={{
@@ -509,10 +508,10 @@ export default function Portfolio() {
               onClick={() => setPortfolioTab(id)}
               style={{
                 padding: '10px 20px', background: 'transparent', border: 'none',
-                borderBottom: portfolioTab === id ? '2px solid var(--navy)' : '2px solid transparent',
+                borderBottom: portfolioTab === id ? '2px solid var(--electric)' : '2px solid transparent',
                 marginBottom: '-2px', cursor: 'pointer',
                 fontSize: '13px', fontWeight: portfolioTab === id ? 600 : 400,
-                color: portfolioTab === id ? 'var(--navy)' : 'var(--text-2)',
+                color: portfolioTab === id ? 'var(--text)' : 'var(--text-2)',
                 transition: 'all 0.15s',
               }}
             >
@@ -524,45 +523,58 @@ export default function Portfolio() {
         {/* ── ALERTS TAB ─────────────────────────────────────── */}
         {portfolioTab === 'alerts' && <AlertsContent />}
 
-        {/* ── ABONNEMENT TAB ─────────────────────────────────── */}
-        {portfolioTab === 'abonnement' && (
-          <div>
-            {/* Plan features */}
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 600, color: 'var(--text)', margin: '0 0 24px' }}>
-              Your Plan — {planLabel}
-            </h2>
-            <div style={{ background: 'var(--bg-card)', border: '2px solid var(--border)', borderRadius: '10px', padding: '28px 32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 48px' }}>
-              <div>
-                <FeatureRow label="Opportunities" value={limits.maxOpportunities >= 9999 ? 'Unlimited' : String(limits.maxOpportunities)} active={true} />
-                <FeatureRow label="AI Analyses / month" value={usageLimit === 0 ? '—' : usageLimit >= 999 ? 'Unlimited' : String(usageLimit)} active={usageLimit > 0} />
-                <FeatureRow label="Investment Analysis" value={limits.hasFullAnalysis ? '✓' : '—'} active={limits.hasFullAnalysis} />
-                <FeatureRow label="AI Investment Advisor" value={limits.hasAIVerdict ? '✓' : '—'} active={limits.hasAIVerdict} />
+        {/* ── BILLING TAB ────────────────────────────────────── */}
+        {portfolioTab === 'billing' && (
+          <div style={{ paddingTop: '8px' }}>
+            {/* Current plan card — electric border */}
+            <div style={{ border: '2px solid var(--electric-border)', borderRadius: '12px', padding: '32px', background: 'var(--electric-subtle)', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' }}>
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em', color: 'var(--electric)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '6px' }}>Current Plan</div>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--text)' }}>{planLabel}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--electric)', animation: 'pulseDot 2s infinite' }} />
+                  <span style={{ fontSize: '11px', color: 'var(--electric)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>Active</span>
+                </div>
               </div>
-              <div>
-                <FeatureRow label="Price Projections" value={limits.projectionYears.length > 0 ? limits.projectionYears.map((y: number) => `${y}y`).join(', ') : '—'} active={limits.projectionYears.length > 0} />
-                <FeatureRow label="Real-time Alerts" value={limits.hasAlerts ? '✓' : '—'} active={limits.hasAlerts} />
-                <FeatureRow label="Portfolio Tracking" value={limits.hasPortfolio ? '✓' : '—'} active={limits.hasPortfolio} />
-                <FeatureRow label="Full Artist Profiles" value={limits.hasFullArtistProfile ? '✓' : '—'} active={limits.hasFullArtistProfile} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 48px', marginBottom: '24px' }}>
+                <div>
+                  <FeatureRow label="Opportunities" value={limits.maxOpportunities >= 9999 ? 'Unlimited' : String(limits.maxOpportunities)} active={true} />
+                  <FeatureRow label="AI Analyses / month" value={usageLimit === 0 ? '—' : usageLimit >= 999 ? 'Unlimited' : String(usageLimit)} active={usageLimit > 0} />
+                  <FeatureRow label="Investment Analysis" value={limits.hasFullAnalysis ? '✓' : '—'} active={limits.hasFullAnalysis} />
+                  <FeatureRow label="AI Advisor" value={limits.hasAIVerdict ? '✓' : '—'} active={limits.hasAIVerdict} />
+                </div>
+                <div>
+                  <FeatureRow label="Price Projections" value={limits.projectionYears.length > 0 ? limits.projectionYears.map((y: number) => `${y}y`).join(', ') : '—'} active={limits.projectionYears.length > 0} />
+                  <FeatureRow label="Real-time Alerts" value={limits.hasAlerts ? '✓' : '—'} active={limits.hasAlerts} />
+                  <FeatureRow label="Portfolio Tracking" value={limits.hasPortfolio ? '✓' : '—'} active={limits.hasPortfolio} />
+                  <FeatureRow label="Full Artist Profiles" value={limits.hasFullArtistProfile ? '✓' : '—'} active={limits.hasFullArtistProfile} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                {isFreePlan ? (
+                  <Link to="/app/pricing" className="btn-electric" style={{ padding: '10px 24px', fontSize: '12px', letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none' }}>
+                    Upgrade Plan
+                  </Link>
+                ) : (
+                  <button
+                    onClick={() => { setShowCancelModal(true); setCancelStep(1); setCancelReason(''); setCancelFeedback(''); }}
+                    style={{ padding: '10px 20px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--text-2)', cursor: 'pointer', letterSpacing: '0.04em' }}
+                  >
+                    Cancel subscription
+                  </button>
+                )}
               </div>
             </div>
-            {isFreePlan && (
-              <div style={{ marginTop: '24px', background: 'var(--navy)', borderRadius: '10px', padding: '40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', fontWeight: 600, color: 'white', margin: '0 0 8px' }}>Unlock the full platform</h3>
-                  <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', margin: 0, maxWidth: '420px' }}>Get unlimited opportunities, AI analyses, price projections, and real-time alerts.</p>
-                </div>
-                <Link to="/app/pricing" style={{ padding: '14px 28px', background: 'var(--gold)', color: 'white', borderRadius: '7px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none', flexShrink: 0, marginLeft: '32px' }}>
-                  Upgrade Now
-                </Link>
-              </div>
-            )}
-            {/* Danger zone */}
-            <div style={{ marginTop: '40px', border: '1px solid rgba(192,57,43,0.2)', borderRadius: '10px', padding: '28px 32px', background: 'rgba(192,57,43,0.02)' }}>
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, color: '#C0392B', margin: '0 0 8px' }}>Danger Zone</h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: '0 0 20px' }}>Permanently delete your account and all associated data.</p>
+
+            {/* Danger zone — discreet */}
+            <div style={{ marginTop: '32px', border: '1px solid var(--border-light)', borderRadius: '10px', padding: '24px 28px', background: 'var(--bg-subtle)' }}>
+              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', fontWeight: 600, color: 'var(--text-2)', margin: '0 0 6px' }}>Danger Zone</h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: '0 0 16px' }}>Permanently delete your account and all associated data.</p>
               {!deleteConfirm ? (
-                <button onClick={() => setDeleteConfirm(true)} style={{ padding: '10px 20px', background: 'transparent', border: '1px solid rgba(192,57,43,0.4)', borderRadius: '6px', color: '#C0392B', fontSize: '12px', fontWeight: 600, cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                  Delete Account
+                <button onClick={() => setDeleteConfirm(true)} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-3)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', letterSpacing: '0.04em' }}>
+                  Delete account
                 </button>
               ) : (
                 <div>
@@ -583,7 +595,7 @@ export default function Portfolio() {
         )}
 
         {/* ── PORTFOLIO TAB ──────────────────────────────────── */}
-        {portfolioTab === 'portfolio' && <>
+        {portfolioTab === 'collection' && <>
 
         {/* ── 2. ACCOUNT OVERVIEW STRIP ──────────────────────── */}
         <div style={{
@@ -1092,173 +1104,68 @@ export default function Portfolio() {
         {/* Close portfolio tab */}
         </>}
 
-        {/* ── 5. PLAN FEATURES PANEL ─────────────────────────── */}
-        {false && <div style={{ marginTop: '56px' }}>
-          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 600, color: 'var(--text)', margin: '0 0 24px' }}>
-            Your Plan — {planLabel}
-          </h2>
+      </div>
 
-          <div style={{
-            background: 'var(--bg-card)', border: '2px solid var(--border)',
-            borderRadius: '10px', padding: '28px 32px',
-            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 48px',
-          }}>
-            <div>
-              <FeatureRow
-                label="Opportunities"
-                value={limits.maxOpportunities >= 9999 ? 'Unlimited' : String(limits.maxOpportunities)}
-                active={true}
-              />
-              <FeatureRow
-                label="AI Analyses / month"
-                value={usageLimit === 0 ? '—' : usageLimit >= 999 ? 'Unlimited' : String(usageLimit)}
-                active={usageLimit > 0}
-              />
-              <FeatureRow
-                label="Investment Analysis"
-                value={limits.hasFullAnalysis ? '✓' : '—'}
-                active={limits.hasFullAnalysis}
-              />
-              <FeatureRow
-                label="AI Investment Advisor"
-                value={limits.hasAIVerdict ? '✓' : '—'}
-                active={limits.hasAIVerdict}
-              />
-            </div>
-            <div>
-              <FeatureRow
-                label="Price Projections"
-                value={limits.projectionYears.length > 0 ? limits.projectionYears.map(y => `${y}y`).join(', ') : '—'}
-                active={limits.projectionYears.length > 0}
-              />
-              <FeatureRow
-                label="Real-time Alerts"
-                value={limits.hasAlerts ? '✓' : '—'}
-                active={limits.hasAlerts}
-              />
-              <FeatureRow
-                label="Portfolio Tracking"
-                value={limits.hasPortfolio ? '✓' : '—'}
-                active={limits.hasPortfolio}
-              />
-              <FeatureRow
-                label="Full Artist Profiles"
-                value={limits.hasFullArtistProfile ? '✓' : '—'}
-                active={limits.hasFullArtistProfile}
-              />
-            </div>
+    {/* ── CANCEL SUBSCRIPTION MODAL ──────────────────────── */}
+    {showCancelModal && (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px' }}>
+        <div style={{ background: 'white', borderRadius: '12px', padding: '40px', maxWidth: '480px', width: '100%', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }}>
+          {/* Step indicator */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '28px' }}>
+            {([1, 2] as const).map((step) => (
+              <div key={step} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, background: cancelStep >= step ? 'var(--electric)' : 'var(--bg-subtle)', color: cancelStep >= step ? 'white' : 'var(--text-3)' }}>{step}</div>
+                {step < 2 && <div style={{ width: '32px', height: '1px', background: cancelStep > step ? 'var(--electric)' : 'var(--border)' }} />}
+              </div>
+            ))}
+            <span style={{ fontSize: '12px', color: 'var(--text-3)', marginLeft: '8px' }}>Step {cancelStep} of 2</span>
           </div>
 
-          {/* Upgrade CTA */}
-          {isFreePlan && (
-            <div style={{
-              marginTop: '24px', background: 'var(--navy)', borderRadius: '10px',
-              padding: '40px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            }}>
-              <div>
-                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', fontWeight: 600, color: 'white', margin: '0 0 8px' }}>
-                  Unlock the full platform
-                </h3>
-                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', margin: 0, maxWidth: '420px' }}>
-                  Get unlimited opportunities, AI analyses, price projections, and real-time alerts. Built for serious collectors.
-                </p>
+          {cancelStep === 1 && (
+            <>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px' }}>Cancel subscription?</h2>
+              <p style={{ fontSize: '13px', color: 'var(--text-2)', margin: '0 0 24px', lineHeight: 1.6 }}>We're sorry to see you go. Could you tell us why you're cancelling?</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '28px' }}>
+                {['Too expensive', 'Not using it enough', 'Missing features I need', 'Found a better alternative', 'Technical issues', 'Other'].map(reason => (
+                  <label key={reason} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', border: `1px solid ${cancelReason === reason ? 'var(--electric)' : 'var(--border)'}`, borderRadius: '6px', cursor: 'pointer', background: cancelReason === reason ? 'var(--electric-subtle)' : 'white' }}>
+                    <input type="radio" name="cancelReason" value={reason} checked={cancelReason === reason} onChange={() => setCancelReason(reason)} style={{ accentColor: 'var(--electric)' }} />
+                    <span style={{ fontSize: '13px', color: 'var(--text)' }}>{reason}</span>
+                  </label>
+                ))}
               </div>
-              <Link
-                to="/app/pricing"
-                style={{
-                  padding: '14px 28px', background: 'var(--gold)', color: 'white',
-                  borderRadius: '7px', fontSize: '12px', fontWeight: 700,
-                  letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none',
-                  flexShrink: 0, marginLeft: '32px',
-                  boxShadow: '0 4px 16px rgba(198,168,90,0.4)',
-                }}
-              >
-                Upgrade Now
-              </Link>
-            </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={() => setCancelStep(2)} disabled={!cancelReason} className="btn-electric" style={{ padding: '11px 24px', fontSize: '13px', opacity: cancelReason ? 1 : 0.4, cursor: cancelReason ? 'pointer' : 'not-allowed' }}>Next</button>
+                <button onClick={() => setShowCancelModal(false)} style={{ padding: '11px 20px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '13px', color: 'var(--text-2)', cursor: 'pointer' }}>Keep subscription</button>
+              </div>
+            </>
+          )}
+
+          {cancelStep === 2 && (
+            <>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px' }}>Any additional feedback?</h2>
+              <p style={{ fontSize: '13px', color: 'var(--text-2)', margin: '0 0 20px', lineHeight: 1.6 }}>Your feedback helps us improve. This is optional.</p>
+              <textarea value={cancelFeedback} onChange={e => setCancelFeedback(e.target.value)} placeholder="Tell us more..." rows={4} style={{ width: '100%', padding: '12px 14px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '13px', color: 'var(--text)', background: 'var(--bg-subtle)', resize: 'vertical', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '24px' }} />
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  disabled={cancelLoading}
+                  onClick={async () => {
+                    setCancelLoading(true);
+                    try { await cancelSubscription(); } catch {}
+                    setCancelLoading(false);
+                    setShowCancelModal(false);
+                    getSubscription().then(setSub).catch(() => {});
+                  }}
+                  style={{ padding: '11px 20px', background: 'var(--red)', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 600, color: 'white', cursor: cancelLoading ? 'not-allowed' : 'pointer', opacity: cancelLoading ? 0.7 : 1 }}
+                >
+                  {cancelLoading ? 'Cancelling...' : 'Confirm cancellation'}
+                </button>
+                <button onClick={() => setCancelStep(1)} style={{ padding: '11px 20px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '13px', color: 'var(--text-2)', cursor: 'pointer' }}>Back</button>
+              </div>
+            </>
           )}
         </div>
-
-        }
-        {/* ── 6. DANGER ZONE (moved to Abonnement tab) ────────── */}
-        {false && <div style={{ marginTop: '56px' }}>
-          <div style={{
-            border: '1px solid rgba(192,57,43,0.2)', borderRadius: '10px',
-            padding: '28px 32px', background: 'rgba(192,57,43,0.02)',
-          }}>
-            <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, color: '#C0392B', margin: '0 0 8px' }}>
-              Danger Zone
-            </h3>
-            <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: '0 0 20px' }}>
-              Permanently delete your account and all associated data. This action cannot be undone.
-            </p>
-
-            {!deleteConfirm ? (
-              <button
-                onClick={() => setDeleteConfirm(true)}
-                style={{
-                  padding: '10px 20px', background: 'transparent',
-                  border: '1px solid rgba(192,57,43,0.4)', borderRadius: '6px',
-                  color: '#C0392B', fontSize: '12px', fontWeight: 600,
-                  cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase',
-                }}
-              >
-                Delete Account
-              </button>
-            ) : (
-              <div>
-                <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '12px' }}>
-                  Type <strong>DELETE</strong> to confirm:
-                </p>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <input
-                    type="text"
-                    value={deleteInput}
-                    onChange={e => setDeleteInput(e.target.value)}
-                    placeholder="DELETE"
-                    style={{
-                      padding: '10px 14px', border: '1px solid var(--border)',
-                      borderRadius: '6px', fontSize: '13px', fontFamily: 'var(--font-mono)',
-                      background: 'var(--bg-card)', color: 'var(--text)', outline: 'none', width: '160px',
-                    }}
-                  />
-                  <button
-                    disabled={deleteInput !== 'DELETE'}
-                    style={{
-                      padding: '10px 20px',
-                      background: deleteInput === 'DELETE' ? '#C0392B' : 'var(--bg-subtle)',
-                      border: 'none', borderRadius: '6px',
-                      color: deleteInput === 'DELETE' ? 'white' : 'var(--text-3)',
-                      fontSize: '12px', fontWeight: 600,
-                      cursor: deleteInput === 'DELETE' ? 'pointer' : 'not-allowed',
-                      letterSpacing: '0.04em', textTransform: 'uppercase',
-                    }}
-                    onClick={() => {
-                      if (deleteInput === 'DELETE') {
-                        logout();
-                        navigate('/');
-                      }
-                    }}
-                  >
-                    Confirm Delete
-                  </button>
-                  <button
-                    onClick={() => { setDeleteConfirm(false); setDeleteInput(''); }}
-                    style={{
-                      padding: '10px 16px', background: 'transparent', border: '1px solid var(--border)',
-                      borderRadius: '6px', color: 'var(--text-2)', fontSize: '12px',
-                      cursor: 'pointer', letterSpacing: '0.04em',
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>}
-
       </div>
+    )}
     </div>
   );
 }

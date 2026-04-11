@@ -56,7 +56,7 @@ export default function BillingSuccess() {
               ✓
             </div>
             <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "32px", color: "#1A1A1A", marginBottom: "12px" }}>
-              Welcome to ArtAlpha
+              Welcome to Nautilus
             </h2>
             {plan && (
               <div style={{ display: "inline-block", padding: "4px 16px", background: "rgba(15,61,44,0.08)", color: "#1A2A44", borderRadius: "20px", fontSize: "13px", fontWeight: 600, marginBottom: "16px" }}>

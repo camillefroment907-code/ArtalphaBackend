@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
-import { getToken, getPlanLimits, getUser } from '../../lib/auth';
+import { getToken, getPlanLimits } from '../../lib/auth';
+import { Logo } from '../components/Logo';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -143,6 +144,7 @@ interface AlertFormProps {
 }
 
 function AlertForm({ initial, onSave, onCancel, saving }: AlertFormProps) {
+  const [formStep, setFormStep] = useState<1 | 2>(1);
   const [name, setName] = useState(initial?.name ?? '');
   const [artistName, setArtistName] = useState(initial?.artist_name ?? '');
   const [category, setCategory] = useState(initial?.category ?? '');
@@ -169,12 +171,11 @@ function AlertForm({ initial, onSave, onCancel, saving }: AlertFormProps) {
     color: 'var(--text-3)', marginBottom: '5px',
   };
   const row2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' };
-  const row3: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px', marginBottom: '14px' };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      setNameError('Ce champ est requis');
+      setNameError('Required');
       return;
     }
     setNameError('');
@@ -193,107 +194,134 @@ function AlertForm({ initial, onSave, onCancel, saving }: AlertFormProps) {
     });
   }
 
+  function handleStep1Next() {
+    if (!name.trim()) { setNameError('Required'); return; }
+    setNameError('');
+    setFormStep(2);
+  }
+
   return (
     <form onSubmit={handleSubmit}>
-      {/* Row 1: Name */}
-      <div style={{ marginBottom: '14px' }}>
-        <label style={lbl}>Nom de l'alerte</label>
-        <input
-          style={{ ...inp, borderColor: nameError ? 'var(--red, #c0392b)' : 'var(--border)' }}
-          value={name}
-          onChange={e => { setName(e.target.value); if (e.target.value.trim()) setNameError(''); }}
-          placeholder="ex: Picasso < €50K"
-        />
-        {nameError && <div style={{ fontSize: '11px', color: 'var(--red, #c0392b)', marginTop: '4px' }}>Ce champ est requis</div>}
+      {/* Step indicator */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+        {([1, 2] as const).map((step) => (
+          <div key={step} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, background: formStep >= step ? 'var(--navy)' : 'var(--bg-subtle)', color: formStep >= step ? 'white' : 'var(--text-3)', cursor: step < formStep ? 'pointer' : 'default' }} onClick={() => { if (step < formStep) setFormStep(step); }}>{step}</div>
+            {step < 2 && <div style={{ width: '28px', height: '1px', background: formStep > step ? 'var(--navy)' : 'var(--border)' }} />}
+          </div>
+        ))}
+        <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginLeft: '4px' }}>
+          {formStep === 1 ? 'Target' : 'Parameters'}
+        </span>
       </div>
 
-      {/* Row 2: Artist + Category */}
-      <div style={row2}>
-        <div>
-          <label style={lbl}>Artiste</label>
-          <input style={inp} value={artistName} onChange={e => setArtistName(e.target.value)} placeholder="ex: Picasso, Warhol…" />
-        </div>
-        <div>
-          <label style={lbl}>Catégorie</label>
-          <select style={sel} value={category} onChange={e => setCategory(e.target.value)}>
-            <option value="">Toutes catégories</option>
-            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-      </div>
+      {formStep === 1 && (
+        <>
+          {/* Step 1: Name + Artist + Category + Subcategory */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={lbl}>Strategy name</label>
+            <input
+              style={{ ...inp, borderColor: nameError ? 'var(--red)' : 'var(--border)' }}
+              value={name}
+              onChange={e => { setName(e.target.value); if (e.target.value.trim()) setNameError(''); }}
+              placeholder="ex: Picasso < €50K"
+              autoFocus
+            />
+            {nameError && <div style={{ fontSize: '11px', color: 'var(--red)', marginTop: '4px' }}>{nameError}</div>}
+          </div>
 
-      {/* Row 3: Subcategory + Keywords */}
-      <div style={row2}>
-        <div>
-          <label style={lbl}>Sous-catégorie</label>
-          <input style={inp} value={subcategory} onChange={e => setSubcategory(e.target.value)} placeholder="ex: Bague, Huile sur toile…" />
-        </div>
-        <div>
-          <label style={lbl}>Mots-clés (séparés par virgule)</label>
-          <input style={inp} value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="ex: abstraite, signé" />
-        </div>
-      </div>
+          <div style={row2}>
+            <div>
+              <label style={lbl}>Artist</label>
+              <input style={inp} value={artistName} onChange={e => setArtistName(e.target.value)} placeholder="ex: Picasso, Warhol…" />
+            </div>
+            <div>
+              <label style={lbl}>Category</label>
+              <select style={sel} value={category} onChange={e => setCategory(e.target.value)}>
+                <option value="">All categories</option>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
 
-      {/* Row 4: Budget */}
-      <div style={row2}>
-        <div>
-          <label style={lbl}>Budget min (€)</label>
-          <input type="number" style={inp} value={budgetMin} onChange={e => setBudgetMin(e.target.value)} placeholder="500" />
-        </div>
-        <div>
-          <label style={lbl}>Budget max (€)</label>
-          <input type="number" style={inp} value={budgetMax} onChange={e => setBudgetMax(e.target.value)} placeholder="50 000" />
-        </div>
-      </div>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={lbl}>Subcategory</label>
+            <input style={inp} value={subcategory} onChange={e => setSubcategory(e.target.value)} placeholder="ex: Oil on canvas, Signed…" />
+          </div>
 
-      {/* Row 5: Horizon + Risk */}
-      <div style={row2}>
-        <div>
-          <label style={lbl}>Horizon</label>
-          <select style={sel} value={horizon} onChange={e => setHorizon(e.target.value)}>
-            <option value="short">Court terme (&lt; 2 ans)</option>
-            <option value="medium">Moyen terme (2–5 ans)</option>
-            <option value="long">Long terme (5 ans+)</option>
-          </select>
-        </div>
-        <div>
-          <label style={lbl}>Risque</label>
-          <select style={sel} value={risk} onChange={e => setRisk(e.target.value)}>
-            <option value="low">Faible</option>
-            <option value="medium">Modéré</option>
-            <option value="high">Élevé</option>
-          </select>
-        </div>
-      </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button type="button" className="btn btn-navy" style={{ fontSize: '12px', padding: '9px 22px' }} onClick={handleStep1Next}>
+              Next →
+            </button>
+            <button type="button" className="btn btn-ghost" style={{ fontSize: '12px', padding: '9px 16px' }} onClick={onCancel}>
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
 
-      {/* Row 6: Conviction + Email */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '14px', marginBottom: '20px', alignItems: 'end' }}>
-        <div>
-          <label style={{ ...lbl, marginBottom: '8px' }}>
-            Score de conviction minimum — <span style={{ color: 'var(--navy)', fontWeight: 700 }}>{conviction}</span>
-          </label>
-          <input
-            type="range" min={50} max={90} value={conviction}
-            onChange={e => setConviction(parseInt(e.target.value, 10))}
-            style={{ width: '100%', accentColor: 'var(--navy)' }}
-          />
-        </div>
-        <div style={{ paddingBottom: '4px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', color: 'var(--text-2)', userSelect: 'none' }}>
-            <input type="checkbox" checked={notifyEmail} onChange={e => setNotifyEmail(e.target.checked)} style={{ accentColor: 'var(--navy)' }} />
-            Alertes email
-          </label>
-        </div>
-      </div>
+      {formStep === 2 && (
+        <>
+          {/* Step 2: Budget + Horizon + Risk + Conviction + Email */}
+          <div style={row2}>
+            <div>
+              <label style={lbl}>Budget min (€)</label>
+              <input type="number" style={inp} value={budgetMin} onChange={e => setBudgetMin(e.target.value)} placeholder="500" />
+            </div>
+            <div>
+              <label style={lbl}>Budget max (€)</label>
+              <input type="number" style={inp} value={budgetMax} onChange={e => setBudgetMax(e.target.value)} placeholder="50 000" />
+            </div>
+          </div>
 
-      <div style={{ display: 'flex', gap: '10px' }}>
-        <button type="submit" className="btn btn-navy" style={{ fontSize: '12px', padding: '9px 22px' }} disabled={saving}>
-          {saving ? 'Enregistrement…' : (initial?.id ? 'Mettre à jour' : 'Créer l\'alerte')}
-        </button>
-        <button type="button" className="btn btn-ghost" style={{ fontSize: '12px', padding: '9px 16px' }} onClick={onCancel}>
-          Annuler
-        </button>
-      </div>
+          <div style={row2}>
+            <div>
+              <label style={lbl}>Horizon</label>
+              <select style={sel} value={horizon} onChange={e => setHorizon(e.target.value)}>
+                <option value="short">Short term (&lt; 2 years)</option>
+                <option value="medium">Medium term (2–5 years)</option>
+                <option value="long">Long term (5+ years)</option>
+              </select>
+            </div>
+            <div>
+              <label style={lbl}>Risk</label>
+              <select style={sel} value={risk} onChange={e => setRisk(e.target.value)}>
+                <option value="low">Low</option>
+                <option value="medium">Moderate</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '14px', marginBottom: '20px', alignItems: 'end' }}>
+            <div>
+              <label style={{ ...lbl, marginBottom: '8px' }}>
+                Minimum conviction score — <span style={{ color: 'var(--navy)', fontWeight: 700 }}>{conviction}</span>
+              </label>
+              <input
+                type="range" min={50} max={90} value={conviction}
+                onChange={e => setConviction(parseInt(e.target.value, 10))}
+                style={{ width: '100%', accentColor: 'var(--navy)' }}
+              />
+            </div>
+            <div style={{ paddingBottom: '4px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', color: 'var(--text-2)', userSelect: 'none' }}>
+                <input type="checkbox" checked={notifyEmail} onChange={e => setNotifyEmail(e.target.checked)} style={{ accentColor: 'var(--navy)' }} />
+                Email alerts
+              </label>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button type="submit" className="btn btn-navy" style={{ fontSize: '12px', padding: '9px 22px' }} disabled={saving}>
+              {saving ? 'Saving…' : (initial?.id ? 'Update strategy' : 'Create strategy')}
+            </button>
+            <button type="button" className="btn btn-ghost" style={{ fontSize: '12px', padding: '9px 16px' }} onClick={() => setFormStep(1)}>
+              Back
+            </button>
+          </div>
+        </>
+      )}
     </form>
   );
 }
@@ -367,7 +395,7 @@ function AlertCard({ alert, onEdit, onDelete, onToggle, onScrollToRecs }: AlertC
             onClick={() => onToggle(alert.id, !alert.is_active)}
             style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-3)', background: 'none', border: '1px solid var(--border)', borderRadius: '2px', padding: '4px 8px', cursor: 'pointer' }}
           >
-            {alert.is_active ? 'Pause' : 'Activer'}
+            {alert.is_active ? 'Pause' : 'Resume'}
           </button>
           <button
             onClick={() => onEdit(alert)}
@@ -378,7 +406,7 @@ function AlertCard({ alert, onEdit, onDelete, onToggle, onScrollToRecs }: AlertC
           </button>
           <button
             onClick={() => {
-              if (window.confirm(`Supprimer l'alerte "${alert.name}" et ses recommandations ?`)) {
+              if (window.confirm(`Delete strategy "${alert.name}" and all its recommendations?`)) {
                 onDelete(alert.id);
               }
             }}
@@ -390,8 +418,11 @@ function AlertCard({ alert, onEdit, onDelete, onToggle, onScrollToRecs }: AlertC
         </div>
       </div>
 
-      <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '10px', padding: '8px 12px', background: 'var(--bg-subtle, var(--navy-subtle))', borderRadius: '2px', borderLeft: '2px solid var(--gold)' }}>
-        ⏱ Votre agent analyse les nouveaux lots toutes les 15 minutes. Les recommandations apparaîtront ici dès qu'une opportunité correspondant à vos critères sera détectée.
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px' }}>
+        <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: alert.is_active ? 'var(--electric)' : 'var(--border)', flexShrink: 0, animation: alert.is_active ? 'pulseDot 2s infinite' : 'none' }} />
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)', letterSpacing: '0.04em' }}>
+          {alert.is_active ? 'Scanning · Updated every 15 min' : 'Monitoring paused'}
+        </span>
       </div>
 
       {alert.recommendation_count > 0 && (
@@ -419,10 +450,10 @@ function RecCard({ rec, onRead, onActed }: { rec: Recommendation; onRead: (id: s
     : rec.verdict === 'BUY' ? 'ACHAT'
     : rec.verdict === 'WATCH' ? 'SURVEILLER' : 'PASSER';
 
-  const verdictColor = rec.verdict === 'STRONG_BUY' ? 'var(--gold)'
+  const verdictColor = rec.verdict === 'STRONG_BUY' ? 'var(--electric)'
     : rec.verdict === 'BUY' ? 'var(--navy)' : 'var(--text-3)';
 
-  const stripColor = rec.verdict === 'STRONG_BUY' ? 'var(--gold)'
+  const stripColor = rec.verdict === 'STRONG_BUY' ? 'var(--electric)'
     : rec.verdict === 'BUY' ? 'var(--navy)' : 'var(--border)';
 
   async function handleRead() {
@@ -730,30 +761,85 @@ function AgentPage() {
     );
   }
 
+  const showEmptyState = recs.length === 0 && alerts.length === 0;
+
   return (
+    <div>
+      {/* Status banner */}
+      <div style={{ background: 'var(--navy)', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E', animation: 'pulseDot 2s infinite', flexShrink: 0 }} />
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'rgba(255,255,255,0.7)', letterSpacing: '0.06em' }}>
+          AI ANALYST ACTIVE · Scanning new lots every 15 min
+        </span>
+        {limits && (
+          <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>
+            {limits.used}/{limits.max === 9999 ? '∞' : limits.max} strategies
+          </span>
+        )}
+      </div>
+
     <div style={{ maxWidth: 880, margin: '0 auto', padding: '40px 24px' }}>
 
       {/* Header */}
       <div style={{ marginBottom: '32px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 400, color: 'var(--navy)', margin: 0 }}>
-            Agent IA
+            AI Agent
           </h1>
-          {limits && (
-            <span style={{
-              fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700,
-              letterSpacing: '0.08em', color: 'var(--gold-dim)',
-              background: 'var(--gold-subtle)', border: '1px solid var(--gold-border)',
-              padding: '3px 9px', borderRadius: '2px',
-            }}>
-              {limits.used}/{limits.max === 9999 ? '∞' : limits.max} alertes
-            </span>
-          )}
         </div>
         <p style={{ fontSize: '13px', color: 'var(--text-2)', margin: 0 }}>
-          Vos alertes d'investissement personnalisées
+          Your personalized investment strategies
         </p>
       </div>
+
+      {/* Empty state with Logo */}
+      {showEmptyState && (
+        <div style={{ textAlign: 'center', padding: '80px 24px', border: '1px dashed var(--border)', borderRadius: '8px', marginBottom: '32px' }}>
+          <Logo variant="symbol" color="dark" size={40} />
+          <p style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--navy)', margin: '20px 0 8px' }}>
+            Your agent is ready
+          </p>
+          <p style={{ fontSize: '13px', color: 'var(--text-3)', lineHeight: 1.6, maxWidth: '320px', margin: '0 auto' }}>
+            Create a strategy below. The agent will scan new lots and surface matching opportunities with AI verdicts.
+          </p>
+        </div>
+      )}
+
+      {/* Recommendations — hero section */}
+      {recs.length > 0 && (
+        <div ref={recsRef} style={{ marginBottom: '48px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <p style={{ ...sectionTitle, marginBottom: 0 }}>
+                Recommendations ({filteredRecs.length})
+              </p>
+              {unreadCount > 0 && (
+                <span style={{
+                  fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700,
+                  color: 'var(--electric)', background: 'var(--electric-subtle)',
+                  border: '1px solid var(--electric-border)', padding: '2px 7px', borderRadius: '2px',
+                }}>
+                  {unreadCount} new
+                </span>
+              )}
+            </div>
+            {filterAlertId && (
+              <button
+                style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-3)', background: 'none', border: '1px solid var(--border)', borderRadius: '2px', padding: '4px 10px', cursor: 'pointer' }}
+                onClick={() => setFilterAlertId(null)}
+              >
+                × All strategies
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {filteredRecs.map(rec => (
+              <RecCard key={rec.id} rec={rec} onRead={handleRead} onActed={handleActed} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Limits bar */}
       {limits && limits.max < 9999 && (
@@ -768,12 +854,12 @@ function AgentPage() {
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>
-              {limits.used} alerte{limits.used !== 1 ? 's' : ''} active{limits.used !== 1 ? 's' : ''} sur {limits.max}
+              {limits.used} active strateg{limits.used !== 1 ? 'ies' : 'y'} of {limits.max}
             </p>
             {limits.used >= limits.max && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--gold-dim)' }}>
-                  Limite atteinte · Upgrade pour plus d'alertes
+                  Limit reached · Upgrade for more strategies
                 </span>
                 <button
                   className="btn btn-gold"
@@ -788,7 +874,7 @@ function AgentPage() {
         </div>
       )}
 
-      {/* Create alert */}
+      {/* Create strategy */}
       {limits?.can_create && !showCreateForm && !editingAlert && (
         <div style={{ marginBottom: '24px' }}>
           <button
@@ -796,14 +882,14 @@ function AgentPage() {
             style={{ fontSize: '12px', padding: '9px 18px', letterSpacing: '0.04em', fontFamily: 'var(--font-mono)' }}
             onClick={() => setShowCreateForm(true)}
           >
-            + CRÉER UNE ALERTE
+            + CREATE STRATEGY
           </button>
         </div>
       )}
 
       {showCreateForm && (
         <div style={{ background: 'var(--navy-subtle)', border: '1px solid var(--border)', borderRadius: '2px', padding: '24px', marginBottom: '24px' }}>
-          <p style={{ ...sectionTitle, marginBottom: '20px' }}>Nouvelle alerte</p>
+          <p style={{ ...sectionTitle, marginBottom: '20px' }}>New strategy</p>
           {formError && (
             <p style={{ fontSize: '12px', color: 'var(--text-2)', background: 'var(--border)', padding: '8px 12px', borderRadius: '2px', marginBottom: '16px' }}>
               {formError}
@@ -813,26 +899,16 @@ function AgentPage() {
         </div>
       )}
 
-      {/* Alerts list */}
-      <div style={{ marginBottom: '40px' }}>
-        <p style={sectionTitle}>Alertes ({alerts.length})</p>
+      {/* Strategies list */}
+      {alerts.length > 0 && (
+        <div style={{ marginBottom: '40px' }}>
+          <p style={sectionTitle}>Strategies ({alerts.length})</p>
 
-        {alerts.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 24px', border: '1px dashed var(--border)', borderRadius: '2px' }}>
-            <p style={{ fontSize: '24px', color: 'var(--border)', marginBottom: '10px' }}>◇</p>
-            <p style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: 'var(--navy)', marginBottom: '6px' }}>
-              Aucune alerte créée
-            </p>
-            <p style={{ fontSize: '12px', color: 'var(--text-3)' }}>
-              Créez votre première alerte ci-dessus
-            </p>
-          </div>
-        ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {alerts.map(alert => (
               editingAlert?.id === alert.id ? (
                 <div key={alert.id} style={{ background: 'var(--navy-subtle)', border: '1px solid var(--border)', borderRadius: '2px', padding: '24px' }}>
-                  <p style={{ ...sectionTitle, marginBottom: '20px' }}>Modifier « {alert.name} »</p>
+                  <p style={{ ...sectionTitle, marginBottom: '20px' }}>Edit « {alert.name} »</p>
                   {formError && (
                     <p style={{ fontSize: '12px', color: 'var(--text-2)', background: 'var(--border)', padding: '8px 12px', borderRadius: '2px', marginBottom: '16px' }}>
                       {formError}
@@ -857,54 +933,22 @@ function AgentPage() {
               )
             ))}
           </div>
-        )}
-      </div>
-
-      {/* Recommendations */}
-      <div ref={recsRef}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <p style={{ ...sectionTitle, marginBottom: 0 }}>
-              Recommandations ({filteredRecs.length})
-            </p>
-            {unreadCount > 0 && (
-              <span style={{
-                fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700,
-                color: 'var(--gold-dim)', background: 'var(--gold-subtle)',
-                border: '1px solid var(--gold-border)', padding: '2px 7px', borderRadius: '2px',
-              }}>
-                {unreadCount} non lue{unreadCount > 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
-          {filterAlertId && (
-            <button
-              style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-3)', background: 'none', border: '1px solid var(--border)', borderRadius: '2px', padding: '4px 10px', cursor: 'pointer' }}
-              onClick={() => setFilterAlertId(null)}
-            >
-              × Toutes les alertes
-            </button>
-          )}
         </div>
+      )}
 
-        {filteredRecs.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '52px 24px', border: '1px dashed var(--border)', borderRadius: '2px' }}>
-            <p style={{ fontSize: '24px', color: 'var(--border)', marginBottom: '10px' }}>◇</p>
-            <p style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: 'var(--navy)', marginBottom: '6px' }}>
-              Votre agent surveille le marché
-            </p>
-            <p style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.6 }}>
-              Les nouvelles opportunités apparaîtront ici après le prochain scan
-            </p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {filteredRecs.map(rec => (
-              <RecCard key={rec.id} rec={rec} onRead={handleRead} onActed={handleActed} />
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Recs empty state (has strategies but no recs yet) */}
+      {alerts.length > 0 && recs.length === 0 && (
+        <div ref={recsRef} style={{ textAlign: 'center', padding: '52px 24px', border: '1px dashed var(--border)', borderRadius: '2px' }}>
+          <p style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: 'var(--navy)', marginBottom: '6px' }}>
+            Agent scanning the market
+          </p>
+          <p style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.6 }}>
+            New opportunities will appear here after the next scan
+          </p>
+        </div>
+      )}
+
+    </div>
     </div>
   );
 }

@@ -198,7 +198,7 @@ export async function fetchLot(id: string) {
   return res.json();
 }
 
-// Maps an ArtAlpha API lot to the Artwork shape expected by Figma components
+// Maps an Nautilus API lot to the Artwork shape expected by Figma components
 export function mapLotToArtwork(lot: any) {
   const price = lot.current_price || lot.estimate_low || 0;
   const estimate = lot.estimate_high || lot.estimate_low || price;

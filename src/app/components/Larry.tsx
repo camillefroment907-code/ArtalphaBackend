@@ -25,7 +25,7 @@ const ALL_SUGGESTIONS = [
   "Quelles sont tes meilleures opportunités en ce moment ?",
   "Comment débuter dans l'investissement art avec 10 000€ ?",
   "Quels artistes émergents surveiller en 2025 ?",
-  "Comment lire un deal score ArtAlpha ?",
+  "Comment lire un deal score Nautilus ?",
   "Drouot vs Christie's — où acheter ?",
   "Comment ajouter une œuvre à mon portfolio ?",
 ];
@@ -333,7 +333,7 @@ export function Larry({ lotId }: LarryProps) {
                 Larry
               </div>
               <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '2px' }}>
-                Conseiller privé ArtAlpha
+                Conseiller privé Nautilus
               </div>
             </div>
             {usage && usage.limit < 9999 && (

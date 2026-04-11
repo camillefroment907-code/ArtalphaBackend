@@ -12,7 +12,7 @@ const SECTIONS: Section[] = [
     title: 'Compte & Inscription',
     items: [
       {
-        q: 'Comment créer un compte ArtAlpha ?',
+        q: 'Comment créer un compte Nautilus ?',
         a: 'Cliquez sur "Sign Up" en haut à droite de la page d\'accueil. Renseignez votre email et un mot de passe. Vous serez redirigé vers une courte étape de configuration de votre profil d\'investissement (budget, horizon, type de collectionneur). Votre compte est activé immédiatement.',
       },
       {
@@ -39,7 +39,7 @@ const SECTIONS: Section[] = [
     items: [
       {
         q: 'Quels sont les plans disponibles ?',
-        a: 'ArtAlpha propose 4 plans : <strong>Collector</strong> (€9/mois) pour débuter, <strong>Investor</strong> (€29/mois) pour les opportunités avancées et l\'agent IA, <strong>Family Office</strong> (€99/mois) pour les investisseurs sérieux avec accès complet, et <strong>Institutional</strong> (sur devis) pour les maisons de vente et family offices institutionnels.',
+        a: 'Nautilus propose 4 plans : <strong>Collector</strong> (€9/mois) pour débuter, <strong>Investor</strong> (€29/mois) pour les opportunités avancées et l\'agent IA, <strong>Family Office</strong> (€99/mois) pour les investisseurs sérieux avec accès complet, et <strong>Institutional</strong> (sur devis) pour les maisons de vente et family offices institutionnels.',
       },
       {
         q: "Y a-t-il un essai gratuit ?",
@@ -105,7 +105,7 @@ const SECTIONS: Section[] = [
       },
       {
         q: "D'où proviennent les données des lots ?",
-        a: "ArtAlpha agrège les données de 10 sources : Drouot, Interenchères, Invaluable, LiveAuctioneers, Sotheby's, Christie's, Bonhams, eBay, Artsy et Catawiki. Les données sont mises à jour toutes les 15 minutes.",
+        a: "Nautilus agrège les données de 10 sources : Drouot, Interenchères, Invaluable, LiveAuctioneers, Sotheby's, Christie's, Bonhams, eBay, Artsy et Catawiki. Les données sont mises à jour toutes les 15 minutes.",
       },
       {
         q: "Comment accéder au détail d'un lot ?",
@@ -153,7 +153,7 @@ const SECTIONS: Section[] = [
     items: [
       {
         q: 'Qui est Larry ?',
-        a: "Larry est votre conseiller privé en investissement art, intégré à ArtAlpha. Il connaît l'histoire de l'art, le marché des enchères mondial, la cotation des artistes et les opportunités actuelles en base. Il vous aide à analyser des lots, comprendre le marché et prendre de meilleures décisions d'investissement.",
+        a: "Larry est votre conseiller privé en investissement art, intégré à Nautilus. Il connaît l'histoire de l'art, le marché des enchères mondial, la cotation des artistes et les opportunités actuelles en base. Il vous aide à analyser des lots, comprendre le marché et prendre de meilleures décisions d'investissement.",
       },
       {
         q: 'Sur quels plans Larry est-il disponible ?',
@@ -161,7 +161,7 @@ const SECTIONS: Section[] = [
       },
       {
         q: 'Larry peut-il m\'envoyer des liens vers des lots ?',
-        a: "Oui. Quand vous demandez des recommandations de lots, Larry puise dans la base de données ArtAlpha en temps réel et vous fournit des liens directs vers les lots correspondants.",
+        a: "Oui. Quand vous demandez des recommandations de lots, Larry puise dans la base de données Nautilus en temps réel et vous fournit des liens directs vers les lots correspondants.",
       },
       {
         q: 'Les conversations avec Larry sont-elles sauvegardées ?',
@@ -169,7 +169,7 @@ const SECTIONS: Section[] = [
       },
       {
         q: 'Larry peut-il se tromper ?',
-        a: "Larry est configuré pour ne citer que des lots réels présents en base ArtAlpha. Pour les questions de marché générales, il s'appuie sur ses connaissances GPT-4o. Comme tout conseil, ses recommandations sont indicatives et ne constituent pas un conseil financier réglementé.",
+        a: "Larry est configuré pour ne citer que des lots réels présents en base Nautilus. Pour les questions de marché générales, il s'appuie sur ses connaissances GPT-4o. Comme tout conseil, ses recommandations sont indicatives et ne constituent pas un conseil financier réglementé.",
       },
     ],
   },
@@ -182,7 +182,7 @@ const SECTIONS: Section[] = [
         a: 'Dans <a href="https://artalpha.io/app/portfolio">artalpha.io/app/portfolio</a>, cliquez sur "+ Add an artwork". Renseignez le titre, l\'artiste, le prix d\'achat, et optionnellement la date, le médium et des notes. L\'œuvre apparaît immédiatement dans votre collection.',
       },
       {
-        q: 'Puis-je lier une œuvre de mon portfolio à un lot ArtAlpha ?',
+        q: 'Puis-je lier une œuvre de mon portfolio à un lot Nautilus ?',
         a: "Oui. Lors de l'ajout d'une œuvre, vous pouvez renseigner un lot_id pour lier l'œuvre à un lot existant en base.",
       },
       {
@@ -226,11 +226,11 @@ const SECTIONS: Section[] = [
         a: "Toutes les 15 minutes via notre pipeline automatisé. La barre de statut en haut de la page Opportunités indique la dernière mise à jour.",
       },
       {
-        q: 'Sur quels navigateurs ArtAlpha fonctionne-t-il ?',
+        q: 'Sur quels navigateurs Nautilus fonctionne-t-il ?',
         a: "Chrome, Firefox, Safari, Edge (versions récentes). L'interface est optimisée pour desktop. Une version mobile est en cours de développement.",
       },
       {
-        q: 'Puis-je utiliser ArtAlpha sur mobile ?',
+        q: 'Puis-je utiliser Nautilus sur mobile ?',
         a: "L'interface est responsive et utilisable sur mobile, mais optimisée pour desktop. Une application mobile native est prévue.",
       },
       {
@@ -238,7 +238,7 @@ const SECTIONS: Section[] = [
         a: 'Via le formulaire de contact sur <a href="https://artalpha.io/contact">artalpha.io/contact</a>, ou directement par email. Pour les clients Institutional, un accès prioritaire au support est inclus.',
       },
       {
-        q: 'ArtAlpha est-il disponible en anglais ?',
+        q: 'Nautilus est-il disponible en anglais ?',
         a: "Oui. L'interface est disponible en français et en anglais. Larry répond dans votre langue automatiquement.",
       },
     ],
@@ -327,7 +327,7 @@ export default function FAQ() {
       }}>
         <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontFamily: 'var(--font-serif, serif)', fontSize: '20px', fontWeight: 700, color: 'var(--navy)' }}>
-            ArtAlpha
+            Nautilus
           </span>
         </Link>
         <div style={{ display: 'flex', gap: '32px', alignItems: 'center', fontSize: '13px' }}>
@@ -363,7 +363,7 @@ export default function FAQ() {
           Centre d'aide
         </h1>
         <p style={{ color: 'var(--text-2)', fontSize: '16px', margin: '0 0 32px' }}>
-          Toutes les réponses pour utiliser ArtAlpha
+          Toutes les réponses pour utiliser Nautilus
         </p>
         {/* Search */}
         <div style={{
@@ -501,13 +501,13 @@ export default function FAQ() {
         fontSize: '13px',
         color: 'var(--text-2)',
       }}>
-        <span style={{ fontFamily: 'var(--font-serif, serif)', fontWeight: 700, color: 'var(--navy)' }}>ArtAlpha</span>
+        <span style={{ fontFamily: 'var(--font-serif, serif)', fontWeight: 700, color: 'var(--navy)' }}>Nautilus</span>
         <div style={{ display: 'flex', gap: '24px' }}>
           <Link to="/about" style={{ color: 'var(--text-2)', textDecoration: 'none' }}>About</Link>
           <Link to="/contact" style={{ color: 'var(--text-2)', textDecoration: 'none' }}>Contact</Link>
           <Link to="/pricing" style={{ color: 'var(--text-2)', textDecoration: 'none' }}>Pricing</Link>
         </div>
-        <span style={{ fontSize: '11px', letterSpacing: '0.1em' }}>© 2026 ARTALPHA</span>
+        <span style={{ fontSize: '11px', letterSpacing: '0.1em' }}>© 2026 NAUTILUS</span>
       </footer>
 
       <style>{`

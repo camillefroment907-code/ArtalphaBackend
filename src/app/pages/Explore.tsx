@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { getPlanLimits, getUser } from "../../lib/auth";
 import { FilterSidebar } from "../components/FilterSidebar";
 import type { Filters } from "../components/FilterSidebar";
@@ -270,7 +270,8 @@ const DEFAULT_FILTERS: Filters = {
 // ── Explore component ─────────────────────────────────────────
 export default function Explore() {
   const navigate = useNavigate();
-  const [exploreTab, setExploreTab] = useState<ExploreTab>("best");
+  const [searchParams] = useSearchParams();
+  const exploreTab = (searchParams.get('tab') || 'best') as ExploreTab;
 
   // Opportunities state
   const [lots, setLots]             = useState<MappedLot[]>([]);
@@ -453,12 +454,6 @@ export default function Explore() {
   const sourceDotColor = (status: string) =>
     status === "fresh" ? "var(--navy)" : status === "stale" ? "#B8961E" : "var(--text-3)";
 
-  const EXPLORE_TABS: { id: ExploreTab; icon: string; label: string; desc: string }[] = [
-    { id: "best",        icon: "◆", label: "Best Lots",    desc: "Opportunités IA détectées"  },
-    { id: "auctions",   icon: "◉", label: "All Auctions", desc: "Tous les lots en cours"      },
-    { id: "primary",    icon: "◐", label: "Primary",      desc: "Galeries & marché primaire" },
-    { id: "convictions",icon: "★", label: "Convictions",  desc: "Sélection IA du jour"       },
-  ];
 
   return (
     <div
@@ -469,42 +464,10 @@ export default function Explore() {
         overflow: "hidden", background: "var(--bg)",
       }}
     >
-      {/* ── Sub-navigation ─────────────────────────────────── */}
-      <div style={{
-        borderBottom: "2px solid var(--border)",
-        background: "white", flexShrink: 0,
-        padding: "0 20px",
-        display: "flex", alignItems: "stretch",
-      }}>
-        <div style={{ display: "flex" }}>
-          {EXPLORE_TABS.map(({ id, icon, label, desc }) => (
-            <button
-              key={id}
-              onClick={() => { setExploreTab(id); setFilters(DEFAULT_FILTERS); }}
-              style={{
-                padding: "10px 20px", background: "transparent", border: "none",
-                borderBottom: exploreTab === id ? "2px solid var(--navy)" : "2px solid transparent",
-                marginBottom: "-2px", cursor: "pointer", textAlign: "left",
-                transition: "all 0.15s ease", display: "flex", flexDirection: "column", gap: "2px",
-              }}
-            >
-              <div style={{
-                display: "flex", alignItems: "center", gap: "7px",
-                fontSize: "13px", fontWeight: exploreTab === id ? 600 : 400,
-                color: exploreTab === id ? "var(--navy)" : "var(--text-2)",
-              }}>
-                <span style={{ color: exploreTab === id ? "var(--gold)" : "var(--text-3)", fontSize: "11px" }}>{icon}</span>
-                {label}
-              </div>
-              <div style={{ fontSize: "10px", color: "var(--text-3)", letterSpacing: "0.02em" }}>{desc}</div>
-            </button>
-          ))}
-        </div>
-        <div style={{ flex: 1 }} />
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "0 12px" }}>
-          <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--gold)", animation: "pulseDot 2s infinite" }} />
-          <span style={{ fontSize: "10px", color: "var(--text-3)", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase" }}>LIVE · 15min</span>
-        </div>
+      {/* ── Page header ──────────────────────────────────────── */}
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)", background: "white", flexShrink: 0, display: "flex", alignItems: "baseline", gap: "12px" }}>
+        <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "22px", fontWeight: 600, color: "var(--navy)", margin: 0 }}>Explorer</h1>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--text-3)", letterSpacing: "0.06em" }}>Enchères mondiales · Marché primaire · Sélection IA</span>
       </div>
 
       {/* ── Primary / Convictions inline ───────────────────── */}

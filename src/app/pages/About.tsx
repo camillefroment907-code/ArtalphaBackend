@@ -75,7 +75,7 @@ export default function About() {
         <div className="max-w-[900px]">
           <div className="inline-block border px-4 py-2 mb-8" style={{ borderColor: '#E5E5E5' }}>
             <div className="text-[11px] tracking-[0.15em] uppercase" style={{ color: '#737373' }}>
-              About ArtAlpha
+              About Nautilus
             </div>
           </div>
           <h1 className="mb-8 text-[64px] leading-[1.05]" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>
@@ -83,7 +83,7 @@ export default function About() {
           </h1>
           <div className="w-24 h-px mb-12" style={{ backgroundColor: '#1A1A1A' }}></div>
           <p className="text-[22px] leading-[1.6]" style={{ color: '#4A4A4A' }}>
-            ArtAlpha transforms how collectors and institutions invest in art by combining decades of market data with advanced analytics to identify undervalued opportunities across global auction houses and galleries.
+            Nautilus transforms how collectors and institutions invest in art by combining decades of market data with advanced analytics to identify undervalued opportunities across global auction houses and galleries.
           </p>
         </div>
       </section>
@@ -100,7 +100,7 @@ export default function About() {
                 While equities, bonds, and commodities benefit from sophisticated data tools, art investment has remained opaque—reliant on relationships, intuition, and incomplete information.
               </p>
               <p className="text-[17px] leading-[1.7]" style={{ color: '#666666' }}>
-                ArtAlpha changes this by bringing institutional-grade intelligence to the art market, enabling data-driven decisions backed by rigorous analysis and predictive modeling.
+                Nautilus changes this by bringing institutional-grade intelligence to the art market, enabling data-driven decisions backed by rigorous analysis and predictive modeling.
               </p>
             </div>
             <div className="bg-white border p-12" style={{ borderColor: '#E5E5E5' }}>
@@ -158,7 +158,7 @@ export default function About() {
               What We Do
             </div>
             <h2 className="text-[42px]" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>
-              How ArtAlpha Works
+              How Nautilus Works
             </h2>
           </div>
           <div className="grid grid-cols-3 gap-8">
@@ -314,7 +314,7 @@ export default function About() {
               <Link to="/about" className="hover:text-[#111111] transition-colors">About</Link>
             </div>
             <div className="text-[13px]" style={{ color: '#666666' }}>
-              © 2026 ArtAlpha. All rights reserved.
+              © 2026 Nautilus. All rights reserved.
             </div>
           </div>
         </div>

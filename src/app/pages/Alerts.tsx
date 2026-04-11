@@ -143,15 +143,12 @@ export function AlertsContent() {
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{
-              fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700,
-              letterSpacing: '0.1em', textTransform: 'uppercase',
-              color: 'var(--gold-dim)', background: 'var(--gold-subtle)',
-              border: '1px solid var(--gold-border)',
-              padding: '3px 9px', borderRadius: '4px',
-            }}>
-              {planLabel}
-            </span>
+            {alerts.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', borderRadius: '4px' }}>
+                <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--electric)', animation: 'pulseDot 2s infinite' }} />
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: 'var(--electric)', letterSpacing: '0.08em' }}>LIVE MONITORING</span>
+              </div>
+            )}
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-3)' }}>
               {alerts.length} / {maxAlerts >= 9999 ? '∞' : maxAlerts} alerts
             </span>
@@ -288,10 +285,22 @@ export function AlertsContent() {
           </div>
 
           {alerts.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 0' }}>
-              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '36px', color: 'var(--border)', marginBottom: '12px' }}>◇</div>
-              <div style={{ fontSize: '15px', color: 'var(--text-2)', marginBottom: '6px' }}>No alerts set yet</div>
-              <div style={{ fontSize: '13px', color: 'var(--text-3)' }}>Use the form above to create your first alert</div>
+            <div style={{ padding: '40px 0' }}>
+              <div style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '16px' }}>Start from a template:</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button onClick={() => { setSelectedType('artist'); setInputText('Picasso'); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', textAlign: 'left' }}>
+                  <span style={{ fontSize: '16px' }}>🎨</span>
+                  <div><div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>Artist: Picasso</div><div style={{ fontSize: '12px', color: 'var(--text-3)' }}>Alert when any Picasso lot appears at auction</div></div>
+                </button>
+                <button onClick={() => { setSelectedType('category'); setInputText('Photography'); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', textAlign: 'left' }}>
+                  <span style={{ fontSize: '16px' }}>📷</span>
+                  <div><div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>Category: Photography</div><div style={{ fontSize: '12px', color: 'var(--text-3)' }}>Track photography lots scored 80+</div></div>
+                </button>
+                <button onClick={() => { setSelectedType('score'); setScoreValue('85'); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', textAlign: 'left' }}>
+                  <span style={{ fontSize: '16px' }}>⚡</span>
+                  <div><div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>Score ≥ 85 — Exceptional deals</div><div style={{ fontSize: '12px', color: 'var(--text-3)' }}>Get notified on top-rated market opportunities</div></div>
+                </button>
+              </div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -322,6 +331,12 @@ export function AlertsContent() {
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>
                         {alert.label}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px' }}>
+                        <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: alert.active ? 'var(--electric)' : 'var(--border)', flexShrink: 0 }} />
+                        <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                          {alert.active ? 'Scanning new lots · Updated live' : 'Monitoring paused'}
+                        </span>
                       </div>
                     </div>
 

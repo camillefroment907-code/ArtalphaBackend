@@ -29,7 +29,7 @@ export default function ContactSales() {
       }).catch(() => null);
 
       if (!res || !res.ok) {
-        const subject = encodeURIComponent(`ArtAlpha Institutional Inquiry — ${form.company}`);
+        const subject = encodeURIComponent(`Nautilus Institutional Inquiry — ${form.company}`);
         const body = encodeURIComponent(
           `Name: ${form.name}\nEmail: ${form.email}\nCompany: ${form.company}\nType: ${form.employees}\nBudget: ${form.budget}\n\nMessage:\n${form.message}`
         );
@@ -66,7 +66,7 @@ export default function ContactSales() {
             Message received
           </h2>
           <p style={{ color: "#666", lineHeight: 1.7, marginBottom: "32px" }}>
-            Thank you for your interest in ArtAlpha Institutional. Our team will contact you within 24 hours.
+            Thank you for your interest in Nautilus Institutional. Our team will contact you within 24 hours.
           </p>
           <button
             onClick={() => navigate("/pricing")}

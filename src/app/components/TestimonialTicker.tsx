@@ -8,7 +8,7 @@ interface Testimonial {
 
 const testimonials: Testimonial[] = [
   {
-    quote: 'ArtAlpha helped me identify a work that doubled in value in 8 months.',
+    quote: 'Nautilus helped me identify a work that doubled in value in 8 months.',
     author: 'Private Collector',
     location: 'London',
   },
@@ -28,7 +28,7 @@ const testimonials: Testimonial[] = [
     location: 'Hong Kong',
   },
   {
-    quote: 'ArtAlpha transformed how our fund approaches art as an asset class.',
+    quote: 'Nautilus transformed how our fund approaches art as an asset class.',
     author: 'Art Fund Director',
     location: 'Paris',
   },

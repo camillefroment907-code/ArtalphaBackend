@@ -75,7 +75,7 @@ export const VERDICT_CONFIG: Record<VerdictType, { color: string; bg: string; bo
 
 function buildPrompt(lot: LotData): string {
   const p = lot.price || 0;
-  return `You are the Chief Investment Officer at ArtAlpha, the world's most sophisticated art investment platform.
+  return `You are the Chief Investment Officer at Nautilus, the world's most sophisticated art investment platform.
 
 Produce a complete investment dossier for this auction lot. Be precise, data-driven, and honest about uncertainty.
 
@@ -90,7 +90,7 @@ Auction House: ${lot.auction_house || 'Unknown'}
 ${lot.country ? `Country: ${lot.country}` : ''}
 ${lot.price_per_cm2 ? `Price/cm²: €${lot.price_per_cm2.toFixed(2)}` : ''}
 ${lot.artist_avg_price ? `Artist avg auction price: €${lot.artist_avg_price.toLocaleString()}` : ''}
-${lot.deal_score ? `ArtAlpha deal score: ${lot.deal_score}/100` : ''}
+${lot.deal_score ? `Nautilus deal score: ${lot.deal_score}/100` : ''}
 ${lot.pct_below ? `Below estimate: ${lot.pct_below.toFixed(0)}%` : ''}
 
 Return ONLY valid JSON (no markdown, no extra text) matching this schema exactly:

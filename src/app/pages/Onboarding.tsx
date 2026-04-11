@@ -116,10 +116,10 @@ export default function Onboarding() {
         {step === 0 && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--gold, #C6A85A)', marginBottom: '24px' }}>
-              ArtAlpha
+              Nautilus
             </div>
             <h1 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '36px', fontWeight: 600, color: '#1A2A44', margin: '0 0 16px', lineHeight: 1.2 }}>
-              Bienvenue sur ArtAlpha
+              Bienvenue sur Nautilus
             </h1>
             <div style={{ width: '40px', height: '2px', background: 'var(--gold, #C6A85A)', margin: '0 auto 24px' }} />
             <p style={{ fontSize: '15px', color: '#666', lineHeight: 1.7, margin: '0 0 48px' }}>

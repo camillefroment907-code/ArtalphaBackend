@@ -1,129 +1,65 @@
+type Variant = 'horizontal' | 'full' | 'symbol';
+type ColorScheme = 'dark' | 'white' | 'gold';
+
 interface LogoProps {
-  variant?: 'full' | 'monogram' | 'horizontal';
-  color?: 'dark' | 'gold' | 'white';
+  variant?: Variant;
+  color?: ColorScheme;
   size?: number;
 }
 
-export function Logo({ variant = 'full', color = 'dark', size = 40 }: LogoProps) {
-  const colors = {
-    dark: '#1C2B24',
-    gold: '#A38B4A',
-    white: '#FFFFFF',
-  };
+export function Logo({ variant = 'horizontal', color = 'dark', size = 28 }: LogoProps) {
+  const c = {
+    dark:  { primary: '#0A1628', accent: '#C6A85A', text: '#0A1628' },
+    white: { primary: '#FFFFFF', accent: '#C6A85A', text: '#FFFFFF' },
+    gold:  { primary: '#C6A85A', accent: '#0A1628', text: '#C6A85A' },
+  }[color];
 
-  const fillColor = colors[color];
-
-  // Monogram - AA as mountain peaks / investment curves
-  const Monogram = () => (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 100 100"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      {/* First mountain/curve (A) */}
-      <path
-        d="M15 75 L30 30 L45 75"
-        stroke={fillColor}
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-
-      {/* Second mountain/curve (A) */}
-      <path
-        d="M55 75 L70 30 L85 75"
-        stroke={fillColor}
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
+  const Symbol = () => (
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 20 4 A 16 16 0 0 1 36 20" stroke={c.primary} strokeWidth="2.2" strokeLinecap="round"/>
+      <path d="M 36 20 A 16 16 0 0 1 20 36" stroke={c.primary} strokeWidth="2.2" strokeLinecap="round" opacity="0.65"/>
+      <path d="M 20 36 A 8 8 0 0 1 12 28" stroke={c.accent} strokeWidth="2.2" strokeLinecap="round"/>
+      <path d="M 12 28 A 8 8 0 0 1 20 20" stroke={c.accent} strokeWidth="2.2" strokeLinecap="round" opacity="0.7"/>
+      <path d="M 20 20 A 4 4 0 0 1 24 24" stroke={c.primary} strokeWidth="2" strokeLinecap="round"/>
+      <circle cx="20" cy="20" r="1.8" fill={c.accent}/>
     </svg>
   );
 
-  // Full logo with monogram + text
-  if (variant === 'full') {
-    return (
-      <div className="flex flex-col items-center gap-3">
-        <Monogram />
-        <div
-          className="tracking-[0.2em]"
-          style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize: size * 0.35,
-            color: fillColor,
-            fontWeight: 400,
-          }}
-        >
-          ARTALPHA
-        </div>
-      </div>
-    );
+  if (variant === 'symbol') {
+    return <Symbol />;
   }
-
-  // Horizontal version (monogram + text side by side)
-  if (variant === 'horizontal') {
-    return (
-      <div className="flex items-center gap-4">
-        <Monogram />
-        <div
-          className="tracking-[0.15em]"
-          style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize: size * 0.4,
-            color: fillColor,
-            fontWeight: 400,
-          }}
-        >
-          ArtAlpha
-        </div>
-      </div>
-    );
-  }
-
-  // Monogram only
-  return <Monogram />;
-}
-
-// Simplified version for favicon/small sizes
-export function LogoIcon({ color = 'dark', size = 32 }: { color?: 'dark' | 'gold' | 'white'; size?: number }) {
-  const colors = {
-    dark: '#1C2B24',
-    gold: '#A38B4A',
-    white: '#FFFFFF',
-  };
-
-  const fillColor = colors[color];
 
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 100 100"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      {/* Simplified AA as mountain peaks */}
-      <path
-        d="M15 75 L30 30 L45 75"
-        stroke={fillColor}
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-
-      <path
-        d="M55 75 L70 30 L85 75"
-        stroke={fillColor}
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-    </svg>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <Symbol />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+        <span style={{
+          fontFamily: "'Playfair Display', Georgia, serif",
+          fontSize: `${Math.round(size * 0.68)}px`,
+          fontWeight: 600,
+          color: c.text,
+          letterSpacing: '0.04em',
+          lineHeight: 1,
+        }}>
+          Nautilus
+        </span>
+        {variant === 'full' && (
+          <span style={{
+            fontFamily: "'Inter', sans-serif",
+            fontSize: `${Math.round(size * 0.32)}px`,
+            fontWeight: 500,
+            color: c.text,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase' as const,
+            opacity: 0.55,
+            lineHeight: 1,
+          }}>
+            Market Intelligence
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
+
+export default Logo;

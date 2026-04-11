@@ -267,7 +267,7 @@ export default function Contact() {
               <Link to="/contact" className="hover:text-[#111111] transition-colors">Contact</Link>
             </div>
             <div className="text-[13px]" style={{ color: '#666666' }}>
-              © 2026 ArtAlpha. All rights reserved.
+              © 2026 Nautilus. All rights reserved.
             </div>
           </div>
         </div>

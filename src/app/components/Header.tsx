@@ -1,29 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { Logo } from './Logo';
-import { getUser, logout, getPlanLimits, getToken } from '../../lib/auth';
+import { getUser, logout, getUserPlan, getToken } from '../../lib/auth';
 
-const NAV_LINKS = [
-  { to: '/app/dashboard',  label: 'Dashboard',    icon: '◆' },
-  { to: '/app/explore',    label: 'Explorer',     icon: '◎' },
-  { to: '/app/agent',      label: 'Intelligence', icon: '◈' },
-  { to: '/app/portfolio',  label: 'Mon compte',   icon: '◇' },
+const NAV_ITEMS = [
+  { label: 'Dashboard',    to: '/app/dashboard', dropdown: null },
+  { label: 'Explorer',     to: '/app/explore',   dropdown: 'explorer' },
+  { label: 'Intelligence', to: '/app/agent',      dropdown: null },
+  { label: 'Portfolio',    to: '/app/portfolio',  dropdown: null },
 ];
 
-// Paths that activate each nav item
-const ACTIVE_PATHS: Record<string, string[]> = {
-  '/app/dashboard':  ['/app/dashboard'],
-  '/app/explore':    ['/app/explore', '/app/opportunities', '/app/primary', '/app/convictions', '/app/artists'],
-  '/app/agent':      ['/app/agent', '/app/intelligence'],
-  '/app/portfolio':  ['/app/portfolio', '/app/alerts'],
-};
+const EXPLORER_ITEMS = [
+  { icon: '◆', label: 'Best Lots',    sub: 'AI-detected opportunities',    to: '/app/explore?tab=best' },
+  { icon: '◉', label: 'All Auctions', sub: 'Global auction feed',          to: '/app/explore?tab=auctions' },
+  { icon: '◐', label: 'Primary',      sub: 'Galleries & emerging artists', to: '/app/explore?tab=primary' },
+  { icon: '★', label: 'Convictions',  sub: 'Highest confidence picks',     to: '/app/explore?tab=convictions' },
+];
 
 const PLAN_LABELS: Record<string, string> = {
-  free:     'Free',
-  starter:  'Collector',
-  investor: 'Investor',
-  pro:      'Family Office',
-  elite:    'Institutional',
+  free: 'Free', starter: 'Collector', investor: 'Investor',
+  pro: 'Family Office', elite: 'Institutional', institutional: 'Institutional',
 };
 
 const ADMIN_EMAIL = 'camillefroment907@gmail.com';
@@ -33,30 +29,48 @@ export function Header() {
   const navigate = useNavigate();
   const user = getUser();
 
-  const [scanState, setScanState] = useState<'idle' | 'loading' | 'done'>('idle');
+  const [explorerOpen, setExplorerOpen] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
   const [agentUnread, setAgentUnread] = useState(0);
+  const [scanState, setScanState] = useState<'idle' | 'loading' | 'done'>('idle');
 
-  const hasAgentAccess = user ? getPlanLimits().hasFullArtistProfile : false;
+  const avatarRef = useRef<HTMLDivElement>(null);
+
+  const plan = user?.email === ADMIN_EMAIL ? 'elite' : getUserPlan();
+  const planLabel = PLAN_LABELS[plan] ?? plan;
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
   useEffect(() => {
-    if (!hasAgentAccess) return;
+    if (!user) return;
     const token = getToken();
     fetch('/api/agent/unread-count', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : { count: 0 })
       .then(d => setAgentUnread(d.count ?? 0))
       .catch(() => {});
-  }, [hasAgentAccess]);
+  }, [user?.email]);
 
-  const isActive = (to: string) =>
-    (ACTIVE_PATHS[to] ?? [to]).some(p => location.pathname.startsWith(p));
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) {
+        setAvatarOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
-  const plan = user?.email === ADMIN_EMAIL ? 'elite' : (user?.plan ?? 'free');
-  const planLabel = PLAN_LABELS[plan] ?? plan;
-  const isAdmin = user?.email === ADMIN_EMAIL;
-  const isFreePlan = plan === 'free' || plan === 'starter';
-
-  const truncateEmail = (email: string) =>
-    email.length > 20 ? email.slice(0, 20) + '…' : email;
+  const isActive = (item: typeof NAV_ITEMS[0]) => {
+    if (item.to === '/app/explore') {
+      return ['/app/explore', '/app/opportunities', '/app/primary', '/app/convictions']
+        .some(p => location.pathname.startsWith(p));
+    }
+    if (item.to === '/app/agent') {
+      return location.pathname.startsWith('/app/agent') || location.pathname.startsWith('/app/intelligence');
+    }
+    return location.pathname.startsWith(item.to);
+  };
 
   async function handleScan() {
     if (scanState === 'loading') return;
@@ -66,161 +80,337 @@ export function Header() {
         method: 'POST',
         headers: { 'x-api-key': 'eee50ac99b4fca0ff5c5c205fe3ed79a' },
       });
-    } catch {
-      // ignore errors
-    }
+    } catch { /* ignore */ }
     setScanState('done');
     setTimeout(() => setScanState('idle'), 2000);
   }
 
-  function handleSignOut() {
-    logout();
-    navigate('/');
-  }
+  const initials = user
+    ? (user.name ? user.name.slice(0, 2) : user.email.slice(0, 2)).toUpperCase()
+    : '?';
 
   return (
-    <header
-      style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        background: 'rgba(250,250,248,0.94)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderBottom: '1px solid var(--border)',
-        height: '60px',
-        display: 'flex', alignItems: 'center',
-        padding: '0 40px',
-        gap: '32px',
-      }}
-    >
+    <header style={{
+      position: 'sticky', top: 0, zIndex: 100,
+      background: 'rgba(250,250,250,0.94)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+      borderBottom: '1px solid var(--border)',
+      height: '56px',
+      display: 'flex', alignItems: 'center',
+      padding: '0 32px',
+      gap: '24px',
+    }}>
+
       {/* Logo */}
-      <Link to="/app/dashboard" style={{ textDecoration: 'none', flexShrink: 0 }}>
+      <Link to={user ? '/app/dashboard' : '/'} style={{ textDecoration: 'none', flexShrink: 0 }}>
         <Logo variant="horizontal" color="dark" size={26} />
       </Link>
 
-      {/* Nav */}
-      <nav style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
-        {NAV_LINKS.map(({ to, label, icon }) => {
-          const active = isActive(to);
-          const isIntelligence = to === '/app/agent';
-          return (
-            <Link
-              key={to}
-              to={to}
+      {/* ── Logged-in layout ── */}
+      {user ? (
+        <>
+          {/* Nav */}
+          <nav style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+            {NAV_ITEMS.map((item) => {
+              const active = isActive(item);
+              const isExplorer = item.dropdown === 'explorer';
+              const isIntelligence = item.to === '/app/agent';
+
+              if (isExplorer) {
+                return (
+                  <div
+                    key={item.to}
+                    style={{ position: 'relative' }}
+                    onMouseEnter={() => setExplorerOpen(true)}
+                    onMouseLeave={() => setExplorerOpen(false)}
+                  >
+                    <Link
+                      to={item.to}
+                      style={{
+                        padding: '6px 14px',
+                        fontSize: '13px',
+                        fontWeight: active ? 600 : 400,
+                        color: active ? 'var(--navy)' : 'var(--text-2)',
+                        textDecoration: 'none',
+                        borderBottom: active ? '2px solid var(--electric)' : '2px solid transparent',
+                        transition: 'all 0.15s var(--ease)',
+                        letterSpacing: '0.01em',
+                        display: 'flex', alignItems: 'center', gap: '4px',
+                        lineHeight: '42px',
+                      }}
+                    >
+                      {item.label}
+                      <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{
+                        transition: 'transform 0.15s',
+                        transform: explorerOpen ? 'rotate(180deg)' : 'none',
+                        opacity: 0.5,
+                      }}>
+                        <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </Link>
+
+                    <div style={{
+                      position: 'absolute', top: '100%', left: '0',
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '0 8px 8px 8px',
+                      boxShadow: 'var(--shadow-lg)',
+                      minWidth: '240px',
+                      padding: '6px',
+                      pointerEvents: explorerOpen ? 'auto' : 'none',
+                      opacity: explorerOpen ? 1 : 0,
+                      transform: explorerOpen ? 'translateY(0)' : 'translateY(-6px)',
+                      transition: 'opacity 0.15s var(--ease), transform 0.15s var(--ease)',
+                    }}>
+                      {EXPLORER_ITEMS.map(sub => (
+                        <Link
+                          key={sub.to}
+                          to={sub.to}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '12px',
+                            padding: '10px 16px', borderRadius: '6px',
+                            textDecoration: 'none',
+                            cursor: 'pointer',
+                            transition: 'background 0.12s',
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-subtle)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <span style={{ fontSize: '14px', flexShrink: 0, width: '20px', textAlign: 'center', color: 'var(--navy)' }}>
+                            {sub.icon}
+                          </span>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', lineHeight: 1.3 }}>
+                              {sub.label}
+                            </div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.3 }}>
+                              {sub.sub}
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: '13px',
+                    fontWeight: active ? 600 : 400,
+                    color: active ? 'var(--navy)' : 'var(--text-2)',
+                    textDecoration: 'none',
+                    borderRadius: '6px',
+                    borderBottom: active ? '2px solid var(--electric)' : '2px solid transparent',
+                    transition: 'all 0.15s var(--ease)',
+                    letterSpacing: '0.01em',
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                  }}
+                  onMouseEnter={e => {
+                    if (!active) {
+                      (e.currentTarget as HTMLAnchorElement).style.color = 'var(--navy)';
+                      (e.currentTarget as HTMLAnchorElement).style.background = 'var(--navy-subtle)';
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!active) {
+                      (e.currentTarget as HTMLAnchorElement).style.color = 'var(--text-2)';
+                      (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
+                    }
+                  }}
+                >
+                  {item.label}
+                  {isIntelligence && agentUnread > 0 && (
+                    <span style={{
+                      width: '6px', height: '6px', borderRadius: '50%',
+                      background: 'var(--gold)', display: 'inline-block', flexShrink: 0,
+                    }} />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Spacer */}
+          <div style={{ flex: 1 }} />
+
+          {/* Live */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+            <span style={{
+              width: '6px', height: '6px', borderRadius: '50%',
+              background: '#10B981', display: 'inline-block',
+              boxShadow: '0 0 0 2px rgba(16,185,129,0.25)',
+            }} />
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', letterSpacing: '0.06em' }}>
+              LIVE
+            </span>
+          </div>
+
+          {/* Search */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <input
+              type="text"
+              placeholder="Search…"
+              value={searchValue}
+              onChange={e => setSearchValue(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
               style={{
-                padding: '6px 14px',
-                fontSize: '13px',
-                fontWeight: active ? 600 : 400,
-                color: active ? 'var(--navy)' : 'var(--text-2)',
-                textDecoration: 'none',
+                width: searchFocused ? '220px' : '160px',
+                padding: '6px 12px 6px 32px',
+                fontSize: '12px',
+                fontFamily: 'var(--font-sans)',
+                background: 'var(--bg-subtle)',
+                border: searchFocused ? '1px solid var(--electric)' : '1px solid var(--border)',
                 borderRadius: '6px',
-                borderBottom: active ? '2px solid var(--gold)' : '2px solid transparent',
-                transition: 'all 0.15s var(--ease)',
-                letterSpacing: '0.01em',
-                display: 'flex', alignItems: 'center', gap: '6px',
+                color: 'var(--text)',
+                outline: 'none',
+                boxShadow: searchFocused ? '0 0 0 3px var(--electric-subtle)' : 'none',
+                transition: 'width 0.2s var(--ease), border-color 0.15s, box-shadow 0.15s',
               }}
-              onMouseEnter={(e) => {
-                if (!active) {
-                  (e.currentTarget as HTMLAnchorElement).style.color = 'var(--navy)';
-                  (e.currentTarget as HTMLAnchorElement).style.background = 'var(--navy-subtle)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!active) {
-                  (e.currentTarget as HTMLAnchorElement).style.color = 'var(--text-2)';
-                  (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
-                }
-              }}
+            />
+            <svg
+              width="13" height="13" viewBox="0 0 24 24" fill="none"
+              style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.4 }}
             >
-              <span style={{ fontSize: '10px', color: 'var(--gold-dim)', marginRight: '2px' }}>
-                {icon}
-              </span>
-              {label}
-              {isIntelligence && agentUnread > 0 && (
-                <span style={{
-                  width: '6px', height: '6px', borderRadius: '50%',
-                  background: 'var(--gold)',
-                  display: 'inline-block', flexShrink: 0,
-                  animation: 'pulse 2s infinite',
-                }} />
-              )}
-            </Link>
-          );
-        })}
-      </nav>
+              <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
+              <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </div>
 
-      {/* Right actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-        {!user ? (
-          <>
-            <button
-              className="btn btn-ghost"
-              style={{ fontSize: '12px' }}
-              onClick={() => navigate('/app/login')}
-            >
-              Log In
-            </button>
-            <button
-              className="btn btn-gold"
-              style={{ fontSize: '11px', padding: '8px 18px' }}
-              onClick={() => navigate('/app/signup')}
-            >
-              Get Started
-            </button>
-          </>
-        ) : (
-          <>
-            {/* Plan badge */}
-            <span style={{
-              fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700,
-              letterSpacing: '0.1em', textTransform: 'uppercase',
-              color: 'var(--gold-dim)', background: 'var(--gold-subtle)',
-              border: '1px solid var(--gold-border)',
-              padding: '3px 9px', borderRadius: '4px',
-            }}>
-              {planLabel}
-            </span>
-
-            {/* Email */}
-            <span style={{
-              fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-3)',
-            }}>
-              {truncateEmail(user.email)}
-            </span>
-
-            {/* Admin scan button */}
-            {isAdmin && (
-              <button
-                className="btn btn-navy"
-                style={{ fontSize: '11px', padding: '8px 18px' }}
-                onClick={handleScan}
-                disabled={scanState === 'loading'}
-              >
-                {scanState === 'loading' ? 'Scanning…' : scanState === 'done' ? 'Done ✓' : 'RUN SCAN'}
-              </button>
+          {/* Bell */}
+          <button
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center' }}
+            onClick={() => navigate('/app/alerts')}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            {agentUnread > 0 && (
+              <span style={{
+                position: 'absolute', top: '2px', right: '2px',
+                width: '7px', height: '7px', borderRadius: '50%',
+                background: 'var(--gold)', border: '1.5px solid var(--bg)',
+              }} />
             )}
+          </button>
 
-            {/* Upgrade for free/starter */}
-            {isFreePlan && (
-              <button
-                className="btn btn-gold"
-                style={{ fontSize: '11px', padding: '8px 16px' }}
-                onClick={() => navigate('/app/pricing')}
-              >
-                Upgrade
-              </button>
-            )}
-
-            {/* Sign out */}
+          {/* Avatar */}
+          <div ref={avatarRef} style={{ position: 'relative', flexShrink: 0 }}>
             <button
-              className="btn btn-ghost"
-              style={{ fontSize: '12px' }}
-              onClick={handleSignOut}
+              onClick={() => setAvatarOpen(o => !o)}
+              style={{
+                width: '32px', height: '32px', borderRadius: '50%',
+                background: 'var(--electric-subtle)',
+                border: '1.5px solid var(--electric-border)',
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700,
+                color: 'var(--electric)', letterSpacing: '0.04em',
+              }}
             >
-              Sign out
+              {initials}
             </button>
-          </>
-        )}
-      </div>
+
+            {avatarOpen && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                boxShadow: 'var(--shadow-lg)',
+                minWidth: '220px',
+                padding: '8px',
+                zIndex: 200,
+              }}>
+                {/* User info */}
+                <div style={{ padding: '8px 12px 12px', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ marginBottom: '6px' }}>
+                    <span style={{
+                      padding: '2px 8px', borderRadius: '4px',
+                      background: 'var(--electric-subtle)',
+                      border: '1px solid var(--electric-border)',
+                      fontSize: '10px', fontWeight: 700,
+                      color: 'var(--electric)', letterSpacing: '0.08em',
+                      fontFamily: 'var(--font-mono)', textTransform: 'uppercase' as const,
+                    }}>
+                      {planLabel}
+                    </span>
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user.email}
+                  </div>
+                </div>
+
+                {/* Menu items */}
+                <div style={{ padding: '4px 0' }}>
+                  <button
+                    onClick={() => { navigate('/app/portfolio'); setAvatarOpen(false); }}
+                    style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '10px 16px', fontSize: '13px', color: 'var(--text)', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-subtle)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    <span style={{ opacity: 0.5 }}>◇</span> Mon compte
+                  </button>
+                  <button
+                    onClick={() => { navigate('/app/pricing'); setAvatarOpen(false); }}
+                    style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '10px 16px', fontSize: '13px', color: 'var(--text)', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-subtle)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    <span style={{ opacity: 0.5 }}>◈</span> Subscription
+                  </button>
+
+                  {isAdmin && (
+                    <button
+                      onClick={() => { handleScan(); setAvatarOpen(false); }}
+                      style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '10px 16px', fontSize: '13px', color: 'var(--navy)', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--navy-subtle)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                    >
+                      <span>⚡</span> {scanState === 'loading' ? 'Scanning…' : scanState === 'done' ? 'Done ✓' : 'Scan Market'}
+                    </button>
+                  )}
+
+                  <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />
+
+                  <button
+                    onClick={() => { logout(); navigate('/'); }}
+                    style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '10px 16px', fontSize: '13px', color: 'var(--red)', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--red-subtle)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    <span style={{ opacity: 0.6 }}>→</span> Sign out
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        /* ── Not logged in ── */
+        <>
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={() => navigate('/app/login')}
+            style={{ fontSize: '14px', color: 'var(--text-2)', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px' }}
+          >
+            Sign in
+          </button>
+          <button
+            className="btn btn-electric"
+            onClick={() => navigate('/app/signup')}
+          >
+            Get access
+          </button>
+        </>
+      )}
     </header>
   );
 }

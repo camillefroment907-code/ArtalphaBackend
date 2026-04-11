@@ -7,7 +7,7 @@ export default function BrandShowcase() {
         <div className="max-w-[1400px] mx-auto">
           <div className="mb-20">
             <h1 className="mb-4 text-[42px]" style={{ fontFamily: 'var(--font-serif)' }}>
-              ArtAlpha Brand System
+              Nautilus Brand System
             </h1>
             <p className="text-[18px] text-[#666666]">
               Logo variations and usage guidelines
@@ -154,7 +154,7 @@ export default function BrandShowcase() {
               <div className="border border-[#EAEAEA] p-12">
                 <div className="text-[13px] text-[#666666] tracking-wide uppercase mb-4">Display / Serif</div>
                 <div className="text-[48px] mb-4" style={{ fontFamily: 'var(--font-serif)' }}>
-                  ArtAlpha
+                  Nautilus
                 </div>
                 <div className="text-[15px] text-[#666666]">
                   Cormorant Garamond<br />
@@ -164,7 +164,7 @@ export default function BrandShowcase() {
               <div className="border border-[#EAEAEA] p-12">
                 <div className="text-[13px] text-[#666666] tracking-wide uppercase mb-4">Body / Sans</div>
                 <div className="text-[32px] mb-4">
-                  ArtAlpha
+                  Nautilus
                 </div>
                 <div className="text-[15px] text-[#666666]">
                   Inter<br />

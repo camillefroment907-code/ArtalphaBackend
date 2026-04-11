@@ -3,15 +3,9 @@ import { Link, useNavigate } from 'react-router';
 import { Logo } from '../components/Logo';
 import { mockArtworks } from '../data/mockData';
 
-function fmtPrice(v: number): string {
-  if (!v) return '—';
-  return v >= 1000 ? `€${(v / 1000).toFixed(0)}K` : `€${v}`;
-}
-
 export default function Landing() {
   const navigate = useNavigate();
   const [topLots, setTopLots] = useState<any[]>([]);
-  const [lotsLoading, setLotsLoading] = useState(true);
 
   useEffect(() => {
     fetch('https://artalpha-backend-production.up.railway.app/api/lots?sort_by=deal_score&sort_dir=desc&page_size=6')
@@ -19,414 +13,345 @@ export default function Landing() {
       .then(data => {
         const items = Array.isArray(data) ? data : (data.items || []);
         setTopLots(items.slice(0, 6));
-        setLotsLoading(false);
       })
-      .catch(() => setLotsLoading(false));
+      .catch(() => {});
   }, []);
 
-  // Fallback to mock if API returns nothing
-  const recentLots = topLots.length >= 3 ? topLots.slice(0, 3) : null;
-  const liveLots   = topLots.length >= 6 ? topLots.slice(3, 6) : topLots.length >= 3 ? topLots.slice(0, 3) : null;
-
-  // Hero overlay data from top lot
-  const hero = topLots[0];
-  const heroLeft   = hero ? fmtPrice(hero.current_price || hero.estimate_low || 42000) : '€42K';
-  const heroRight  = hero ? fmtPrice(hero.estimate_high || Math.round((hero.current_price || 42000) * 1.5)) : '€85K';
-  const heroUpside = hero?.pct_below_low_estimate > 0
-    ? `+${Math.round(hero.pct_below_low_estimate)}%`
-    : hero?.estimate_high > hero?.current_price
-      ? `+${Math.round(((hero.estimate_high - hero.current_price) / hero.current_price) * 100)}%`
-      : '+102%';
-  const heroLabel  = hero
-    ? (hero.auction_date && hero.auction_date.startsWith(new Date().toISOString().slice(0, 10))
-        ? 'Detected today'
-        : 'Live opportunity')
-    : 'Live opportunity';
-
   return (
-    <div className="page min-h-screen" style={{ backgroundColor: 'var(--bg)' }}>
-      {/* Header Navigation */}
-      <header
-        className="px-[120px] sticky top-0 z-50"
-        style={{
-          borderBottom: '1px solid var(--border)',
-          background: 'rgba(250,250,248,0.94)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          height: '64px',
-          display: 'flex',
-          alignItems: 'center',
-        }}
-      >
-        <div className="flex items-center justify-between w-full">
-          <Logo variant="horizontal" color="dark" size={28} />
-          <div className="flex items-center gap-6">
-            <Link to="/pricing" className="text-[13px] transition-colors" style={{ color: 'var(--text-2)' }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'var(--navy)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-2)')}
-            >
-              Pricing
-            </Link>
-            <button
-              onClick={() => navigate('/app/login')}
-              className="btn btn-ghost"
-              style={{ fontSize: '13px', textTransform: 'none', letterSpacing: 0 }}
-            >
-              Log In
-            </button>
-            <button
-              onClick={() => navigate('/app/signup')}
-              className="btn btn-navy"
-              style={{ fontSize: '11px' }}
-            >
-              SIGN UP
-            </button>
-          </div>
+    <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+
+      {/* ── Public header ── */}
+      <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', height: '64px', padding: '0 80px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Logo variant="horizontal" color="dark" size={24} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <Link to="/pricing" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>Pricing</Link>
+          <Link to="/faq" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>FAQ</Link>
+          <button onClick={() => navigate('/app/login')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: 'var(--text-2)', padding: '0 4px' }}>
+            Sign in
+          </button>
+          <button onClick={() => navigate('/app/signup')} className="btn-electric" style={{ fontSize: '11px', padding: '8px 20px' }}>
+            Get access
+          </button>
         </div>
       </header>
 
-      {/* Hero Section - Split Layout */}
-      <section className="px-[120px] py-[100px]">
-        <div className="flex items-center gap-[100px] min-h-[650px]">
-          {/* Left - Content */}
-          <div className="flex-1 flex flex-col gap-12">
-            {/* Headline */}
-            <div>
-              <h1 className="mb-5 text-[60px] leading-[1.08]" style={{ fontFamily: 'var(--font-serif)', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
-                Invest in Art with Data
-              </h1>
-              <p className="text-[19px] leading-[1.65]" style={{ color: 'var(--text-2)' }}>
-                Systematic analysis of global auction markets. Identify undervalued artworks before price correction.
-              </p>
-            </div>
-
-            {/* Metrics */}
-            <div className="grid grid-cols-2 gap-x-12 gap-y-10 pt-8 border-t" style={{ borderColor: 'var(--border)' }}>
-              {[
-                { val: '2,847', label: 'Auction Houses' },
-                { val: '€4.2B', label: 'Sales Analyzed' },
-                { val: '18',    label: 'Live Opportunities' },
-                { val: '24 days', label: 'Avg. Lead Time' },
-              ].map(({ val, label }) => (
-                <div key={label}>
-                  <div className="text-[36px] leading-none mb-2" style={{ fontFamily: 'var(--font-serif)', color: 'var(--navy)' }}>{val}</div>
-                  <div className="label-caps">{label}</div>
-                </div>
-              ))}
-            </div>
-            {/* Trust signals */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-              {['7-day free trial', 'No credit card required', 'Cancel anytime'].map(t => (
-                <span key={t} style={{ fontSize: '13px', color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ color: 'var(--gold)', fontWeight: 700 }}>✦</span>
-                  {t}
-                </span>
-              ))}
-            </div>
+      {/* ── HERO ── */}
+      <section style={{ padding: '80px 120px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'center', background: 'white' }}>
+        {/* Left */}
+        <div>
+          <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--electric)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '20px' }}>
+            Market Intelligence · Art Investment
           </div>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(36px, 4vw, 56px)', fontWeight: 600, color: 'var(--text)', lineHeight: 1.1, margin: '0 0 20px', letterSpacing: '-0.01em' }}>
+            Uncover hidden value<br />in the art market.
+          </h1>
+          <p style={{ fontSize: '17px', color: 'var(--text-2)', lineHeight: 1.7, margin: '0 0 32px', maxWidth: '440px' }}>
+            Nautilus identifies undervalued artworks before prices correct. AI-powered intelligence for serious investors.
+          </p>
+          <div style={{ width: '32px', height: '2px', background: 'var(--gold)', marginBottom: '32px' }} />
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '28px' }}>
+            <button onClick={() => navigate('/app/signup')} className="btn-electric" style={{ fontSize: '13px', padding: '14px 32px' }}>
+              Get access
+            </button>
+            <button onClick={() => navigate('/pricing')} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '14px 24px', fontSize: '13px', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+              View pricing →
+            </button>
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
+            Tracking 10+ global auction houses · Updated every 15 minutes
+          </div>
+        </div>
 
-          {/* Right - Image with Overlay */}
-          <div className="flex-1">
-            <div className="w-full h-[650px] relative" style={{ borderRadius: '12px', overflow: 'hidden' }}>
-              <img
-                src="https://images.unsplash.com/photo-1643755639786-455a2479261e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080"
-                alt="Contemporary artwork"
-                className="w-full h-full object-cover"
-              />
-              
-              {/* Live Opportunity Overlay */}
-              <div
-                className="absolute bottom-6 left-6 right-6 p-6"
-                style={{
-                  background: 'rgba(26,42,68,0.88)',
-                  borderRadius: '10px',
-                  backdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(198,168,90,0.2)',
-                }}
-              >
-                <div className="label-gold mb-4">{heroLabel}</div>
-                <div className="flex items-center gap-4 mb-3">
-                  <span className="text-[32px] leading-none" style={{ fontFamily: 'var(--font-serif)', color: 'white' }}>{heroLeft}</span>
-                  <span className="text-[24px]" style={{ color: 'rgba(255,255,255,0.3)' }}>→</span>
-                  <span className="text-[32px] leading-none" style={{ fontFamily: 'var(--font-serif)', color: 'var(--gold)' }}>{heroRight}</span>
-                </div>
-                <div className="flex items-baseline gap-3">
-                  <div className="text-[40px] leading-none" style={{ fontFamily: 'var(--font-serif)', color: 'var(--gold)' }}>
-                    {heroUpside}
+        {/* Right — dark terminal */}
+        <div style={{ background: '#0A1628', borderRadius: '12px', padding: '28px', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', inset: 0, opacity: 0.04, borderRadius: '12px', backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+          <div style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.16em', color: '#C6A85A', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>
+                Nautilus Terminal
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#C6A85A', animation: 'pulseDot 2s infinite' }} />
+                <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)' }}>LIVE</span>
+              </div>
+            </div>
+
+            {topLots.slice(0, 3).map((lot: any, i: number) => {
+              const price = lot.current_price || lot.estimate_low || 0;
+              const upside = lot.pct_below_low_estimate || 0;
+              const score = lot.deal_score || 0;
+              return (
+                <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '10px 0', borderBottom: i < 2 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                  {lot.image_url ? (
+                    <img src={lot.image_url} alt="" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: '36px', height: '36px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', flexShrink: 0 }} />
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {lot.artist_name_raw || 'Unknown Artist'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {lot.title || 'Untitled'}
+                    </div>
                   </div>
-                  <div className="text-[13px]" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                    Estimated upside · Top scored lot
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'white', fontFamily: 'var(--font-mono)' }}>
+                      {price >= 1000 ? `€${(price / 1000).toFixed(0)}K` : `€${price}`}
+                    </div>
+                    {upside > 0 && (
+                      <div style={{ fontSize: '10px', color: '#2563EB', fontFamily: 'var(--font-mono)' }}>+{upside.toFixed(0)}%</div>
+                    )}
+                  </div>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '4px', background: score >= 80 ? '#C6A85A' : 'rgba(37,99,235,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: 'white', fontFamily: 'var(--font-mono)' }}>{Math.round(score)}</span>
+                  </div>
+                </div>
+              );
+            })}
+
+            {topLots.length === 0 && [0, 1, 2].map(i => (
+              <div key={i} className="skeleton" style={{ height: '56px', borderRadius: '6px', marginBottom: '8px', background: 'rgba(255,255,255,0.06)' }} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── METRICS ── */}
+      <section style={{ padding: '32px 120px', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', background: 'white' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
+          {[
+            { value: '10+', label: 'Auction Houses', sub: 'Global coverage' },
+            { value: '15 min', label: 'Update Frequency', sub: 'Real-time scanning' },
+            { value: '0–100', label: 'AI Deal Score', sub: 'Per lot conviction' },
+            { value: '3 tiers', label: 'Signal Strength', sub: 'Interesting → Exceptional' },
+          ].map(({ value, label, sub }, i) => (
+            <div key={i} style={{ padding: '20px 32px', borderRight: i < 3 ? '1px solid var(--border)' : 'none' }}>
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>{value}</div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-2)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>{label}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{sub}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', fontStyle: 'italic' }}>
+          Data aggregated from global auction houses and primary market platforms
+        </div>
+      </section>
+
+      {/* ── TODAY'S SIGNALS ── */}
+      <section style={{ padding: '80px 120px', background: 'var(--bg-subtle)' }}>
+        <div style={{ marginBottom: '40px' }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--electric)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '8px' }}>
+            Live opportunities
+          </div>
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '36px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px' }}>
+            Today's Signals
+          </h2>
+          <p style={{ fontSize: '14px', color: 'var(--text-2)', margin: 0 }}>
+            Real opportunities identified by Nautilus — updated continuously
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '20px' }}>
+          {(topLots.length > 0 ? topLots : mockArtworks).slice(0, 3).map((lot: any, i: number) => {
+            const isReal = topLots.length > 0;
+            const price = isReal ? (lot.current_price || lot.estimate_low || 0) : 0;
+            const upside = isReal ? (lot.pct_below_low_estimate || 0) : parseFloat(lot.upside || '0');
+            const score = isReal ? (lot.deal_score || 0) : 75;
+            const artist = isReal ? (lot.artist_name_raw || 'Unknown Artist') : lot.artistName;
+            const title = isReal ? (lot.title || 'Untitled') : lot.title;
+            const image = isReal ? lot.image_url : lot.imageUrl;
+
+            return (
+              <div
+                key={i}
+                onClick={() => navigate('/app/signup')}
+                style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s var(--ease), box-shadow 0.2s var(--ease)' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-md)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; }}
+              >
+                <div style={{ position: 'relative', paddingTop: '60%', background: 'var(--bg-subtle)', overflow: 'hidden' }}>
+                  {image ? (
+                    <img src={image} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+                  ) : (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', color: 'var(--border)' }}>◇</span>
+                    </div>
+                  )}
+                  <div style={{ position: 'absolute', top: '10px', right: '10px', background: score >= 80 ? 'var(--gold)' : 'var(--electric)', borderRadius: '4px', padding: '3px 8px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: 'white', fontFamily: 'var(--font-mono)' }}>{Math.round(score)}</span>
+                  </div>
+                </div>
+                <div style={{ padding: '16px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--electric)', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {artist}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: 'var(--text)', marginBottom: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {title}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '16px', fontWeight: 700, color: 'var(--text)' }}>
+                      {price >= 1000000 ? `€${(price / 1000000).toFixed(1)}M` : price >= 1000 ? `€${(price / 1000).toFixed(0)}K` : price > 0 ? `€${price}` : '—'}
+                    </div>
+                    {upside > 0 && (
+                      <div style={{ padding: '3px 8px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', borderRadius: '4px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--electric)', fontFamily: 'var(--font-mono)' }}>+{Math.round(upside)}%</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
+            );
+          })}
+        </div>
+        <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-3)', fontStyle: 'italic', fontFamily: 'var(--font-mono)' }}>
+          Live data · Updated every 15 minutes
+        </div>
+      </section>
+
+      {/* ── YOUR EDGE ── */}
+      <section style={{ padding: '80px 120px', background: 'white' }}>
+        <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '36px', fontWeight: 600, color: 'var(--text)', marginBottom: '48px' }}>
+          Your informational edge
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '48px' }}>
+          {[
+            { title: 'Early Detection', body: 'Identify undervalued works 2–4 weeks before market adjustment through pattern recognition across 10+ global sources.', metric: '24 days avg. lead time' },
+            { title: 'Price Validation', body: 'Every lot benchmarked against historical sales, artist market data, and real-time comparable transactions.', metric: '4.2M transactions analyzed' },
+            { title: 'Conviction Scoring', body: 'Our AI assigns a 0–100 conviction score to every opportunity. Only what matters rises to the top.', metric: 'Score ≥ 65 = strong signal' },
+          ].map(({ title, body, metric }) => (
+            <div key={title}>
+              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 600, color: 'var(--text)', marginBottom: '12px' }}>{title}</h3>
+              <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.7, marginBottom: '16px' }}>{body}</p>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold-dim)', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>{metric}</div>
             </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── GATED OPPORTUNITIES ── */}
+      <section style={{ padding: '80px 120px', background: 'var(--bg-subtle)' }}>
+        <div style={{ marginBottom: '40px' }}>
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '36px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px' }}>
+            Live opportunities — members only
+          </h2>
+          <p style={{ fontSize: '14px', color: 'var(--text-2)', margin: 0 }}>Access requires an active Nautilus account.</p>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '40px' }}>
+          {[
+            { entry: '€52K', target: '€72K', upside: 28, score: 82 },
+            { entry: '£38K', target: '£62K', upside: 42, score: 91 },
+            { entry: '€64K', target: '€98K', upside: 35, score: 76 },
+          ].map((opp, i) => (
+            <div key={i} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', position: 'relative', cursor: 'pointer', minHeight: '200px' }} onClick={() => navigate('/app/signup')}>
+              <div style={{ paddingTop: '60%', background: 'var(--bg-subtle)', filter: 'blur(8px)', opacity: 0.4 }} />
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <div style={{ padding: '4px 12px', background: 'var(--navy)', borderRadius: '4px' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>MEMBERS ONLY</span>
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+                  {opp.entry} → {opp.target}
+                </div>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--electric)', fontFamily: 'var(--font-mono)' }}>+{opp.upside}% upside · Score {opp.score}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ fontSize: '16px', color: 'var(--text-2)', marginBottom: '20px', fontFamily: 'var(--font-serif)' }}>
+            Reserved for active investors.
+          </p>
+          <button onClick={() => navigate('/app/signup')} className="btn-electric" style={{ fontSize: '13px', padding: '14px 40px' }}>
+            Get access to the platform
+          </button>
+          <div style={{ marginTop: '12px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+            No public access · Reserved for active investors
           </div>
         </div>
       </section>
 
-      {/* Recent Opportunities */}
-      <section className="px-16 py-28 border-t" style={{ borderColor: 'var(--border)' }}>
-        <div className="max-w-[1400px] mx-auto">
-          <div className="mb-16">
-            <h2 className="text-[48px] mb-3" style={{ fontFamily: 'var(--font-serif)', color: 'var(--navy)' }}>
-              Recent Opportunities
-            </h2>
-            <p className="text-[14px]" style={{ color: 'var(--gold-dim)' }}>Identified before market adjustment</p>
+      {/* ── ARTISTS IN TREND ── */}
+      <section style={{ padding: '80px 120px', background: '#0A1628', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, opacity: 0.03, backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+        <div style={{ position: 'relative' }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '8px' }}>
+            Market Momentum
           </div>
-
-          <div className="grid grid-cols-3 gap-10">
-            {lotsLoading
-              ? Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i}>
-                    <div className="aspect-[3/4] mb-6 skeleton" style={{ backgroundColor: '#EDE8DC' }} />
-                    <div className="skeleton" style={{ height: '28px', width: '70%', marginBottom: '8px', borderRadius: '4px' }} />
-                    <div className="skeleton" style={{ height: '16px', width: '50%', marginBottom: '24px', borderRadius: '4px' }} />
-                    <div className="skeleton" style={{ height: '24px', width: '60%', borderRadius: '4px' }} />
-                  </div>
-                ))
-              : (recentLots ?? mockArtworks.slice(0, 3).map(a => ({
-                  _mock: true, id: a.id,
-                  artist_name_raw: a.artistName, title: a.title, image_url: a.imageUrl,
-                  current_price: 0, estimate_low: 0, estimate_high: 0, pct_below_low_estimate: parseFloat(a.upside),
-                  _priceStr: a.price,
-                }))).map((lot: any, idx: number) => {
-                const artistName = lot._mock ? lot.artist_name_raw : (lot.artist_name_raw?.trim() || 'Unknown Artist');
-                const title      = lot._mock ? lot.title : (lot.title || 'Untitled');
-                const imgUrl     = lot._mock ? lot.image_url : lot.image_url;
-                const priceLeft  = lot._mock ? lot._priceStr : fmtPrice(lot.current_price || lot.estimate_low);
-                const priceRight = lot._mock
-                  ? (['€78K', '£142K', '€164K'][idx] ?? '—')
-                  : fmtPrice(lot.estimate_high || Math.round((lot.current_price || lot.estimate_low || 0) * 1.3));
-                const upside = lot._mock
-                  ? `+${Math.round(lot.pct_below_low_estimate)}%`
-                  : lot.pct_below_low_estimate > 0
-                    ? `+${Math.round(lot.pct_below_low_estimate)}%`
-                    : lot.estimate_high > lot.current_price
-                      ? `+${Math.round(((lot.estimate_high - lot.current_price) / lot.current_price) * 100)}%`
-                      : '+—';
-                return (
-                  <div
-                    key={lot.id ?? idx}
-                    className="group cursor-pointer"
-                    onClick={() => navigate('/app/signup')}
-                  >
-                    <div className="aspect-[3/4] overflow-hidden mb-6 relative" style={{ backgroundColor: '#EDE8DC' }}>
-                      {imgUrl ? (
-                        <img
-                          src={imgUrl}
-                          alt={title}
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#B5ACA0' }}>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                          </svg>
-                        </div>
-                      )}
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ backgroundColor: 'rgba(247, 243, 235, 0.97)' }}>
-                        <div className="text-center">
-                          <svg className="w-10 h-10 mb-3 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--gold-dim)' }}>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                          </svg>
-                          <div className="text-[13px] tracking-wider" style={{ color: 'var(--gold-dim)' }}>MEMBERS ONLY</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[26px] mb-1.5" style={{ fontFamily: 'var(--font-serif)', color: 'var(--navy)' }}>
-                        {artistName}
-                      </div>
-                      <div className="text-[15px] mb-6" style={{ fontStyle: 'italic', color: '#79736B' }}>
-                        {title}
-                      </div>
-                      <div className="flex items-baseline gap-6 pb-5 mb-5 border-b" style={{ borderColor: 'var(--border)' }}>
-                        <div className="text-[24px]" style={{ fontFamily: 'var(--font-serif)', color: 'var(--navy)' }}>{priceLeft}</div>
-                        <div className="text-[20px]" style={{ color: '#C4BCAE' }}>→</div>
-                        <div className="text-[24px]" style={{ fontFamily: 'var(--font-serif)', color: 'var(--navy)' }}>{priceRight}</div>
-                      </div>
-                      <div className="flex items-baseline justify-between">
-                        <div className="text-[11px] uppercase tracking-[0.15em]" style={{ color: 'var(--gold-dim)' }}>Upside</div>
-                        <div className="text-[32px]" style={{ fontFamily: 'var(--font-serif)', color: '#8B7355' }}>{upside}</div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            }
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-3)', textAlign: 'center', marginTop: '16px', fontStyle: 'italic' }}>
-            Live data from current auctions · Updated every 15 minutes
-          </div>
-        </div>
-      </section>
-
-      {/* Your Edge */}
-      <section className="px-16 py-28" style={{ backgroundColor: '#FFFFFF' }}>
-        <div className="max-w-[1400px] mx-auto">
-          <div className="mb-16">
-            <h2 className="text-[48px]" style={{ fontFamily: 'var(--font-serif)', color: 'var(--navy)' }}>Your Edge</h2>
-          </div>
-
-          <div className="grid grid-cols-3 gap-16">
-            <div>
-              <div className="text-[28px] mb-4" style={{ fontFamily: 'var(--font-serif)', color: 'var(--navy)' }}>Early Detection</div>
-              <p className="text-[16px] leading-relaxed mb-5" style={{ color: '#6B6660' }}>
-                Identify undervalued works 2-4 weeks before market adjustment through pattern recognition.
-              </p>
-              <div className="text-[13px] uppercase tracking-[0.15em]" style={{ color: 'var(--gold-dim)' }}>24 days avg. lead time</div>
-            </div>
-            <div>
-              <div className="text-[28px] mb-4" style={{ fontFamily: 'var(--font-serif)', color: 'var(--navy)' }}>Price Validation</div>
-              <p className="text-[16px] leading-relaxed mb-5" style={{ color: '#6B6660' }}>
-                Compare prices against 20+ years of sales data, adjusted for inflation and conditions.
-              </p>
-              <div className="text-[13px] uppercase tracking-[0.15em]" style={{ color: 'var(--gold-dim)' }}>4.2M transactions</div>
-            </div>
-            <div>
-              <div className="text-[28px] mb-4" style={{ fontFamily: 'var(--font-serif)', color: 'var(--navy)' }}>Market Intelligence</div>
-              <p className="text-[16px] leading-relaxed mb-5" style={{ color: '#6B6660' }}>
-                Track institutional patterns, gallery representation, and exhibition momentum.
-              </p>
-              <div className="text-[13px] uppercase tracking-[0.15em]" style={{ color: 'var(--gold-dim)' }}>Real-time updates</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Live Opportunities (Gated) */}
-      <section className="px-16 py-28 border-t" style={{ borderColor: 'var(--border)' }}>
-        <div className="max-w-[1400px] mx-auto">
-          <div className="mb-16">
-            <h2 className="text-[48px] mb-3" style={{ fontFamily: 'var(--font-serif)', color: 'var(--navy)' }}>
-              Live Opportunities
-            </h2>
-            <p className="text-[14px]" style={{ color: 'var(--gold-dim)' }}>18 active positions · Members only</p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-10">
-            {lotsLoading
-              ? Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i}>
-                    <div className="aspect-[3/4] mb-6 skeleton" style={{ backgroundColor: '#EDE8DC' }} />
-                    <div className="skeleton" style={{ height: '24px', width: '60%', marginBottom: '24px', borderRadius: '4px' }} />
-                    <div className="skeleton" style={{ height: '32px', width: '40%', borderRadius: '4px' }} />
-                  </div>
-                ))
-              : (liveLots ?? [
-                  { id: 'f1', current_price: 52000, estimate_high: 72000, pct_below_low_estimate: 28 },
-                  { id: 'f2', current_price: 38000, estimate_high: 62000, pct_below_low_estimate: 42 },
-                  { id: 'f3', current_price: 64000, estimate_high: 98000, pct_below_low_estimate: 35 },
-                ]).map((lot: any, idx: number) => {
-                const priceLeft  = fmtPrice(lot.current_price || lot.estimate_low || 0);
-                const priceRight = fmtPrice(lot.estimate_high || Math.round((lot.current_price || 0) * 1.3));
-                const upside     = lot.pct_below_low_estimate > 0
-                  ? `+${Math.round(lot.pct_below_low_estimate)}%`
-                  : lot.estimate_high > lot.current_price
-                    ? `+${Math.round(((lot.estimate_high - lot.current_price) / lot.current_price) * 100)}%`
-                    : '+—';
-                return (
-                  <div
-                    key={lot.id ?? idx}
-                    className="cursor-pointer"
-                    onClick={() => navigate('/app/signup')}
-                  >
-                    <div className="aspect-[3/4] overflow-hidden flex items-center justify-center mb-6" style={{ backgroundColor: '#EDE8DC' }}>
-                      {lot.image_url ? (
-                        <img src={lot.image_url} alt="" className="w-full h-full object-cover" style={{ filter: 'blur(6px)', opacity: 0.4 }} />
-                      ) : null}
-                      <div className="text-center" style={{ position: lot.image_url ? 'absolute' : 'static' }}>
-                        <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#B5ACA0', margin: '0 auto 12px' }}>
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                        <div className="text-[13px] tracking-wider" style={{ color: '#B5ACA0' }}>MEMBERS ONLY</div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex items-baseline gap-6 pb-5 mb-5 border-b" style={{ borderColor: 'var(--border)' }}>
-                        <div className="text-[24px]" style={{ fontFamily: 'var(--font-serif)', color: 'var(--navy)' }}>{priceLeft}</div>
-                        <div className="text-[20px]" style={{ color: '#C4BCAE' }}>→</div>
-                        <div className="text-[24px]" style={{ fontFamily: 'var(--font-serif)', color: 'var(--navy)' }}>{priceRight}</div>
-                      </div>
-                      <div className="flex items-baseline justify-between">
-                        <div className="text-[11px] uppercase tracking-[0.15em]" style={{ color: 'var(--gold-dim)' }}>Upside</div>
-                        <div className="text-[32px]" style={{ fontFamily: 'var(--font-serif)', color: '#8B7355' }}>{upside}</div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            }
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-3)', textAlign: 'center', marginTop: '16px', fontStyle: 'italic' }}>
-            Live data from current auctions · Updated every 15 minutes
-          </div>
-        </div>
-      </section>
-
-      {/* Artists in Trend */}
-      <section className="px-16 py-28" style={{ backgroundColor: '#FFFFFF' }}>
-        <div className="max-w-[1400px] mx-auto">
-          <div className="mb-16">
-            <h2 className="text-[48px] mb-3" style={{ fontFamily: 'var(--font-serif)', color: 'var(--navy)' }}>
-              Artists in Trend
-            </h2>
-            <p className="text-[14px]" style={{ color: 'var(--gold-dim)' }}>Price momentum analysis · Updated daily</p>
-          </div>
-
-          <div className="grid grid-cols-4 gap-10">
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '36px', fontWeight: 600, color: 'white', marginBottom: '8px' }}>
+            Artists with momentum
+          </h2>
+          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginBottom: '48px', fontFamily: 'var(--font-mono)' }}>
+            Price momentum analysis · Updated daily
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
             {[
               { name: 'Georges Mathieu', movement: 'Lyrical Abstraction', growth: 18 },
               { name: 'Pierre Soulages', movement: 'Abstract Expressionism', growth: 24 },
               { name: 'Hans Hartung', movement: 'Post-War European', growth: 15 },
-              { name: 'Zao Wou-Ki', movement: 'Abstract Painting', growth: 32 }
-            ].map((artist, idx) => (
-              <div key={idx} className="border-l pl-6" style={{ borderColor: 'var(--border)' }}>
-                <div className="text-[24px] mb-2" style={{ fontFamily: 'var(--font-serif)', color: 'var(--navy)' }}>{artist.name}</div>
-                <div className="text-[13px] mb-6" style={{ color: '#79736B' }}>{artist.movement}</div>
-                <div className="text-[32px]" style={{ fontFamily: 'var(--font-serif)', color: '#8B7355' }}>+{artist.growth}%</div>
+              { name: 'Zao Wou-Ki', movement: 'Abstract Painting', growth: 32 },
+            ].map((artist, i) => (
+              <div key={i} style={{ padding: '0 32px', borderRight: i < 3 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 600, color: 'white', marginBottom: '6px' }}>{artist.name}</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginBottom: '16px' }}>{artist.movement}</div>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--gold)' }}>+{artist.growth}%</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="px-16 py-28 border-t" style={{ borderColor: 'var(--border)' }}>
-        <div className="max-w-[900px] mx-auto text-center">
-          <h2 className="text-[48px] mb-5" style={{ fontFamily: 'var(--font-serif)', color: 'var(--navy)' }}>
-            Access the Platform
-          </h2>
-          <p className="text-[18px] mb-12" style={{ color: '#6B6660' }}>
-            Create an account to view opportunities and pricing data
-          </p>
-          <button
-            onClick={() => navigate('/app/signup')}
-            className="btn btn-navy"
-            style={{ fontSize: '13px', padding: '14px 40px' }}
-          >
-            CREATE ACCOUNT
-          </button>
-          <div className="text-[12px] mt-5 tracking-[0.15em]" style={{ color: 'var(--gold-dim)' }}>
-            PRIVATE ACCESS · NO PUBLIC BROWSING
-          </div>
+      {/* ── FINAL CTA ── */}
+      <section style={{ padding: '120px', background: 'var(--bg-subtle)', textAlign: 'center' }}>
+        <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '48px', fontWeight: 600, color: 'var(--text)', marginBottom: '16px', lineHeight: 1.2 }}>
+          Intelligence you can act on.
+        </h2>
+        <p style={{ fontSize: '18px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto 40px', lineHeight: 1.6 }}>
+          Access Nautilus and start identifying opportunities before the market corrects.
+        </p>
+        <button onClick={() => navigate('/app/signup')} className="btn-electric" style={{ fontSize: '14px', padding: '16px 48px' }}>
+          Get access to the platform
+        </button>
+        <div style={{ marginTop: '16px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>
+          No public access · Reserved for active investors
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="px-16 py-14 border-t" style={{ borderColor: '#D4CFC3', backgroundColor: '#FFFFFF' }}>
-        <div className="max-w-[1400px] mx-auto">
-          <div className="flex items-center justify-between">
-            <Logo variant="horizontal" color="dark" size={24} />
-            <div className="flex items-center gap-12 text-[13px]" style={{ color: 'var(--gold-dim)' }}>
-              <Link to="/about" className="hover:opacity-70 transition-opacity">About</Link>
-              <Link to="/contact" className="hover:opacity-70 transition-opacity">Contact</Link>
-              <Link to="/faq" className="hover:opacity-70 transition-opacity">FAQ</Link>
-              <a href="#" className="hover:opacity-70 transition-opacity">Legal</a>
-            </div>
-            <div className="text-[11px] tracking-[0.15em]" style={{ color: '#B5ACA0' }}>
-              © 2026 ARTALPHA
-            </div>
+      {/* ── FOOTER ── */}
+      <footer style={{ padding: '48px 120px', borderTop: '1px solid var(--border)', background: 'white' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '48px', marginBottom: '32px' }}>
+          <div>
+            <Logo variant="full" color="dark" size={24} />
+            <p style={{ fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic', marginTop: '12px', lineHeight: 1.6 }}>
+              Uncover hidden value.
+            </p>
+          </div>
+          <div>
+            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '16px' }}>Product</div>
+            {[
+              { label: 'Pricing', to: '/pricing' },
+              { label: 'FAQ', to: '/faq' },
+              { label: 'Contact', to: '/contact' },
+            ].map(({ label, to }) => (
+              <div key={label} style={{ marginBottom: '8px' }}>
+                <Link to={to} style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>{label}</Link>
+              </div>
+            ))}
+          </div>
+          <div>
+            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '16px' }}>Intelligence</div>
+            <p style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.7 }}>
+              Data aggregated from global auction houses and primary market platforms.
+            </p>
+            <p style={{ fontSize: '11px', color: 'var(--text-ghost)', marginTop: '16px', fontFamily: 'var(--font-mono)' }}>
+              Nautilus — Market Intelligence for Art Investment
+            </p>
+          </div>
+        </div>
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '12px', color: 'var(--text-3)' }}>© 2026 Nautilus</span>
+          <div style={{ display: 'flex', gap: '24px' }}>
+            <Link to="/about" style={{ fontSize: '12px', color: 'var(--text-3)', textDecoration: 'none' }}>About</Link>
+            <Link to="/contact" style={{ fontSize: '12px', color: 'var(--text-3)', textDecoration: 'none' }}>Contact</Link>
           </div>
         </div>
       </footer>
