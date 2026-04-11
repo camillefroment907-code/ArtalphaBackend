@@ -272,7 +272,8 @@ async def _poll_and_score_async():
                     created_at=lot_obj.created_at,
                     updated_at=lot_obj.updated_at,
                 ).on_conflict_do_nothing(
-                    index_elements=["source", "external_id"]
+                    index_elements=["source", "external_id"],
+                    index_where=Lot.external_id.isnot(None),
                 )
                 await session.execute(stmt)
 

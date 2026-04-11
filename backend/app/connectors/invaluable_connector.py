@@ -184,7 +184,6 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
                             "size": page_size,
                             "upcoming": "true",
                             "page": page,
-                            "categoryId": "3",  # Fine Art category on Invaluable
                         },
                     )
                     if resp.status_code != 200:
