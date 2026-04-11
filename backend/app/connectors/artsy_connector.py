@@ -348,7 +348,6 @@ async def fetch_primary_lots(limit: int = 100) -> List[LotNormalized]:
             partner {
               name
               type
-              profile { followers { totalCount } }
             }
           }
         }
