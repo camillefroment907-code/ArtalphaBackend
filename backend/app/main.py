@@ -114,7 +114,7 @@ app.include_router(artist_profiles_router, prefix="/api")
 
 @app.get("/")
 async def root():
-    return {"name": "HONO API", "version": "1.0.0", "docs": "/docs", "status": "operational"}
+    return {"name": "HONO API", "version": "1.1.0", "docs": "/docs", "status": "operational"}
 
 
 @app.get("/health")
