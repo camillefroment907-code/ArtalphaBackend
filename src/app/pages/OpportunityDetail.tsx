@@ -16,9 +16,18 @@ function fmt(v?: number | null): string {
 
 // ── SCORE BAR ─────────────────────────────────────────────────────────────────
 
-function ScoreBar({ score }: { score: number }) {
-  const tier = score >= 80 ? 'EXCEPTIONAL' : score >= 60 ? 'STRONG' : 'INTERESTING';
-  const tierColor = score >= 80 ? 'var(--gold)' : score >= 60 ? 'var(--navy)' : 'var(--text-3)';
+function ScoreBar({ score, isUpcoming = false }: { score: number; isUpcoming?: boolean }) {
+  const tier = isUpcoming && score >= 65
+    ? 'WATCH'
+    : score >= 80 ? 'EXCEPTIONAL'
+    : score >= 65 ? 'STRONG'
+    : score >= 45 ? 'INTERESTING'
+    : 'LOW';
+  const tierColor = isUpcoming && score >= 65
+    ? 'var(--text-2)'
+    : score >= 80 ? 'var(--gold)'
+    : score >= 65 ? 'var(--electric)'
+    : 'var(--text-3)';
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -220,6 +229,9 @@ export default function OpportunityDetail() {
   const upsidePct = upside > 0 ? upside : (fairVal > price ? ((fairVal - price) / price) * 100 : 0);
   const proj = (years: number) => Math.round(price * Math.pow(1.07, years));
 
+  const isUpcoming = lot.status === 'upcoming' || lot.status === 'preview' ||
+    (lot.auction_date && new Date(lot.auction_date) > new Date() && !lot.status);
+
   const source = String(lot.source || '').toLowerCase();
   const flags: Record<string, string> = {
     drouot: '🇫🇷', interencheres: '🇫🇷', invaluable: '🇺🇸',
@@ -371,18 +383,33 @@ export default function OpportunityDetail() {
 
             {/* Price block */}
             <div style={{ marginBottom: '28px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '8px' }}>Current Price</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '8px' }}>
+                {isUpcoming ? 'Starting Bid' : 'Current Price'}
+              </div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '40px', fontWeight: 700, color: 'var(--text)', lineHeight: 1, marginBottom: '6px' }}>{fmt(price)}</div>
+              {isUpcoming && (
+                <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: '4px' }}>
+                  Starting bid · Auction not yet started
+                </div>
+              )}
               {(estLow > 0 || estHigh > 0) && (
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-3)' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-3)', marginTop: '4px' }}>
                   est. {estLow && estHigh && estLow !== estHigh ? `${fmt(estLow)} – ${fmt(estHigh)}` : fmt(estHigh || estLow)}
                 </div>
               )}
-              {upsidePct > 0 && (
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginTop: '12px', padding: '8px 14px', background: 'var(--navy)', border: 'none' }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.06em' }}>
-                    -{upsidePct.toFixed(0)}% below estimate
-                  </span>
+              {lot.pct_below_low_estimate && lot.pct_below_low_estimate > 5 && (
+                <div style={{
+                  display: 'inline-block',
+                  padding: '8px 16px',
+                  background: isUpcoming ? 'var(--navy)' : 'var(--electric)',
+                  marginTop: '12px',
+                  fontSize: '13px', fontWeight: 700,
+                  color: 'white', fontFamily: 'var(--font-mono)',
+                }}>
+                  {isUpcoming
+                    ? `Starting bid — est. €${(estLow / 1000).toFixed(0)}K–€${(estHigh / 1000).toFixed(0)}K`
+                    : `-${Math.round(lot.pct_below_low_estimate)}% below estimate`
+                  }
                 </div>
               )}
             </div>
@@ -390,7 +417,7 @@ export default function OpportunityDetail() {
             {/* Score bar */}
             {lot.deal_score > 0 && (
               <div style={{ marginBottom: lot.score_rationale ? '16px' : '28px', paddingBottom: lot.score_rationale ? '16px' : '28px', borderBottom: lot.score_rationale ? 'none' : '1px solid var(--border)' }}>
-                <ScoreBar score={lot.deal_score} />
+                <ScoreBar score={lot.deal_score} isUpcoming={!!isUpcoming} />
               </div>
             )}
 
