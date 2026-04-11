@@ -343,19 +343,23 @@ async def _rescore_live_async():
     from app.models.db_models import Lot, LotStatus, Artist
     from app.engines.scoring import compute_deal_score, ScoringInput
     from app.connectors.aggregator import get_house_reputation
-    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-    from sqlalchemy import select
+    from sqlalchemy import select, or_
     from sqlalchemy.orm import selectinload
 
-    from app.database import engine, AsyncSessionLocal
+    from app.database import AsyncSessionLocal
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Lot)
             .options(selectinload(Lot.artist))
             .where(Lot.status.in_([LotStatus.UPCOMING, LotStatus.LIVE]))
-            .where(Lot.auction_date >= datetime.utcnow())
-            .limit(500)
+            .where(
+                or_(
+                    Lot.auction_date >= datetime.utcnow(),
+                    Lot.auction_date.is_(None),  # includes gallery/primary lots
+                )
+            )
+            .limit(50)
         )
         lots = result.scalars().all()
         logger.info("Re-scoring live lots", count=len(lots))
@@ -400,6 +404,32 @@ async def _rescore_live_async():
                 lot.pct_below_market_avg = score_result.pct_below_market_avg
                 lot.score_breakdown = score_result.breakdown.model_dump()
                 lot.scored_at = datetime.utcnow()
+
+                # Generate rationale if missing
+                if (
+                    lot.score_rationale is None
+                    and lot.deal_score >= 45
+                    and settings.openai_api_key
+                ):
+                    from app.engines.rationale import generate_rationale
+                    rationale = await generate_rationale(
+                        title=lot.title or "",
+                        artist_name=lot.artist_name_raw or "Unknown",
+                        current_price=lot.current_price,
+                        estimate_low=lot.estimate_low,
+                        estimate_high=lot.estimate_high,
+                        deal_score=lot.deal_score or 0,
+                        pct_below_estimate=lot.pct_below_low_estimate,
+                        pct_below_market=lot.pct_below_market_avg,
+                        artist_avg_price=None,
+                        artist_liquidity=None,
+                        auction_house=lot.auction_house_name,
+                        category=lot.category,
+                        lang="fr",
+                    )
+                    if rationale:
+                        lot.score_rationale = rationale
+                    await asyncio.sleep(0.5)
 
             except Exception as e:
                 logger.warning("Re-score failed for lot", lot_id=str(lot.id), error=str(e))
