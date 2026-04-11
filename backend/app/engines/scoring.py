@@ -284,7 +284,7 @@ def compute_deal_score(inp: ScoringInput) -> ScoringResult:
     reputation = inp.house_reputation
 
     # ── Primary market early return ──────────────────────────────────────────
-    if getattr(lot, "market_type", None) == "primary":
+    if getattr(lot, "market_type", None) in ("primary", "PRIMARY"):
         deal_score = _score_primary_lot(lot, artist)
         return ScoringResult(
             deal_score=deal_score,
