@@ -47,6 +47,7 @@ class ScoringInput:
     artist_data: Dict[str, Any]
     house_reputation: float
     weights: Optional[Dict[str, float]] = None
+    status: Optional[str] = None
 
 
 @dataclass
@@ -56,6 +57,7 @@ class ScoringResult:
     pct_below_low_estimate: Optional[float]
     pct_below_market_avg: Optional[float]
     breakdown: ScoreBreakdown
+    is_upcoming: bool = False
 
 
 def _sigmoid(x: float, steepness: float = 0.08, midpoint: float = 30) -> float:
@@ -137,6 +139,16 @@ def _score_confidence(
     if estimate_available:
         base = min(base + 0.10, 1.0)
     return float(base * 100)
+
+
+def _get_status_multiplier(status: str) -> float:
+    """Starting bid < estimate is normal auction mechanics, not an inefficiency."""
+    s = (status or "").lower()
+    if s in ("upcoming", "preview", "scheduled"):
+        return 0.3
+    if s in ("live", "open", "active"):
+        return 1.0
+    return 0.6  # unknown
 
 
 def build_rationale(
@@ -246,6 +258,9 @@ def compute_deal_score(inp: ScoringInput) -> ScoringResult:
         lot.current_price, lot.estimate_low
     )
 
+    status_mult = _get_status_multiplier(getattr(inp, 'status', '') or '')
+    below_est_score = below_est_score * status_mult
+
     below_mkt_score, pct_below_market = _score_below_market(
         lot.current_price, avg_market_price
     )
@@ -290,6 +305,11 @@ def compute_deal_score(inp: ScoringInput) -> ScoringResult:
         raw_score = min(raw_score * 1.05, 100)
 
     deal_score = float(np.clip(raw_score, 0, 100))
+
+    is_upcoming = status_mult == 0.3
+    if is_upcoming and deal_score >= 65:
+        deal_score = min(deal_score, 72.0)
+
     is_deal = deal_score >= settings.deal_score_threshold
 
     rationale = build_rationale(inp, pct_below_estimate, pct_below_market)
@@ -323,6 +343,7 @@ def compute_deal_score(inp: ScoringInput) -> ScoringResult:
         pct_below_low_estimate=round(pct_below_estimate, 2) if pct_below_estimate is not None else None,
         pct_below_market_avg=round(pct_below_market, 2) if pct_below_market is not None else None,
         breakdown=breakdown,
+        is_upcoming=is_upcoming,
     )
 
 
