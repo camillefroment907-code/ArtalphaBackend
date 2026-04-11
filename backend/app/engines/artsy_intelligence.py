@@ -9,6 +9,7 @@ Transforms raw Artsy data into investment-grade signals.
 """
 import httpx
 import asyncio
+import re
 import structlog
 from datetime import datetime, timedelta
 from typing import Optional
@@ -22,21 +23,30 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0",
 }
 
+# Known major museums/institutions — presence in bio = collection count proxy
+MAJOR_INSTITUTIONS = [
+    "moma", "museum of modern art", "tate", "pompidou", "guggenheim",
+    "louvre", "hermitage", "metropolitan", "met museum", "whitney",
+    "lacma", "sfmoma", "stedelijk", "musée d'orsay", "national gallery",
+    "art institute of chicago", "musée national", "centre pompidou",
+    "kunst", "nationalgalerie", "pinakothek", "rijksmuseum",
+]
+
 
 # ─────────────────────────────────────────────
 # GALLERY TIER CALCULATION
 # ─────────────────────────────────────────────
 
-def compute_gallery_tier(followers: int, fair_count: int, location_count: int) -> int:
+def compute_gallery_tier(location_count: int, shows_count: int) -> int:
     """
     Tier 1: Top institutional galleries (Gagosian, Pace, Hauser & Wirth level)
-    Tier 2: Strong mid-market galleries (Templon, Perrotin, Almine Rech level)
+    Tier 2: Strong mid-market galleries
     Tier 3: Emerging or regional galleries
+    Uses location count and shows count as proxies for gallery prestige.
     """
     score = 0
-    score += min(followers / 1000, 60)    # Max 60pts from followers
-    score += min(fair_count * 5, 25)      # Max 25pts from art fairs
-    score += min(location_count * 3, 15)  # Max 15pts from locations
+    score += min(location_count * 15, 60)   # Max 60pts: 4+ locations = major gallery
+    score += min(shows_count * 5, 40)        # Max 40pts from number of shows at gallery
 
     if score >= 60:
         return 1
@@ -152,6 +162,21 @@ def detect_pre_auction(
     )
 
 
+def _count_institutional_mentions(biography: str) -> int:
+    """
+    Count major museum/institution mentions in biography text.
+    Used as proxy for public collections count.
+    """
+    if not biography:
+        return 0
+    bio_lower = biography.lower()
+    count = 0
+    for inst in MAJOR_INSTITUTIONS:
+        if inst in bio_lower:
+            count += 1
+    return count
+
+
 # ─────────────────────────────────────────────
 # ARTSY DATA FETCHERS
 # ─────────────────────────────────────────────
@@ -166,6 +191,7 @@ async def fetch_artist_from_artsy(artist_name: str) -> Optional[dict]:
       searchConnection(query: $name, entities: [ARTIST], first: 1) {
         edges {
           node {
+            __typename
             ... on Artist {
               internalID
               slug
@@ -182,7 +208,9 @@ async def fetch_artist_from_artsy(artist_name: str) -> Optional[dict]:
                   node {
                     startAt
                     endAt
-                    partner { name }
+                    partner {
+                      ... on Partner { name }
+                    }
                   }
                 }
               }
@@ -191,19 +219,17 @@ async def fetch_artist_from_artsy(artist_name: str) -> Optional[dict]:
                 totalCount
               }
 
-              partnersConnection(first: 10, partnerType: GALLERY) {
+              partnersConnection(first: 10) {
                 edges {
                   node {
-                    internalID
-                    name
-                    followersCount
-                    locationsConnection(first: 5) { totalCount }
+                    ... on Partner {
+                      internalID
+                      name
+                      locationsConnection(first: 5) { totalCount }
+                      showsConnection(first: 3) { totalCount }
+                    }
                   }
                 }
-              }
-
-              collectionConnection: collectionsConnection(first: 1) {
-                totalCount
               }
             }
           }
@@ -219,9 +245,16 @@ async def fetch_artist_from_artsy(artist_name: str) -> Optional[dict]:
                 json={"query": query, "variables": {"name": artist_name}},
             )
             if resp.status_code != 200:
+                logger.debug("artsy_http_error", artist=artist_name, status=resp.status_code)
                 return None
 
             data = resp.json()
+
+            # Check for GraphQL errors
+            if data.get("errors"):
+                logger.debug("artsy_graphql_error", artist=artist_name, errors=data["errors"])
+                return None
+
             edges = (data.get("data", {})
                         .get("searchConnection", {})
                         .get("edges", []))
@@ -230,7 +263,8 @@ async def fetch_artist_from_artsy(artist_name: str) -> Optional[dict]:
                 return None
 
             node = edges[0].get("node", {})
-            if not node or node.get("__typename") == "SearchableItem":
+            # Only process Artist nodes (not SearchableItem or other types)
+            if not node or node.get("__typename") != "Artist":
                 return None
 
             return _parse_artist_node(node, artist_name)
@@ -245,6 +279,10 @@ def _parse_artist_node(node: dict, fallback_name: str) -> dict:
     now = datetime.utcnow()
     one_year_ago = now - timedelta(days=365)
     two_years_ago = now - timedelta(days=730)
+
+    # Biography
+    bio_obj = node.get("biographyBlurb") or {}
+    biography = bio_obj.get("text", "") if isinstance(bio_obj, dict) else ""
 
     # Shows analysis
     shows_edges = (node.get("showsConnection") or {}).get("edges", [])
@@ -265,20 +303,23 @@ def _parse_artist_node(node: dict, fallback_name: str) -> dict:
         except Exception:
             pass
 
-    # Gallery analysis
+    # Gallery analysis — partners use inline fragment ... on Partner
     partners_edges = (node.get("partnersConnection") or {}).get("edges", [])
     gallery_tiers = []
-    gallery_count = len(partners_edges)
+    gallery_count = 0
     top_gallery = None
     top_tier = 3
     location_total = 0
 
     for edge in partners_edges:
         partner = edge.get("node", {})
-        followers = partner.get("followersCount") or 0
+        if not partner or not partner.get("name"):
+            continue  # Skip non-Partner nodes (empty {} from inline fragment miss)
+        gallery_count += 1
         locations = (partner.get("locationsConnection") or {}).get("totalCount", 1)
+        shows_at_gallery = (partner.get("showsConnection") or {}).get("totalCount", 0)
         location_total += locations
-        tier = compute_gallery_tier(followers, 0, locations)
+        tier = compute_gallery_tier(locations, shows_at_gallery)
         gallery_tiers.append(tier)
         if tier < top_tier:
             top_tier = tier
@@ -286,8 +327,8 @@ def _parse_artist_node(node: dict, fallback_name: str) -> dict:
 
     gallery_tier_avg = (sum(gallery_tiers) / len(gallery_tiers)) if gallery_tiers else 3.0
 
-    # Collections (institutional validation)
-    public_collections = (node.get("collectionConnection") or {}).get("totalCount", 0)
+    # Institutional validation — count major museum mentions in biography
+    public_collections = _count_institutional_mentions(biography)
 
     # Birth/death year
     birth_year = None
@@ -315,10 +356,6 @@ def _parse_artist_node(node: dict, fallback_name: str) -> dict:
         gallery_tier_avg, shows_last_12m, public_collections,
         has_auction_results=False  # Will be updated by lot matching
     )
-
-    # Biography
-    bio_obj = node.get("biographyBlurb") or {}
-    biography = bio_obj.get("text", "") if isinstance(bio_obj, dict) else ""
 
     return {
         "artsy_id": node.get("internalID") or node.get("slug", ""),
