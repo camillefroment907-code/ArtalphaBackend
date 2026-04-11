@@ -298,7 +298,10 @@ def compute_deal_score(inp: ScoringInput) -> ScoringResult:
                 liquidity_score=round((artist.get("liquidity", 50) / 100) * 100, 2),
                 house_reputation_score=0.0,
                 confidence_score=0.0,
-                rationale="Primary market listing — scored on artist quality and gallery tier.",
+                weights=DEFAULT_WEIGHTS,
+                pct_below_low_estimate=None,
+                pct_below_market_avg=None,
+                rationale=["Primary market listing — scored on artist quality and gallery tier."],
                 ai_insight=None,
             ),
         )
