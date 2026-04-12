@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
-import { getPlanLimits, getUser } from '../../lib/auth';
+import { getUser } from '../../lib/auth';
 
 function getToken(): string {
   try {
@@ -169,10 +169,11 @@ function Skeleton() {
 
 export default function Primary() {
   const navigate = useNavigate();
-  const limits = getPlanLimits();
   const user = getUser();
   const isAdmin = user?.email === 'camillefroment907@gmail.com';
-  const maxVisible = isAdmin ? 9999 : (limits.maxOpportunities || 3);
+
+  const [userPlan, setUserPlan] = useState<string>('free');
+  const [planLoading, setPlanLoading] = useState(true);
 
   const [lots, setLots] = useState<Lot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -181,13 +182,32 @@ export default function Primary() {
   const [search, setSearch] = useState('');
   const debouncRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchLots = (chipId: string, q: string) => {
+  useEffect(() => {
+    const token = getToken();
+    if (!token) { setPlanLoading(false); return; }
+    fetch('/api/billing/subscription', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        const plan = (data.plan || 'free').toLowerCase();
+        const status = (data.status || '').toLowerCase();
+        setUserPlan(['active', 'trialing'].includes(status) && plan !== 'free' ? plan : 'free');
+      })
+      .catch(() => setUserPlan('free'))
+      .finally(() => setPlanLoading(false));
+  }, []);
+
+  const PLAN_LIMITS: Record<string, number> = {
+    free: 3, starter: 10, investor: 99999, pro: 99999, institutional: 99999, elite: 99999,
+  };
+  const visibleLimit = isAdmin ? 99999 : (PLAN_LIMITS[userPlan] ?? 3);
+
+  const fetchLots = (chipId: string, q: string, limit: number) => {
     setLoading(true);
     const selected = CHIPS.find(c => c.id === chipId) || CHIPS[0];
     const qs = new URLSearchParams();
     qs.set('sort_by', 'deal_score');
     qs.set('sort_dir', 'desc');
-    qs.set('page_size', '24');
+    qs.set('page_size', String(Math.min(24, limit)));
     if (selected.min != null) qs.set('min_price', String(selected.min));
     if (selected.max != null) qs.set('max_price', String(selected.max));
     if (q) qs.set('search', q);
@@ -213,18 +233,19 @@ export default function Primary() {
   };
 
   useEffect(() => {
-    fetchLots(chip, search);
+    if (planLoading) return;
+    fetchLots(chip, search, visibleLimit);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chip]);
+  }, [chip, planLoading]);
 
   const handleSearch = (q: string) => {
     setSearch(q);
     if (debouncRef.current) clearTimeout(debouncRef.current);
-    debouncRef.current = setTimeout(() => fetchLots(chip, q), 300);
+    debouncRef.current = setTimeout(() => fetchLots(chip, q, visibleLimit), 300);
   };
 
-  const visibleLots = lots.slice(0, maxVisible);
-  const lockedLots  = lots.slice(maxVisible, maxVisible + 4);
+  const visibleLots = lots.slice(0, visibleLimit);
+  const isLimited   = !isAdmin && lots.length >= visibleLimit && visibleLimit < 99999;
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingTop: '60px' }}>
@@ -334,32 +355,36 @@ export default function Primary() {
                   onClick={() => navigate(`/app/opportunities/${lot.id}`)}
                 />
               ))}
-              {lockedLots.map(lot => (
-                <PrimaryCard key={lot.id} lot={lot} locked onClick={() => {}} />
-              ))}
             </div>
 
-            {lockedLots.length > 0 && (
-              <div style={{
-                marginTop: '32px', padding: '32px', textAlign: 'center',
-                background: 'white', border: '1px solid var(--border)', borderRadius: '12px',
-              }}>
-                <p style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', color: 'var(--navy)', margin: '0 0 8px' }}>
-                  {lots.length - maxVisible} autres œuvres disponibles
-                </p>
-                <p style={{ fontSize: '12px', color: 'var(--text-3)', margin: '0 0 20px' }}>
-                  Passez à Investor pour accéder au marché primaire complet
-                </p>
-                <button
-                  onClick={() => navigate('/app/pricing')}
-                  style={{
-                    padding: '10px 28px', background: 'var(--navy)', color: 'white',
-                    border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Voir les plans — à partir de €9/mois
-                </button>
+            {isLimited && (
+              <div style={{ position: 'relative', marginTop: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', filter: 'blur(5px)', pointerEvents: 'none', opacity: 0.5, userSelect: 'none' }}>
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', height: '300px' }}>
+                      <div style={{ height: '180px', background: 'var(--bg-subtle)' }} />
+                      <div style={{ padding: '16px' }}>
+                        <div style={{ height: '10px', width: '50%', borderRadius: '4px', marginBottom: '8px', background: 'var(--border)' }} />
+                        <div style={{ height: '14px', width: '80%', borderRadius: '4px', marginBottom: '12px', background: 'var(--border)' }} />
+                        <div style={{ height: '18px', width: '40%', borderRadius: '4px', background: 'var(--border)' }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(250,250,250,0) 0%, rgba(250,250,250,0.97) 35%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: '32px' }}>
+                  <div style={{ textAlign: 'center', maxWidth: '420px', padding: '0 20px' }}>
+                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '8px' }}>
+                      More primary works available
+                    </div>
+                    <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '20px', lineHeight: 1.7 }}>
+                      {userPlan === 'free' ? `You're seeing ${visibleLimit} of ${stats.total || '500+'} available works. Upgrade to unlock the full primary market.` : 'Upgrade to Investor for unlimited access to all primary works.'}
+                    </p>
+                    <button onClick={() => navigate('/app/pricing')} className="btn btn-navy" style={{ fontSize: '13px', padding: '12px 36px', width: '100%', marginBottom: '10px' }}>
+                      Unlock full access →
+                    </button>
+                    <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>From €9/month · Cancel anytime</div>
+                  </div>
+                </div>
               </div>
             )}
           </>

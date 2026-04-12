@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { getPlanLimits, getUser } from "../../lib/auth";
+import { getUser } from "../../lib/auth";
 import { FilterSidebar } from "../components/FilterSidebar";
 import type { Filters } from "../components/FilterSidebar";
 import Primary from "./Primary";
@@ -296,10 +296,31 @@ export default function Explore() {
   const [innerTab, setInnerTab]     = useState<"alpha" | "live">("alpha");
   const [sourceStats, setSourceStats] = useState<SourceStat[]>([]);
 
-  const limits   = getPlanLimits();
   const user     = getUser();
   const isAdmin  = user?.email === "camillefroment907@gmail.com";
-  const maxVisible = isAdmin ? 9999 : (limits.maxOpportunities || 3);
+
+  const [userPlan, setUserPlan] = useState<string>("free");
+  const [planLoading, setPlanLoading] = useState(true);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) { setPlanLoading(false); return; }
+    fetch("/api/billing/subscription", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        const plan = (data.plan || "free").toLowerCase();
+        const status = (data.status || "").toLowerCase();
+        setUserPlan(["active", "trialing"].includes(status) && plan !== "free" ? plan : "free");
+      })
+      .catch(() => setUserPlan("free"))
+      .finally(() => setPlanLoading(false));
+  }, []);
+
+  const PLAN_LIMITS: Record<string, number> = {
+    free: 3, starter: 10, investor: 99999, pro: 99999, institutional: 99999, elite: 99999,
+  };
+  const visibleLimit = isAdmin ? 99999 : (PLAN_LIMITS[userPlan] ?? 3);
+  const maxVisible = visibleLimit;
 
   const fetchIdRef    = useRef(0);
   const debounceRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -488,7 +509,23 @@ export default function Explore() {
       )}
       {exploreTab === "convictions" && (
         <div style={{ flex: 1, overflowY: "auto" }}>
-          <Convictions />
+          {!isAdmin && userPlan === "free" ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: "60px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: "32px", marginBottom: "20px" }}>★</div>
+              <div style={{ fontFamily: "var(--font-serif)", fontSize: "22px", color: "var(--text)", marginBottom: "10px" }}>
+                Convictions IA
+              </div>
+              <p style={{ fontSize: "13px", color: "var(--text-2)", marginBottom: "28px", lineHeight: 1.7, maxWidth: "380px" }}>
+                Our curated high-conviction picks are reserved for Starter and above. Upgrade to access Nautilus AI's top-rated opportunities.
+              </p>
+              <button onClick={() => navigate("/app/pricing")} className="btn btn-navy" style={{ fontSize: "13px", padding: "12px 36px", marginBottom: "10px" }}>
+                Unlock Convictions →
+              </button>
+              <div style={{ fontSize: "11px", color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>From €9/month · Cancel anytime</div>
+            </div>
+          ) : (
+            <Convictions />
+          )}
         </div>
       )}
 
