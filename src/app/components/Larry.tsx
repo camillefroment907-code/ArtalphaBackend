@@ -61,12 +61,27 @@ export function Larry({ lotId }: LarryProps) {
   const [usage, setUsage] = useState<Usage | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [proactiveMessages, setProactiveMessages] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Fresh random 3 suggestions every time panel opens
   useEffect(() => {
     if (open) setSuggestions(shuffle(ALL_SUGGESTIONS).slice(0, 3));
+  }, [open]);
+
+  // Fetch proactive messages when Larry opens
+  useEffect(() => {
+    if (!open) return;
+    const token = getToken();
+    if (!token) return;
+
+    fetch(`${API}/api/larry/proactive`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(data => setProactiveMessages(data.messages || []))
+      .catch(() => {});
   }, [open]);
 
   const fetchUsage = useCallback(async () => {
@@ -256,6 +271,8 @@ export function Larry({ lotId }: LarryProps) {
     ? Math.round((usage.used / usage.limit) * 100)
     : 0;
 
+  const hasProactiveAlert = proactiveMessages.some(m => m.priority === 'high');
+
   return (
     <>
       {/* Floating button */}
@@ -284,6 +301,17 @@ export function Larry({ lotId }: LarryProps) {
         }}
         title="Parler à Larry"
       >
+        {hasProactiveAlert && !open && (
+          <div style={{
+            position: 'absolute',
+            inset: '-3px',
+            borderRadius: '50%',
+            border: '2px solid var(--gold)',
+            animation: 'pulseDot 2s infinite',
+            opacity: 0.6,
+            pointerEvents: 'none',
+          }} />
+        )}
         {open ? '×' : 'L'}
         {unreadCount > 0 && !open && (
           <span style={{
@@ -414,6 +442,54 @@ export function Larry({ lotId }: LarryProps) {
                     }}>
                       Bonjour. Je suis Larry, votre conseiller art.<br />Comment puis-je vous aider ?
                     </p>
+
+                    {/* Proactive notification cards */}
+                    {proactiveMessages.length > 0 && (
+                      <div style={{ marginBottom: '16px' }}>
+                        {proactiveMessages.slice(0, 2).map((msg: any) => (
+                          <div
+                            key={msg.id}
+                            style={{
+                              background: 'var(--navy)',
+                              borderRadius: '8px',
+                              padding: '12px 14px',
+                              marginBottom: '8px',
+                              cursor: 'pointer',
+                              transition: 'opacity 0.15s',
+                            }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.opacity = '0.85'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.opacity = '1'; }}
+                            onClick={() => {
+                              setMessages([{
+                                id: uid(),
+                                role: 'assistant' as const,
+                                content: msg.larry_message,
+                                streaming: false,
+                              }]);
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                                {msg.type === 'exceptional_lot' ? '◆ SIGNAL FORT' : msg.type === 'market_signal' ? '⚡ MARCHÉ ACTIF' : '◐ MARCHÉ PRIMAIRE'}
+                              </div>
+                              <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)' }}>
+                                {msg.priority === 'high' ? 'PRIORITAIRE' : 'NOUVEAU'}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'white', fontWeight: 600, marginBottom: '3px' }}>
+                              {msg.title}
+                            </div>
+                            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)' }}>
+                              {msg.detail}
+                            </div>
+                            <div style={{ fontSize: '10px', color: 'var(--gold)', marginTop: '8px', fontWeight: 600 }}>
+                              {msg.cta}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {suggestions.map(s => (
                         <button
@@ -590,6 +666,10 @@ export function Larry({ lotId }: LarryProps) {
         @keyframes pulse {
           0%, 100% { transform: scale(1); opacity: 1; }
           50% { transform: scale(1.4); opacity: 0.7; }
+        }
+        @keyframes pulseDot {
+          0%, 100% { transform: scale(1); opacity: 0.6; }
+          50% { transform: scale(1.15); opacity: 1; }
         }
       `}</style>
     </>
