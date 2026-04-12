@@ -77,9 +77,10 @@ async def create_tables():
         # users columns
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)",
-        # preferences columns added after initial deploy
-        "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100)",
+        # preferences columns — add ALL non-core columns (table may be very old)
         "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS budget_max FLOAT",
+        "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100)",
+        "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS language VARCHAR(10) DEFAULT 'fr'",
         "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS notify_sms BOOLEAN DEFAULT FALSE",
         "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS collector_type VARCHAR(50)",
         "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS investment_horizon VARCHAR(50)",
@@ -87,6 +88,7 @@ async def create_tables():
         "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS max_lot_budget_eur FLOAT",
         "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS preferred_periods TEXT[]",
         "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS preferred_regions TEXT[]",
+        "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
         # lots columns added after initial deploy
         "ALTER TABLE lots ADD COLUMN IF NOT EXISTS market_type VARCHAR(50) DEFAULT 'auction'",
         "ALTER TABLE lots ADD COLUMN IF NOT EXISTS size_category VARCHAR(50)",
