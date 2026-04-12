@@ -86,39 +86,74 @@ const HORIZON_LABELS: Record<string, string> = {
 function LockedPage() {
   const navigate = useNavigate();
   return (
-    <div style={{ maxWidth: 620, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
-      <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.15em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '16px' }}>
+    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '60px 40px', textAlign: 'center' }}>
+
+      <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '20px' }}>
         Investor+
-      </p>
-      <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '34px', fontWeight: 400, color: 'var(--navy)', lineHeight: 1.2, marginBottom: '12px' }}>
-        Agent IA Personnel
+      </div>
+
+      <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '42px', fontWeight: 600, color: 'var(--text)', marginBottom: '16px', lineHeight: 1.15 }}>
+        Your private art investment analyst. Always on.
       </h1>
-      <div style={{ width: '48px', height: '1px', background: 'var(--gold)', margin: '24px auto' }} />
-      <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.7, marginBottom: '40px' }}>
-        Créez des alertes ciblées et laissez Nautilus AI surveiller le marché pour vous.
+
+      <p style={{ fontSize: '16px', color: 'var(--text-2)', lineHeight: 1.8, marginBottom: '48px', maxWidth: '480px', margin: '0 auto 48px' }}>
+        While you sleep, your AI analyst scans thousands of artworks across 10+ global auction houses — and surfaces only what matches your strategy, at the right price, at the right moment.
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left', marginBottom: '44px' }}>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '48px', textAlign: 'left' }}>
         {[
-          { title: 'Alertes ciblées', desc: "Définissez vos critères : artiste, catégorie, budget, horizon. L'agent scrute chaque lot entrant." },
-          { title: 'Analyse Nautilus AI', desc: 'Chaque lot est analysé selon votre alerte. Verdict FORT ACHAT / ACHAT / SURVEILLER avec raisonnement.' },
-          { title: 'Recommandations personnalisées', desc: "Notification dès qu'un lot correspond. Score de conviction, cas haussier/baissier, prix max suggéré." },
-        ].map(({ title, desc }) => (
-          <div key={title} style={{ display: 'flex', gap: '14px', padding: '18px 20px', background: 'var(--navy-subtle)', borderRadius: '2px', border: '1px solid var(--border)' }}>
-            <span style={{ color: 'var(--gold)', fontSize: '9px', marginTop: '4px', flexShrink: 0 }}>◆</span>
+          {
+            icon: '◆',
+            title: 'Set your strategy once',
+            body: 'Define your artist preferences, budget, time horizon and risk appetite. Your agent learns your profile and never forgets it.',
+          },
+          {
+            icon: '⚡',
+            title: 'Get alerted before everyone else',
+            body: "The moment a matching lot appears — whether at Drouot, Phillips or Christie's — you receive a precision signal with a conviction score and a clear recommendation.",
+          },
+          {
+            icon: '◎',
+            title: 'Know exactly what to do',
+            body: 'Every recommendation comes with a price target, an upside estimate, and a detailed rationale. Not a suggestion — a decision.',
+          },
+        ].map(({ icon, title, body }) => (
+          <div key={title} style={{
+            display: 'flex', gap: '16px', alignItems: 'flex-start',
+            padding: '20px 24px',
+            background: 'white', border: '1px solid var(--border)', borderRadius: '8px',
+            textAlign: 'left',
+          }}>
+            <span style={{ fontSize: '16px', color: 'var(--gold)', flexShrink: 0, marginTop: '2px' }}>{icon}</span>
             <div>
-              <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--navy)', marginBottom: '3px' }}>{title}</p>
-              <p style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.6 }}>{desc}</p>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)', marginBottom: '4px' }}>{title}</div>
+              <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.7 }}>{body}</div>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Social proof */}
+      <div style={{ padding: '20px 24px', background: 'var(--navy)', borderRadius: '8px', marginBottom: '32px' }}>
+        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', color: 'white', fontStyle: 'italic', marginBottom: '8px', lineHeight: 1.7 }}>
+          "The first time it flagged a Zao Wou-Ki 31% below market average, I thought it was a mistake. It wasn't."
+        </div>
+        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
+          — Nautilus Investor member
+        </div>
+      </div>
+
       <button
-        className="btn btn-navy"
-        style={{ padding: '13px 32px', fontSize: '13px', letterSpacing: '0.04em' }}
         onClick={() => navigate('/app/pricing')}
+        className="btn-electric"
+        style={{ fontSize: '14px', padding: '16px 48px', width: '100%', justifyContent: 'center', marginBottom: '12px' }}
       >
-        Voir les plans →
+        Activate my AI analyst →
       </button>
+      <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+        Available from the Investor plan · €29/month · Cancel anytime
+      </div>
+
     </div>
   );
 }
