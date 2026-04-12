@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { getUser } from '../../lib/auth';
 
+const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
+
 function getToken(): string {
   try {
     const raw = localStorage.getItem('artalpha_auth');
@@ -185,7 +187,7 @@ export default function Primary() {
   useEffect(() => {
     const token = getToken();
     if (!token) { setPlanLoading(false); return; }
-    fetch('/api/billing/subscription', { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${BACKEND}/api/billing/subscription`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => {
         const plan = (data.plan || 'free').toLowerCase();
@@ -216,7 +218,7 @@ export default function Primary() {
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    fetch(`/api/lots/primary?${qs}`, { headers })
+    fetch(`${BACKEND}/api/lots/primary?${qs}`, { headers })
       .then(r => r.ok ? r.json() : { items: [], total: 0 })
       .then(d => {
         const items: Lot[] = d.items || [];
