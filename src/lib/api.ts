@@ -1,5 +1,5 @@
-// Use Vite proxy for dev, direct URL for prod
-const API = import.meta.env.VITE_API_URL || "";
+// Use Vite proxy for dev (empty string), direct Railway URL for prod
+const API = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 // --------------- helpers ---------------
 

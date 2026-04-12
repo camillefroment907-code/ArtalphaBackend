@@ -50,6 +50,8 @@ interface SourceStat {
   status: "fresh" | "stale" | "offline";
 }
 
+const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
+
 function getToken(): string {
   try {
     const raw = localStorage.getItem("artalpha_auth");
@@ -90,7 +92,7 @@ async function loadLots(params: Record<string, any>) {
   if (params.category)           qs.set("category", params.category);
   if (params.medium)             qs.set("medium", params.medium);
   if (params.auction_house)      qs.set("auction_house", params.auction_house);
-  const url = `/api/lots?${qs.toString()}`;
+  const url = `${BACKEND}/api/lots?${qs.toString()}`;
   const token = getToken();
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -108,13 +110,13 @@ async function fetchInvestorLots(budgetMin?: number, budgetMax?: number | null, 
   const token = getToken();
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const d = await cachedFetch(`/api/lots/for-investor?${qs}`, { headers });
+  const d = await cachedFetch(`${BACKEND}/api/lots/for-investor?${qs}`, { headers });
   return { items: d.items || [], total: d.total || 0, pages: 1 };
 }
 
 async function loadSourceStats(): Promise<SourceStat[]> {
   try {
-    return await cachedFetch("/api/lots/sources");
+    return await cachedFetch(`${BACKEND}/api/lots/sources`);
   } catch { return []; }
 }
 
@@ -305,7 +307,7 @@ export default function Explore() {
   useEffect(() => {
     const token = getToken();
     if (!token) { setPlanLoading(false); return; }
-    fetch("/api/billing/subscription", { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${BACKEND}/api/billing/subscription`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => {
         const plan = (data.plan || "free").toLowerCase();
