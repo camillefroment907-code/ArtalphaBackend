@@ -628,6 +628,35 @@ async def create_portal_session(
     return {"portal_url": session.url}
 
 
+@router.post("/portal")
+async def billing_portal(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create Stripe customer portal session. Falls back to pricing if no subscription."""
+    try:
+        import stripe as stripe_lib
+        stripe_lib.api_key = settings.stripe_secret_key
+
+        result = await db.execute(
+            select(Subscription).where(Subscription.user_id == current_user.id)
+        )
+        sub = result.scalar_one_or_none()
+
+        if not sub or not sub.stripe_customer_id:
+            return {"url": f"{settings.frontend_url}/app/pricing"}
+
+        session = stripe_lib.billing_portal.Session.create(
+            customer=sub.stripe_customer_id,
+            return_url=f"{settings.frontend_url}/app/portfolio",
+        )
+        return {"url": session.url}
+
+    except Exception as e:
+        logger.warning("portal_session_failed", error=str(e))
+        return {"url": f"{settings.frontend_url}/app/pricing"}
+
+
 @router.post("/webhook")
 async def stripe_webhook(
     request: Request,
