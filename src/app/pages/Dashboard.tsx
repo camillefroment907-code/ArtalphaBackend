@@ -112,6 +112,20 @@ function PickCard({ lot, onClick }: { lot: any; onClick: () => void }) {
   );
 }
 
+const _cache: Record<string, { data: any; ts: number }> = {};
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function cachedFetch(url: string, options?: RequestInit): Promise<any> {
+  const now = Date.now();
+  if (_cache[url] && now - _cache[url].ts < CACHE_TTL) {
+    return _cache[url].data;
+  }
+  const resp = await fetch(url, options);
+  const data = await resp.json();
+  _cache[url] = { data, ts: now };
+  return data;
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const user = getUser();
@@ -136,29 +150,24 @@ export default function Dashboard() {
     const token = getToken();
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
-    fetch(`${API}/api/lots?sort_by=deal_score&sort_dir=desc&page_size=6&min_score=60`, { headers })
-      .then(r => r.ok ? r.json() : { items: [], total: 0 })
+    cachedFetch(`${API}/api/lots?sort_by=deal_score&sort_dir=desc&page_size=6&min_score=60`, { headers })
       .then(data => { setTopLots(data.items ?? []); setTotalLots(data.total ?? 0); setLotsLoading(false); })
       .catch(() => setLotsLoading(false));
 
-    fetch(`${API}/api/lots?sort_by=created_at&sort_dir=desc&page_size=3`, { headers })
-      .then(r => r.ok ? r.json() : { items: [] })
+    cachedFetch(`${API}/api/lots?sort_by=created_at&sort_dir=desc&page_size=3`, { headers })
       .then(data => setNewLots(data.items ?? []))
       .catch(() => {});
 
-    fetch(`${API}/api/lots/sources`, { headers })
-      .then(r => r.ok ? r.json() : [])
+    cachedFetch(`${API}/api/lots/sources`, { headers })
       .then(data => { setSources(Array.isArray(data) ? data : []); setSourcesLoading(false); })
       .catch(() => setSourcesLoading(false));
 
-    fetch(`${API}/api/lots/coverage`, { headers })
-      .then(r => r.ok ? r.json() : null)
+    cachedFetch(`${API}/api/lots/coverage`, { headers })
       .then(data => { if (data) setCoverage(data); })
       .catch(() => {});
 
     if (canSeeRecs) {
-      fetch(`${API}/api/agent/recommendations?limit=3`, { headers })
-        .then(r => r.ok ? r.json() : [])
+      cachedFetch(`${API}/api/agent/recommendations?limit=3`, { headers })
         .then(data => { setAgentRecs(Array.isArray(data) ? data : []); setRecsLoading(false); })
         .catch(() => setRecsLoading(false));
     } else {
@@ -166,8 +175,7 @@ export default function Dashboard() {
     }
 
     if (user) {
-      fetch(`${API}/api/portfolio/stats`, { headers })
-        .then(r => r.ok ? r.json() : null)
+      cachedFetch(`${API}/api/portfolio/stats`, { headers })
         .then(data => { setPortfolioStats(data); setPortfolioLoading(false); })
         .catch(() => setPortfolioLoading(false));
     } else {

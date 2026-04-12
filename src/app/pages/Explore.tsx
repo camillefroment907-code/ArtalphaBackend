@@ -57,6 +57,20 @@ function getToken(): string {
   } catch { return ""; }
 }
 
+const _cache: Record<string, { data: any; ts: number }> = {};
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function cachedFetch(url: string, options?: RequestInit): Promise<any> {
+  const now = Date.now();
+  if (_cache[url] && now - _cache[url].ts < CACHE_TTL) {
+    return _cache[url].data;
+  }
+  const resp = await fetch(url, options);
+  const data = await resp.json();
+  _cache[url] = { data, ts: now };
+  return data;
+}
+
 async function loadLots(params: Record<string, any>) {
   const qs = new URLSearchParams();
   qs.set("page", String(params.page || 1));
@@ -80,9 +94,7 @@ async function loadLots(params: Record<string, any>) {
   const token = getToken();
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(url, { headers });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const d = await res.json();
+  const d = await cachedFetch(url, { headers });
   const items = Array.isArray(d) ? d : (d.items || []);
   return { items, total: d.total || items.length, pages: d.pages || 1 };
 }
@@ -96,17 +108,13 @@ async function fetchInvestorLots(budgetMin?: number, budgetMax?: number | null, 
   const token = getToken();
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(`/api/lots/for-investor?${qs}`, { headers });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const d = await res.json();
+  const d = await cachedFetch(`/api/lots/for-investor?${qs}`, { headers });
   return { items: d.items || [], total: d.total || 0, pages: 1 };
 }
 
 async function loadSourceStats(): Promise<SourceStat[]> {
   try {
-    const res = await fetch("/api/lots/sources");
-    if (!res.ok) return [];
-    return await res.json();
+    return await cachedFetch("/api/lots/sources");
   } catch { return []; }
 }
 
