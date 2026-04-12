@@ -289,7 +289,7 @@ export default function Explore() {
   const [loading, setLoading]       = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasError, setHasError]     = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [viewMode, setViewMode]     = useState<ViewMode>("grid4");
   const [dateFilter, setDateFilter] = useState("all");
   const [filters, setFilters]       = useState<Filters>(DEFAULT_FILTERS);
@@ -355,6 +355,7 @@ export default function Explore() {
         max_price: filters.maxPrice > 0 ? filters.maxPrice : undefined,
         category: filters.categories?.length === 1 ? filters.categories[0] : undefined,
         artist_tier: filters.artistRating !== "all" ? filters.artistRating : undefined,
+        size_category: filters.sizes?.length === 1 ? filters.sizes[0] : undefined,
         ...timingDates,
       };
     }
@@ -520,17 +521,6 @@ export default function Explore() {
                 {!sidebarOpen && activeFilterCount > 0 && <span style={{ position: "absolute", top: "-6px", right: "-6px", minWidth: "17px", height: "17px", borderRadius: "9px", background: "var(--gold)", color: "white", fontSize: "9px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>{activeFilterCount}</span>}
               </div>
 
-              {/* Source health (live tab) */}
-              {tab === "live" && sourceStats.filter(s => s.lot_count > 0).length > 0 && (
-                <div style={{ display: "flex", gap: "10px", alignItems: "center", padding: "5px 12px", background: "white", border: "1px solid var(--border)", borderRadius: "6px", flexShrink: 0 }}>
-                  {sourceStats.filter(s => s.lot_count > 0).slice(0, 6).map(s => (
-                    <div key={s.source} style={{ display: "flex", alignItems: "center", gap: "4px" }} title={`${SOURCE_LABEL[s.source] || s.source}: ${s.lot_count.toLocaleString()} lots · ${s.status}`}>
-                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: sourceDotColor(s.status), display: "inline-block", flexShrink: 0 }} />
-                      <span style={{ fontSize: "10px", color: "var(--text-3)", whiteSpace: "nowrap" }}>{SOURCE_LABEL[s.source] || s.source}<span style={{ color: "var(--text-3)", fontFamily: "var(--font-mono)", marginLeft: "3px", fontSize: "9px" }}>{s.lot_count > 999 ? `${(s.lot_count / 1000).toFixed(1)}k` : s.lot_count}</span></span>
-                    </div>
-                  ))}
-                </div>
-              )}
 
               {/* Title */}
               <div style={{ display: "flex", alignItems: "baseline", gap: "10px", flex: 1, minWidth: 0 }}>

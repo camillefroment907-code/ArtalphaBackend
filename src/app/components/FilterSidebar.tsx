@@ -123,6 +123,12 @@ const ALPHA_SORT = [
 
 const ALPHA_PLATFORMS = ['Drouot', 'Interenchères', "Christie's", "Sotheby's", 'Invaluable'];
 
+const SIZE_CHIPS = [
+  { label: 'Small',  value: 'small',  sub: '< 40cm' },
+  { label: 'Medium', value: 'medium', sub: '40–100cm' },
+  { label: 'Large',  value: 'large',  sub: '> 100cm' },
+];
+
 const UPSIDE_OPTIONS = [
   { value: 'all', label: 'Any upside' },
   { value: '10',  label: '+10% and above' },
@@ -564,6 +570,18 @@ export function FilterSidebar({ onFilterChange, tab }: FilterSidebarProps) {
                   onClick={() => update({ auctionTiming: value })}
                 >
                   {label}
+                </ChipBtn>
+              ))}
+            </div>
+          </div>
+
+          {/* Size */}
+          <div style={S}>
+            <SectionLabel count={filters.sizes.length || undefined}>Size</SectionLabel>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+              {SIZE_CHIPS.map(({ label, value, sub }) => (
+                <ChipBtn key={value} active={filters.sizes.includes(value)} onClick={() => toggleArr('sizes', value)}>
+                  {label} <span style={{ opacity: 0.6, fontSize: '10px' }}>{sub}</span>
                 </ChipBtn>
               ))}
             </div>

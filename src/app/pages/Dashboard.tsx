@@ -449,39 +449,23 @@ Pas d'introduction, pas de conclusion, juste les 3 lignes.`,
         <div style={{ position: 'sticky', top: '80px' }}>
           <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, color: 'var(--navy)', margin: '0 0 16px' }}>Market Activity</h2>
 
-          {/* Source Health */}
-          <div style={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', marginBottom: '20px', background: 'white' }}>
-            <div style={{ padding: '10px 14px', background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)' }}>Source Health</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--gold)', animation: 'pulseDot 2s infinite' }} />
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-3)', letterSpacing: '0.08em' }}>LIVE</span>
-              </div>
-            </div>
-            {sourcesLoading ? (
-              <div style={{ padding: '12px' }}>
-                <SkeletonLine /><SkeletonLine /><SkeletonLine /><SkeletonLine />
-              </div>
-            ) : sources.length === 0 ? (
-              <div style={{ padding: '14px', fontSize: '12px', color: 'var(--text-3)' }}>No sources available</div>
-            ) : (
-              sources.slice(0, 8).map((s: any, i: number) => {
-                const key = (s.source ?? s.name ?? '').toLowerCase();
-                const flag = SOURCE_FLAG[key] ?? '🌐';
-                const label = SOURCE_LABEL[key] ?? s.source ?? s.name ?? '—';
-                const status = s.status ?? 'offline';
-                return (
-                  <div key={s.source ?? s.name} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderBottom: i < Math.min(sources.length, 8) - 1 ? '1px solid var(--border-light, rgba(0,0,0,0.06))' : 'none' }}>
-                    <span style={{ fontSize: '13px', flexShrink: 0 }}>{flag}</span>
-                    <span style={{ fontSize: '12px', color: 'var(--text)', flex: 1 }}>{label}</span>
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: dotColor(status), flexShrink: 0 }} />
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', minWidth: '36px', textAlign: 'right' }}>
-                      {(s.lot_count ?? s.total ?? 0).toLocaleString()}
-                    </span>
+          {/* Market metrics */}
+          <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px 20px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {[
+                { label: 'Auction lots', value: sources.reduce((a: number, s: any) => a + (s.lot_count ?? s.total ?? 0), 0).toLocaleString(), sub: 'Updated every 15min' },
+                { label: 'Active sources', value: String(sources.filter((s: any) => s.status === 'fresh').length || sources.filter((s: any) => (s.lot_count ?? 0) > 0).length || '—'), sub: 'Global coverage' },
+                { label: 'Avg deal score', value: topLots.length > 0 ? `${Math.round(topLots.reduce((a: number, l: any) => a + (l.deal_score ?? 0), 0) / topLots.length)}/100` : '—', sub: 'Current selection' },
+              ].map(({ label, value, sub }) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'var(--text)' }}>{label}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>{sub}</div>
                   </div>
-                );
-              })
-            )}
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: 'var(--navy)' }}>{value}</div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* New This Cycle */}

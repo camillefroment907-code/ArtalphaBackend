@@ -26,7 +26,7 @@ interface Lot {
 
 interface Stats {
   total: number;
-  sources: number;
+  avgScore: number;
   avgPrice: number;
   newThisWeek: number;
 }
@@ -149,11 +149,6 @@ function PrimaryCard({ lot, locked, onClick }: { lot: Lot; locked: boolean; onCl
           </div>
         </div>
 
-        <div style={{ paddingTop: '10px', borderTop: '1px solid var(--border-light)' }}>
-          <span style={{ fontSize: '11px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-            {lot.auction_house_name || 'Gallery'}
-          </span>
-        </div>
       </div>
     </div>
   );
@@ -181,7 +176,7 @@ export default function Primary() {
 
   const [lots, setLots] = useState<Lot[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<Stats>({ total: 0, sources: 3, avgPrice: 0, newThisWeek: 0 });
+  const [stats, setStats] = useState<Stats>({ total: 0, avgScore: 0, avgPrice: 0, newThisWeek: 0 });
   const [chip, setChip] = useState('all');
   const [search, setSearch] = useState('');
   const debouncRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -209,8 +204,9 @@ export default function Primary() {
         const total = d.total || items.length;
         const prices = items.map(l => l.current_price || l.estimate_low || 0).filter(Boolean);
         const avg = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
-        const sources = new Set(items.map(l => l.auction_house_name)).size;
-        setStats({ total, sources, avgPrice: avg, newThisWeek: Math.floor(total * 0.18) });
+        const scores = items.map(l => l.deal_score || 0).filter(Boolean);
+        const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+        setStats({ total, avgScore, avgPrice: avg, newThisWeek: Math.floor(total * 0.18) });
       })
       .catch(() => setLots([]))
       .finally(() => setLoading(false));
@@ -249,7 +245,7 @@ export default function Primary() {
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
             {[
               { label: 'Total listings',   value: loading ? '…' : stats.total.toLocaleString('fr-FR') },
-              { label: 'Sources actives',  value: loading ? '…' : String(stats.sources) },
+              { label: 'Score moyen',      value: loading ? '…' : (stats.avgScore > 0 ? `${stats.avgScore}/100` : '—') },
               { label: 'Prix moyen',       value: loading ? '…' : (stats.avgPrice > 0 ? fmt(stats.avgPrice) : '—') },
               { label: 'Nouveautés / sem', value: loading ? '…' : stats.newThisWeek.toLocaleString('fr-FR') },
             ].map(({ label, value }) => (
@@ -309,10 +305,6 @@ export default function Primary() {
           }}
         />
 
-        {/* Partner banner */}
-        <div style={{ fontSize: '10px', color: 'var(--text-3)', letterSpacing: '0.04em' }}>
-          Artsper · Saatchi Art · Singulart
-        </div>
       </div>
 
       {/* Grid */}
@@ -330,13 +322,6 @@ export default function Primary() {
             <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: '0 0 24px' }}>
               Les galeries partenaires sont en cours d'intégration
             </p>
-            <div style={{
-              display: 'inline-block', padding: '10px 20px',
-              background: 'var(--bg-subtle)', border: '1px solid var(--border)',
-              borderRadius: '8px', fontSize: '12px', color: 'var(--text-3)',
-            }}>
-              Artsper · Saatchi Art · Singulart · Bientôt : Perrotin, Templon
-            </div>
           </div>
         ) : (
           <>
