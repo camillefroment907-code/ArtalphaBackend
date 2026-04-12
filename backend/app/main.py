@@ -24,6 +24,7 @@ from app.api.profile import router as profile_router
 from app.api.n8n import router as n8n_router
 from app.api.agent import router as agent_router
 from app.api.chat import router as chat_router
+from app.api.memo import router as memo_router
 
 settings = get_settings()
 
@@ -110,6 +111,7 @@ app.include_router(n8n_router,      prefix="/api")
 app.include_router(agent_router,    prefix="/api")
 app.include_router(chat_router,           prefix="/api")
 app.include_router(artist_profiles_router, prefix="/api")
+app.include_router(memo_router,            prefix="/api")
 
 
 @app.get("/")
