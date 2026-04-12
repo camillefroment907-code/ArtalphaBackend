@@ -68,7 +68,29 @@ async def get_db():
 async def create_tables():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    logger.info("Database tables created")
+
+        # Auto-migrate: add columns that may be missing from tables created
+        # before these columns were added to the models (create_all won't ALTER).
+        migrations = [
+            # user_preferences columns added after initial deploy
+            "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS notify_sms BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS collector_type VARCHAR(50)",
+            "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS investment_horizon VARCHAR(50)",
+            "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS min_lot_budget_eur FLOAT",
+            "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS max_lot_budget_eur FLOAT",
+            "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS preferred_periods TEXT[]",
+            "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS preferred_regions TEXT[]",
+            # lots columns added after initial deploy
+            "ALTER TABLE lots ADD COLUMN IF NOT EXISTS market_type VARCHAR(50) DEFAULT 'auction'",
+            "ALTER TABLE lots ADD COLUMN IF NOT EXISTS size_category VARCHAR(50)",
+        ]
+        for sql in migrations:
+            try:
+                await conn.execute(text(sql))
+            except Exception as e:
+                logger.warning("migration_skipped", sql=sql[:60], error=str(e))
+
+    logger.info("Database tables ready")
 
 
 async def check_db_connection():
