@@ -10,6 +10,8 @@ from sqlalchemy import select, text
 from typing import Optional
 from datetime import datetime
 import structlog
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.services.email_service import (
     send_trial_ending_email,
@@ -25,6 +27,7 @@ from app.config import get_settings
 settings = get_settings()
 logger = structlog.get_logger().bind(module="billing")
 router = APIRouter(prefix="/billing", tags=["billing"])
+limiter = Limiter(key_func=get_remote_address)
 
 # ── Plan definitions ──────────────────────────────────────────────────────────
 
@@ -316,7 +319,9 @@ async def get_subscription(
 
 
 @router.post("/create-checkout-session")
+@limiter.limit("10/minute")
 async def create_checkout_session(
+    request: Request,
     body: dict,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -429,7 +434,9 @@ async def create_checkout_session(
 
 
 @router.post("/cancel-subscription")
+@limiter.limit("5/minute")
 async def cancel_subscription(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

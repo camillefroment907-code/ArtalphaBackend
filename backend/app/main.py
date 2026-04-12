@@ -3,9 +3,14 @@ HONO — AI Auction Deal Finder
 FastAPI Application
 """
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 import structlog
 import logging
 
@@ -28,6 +33,9 @@ from app.api.memo import router as memo_router
 from app.api.larry_proactive import router as larry_proactive_router
 
 settings = get_settings()
+
+# ── Rate limiter (in-memory; swap storage= to Redis in prod if desired) ────────
+limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
 
 structlog.configure(
     wrapper_class=structlog.make_filtering_bound_logger(
@@ -79,7 +87,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — allow frontend on 3000
+# ── Rate limiting ──────────────────────────────────────────────────────────────
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
+# ── CORS — allow frontend on 3000 ─────────────────────────────────────────────
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
