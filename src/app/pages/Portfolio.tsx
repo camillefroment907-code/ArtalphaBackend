@@ -467,6 +467,25 @@ export default function Portfolio() {
       .finally(() => setInvoicesLoading(false));
   }, [portfolioTab]);
 
+  async function openBillingPortal() {
+    try {
+      const token = getToken();
+      const resp = await fetch('/api/billing/portal', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!resp.ok) { navigate('/app/pricing'); return; }
+      const data = await resp.json();
+      if (data.url) window.open(data.url, '_blank');
+      else navigate('/app/pricing');
+    } catch {
+      navigate('/app/pricing');
+    }
+  }
+
   async function saveSettings(e: React.FormEvent) {
     e.preventDefault();
     setSettingsSaving(true);
@@ -1254,14 +1273,7 @@ export default function Portfolio() {
               )}
 
               <button
-                onClick={async () => {
-                  try {
-                    const token = getToken();
-                    const r = await fetch('/api/billing/create-portal-session', { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {} });
-                    const d = await r.json();
-                    if (d.portal_url) window.open(d.portal_url, '_blank');
-                  } catch { setPortfolioTab('billing'); }
-                }}
+                onClick={openBillingPortal}
                 style={{ width: '100%', marginTop: '16px', padding: '10px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-2)', cursor: 'pointer', fontWeight: 600 }}
               >
                 Manage subscription in Stripe portal →

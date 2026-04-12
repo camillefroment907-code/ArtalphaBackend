@@ -248,7 +248,7 @@ export default function Primary() {
   const isLimited   = !isAdmin && lots.length >= visibleLimit && visibleLimit < 99999;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingTop: '60px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       {/* Header strip */}
       <div style={{ background: 'white', borderBottom: '1px solid var(--border)', padding: '32px 48px 24px' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
@@ -288,8 +288,8 @@ export default function Primary() {
 
       {/* Toolbar */}
       <div style={{
-        position: 'sticky', top: '60px', zIndex: 10,
-        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(8px)',
+        position: 'sticky', top: '56px', zIndex: 10,
+        background: 'white',
         borderBottom: '1px solid var(--border)', padding: '12px 48px',
         display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap',
       }}>
