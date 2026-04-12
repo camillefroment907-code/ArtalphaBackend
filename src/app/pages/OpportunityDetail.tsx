@@ -591,17 +591,72 @@ export default function OpportunityDetail() {
           )}
         </div>
 
-        {/* ── 4. AI INVESTMENT ADVISOR ──────────────────────────────────────────── */}
+        {/* ── 4 & 5. AI INTELLIGENCE ───────────────────────────────────────────── */}
         <div style={{ marginBottom: '32px' }}>
-          <SectionHeader title="AI Investment Advisor" badge={!canSeeAI ? 'INVESTOR+' : undefined} />
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '12px' }}>
+            AI Intelligence
+          </div>
 
+          {/* Card 1 — Investment Memo */}
+          <div style={{ border: '1px solid var(--border)', background: 'white', marginBottom: '8px' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '30px', height: '30px', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '13px' }}>◆</div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>Investment Memo</div>
+                    <span style={{ padding: '2px 6px', background: 'var(--gold-subtle, rgba(198,168,90,0.1))', border: '1px solid var(--gold-border, rgba(198,168,90,0.3))', fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.1em' }}>INVESTOR+</span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Institutional-grade analysis · Nautilus Intelligence</div>
+                </div>
+              </div>
+              <button
+                onClick={memo ? () => setShowMemo(true) : generateMemo}
+                disabled={memoLoading}
+                style={{
+                  padding: '8px 18px',
+                  background: memoLoading ? 'var(--border)' : 'var(--navy)',
+                  color: memoLoading ? 'var(--text-3)' : 'white',
+                  border: 'none', fontSize: '12px', fontWeight: 700,
+                  letterSpacing: '0.06em', cursor: memoLoading ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-mono)',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                }}
+              >
+                {memoLoading ? (
+                  <><div className="pulse-dot" style={{ width: '5px', height: '5px', background: 'var(--text-3)' }} />Generating...</>
+                ) : memo ? '◆ View Memo' : '◆ Generate'}
+              </button>
+            </div>
+            <div style={{ padding: '16px 20px' }}>
+              {memo ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <span style={{
+                    padding: '4px 12px',
+                    background: memo.recommendation === 'BUY' || memo.recommendation === 'STRONG_BUY' ? 'var(--electric-subtle)' : memo.recommendation === 'WATCH' ? 'var(--gold-subtle, rgba(198,168,90,0.1))' : 'var(--bg-subtle)',
+                    border: `1px solid ${memo.recommendation === 'BUY' || memo.recommendation === 'STRONG_BUY' ? 'var(--electric-border)' : memo.recommendation === 'WATCH' ? 'var(--gold-border, rgba(198,168,90,0.3))' : 'var(--border)'}`,
+                    fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700,
+                    color: memo.recommendation === 'BUY' || memo.recommendation === 'STRONG_BUY' ? 'var(--electric)' : memo.recommendation === 'WATCH' ? 'var(--gold)' : 'var(--text-3)',
+                  }}>{memo.recommendation}</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>Conviction {memo.conviction}/100</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>{memo.time_horizon}</span>
+                </div>
+              ) : (
+                <p style={{ fontStyle: 'italic', color: 'var(--text-3)', fontSize: '13px', margin: 0, lineHeight: 1.6 }}>
+                  Generate an institutional-grade investment analysis with thesis, pricing rationale, risks, and price targets.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Card 2 — Investment Dossier */}
           {canSeeAI ? (
             <AIAnalyst rawLot={lot} />
           ) : canSeeAnalysis ? (
             <LockedBlock
               title="AI has a strong opinion on this deal"
               teaser="Get STRONG BUY / BUY / WATCH / PASS verdict, confidence score, bull &amp; bear cases, advanced risk analysis, and 50-year projection."
-              ctaText="Unlock AI Investment Advisor"
+              ctaText="Unlock Investment Dossier"
               ctaPrice="From €49/month"
               planId="investor"
               preview={
@@ -623,7 +678,7 @@ export default function OpportunityDetail() {
             <LockedBlock
               title="Know exactly what to do before you buy"
               teaser="Our AI analyzes every signal — artist cotation, comparable sales, market timing — and gives you a clear verdict: STRONG BUY, BUY, WATCH, or PASS."
-              ctaText="Unlock AI Investment Advisor"
+              ctaText="Unlock Investment Dossier"
               ctaPrice="From €49/month"
               planId="investor"
               preview={
@@ -639,40 +694,6 @@ export default function OpportunityDetail() {
             />
           )}
         </div>
-
-        {/* ── 5. INVESTMENT MEMO BUTTON ─────────────────────────────────────────── */}
-        <button
-          onClick={generateMemo}
-          disabled={memoLoading}
-          style={{
-            width: '100%',
-            padding: '12px',
-            background: memoLoading ? 'var(--bg-subtle)' : 'var(--navy)',
-            color: memoLoading ? 'var(--text-3)' : 'white',
-            border: '1px solid var(--navy)',
-            borderRadius: '6px',
-            fontSize: '12px',
-            fontWeight: 700,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            cursor: memoLoading ? 'not-allowed' : 'pointer',
-            fontFamily: 'var(--font-mono)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            transition: 'all 0.15s',
-          }}
-        >
-          {memoLoading ? (
-            <>
-              <div className="pulse-dot" style={{ width: '6px', height: '6px', background: 'var(--text-3)' }} />
-              Generating memo...
-            </>
-          ) : (
-            '◆ Generate Investment Memo'
-          )}
-        </button>
 
       </div>
 
@@ -783,7 +804,7 @@ export default function OpportunityDetail() {
               {/* Footer */}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                 <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-                  {memo.generated_by} · {new Date(memo.generated_at).toLocaleDateString('fr-FR')}
+                  Nautilus Intelligence · {new Date(memo.generated_at).toLocaleDateString('fr-FR')}
                 </div>
                 <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
                   NOT FINANCIAL ADVICE · FOR INFORMATIONAL PURPOSES ONLY
