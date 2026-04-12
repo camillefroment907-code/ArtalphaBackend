@@ -145,6 +145,7 @@ export default function Dashboard() {
   const [sourcesLoading, setSourcesLoading] = useState(true);
   const [recsLoading, setRecsLoading]       = useState(true);
   const [portfolioLoading, setPortfolioLoading] = useState(true);
+  const [aiBrief, setAiBrief]               = useState<string>('');
 
   useEffect(() => {
     const token = getToken();
@@ -183,7 +184,64 @@ export default function Dashboard() {
     }
   }, [canSeeRecs, user]);
 
-  const briefLines = generateBrief(topLots, sources, totalLots, coverage);
+  useEffect(() => {
+    if (topLots.length === 0) return;
+    const token = getToken();
+    const avgScore = Math.round(topLots.reduce((s, l) => s + (l.deal_score ?? 0), 0) / topLots.length);
+    const exceptional = topLots.filter(l => (l.deal_score ?? 0) >= 80).length;
+    const freshSources = sources.filter((s: any) => s.status === 'fresh').length;
+
+    fetch('https://artalpha-backend-production.up.railway.app/api/chat/message', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        message: `Tu es Larry, conseiller en investissement art pour Nautilus.
+
+Génère un AI Market Brief de 3 bullet points ULTRA concis (max 15 mots chacun) basé sur ces données de marché :
+- ${topLots.length} opportunités détectées, score moyen ${avgScore}/100
+- ${exceptional} lots EXCEPTIONAL (score ≥ 80)
+- Sources actives : ${freshSources}
+- Meilleure opportunité : ${topLots[0]?.artist_name_raw || 'Inconnu'} — ${topLots[0]?.title || ''} à ${topLots[0]?.current_price ? '€' + Math.round(topLots[0].current_price) : 'prix inconnu'}
+
+Format de réponse STRICT — exactement 3 lignes, chacune commençant par un emoji :
+◆ [insight marché 1]
+◆ [insight marché 2]
+◆ [insight marché 3]
+
+Pas d'introduction, pas de conclusion, juste les 3 lignes.`,
+      }),
+    })
+    .then(async resp => {
+      if (!resp.ok) return;
+      const reader = resp.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      if (!reader) return;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const parsed = JSON.parse(line.slice(6));
+            if (parsed.delta) fullText += parsed.delta;
+            if (parsed.done) {
+              const clean = (parsed.full || fullText)
+                .replace(/\s*—\s*Larry[\s\S]*$/im, '')
+                .trim();
+              setAiBrief(clean);
+            }
+          } catch { continue; }
+        }
+      }
+    })
+    .catch(() => {}); // Silent fail — fallback to static brief
+  }, [topLots]);
 
   return (
     <div style={{ minHeight: 'calc(100vh - 56px)', background: 'var(--bg)' }}>
@@ -222,18 +280,37 @@ export default function Dashboard() {
           </div>
 
           {/* AI BRIEF */}
-          <div style={{ background: 'var(--navy)', borderRadius: '8px', padding: '16px 24px', marginBottom: '28px', display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <Logo variant="symbol" color="white" size={28} />
-            <div style={{ flex: 1 }}>
-              {briefLines.map((line, i) => (
-                <div key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: i === 0 ? 'white' : 'rgba(255,255,255,0.45)', marginBottom: i < briefLines.length - 1 ? '3px' : 0, letterSpacing: '0.04em' }}>
-                  {line}
-                </div>
-              ))}
+          <div style={{ background: 'var(--navy)', borderRadius: '8px', padding: '20px 28px', marginBottom: '28px', display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+            <div style={{ flexShrink: 0, marginTop: '2px' }}>
+              <Logo variant="symbol" color="white" size={28} />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)', animation: 'pulseDot 2s infinite' }} />
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)' }}>LIVE</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                <span style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', fontWeight: 600, color: 'white' }}>
+                  AI Market Brief
+                </span>
+                <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.14em', fontFamily: 'var(--font-mono)', background: 'rgba(198,168,90,0.15)', padding: '2px 8px', borderRadius: '3px' }}>
+                  {aiBrief ? 'LIVE' : 'GENERATING...'}
+                </span>
+              </div>
+              {aiBrief ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {aiBrief.split('\n').filter(l => l.trim()).map((line, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.6 }}>{line}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {generateBrief(topLots, sources, totalLots, coverage).filter(Boolean).map((line, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <span style={{ color: 'var(--gold)', fontSize: '10px', marginTop: '3px', flexShrink: 0 }}>◆</span>
+                      <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.6 }}>{line}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
