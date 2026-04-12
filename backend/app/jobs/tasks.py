@@ -55,7 +55,7 @@ async def _poll_and_score_async():
     from app.engines.artist_enrichment import _find_in_db, _detect_artist_from_title, _generate_heuristic_enrichment
     from sqlalchemy import select, tuple_
 
-    from app.database import AsyncSessionLocal
+    from app.database import BgSessionLocal as AsyncSessionLocal
 
     logger.info("Starting poll & score pipeline")
     start_time = datetime.utcnow()
@@ -346,7 +346,7 @@ async def _rescore_live_async():
     from sqlalchemy import select, or_
     from sqlalchemy.orm import selectinload
 
-    from app.database import AsyncSessionLocal
+    from app.database import BgSessionLocal as AsyncSessionLocal
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -429,7 +429,7 @@ async def _process_alerts_async():
     from sqlalchemy import select, and_
     from sqlalchemy.orm import selectinload
 
-    from app.database import engine, AsyncSessionLocal
+    from app.database import engine, BgSessionLocal as AsyncSessionLocal
 
     async with AsyncSessionLocal() as session:
         # Get lots that are deals and haven't been alerted in the last hour
@@ -520,7 +520,7 @@ async def _daily_cleanup_async():
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
     from sqlalchemy import delete, and_
 
-    from app.database import engine, AsyncSessionLocal
+    from app.database import engine, BgSessionLocal as AsyncSessionLocal
 
     cutoff = datetime.utcnow() - timedelta(days=90)
 
@@ -584,7 +584,7 @@ async def _run_ai_agents_async():
     from sqlalchemy import select, and_, desc as sa_desc
     from sqlalchemy.orm import selectinload
 
-    from app.database import AsyncSessionLocal
+    from app.database import BgSessionLocal as AsyncSessionLocal
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -697,7 +697,7 @@ async def _generate_rationales_async(max_lots: int = 30):
     Max 30 lots per run at 0.5s sleep = ~15s total.
     """
     from app.engines.rationale import generate_rationale
-    from app.database import AsyncSessionLocal
+    from app.database import BgSessionLocal as AsyncSessionLocal
     from sqlalchemy import select, and_
     from app.models.db_models import Lot
 

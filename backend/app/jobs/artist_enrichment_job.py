@@ -20,7 +20,7 @@ async def run_artist_enrichment(max_artists: int = 20):
     2. Fetch their Artsy intelligence data
     3. Store in artist_profiles
     """
-    from app.database import AsyncSessionLocal
+    from app.database import BgSessionLocal as AsyncSessionLocal
     from app.models.db_models import Lot, ArtistProfile
     from app.engines.artsy_intelligence import fetch_artist_from_artsy
 

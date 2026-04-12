@@ -11,7 +11,7 @@ logger = structlog.get_logger()
 
 
 async def _dedup_existing_lots():
-    from app.database import AsyncSessionLocal
+    from app.database import BgSessionLocal as AsyncSessionLocal
     from app.models.db_models import Lot, Alert
     from sqlalchemy import select, func, and_, text
     from app.jobs.quality_filter import normalize_title, normalize_artist_name

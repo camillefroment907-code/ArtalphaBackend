@@ -1,4 +1,5 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.pool import NullPool
 from sqlalchemy import text
 from app.config import get_settings
 from app.models.db_models import Base
@@ -38,6 +39,19 @@ engine = create_async_engine(
 
 AsyncSessionLocal = async_sessionmaker(
     engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
+# Background jobs use NullPool — no event-loop binding, safe across threads.
+# Jobs must import BgSessionLocal (not AsyncSessionLocal) so the API pool is never patched.
+_bg_engine = create_async_engine(
+    _db_url,
+    poolclass=NullPool,
+    connect_args=_connect_args,
+)
+BgSessionLocal = async_sessionmaker(
+    _bg_engine,
     class_=AsyncSession,
     expire_on_commit=False,
 )
