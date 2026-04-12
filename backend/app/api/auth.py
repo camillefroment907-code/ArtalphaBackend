@@ -14,44 +14,56 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
 async def register(body: UserRegister, db: AsyncSession = Depends(get_db)):
+    import traceback
+
     # Check duplicate
     result = await db.execute(select(User).where(User.email == body.email))
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    user = User(
-        email=body.email,
-        hashed_password=hash_password(body.password),
-        full_name=body.full_name,
-        is_active=True,
-        is_verified=False,
-    )
-    db.add(user)
-    await db.flush()
+    try:
+        user = User(
+            email=body.email,
+            hashed_password=hash_password(body.password),
+            full_name=body.full_name,
+            is_active=True,
+            is_verified=False,
+        )
+        db.add(user)
+        await db.flush()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"User creation failed: {type(e).__name__}: {e}")
 
-    # Create default preferences
-    prefs = UserPreference(
-        user_id=user.id,
-        favorite_artists=[],
-        categories=[],
-        min_deal_score=75,
-        alert_channel=AlertChannel.EMAIL,
-        alert_email=body.email,
-        auction_houses=[],
-        is_alerts_enabled=True,
-        language="fr",
-    )
-    db.add(prefs)
-    await db.commit()
-    await db.refresh(user)
+    try:
+        prefs = UserPreference(
+            user_id=user.id,
+            favorite_artists=[],
+            categories=[],
+            min_deal_score=75,
+            alert_channel=AlertChannel.EMAIL,
+            alert_email=body.email,
+            auction_houses=[],
+            is_alerts_enabled=True,
+            language="fr",
+        )
+        db.add(prefs)
+        await db.commit()
+        await db.refresh(user)
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Preferences creation failed: {type(e).__name__}: {e}")
 
-    # Fire-and-forget welcome email
-    asyncio.create_task(send_welcome_email(
-        to_email=user.email,
-        name=user.full_name or user.email,
-        plan="free",
-        lang="fr",
-    ))
+    # Fire-and-forget welcome email (non-blocking — failures won't affect registration)
+    try:
+        asyncio.create_task(send_welcome_email(
+            to_email=user.email,
+            name=user.full_name or user.email,
+            plan="free",
+            lang="fr",
+        ))
+    except Exception:
+        pass
 
     token = create_access_token({"sub": str(user.id), "email": user.email})
     return TokenResponse(
