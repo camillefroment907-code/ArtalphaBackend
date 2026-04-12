@@ -77,16 +77,16 @@ async def create_tables():
         # users columns
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)",
-        # user_preferences columns added after initial deploy
-        "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100)",
-        "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS budget_max FLOAT",
-        "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS notify_sms BOOLEAN DEFAULT FALSE",
-        "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS collector_type VARCHAR(50)",
-        "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS investment_horizon VARCHAR(50)",
-        "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS min_lot_budget_eur FLOAT",
-        "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS max_lot_budget_eur FLOAT",
-        "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS preferred_periods TEXT[]",
-        "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS preferred_regions TEXT[]",
+        # preferences columns added after initial deploy
+        "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100)",
+        "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS budget_max FLOAT",
+        "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS notify_sms BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS collector_type VARCHAR(50)",
+        "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS investment_horizon VARCHAR(50)",
+        "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS min_lot_budget_eur FLOAT",
+        "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS max_lot_budget_eur FLOAT",
+        "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS preferred_periods TEXT[]",
+        "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS preferred_regions TEXT[]",
         # lots columns added after initial deploy
         "ALTER TABLE lots ADD COLUMN IF NOT EXISTS market_type VARCHAR(50) DEFAULT 'auction'",
         "ALTER TABLE lots ADD COLUMN IF NOT EXISTS size_category VARCHAR(50)",
