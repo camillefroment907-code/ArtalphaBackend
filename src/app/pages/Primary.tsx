@@ -261,16 +261,16 @@ export default function Primary() {
             Primary Market
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--text-2)', margin: '0 0 28px' }}>
-            Œuvres disponibles en vente directe — galeries, artistes émergents
+            Works available for direct sale — galleries, emerging artists
           </p>
 
           {/* Stats tiles */}
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
             {[
               { label: 'Total listings',   value: loading ? '…' : stats.total.toLocaleString('fr-FR') },
-              { label: 'Score moyen',      value: loading ? '…' : (stats.avgScore > 0 ? `${stats.avgScore}/100` : '—') },
-              { label: 'Prix moyen',       value: loading ? '…' : (stats.avgPrice > 0 ? fmt(stats.avgPrice) : '—') },
-              { label: 'Nouveautés / sem', value: loading ? '…' : stats.newThisWeek.toLocaleString('fr-FR') },
+              { label: 'Avg score',    value: loading ? '…' : (stats.avgScore > 0 ? `${stats.avgScore}/100` : '—') },
+              { label: 'Avg price',    value: loading ? '…' : (stats.avgPrice > 0 ? fmt(stats.avgPrice) : '—') },
+              { label: 'New this week', value: loading ? '…' : stats.newThisWeek.toLocaleString('en') },
             ].map(({ label, value }) => (
               <div key={label} style={{
                 padding: '14px 20px', background: 'var(--bg-subtle)',
@@ -318,7 +318,7 @@ export default function Primary() {
         {/* Search */}
         <input
           type="text"
-          placeholder="Rechercher artiste, œuvre…"
+          placeholder="Search artist, artwork…"
           value={search}
           onChange={e => handleSearch(e.target.value)}
           style={{
@@ -340,10 +340,10 @@ export default function Primary() {
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', color: 'var(--border)', marginBottom: '16px' }}>◇</div>
             <p style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--text-2)', margin: '0 0 8px' }}>
-              Aucune œuvre primaire disponible
+              No primary works available
             </p>
             <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: '0 0 24px' }}>
-              Les galeries partenaires sont en cours d'intégration
+              Partner galleries are being integrated
             </p>
           </div>
         ) : (

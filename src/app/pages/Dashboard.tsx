@@ -198,20 +198,20 @@ export default function Dashboard() {
         'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
-        message: `Tu es Larry, conseiller en investissement art pour Nautilus.
+        message: `You are Larry, art investment advisor for Nautilus.
 
-Génère un AI Market Brief de 3 bullet points ULTRA concis (max 15 mots chacun) basé sur ces données de marché :
-- ${topLots.length} opportunités détectées, score moyen ${avgScore}/100
-- ${exceptional} lots EXCEPTIONAL (score ≥ 80)
-- Sources actives : ${freshSources}
-- Meilleure opportunité : ${topLots[0]?.artist_name_raw || 'Inconnu'} — ${topLots[0]?.title || ''} à ${topLots[0]?.current_price ? '€' + Math.round(topLots[0].current_price) : 'prix inconnu'}
+Generate an AI Market Brief of 3 ULTRA concise bullet points (max 15 words each) based on this market data:
+- ${topLots.length} opportunities detected, avg score ${avgScore}/100
+- ${exceptional} EXCEPTIONAL lots (score ≥ 80)
+- Active sources: ${freshSources}
+- Top opportunity: ${topLots[0]?.artist_name_raw || 'Unknown'} — ${topLots[0]?.title || ''} at ${topLots[0]?.current_price ? '€' + Math.round(topLots[0].current_price) : 'unknown price'}
 
-Format de réponse STRICT — exactement 3 lignes, chacune commençant par un emoji :
-◆ [insight marché 1]
-◆ [insight marché 2]
-◆ [insight marché 3]
+STRICT response format — exactly 3 lines, each starting with an emoji:
+◆ [market insight 1]
+◆ [market insight 2]
+◆ [market insight 3]
 
-Pas d'introduction, pas de conclusion, juste les 3 lignes.`,
+No introduction, no conclusion, just the 3 lines.`,
       }),
     })
     .then(async resp => {

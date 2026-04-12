@@ -18,15 +18,15 @@ const BUDGETS: Budget[] = [
 ];
 
 const PROFILES = [
-  { value: 'first_time', icon: '🎨', label: 'Première acquisition',    sub: "Je découvre l'investissement art" },
-  { value: 'collector',  icon: '◆', label: 'Collectionneur actif',    sub: "J'achète régulièrement en ventes aux enchères" },
-  { value: 'investor',   icon: '◈', label: 'Investisseur pur',        sub: "Je cherche des rendements et des actifs tangibles" },
+  { value: 'first_time', icon: '🎨', label: 'First acquisition',  sub: "I'm discovering art investment" },
+  { value: 'collector',  icon: '◆', label: 'Active collector',    sub: "I buy regularly at auction" },
+  { value: 'investor',   icon: '◈', label: 'Pure investor',       sub: "I'm looking for returns and tangible assets" },
 ];
 
 const HORIZONS = [
-  { value: 'short',  icon: '⚡', label: 'Court terme — < 2 ans',  sub: 'Rotation rapide, liquidité prioritaire' },
-  { value: 'medium', icon: '◎', label: 'Moyen terme — 2 à 5 ans', sub: 'Équilibre rendement / sécurité' },
-  { value: 'long',   icon: '◇', label: 'Long terme — 5 ans +',    sub: 'Patrimoine, transmission, valorisation lente' },
+  { value: 'short',  icon: '⚡', label: 'Short term — < 2 years',    sub: 'Fast rotation, liquidity first' },
+  { value: 'medium', icon: '◎', label: 'Medium term — 2 to 5 years', sub: 'Balance of return and security' },
+  { value: 'long',   icon: '◇', label: 'Long term — 5+ years',       sub: 'Wealth, estate, slow appreciation' },
 ];
 
 const TOTAL_STEPS = 4; // 0..3 (steps 1-3 are questions, step 0 = welcome, step 3 = done but we show progress 0-3)
@@ -121,11 +121,11 @@ export default function Onboarding() {
               Nautilus
             </div>
             <h1 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '36px', fontWeight: 600, color: '#1A2A44', margin: '0 0 16px', lineHeight: 1.2 }}>
-              Bienvenue sur Nautilus
+              Welcome to Nautilus
             </h1>
             <div style={{ width: '40px', height: '2px', background: 'var(--gold, #C6A85A)', margin: '0 auto 24px' }} />
             <p style={{ fontSize: '15px', color: '#666', lineHeight: 1.7, margin: '0 0 48px' }}>
-              Quelques questions pour personnaliser votre expérience d'investissement. 2 minutes.
+              A few questions to personalise your investment experience. 2 minutes.
             </p>
             <button
               onClick={goNext}
@@ -143,7 +143,7 @@ export default function Onboarding() {
               onMouseEnter={e => (e.currentTarget.style.background = '#0f1e33')}
               onMouseLeave={e => (e.currentTarget.style.background = '#1A2A44')}
             >
-              Commencer →
+              Get started →
             </button>
           </div>
         )}
@@ -151,7 +151,7 @@ export default function Onboarding() {
         {/* ── Step 1: Budget ──────────────────────────────── */}
         {step === 1 && (
           <div>
-            <StepHeader step={1} total={3} question="Quel est votre budget d'investissement par lot ?" />
+            <StepHeader step={1} total={3} question="What is your investment budget per lot?" />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '40px' }}>
               {BUDGETS.map(b => (
                 <button
@@ -177,7 +177,7 @@ export default function Onboarding() {
         {/* ── Step 2: Profile ─────────────────────────────── */}
         {step === 2 && (
           <div>
-            <StepHeader step={2} total={3} question="Quel profil vous correspond ?" />
+            <StepHeader step={2} total={3} question="Which profile fits you best?" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '40px' }}>
               {PROFILES.map(p => (
                 <button
@@ -209,7 +209,7 @@ export default function Onboarding() {
         {/* ── Step 3: Horizon ─────────────────────────────── */}
         {step === 3 && (
           <div>
-            <StepHeader step={3} total={3} question="Sur quel horizon souhaitez-vous investir ?" />
+            <StepHeader step={3} total={3} question="What is your investment time horizon?" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '40px' }}>
               {HORIZONS.map(h => (
                 <button
@@ -243,7 +243,7 @@ export default function Onboarding() {
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '32px', marginBottom: '20px' }}>◈</div>
             <h1 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '30px', fontWeight: 600, color: '#1A2A44', margin: '0 0 12px', lineHeight: 1.2 }}>
-              Votre profil est configuré
+              Your profile is set up
             </h1>
             <div style={{ width: '40px', height: '2px', background: 'var(--gold, #C6A85A)', margin: '0 auto 32px' }} />
 
@@ -257,9 +257,9 @@ export default function Onboarding() {
               marginBottom: '40px',
             }}>
               {[
-                { label: 'Budget', value: budget?.label ?? '—' },
-                { label: 'Profil',  value: PROFILES.find(p => p.value === profile)?.label ?? 'Non renseigné' },
-                { label: 'Horizon', value: HORIZONS.find(h => h.value === horizon)?.label.split('—')[0].trim() ?? 'Non renseigné' },
+                { label: 'Budget',  value: budget?.label ?? '—' },
+                { label: 'Profile', value: PROFILES.find(p => p.value === profile)?.label ?? 'Not set' },
+                { label: 'Horizon', value: HORIZONS.find(h => h.value === horizon)?.label.split('—')[0].trim() ?? 'Not set' },
               ].map(item => (
                 <div key={item.label} style={{ background: '#FFFFFF', padding: '20px 16px' }}>
                   <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gold, #C6A85A)', marginBottom: '8px' }}>
@@ -291,7 +291,7 @@ export default function Onboarding() {
               onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLButtonElement).style.background = '#0f1e33'; }}
               onMouseLeave={e => { if (!saving) (e.currentTarget as HTMLButtonElement).style.background = '#1A2A44'; }}
             >
-              {saving ? 'Enregistrement…' : 'Voir mes opportunités →'}
+              {saving ? 'Saving…' : 'View my opportunities →'}
             </button>
 
             <div>
@@ -299,7 +299,7 @@ export default function Onboarding() {
                 onClick={() => navigate('/app/portfolio')}
                 style={{ background: 'none', border: 'none', fontSize: '12px', color: '#999', cursor: 'pointer', textDecoration: 'underline' }}
               >
-                Modifier plus tard dans Portfolio
+                Edit later in Portfolio
               </button>
             </div>
           </div>
@@ -316,7 +316,7 @@ function StepHeader({ step, total, question }: { step: number; total: number; qu
   return (
     <div style={{ marginBottom: '32px' }}>
       <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--gold, #C6A85A)', marginBottom: '16px' }}>
-        Étape {step} / {total}
+        Step {step} / {total}
       </div>
       <h2 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '24px', fontWeight: 600, color: '#1A2A44', margin: 0, lineHeight: 1.3 }}>
         {question}
@@ -332,7 +332,7 @@ function StepFooter({ onNext, onSkip, canNext }: { onNext?: () => void; onSkip: 
         onClick={onSkip}
         style={{ background: 'none', border: 'none', fontSize: '12px', color: '#999', cursor: 'pointer' }}
       >
-        Passer
+        Skip
       </button>
       {canNext && onNext && (
         <button

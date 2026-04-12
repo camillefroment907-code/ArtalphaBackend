@@ -502,7 +502,7 @@ export default function Explore() {
       {/* ── Page header ──────────────────────────────────────── */}
       <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)", background: "white", flexShrink: 0, display: "flex", alignItems: "baseline", gap: "12px" }}>
         <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "22px", fontWeight: 600, color: "var(--navy)", margin: 0 }}>Explorer</h1>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--text-3)", letterSpacing: "0.06em" }}>Enchères mondiales · Marché primaire · Sélection IA</span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--text-3)", letterSpacing: "0.06em" }}>Global auctions · Primary market · AI selection</span>
       </div>
 
       {/* ── Primary / Convictions inline ───────────────────── */}

@@ -22,12 +22,12 @@ interface LarryProps {
 const API = 'https://artalpha-backend-production.up.railway.app';
 
 const ALL_SUGGESTIONS = [
-  "Quelles sont tes meilleures opportunités en ce moment ?",
-  "Comment débuter dans l'investissement art avec 10 000€ ?",
-  "Quels artistes émergents surveiller en 2025 ?",
-  "Comment lire un deal score Nautilus ?",
-  "Drouot vs Christie's — où acheter ?",
-  "Comment ajouter une œuvre à mon portfolio ?",
+  "What are your best opportunities right now?",
+  "How do I start investing in art with €10,000?",
+  "Which emerging artists should I watch in 2025?",
+  "How do I read a Nautilus deal score?",
+  "Drouot vs Christie's — where should I buy?",
+  "How do I add an artwork to my portfolio?",
 ];
 
 function shuffle<T>(arr: T[]): T[] {
@@ -165,16 +165,16 @@ export function Larry({ lotId }: LarryProps) {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        const detail = errData.detail || 'Erreur lors de la connexion à Larry.';
+        const detail = errData.detail || 'Connection error.';
         let content: string;
         if (res.status === 404) {
-          content = 'Je serai disponible très bientôt. Le déploiement est en cours.';
+          content = 'Larry will be available very soon. Deployment in progress.';
         } else if (res.status === 403) {
           content = '🔒 ' + detail;
         } else if (res.status === 429) {
           content = '⏳ ' + detail;
         } else {
-          content = 'Une erreur est survenue. Réessayez.';
+          content = 'An error occurred. Please try again.';
           setError(detail);
         }
         setMessages(prev => prev.map(m =>
@@ -206,7 +206,7 @@ export function Larry({ lotId }: LarryProps) {
             if (parsed.error) {
               setMessages(prev => prev.map(m =>
                 m.id === tempId
-                  ? { ...m, content: 'Une erreur est survenue. Réessayez.', streaming: false }
+                  ? { ...m, content: 'An error occurred. Please try again.', streaming: false }
                   : m
               ));
               return;
@@ -238,8 +238,8 @@ export function Larry({ lotId }: LarryProps) {
       fetchUsage();
     } catch (err: any) {
       const msg = err?.name === 'AbortError'
-        ? 'Larry met du temps à répondre. Réessayez dans un instant.'
-        : 'Connexion au serveur impossible. Vérifiez votre connexion.';
+        ? 'Larry is taking a while to respond. Please try again in a moment.'
+        : 'Could not connect to server. Please check your connection.';
       setMessages(prev => prev.map(m =>
         m.id === tempId
           ? { ...m, content: msg, streaming: false }
@@ -299,7 +299,7 @@ export function Larry({ lotId }: LarryProps) {
           fontWeight: 700,
           transition: 'transform 0.15s ease',
         }}
-        title="Parler à Larry"
+        title="Talk to Larry"
       >
         {hasProactiveAlert && !open && (
           <div style={{
@@ -361,7 +361,7 @@ export function Larry({ lotId }: LarryProps) {
                 Larry
               </div>
               <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '2px' }}>
-                Conseiller privé Nautilus
+                Nautilus private advisor
               </div>
             </div>
             {usage && usage.limit < 9999 && (
@@ -398,10 +398,10 @@ export function Larry({ lotId }: LarryProps) {
               }}>L</div>
               <div>
                 <p style={{ fontWeight: 600, color: 'var(--navy)', margin: 0, fontSize: '15px' }}>
-                  Rencontrez Larry
+                  Meet Larry
                 </p>
                 <p style={{ color: 'var(--text-2)', fontSize: '13px', margin: '8px 0 0' }}>
-                  Votre conseiller privé en investissement art. Disponible à partir du plan Investor.
+                  Your private art investment advisor. Available from the Investor plan.
                 </p>
               </div>
               <a
@@ -418,7 +418,7 @@ export function Larry({ lotId }: LarryProps) {
                   marginTop: '8px',
                 }}
               >
-                Passer à Investor — €29/mois
+                Upgrade to Investor — €29/month
               </a>
             </div>
           ) : (
@@ -440,7 +440,7 @@ export function Larry({ lotId }: LarryProps) {
                       textAlign: 'center',
                       margin: '0 0 16px',
                     }}>
-                      Bonjour. Je suis Larry, votre conseiller art.<br />Comment puis-je vous aider ?
+                      Hello. I'm Larry, your art advisor.<br />How can I help you today?
                     </p>
 
                     {/* Proactive notification cards */}
@@ -470,10 +470,10 @@ export function Larry({ lotId }: LarryProps) {
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                               <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                                {msg.type === 'exceptional_lot' ? '◆ SIGNAL FORT' : msg.type === 'market_signal' ? '⚡ MARCHÉ ACTIF' : '◐ MARCHÉ PRIMAIRE'}
+                                {msg.type === 'exceptional_lot' ? '◆ STRONG SIGNAL' : msg.type === 'market_signal' ? '⚡ MARKET ACTIVE' : '◐ PRIMARY MARKET'}
                               </div>
                               <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)' }}>
-                                {msg.priority === 'high' ? 'PRIORITAIRE' : 'NOUVEAU'}
+                                {msg.priority === 'high' ? 'PRIORITY' : 'NEW'}
                               </span>
                             </div>
                             <div style={{ fontSize: '12px', color: 'white', fontWeight: 600, marginBottom: '3px' }}>
@@ -591,7 +591,7 @@ export function Larry({ lotId }: LarryProps) {
                   color: 'var(--text-2)',
                   fontSize: '12px',
                 }}>
-                  Limite mensuelle atteinte. Renouvellement le 1er du mois.
+                  Monthly limit reached. Renews on the 1st of each month.
                 </div>
               ) : (
                 <div style={{
@@ -606,7 +606,7 @@ export function Larry({ lotId }: LarryProps) {
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Posez votre question à Larry…"
+                    placeholder="Ask Larry anything…"
                     rows={1}
                     disabled={streaming}
                     style={{
