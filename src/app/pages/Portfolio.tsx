@@ -451,6 +451,21 @@ export default function Portfolio() {
   const [settingsForm, setSettingsForm] = useState({ fullName: user?.name || '', phone: '' });
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+
+  useEffect(() => {
+    if (portfolioTab !== 'settings') return;
+    setInvoicesLoading(true);
+    const token = getToken();
+    fetch('/api/billing/invoices', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(r => r.json())
+      .then(d => { setInvoices(d.invoices || []); })
+      .catch(() => {})
+      .finally(() => setInvoicesLoading(false));
+  }, [portfolioTab]);
 
   async function saveSettings(e: React.FormEvent) {
     e.preventDefault();
@@ -1197,23 +1212,59 @@ export default function Portfolio() {
 
             <div style={{ height: '1px', background: 'var(--border)', margin: '36px 0' }} />
 
-            {/* Billing link */}
-            <div>
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, color: 'var(--text)', margin: '0 0 12px' }}>
-                Billing
-              </h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: '0 0 16px' }}>
-                Manage your subscription and view billing history.
-              </p>
+            {/* Billing & Invoices */}
+            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '24px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '16px' }}>
+                Billing & Invoices
+              </div>
+
+              {invoicesLoading ? (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div className="pulse-dot" style={{ margin: '0 auto' }} />
+                </div>
+              ) : invoices.length === 0 ? (
+                <div style={{ fontSize: '13px', color: 'var(--text-3)', textAlign: 'center', padding: '20px 0' }}>
+                  No invoices yet. They will appear here after your first payment.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                  {invoices.map((inv: any) => (
+                    <div key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-light)' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>
+                          {new Date(inv.created * 1000).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>
+                          {inv.description || 'Nautilus subscription'} · {((inv.amount_paid || 0) / 100).toFixed(2)} {(inv.currency || 'EUR').toUpperCase()}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: inv.status === 'paid' ? 'var(--electric)' : 'var(--text-3)', background: inv.status === 'paid' ? 'var(--electric-subtle)' : 'var(--bg-subtle)', padding: '2px 8px', borderRadius: '10px', border: `1px solid ${inv.status === 'paid' ? 'var(--electric-border)' : 'var(--border)'}` }}>
+                          {(inv.status || '').toUpperCase()}
+                        </span>
+                        {inv.invoice_pdf && (
+                          <a href={inv.invoice_pdf} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: 'var(--electric)', textDecoration: 'none', fontWeight: 600, padding: '4px 10px', border: '1px solid var(--electric-border)', borderRadius: '4px', background: 'var(--electric-subtle)' }}>
+                            ↓ PDF
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <button
-                onClick={() => setPortfolioTab('billing')}
-                style={{
-                  padding: '10px 20px', background: 'transparent', border: '1px solid var(--border)',
-                  borderRadius: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--text-2)',
-                  cursor: 'pointer', letterSpacing: '0.04em',
+                onClick={async () => {
+                  try {
+                    const token = getToken();
+                    const r = await fetch('/api/billing/create-portal-session', { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {} });
+                    const d = await r.json();
+                    if (d.portal_url) window.open(d.portal_url, '_blank');
+                  } catch { setPortfolioTab('billing'); }
                 }}
+                style={{ width: '100%', marginTop: '16px', padding: '10px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-2)', cursor: 'pointer', fontWeight: 600 }}
               >
-                Go to Plan & Billing →
+                Manage subscription in Stripe portal →
               </button>
             </div>
 

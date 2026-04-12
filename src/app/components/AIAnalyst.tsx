@@ -303,16 +303,16 @@ export function AIAnalyst({ rawLot }: Props) {
   }
 
   return (
-    <div style={{ background: 'white', border: '1px solid var(--border)' }}>
+    <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
 
       {/* Header */}
       <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '30px', height: '30px', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '13px' }}>◆</div>
+          <div style={{ width: '30px', height: '30px', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '13px' }}>◎</div>
           <div>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>Investment Dossier</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>
-              {limits.name} · {limits.projectionYears.length > 0 ? `${limits.projectionYears.join(', ')}yr projections` : 'Basic analysis'} · Nautilus Intelligence
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>Investment Dossier</div>
+              <span style={{ padding: '2px 6px', background: 'rgba(198,168,90,0.1)', border: '1px solid rgba(198,168,90,0.3)', fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.1em' }}>FAMILY OFFICE+</span>
             </div>
           </div>
         </div>
@@ -375,8 +375,8 @@ export function AIAnalyst({ rawLot }: Props) {
 
         {/* Idle — has credits */}
         {status === 'idle' && canAnalyze && (
-          <p style={{ textAlign: 'center', padding: '16px 0', fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.7 }}>
-            Click "Analyze" to generate a complete investment dossier — artist cotation, price projections, risk assessment, and verdict.
+          <p style={{ padding: '0', fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.6, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            Analyse complète — projections 5/10/20/50 ans · cotation artiste · verdict IA
           </p>
         )}
 

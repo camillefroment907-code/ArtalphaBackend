@@ -321,6 +321,7 @@ export default function Explore() {
     ? alphaLots.reduce((a, l) => a + l.dealScore, 0) / alphaLots.length : 0;
   const visibleLots = tab === "alpha" ? alphaLots.slice(0, maxVisible) : lots;
   const lockedLots  = tab === "alpha" ? alphaLots.slice(maxVisible, maxVisible + 3) : [];
+  const isLimited   = tab === "alpha" && !isAdmin && alphaLots.length > maxVisible;
 
   const buildFetchParams = useCallback((page = 1): Record<string, any> => {
     if (tab === "live") {
@@ -606,23 +607,43 @@ export default function Explore() {
                         {tab === "live" ? <LiveCard lot={lot} onClick={() => navigate(`/app/opportunities/${lot.id}`)} /> : <AlphaCard lot={lot} onClick={() => navigate(`/app/opportunities/${lot.id}`)} locked={false} />}
                       </div>
                     ))}
-                    {tab === "alpha" && lockedLots.map(lot => (
-                      <div key={lot.id} style={{ position: "relative", minWidth: 0 }}>
-                        <AlphaCard lot={lot} onClick={() => {}} locked={true} />
-                        <div onClick={() => navigate("/app/pricing")} style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(250,250,248,0.88)", backdropFilter: "blur(2px)", borderRadius: "10px", cursor: "pointer" }}>
-                          <div style={{ fontSize: "16px", marginBottom: "6px" }}>🔒</div>
-                          <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text)" }}>Investor plan</div>
-                          <div style={{ fontSize: "11px", color: "var(--text-3)" }}>from €29/month</div>
-                        </div>
-                      </div>
-                    ))}
                   </div>
 
-                  {tab === "alpha" && !isAdmin && alphaLots.length > maxVisible && (
-                    <div style={{ marginTop: "32px", padding: "32px 40px", background: "white", border: "1px solid var(--border)", borderRadius: "12px", textAlign: "center", boxShadow: "var(--shadow-sm)" }}>
-                      <div style={{ fontFamily: "var(--font-serif)", fontSize: "22px", color: "var(--navy)", marginBottom: "8px" }}>{alphaLots.length - maxVisible} more opportunities available</div>
-                      <p style={{ fontSize: "14px", color: "var(--text-2)", margin: "0 auto 24px", maxWidth: "420px", lineHeight: 1.7 }}>Upgrade to Investor to unlock all AI-screened opportunities.</p>
-                      <button onClick={() => navigate("/app/pricing")} className="btn btn-navy" style={{ fontSize: "12px" }}>Unlock All Opportunities →</button>
+                  {isLimited && (
+                    <div style={{ position: "relative", marginTop: "16px" }}>
+                      {/* Blurred fake cards */}
+                      <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap, filter: "blur(5px)", pointerEvents: "none", opacity: 0.5, userSelect: "none" }}>
+                        {[...Array(4)].map((_, i) => (
+                          <div key={i} style={{ background: "white", border: "1px solid var(--border)", borderRadius: "8px", overflow: "hidden", height: "300px" }}>
+                            <div style={{ height: "180px", background: "var(--bg-subtle)" }} />
+                            <div style={{ padding: "16px" }}>
+                              <div style={{ height: "10px", width: "50%", borderRadius: "4px", marginBottom: "8px", background: "var(--border)" }} />
+                              <div style={{ height: "14px", width: "80%", borderRadius: "4px", marginBottom: "12px", background: "var(--border)" }} />
+                              <div style={{ height: "18px", width: "40%", borderRadius: "4px", background: "var(--border)" }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Overlay */}
+                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(250,250,250,0) 0%, rgba(250,250,250,0.97) 35%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", paddingBottom: "32px" }}>
+                        <div style={{ textAlign: "center", maxWidth: "420px", padding: "0 20px" }}>
+                          <div style={{ fontFamily: "var(--font-serif)", fontSize: "22px", color: "var(--text)", marginBottom: "8px" }}>
+                            {alphaLots.length - maxVisible}+ more opportunities available
+                          </div>
+                          <p style={{ fontSize: "13px", color: "var(--text-2)", marginBottom: "20px", lineHeight: 1.7 }}>
+                            {!user || user.plan === "free"
+                              ? `You're seeing ${maxVisible} of ${total || "500+"} available lots. Upgrade to unlock the full market.`
+                              : "Upgrade to Investor for unlimited access to all opportunities."
+                            }
+                          </p>
+                          <button onClick={() => navigate("/app/pricing")} className="btn btn-navy" style={{ fontSize: "13px", padding: "12px 36px", width: "100%", marginBottom: "10px" }}>
+                            Unlock full access →
+                          </button>
+                          <div style={{ fontSize: "11px", color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>
+                            From €9/month · Cancel anytime
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
 

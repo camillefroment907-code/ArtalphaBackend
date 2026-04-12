@@ -598,7 +598,7 @@ export default function OpportunityDetail() {
           </div>
 
           {/* Card 1 — Investment Memo */}
-          <div style={{ border: '1px solid var(--border)', background: 'white', marginBottom: '8px' }}>
+          <div style={{ border: '1px solid var(--border)', background: 'white', borderRadius: '8px', overflow: 'hidden', marginBottom: '8px' }}>
             <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: '30px', height: '30px', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '13px' }}>◆</div>
@@ -642,8 +642,8 @@ export default function OpportunityDetail() {
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>{memo.time_horizon}</span>
                 </div>
               ) : (
-                <p style={{ fontStyle: 'italic', color: 'var(--text-3)', fontSize: '13px', margin: 0, lineHeight: 1.6 }}>
-                  Generate an institutional-grade investment analysis with thesis, pricing rationale, risks, and price targets.
+                <p style={{ color: 'var(--text-3)', fontSize: '11px', margin: 0, lineHeight: 1.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  Note de décision — BUY/WATCH/PASS + prix cible · Résultat en ~5s
                 </p>
               )}
             </div>
