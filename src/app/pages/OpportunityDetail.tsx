@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { getPlanLimits } from '../../lib/auth';
+import { getPlanLimits, getToken } from '../../lib/auth';
 import { AIAnalyst } from '../components/AIAnalyst';
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────
@@ -174,11 +174,40 @@ export default function OpportunityDetail() {
   const [lot, setLot]             = useState<any>(null);
   const [loading, setLoading]     = useState(true);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [memoLoading, setMemoLoading] = useState(false);
+  const [memo, setMemo]               = useState<any>(null);
+  const [showMemo, setShowMemo]       = useState(false);
 
   const limits      = getPlanLimits();
   const canSeeAnalysis = limits.hasProjections || limits.hasArtistCotation;
   const canSeeAI       = limits.hasAIVerdict;
   const visibleYears   = limits.projectionYears || [];
+
+  const generateMemo = async () => {
+    if (!lot?.id) return;
+    setMemoLoading(true);
+    try {
+      const resp = await fetch(
+        `https://artalpha-backend-production.up.railway.app/api/memo/${lot.id}`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${getToken()}` },
+        }
+      );
+      if (resp.status === 403) {
+        alert('Investment memos are available from the Investor plan (€29/month).');
+        return;
+      }
+      if (!resp.ok) throw new Error('Failed');
+      const data = await resp.json();
+      setMemo(data);
+      setShowMemo(true);
+    } catch {
+      alert('Memo generation failed. Please try again.');
+    } finally {
+      setMemoLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -563,7 +592,7 @@ export default function OpportunityDetail() {
         </div>
 
         {/* ── 4. AI INVESTMENT ADVISOR ──────────────────────────────────────────── */}
-        <div>
+        <div style={{ marginBottom: '32px' }}>
           <SectionHeader title="AI Investment Advisor" badge={!canSeeAI ? 'INVESTOR+' : undefined} />
 
           {canSeeAI ? (
@@ -610,7 +639,161 @@ export default function OpportunityDetail() {
             />
           )}
         </div>
+
+        {/* ── 5. INVESTMENT MEMO BUTTON ─────────────────────────────────────────── */}
+        <button
+          onClick={generateMemo}
+          disabled={memoLoading}
+          style={{
+            width: '100%',
+            padding: '12px',
+            background: memoLoading ? 'var(--bg-subtle)' : 'var(--navy)',
+            color: memoLoading ? 'var(--text-3)' : 'white',
+            border: '1px solid var(--navy)',
+            borderRadius: '6px',
+            fontSize: '12px',
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            cursor: memoLoading ? 'not-allowed' : 'pointer',
+            fontFamily: 'var(--font-mono)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            transition: 'all 0.15s',
+          }}
+        >
+          {memoLoading ? (
+            <>
+              <div className="pulse-dot" style={{ width: '6px', height: '6px', background: 'var(--text-3)' }} />
+              Generating memo...
+            </>
+          ) : (
+            '◆ Generate Investment Memo'
+          )}
+        </button>
+
       </div>
+
+      {/* ── INVESTMENT MEMO MODAL ─────────────────────────────────────────────── */}
+      {showMemo && memo && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(10,22,40,0.7)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px',
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setShowMemo(false); }}
+        >
+          <div style={{
+            background: 'white', borderRadius: '8px',
+            width: '100%', maxWidth: '680px',
+            maxHeight: '90vh', overflow: 'auto',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.3)',
+          }}>
+            {/* Memo header */}
+            <div style={{ background: 'var(--navy)', padding: '24px 32px', borderRadius: '8px 8px 0 0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.2em', fontFamily: 'var(--font-mono)', marginBottom: '8px' }}>
+                    NAUTILUS · INVESTMENT MEMO
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'white', marginBottom: '4px' }}>
+                    {memo.title}
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                    {memo.artist}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowMemo(false)}
+                  style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '20px', cursor: 'pointer', padding: '0', lineHeight: 1 }}
+                >×</button>
+              </div>
+
+              {/* Key metrics */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginTop: '20px' }}>
+                {[
+                  { label: 'CURRENT PRICE', value: memo.current_price >= 1000 ? `€${(memo.current_price / 1000).toFixed(0)}K` : `€${memo.current_price}` },
+                  { label: 'TARGET LOW',    value: memo.target_price?.low  ? `€${(memo.target_price.low  / 1000).toFixed(0)}K` : 'N/A' },
+                  { label: 'TARGET HIGH',   value: memo.target_price?.high ? `€${(memo.target_price.high / 1000).toFixed(0)}K` : 'N/A' },
+                  { label: 'CONVICTION',    value: `${memo.conviction}/100` },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '4px' }}>{label}</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '16px', fontWeight: 700, color: 'white' }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Memo body */}
+            <div style={{ padding: '28px 32px' }}>
+
+              {/* Recommendation badge */}
+              <div style={{
+                display: 'flex', gap: '12px', alignItems: 'center',
+                marginBottom: '24px', padding: '14px 16px',
+                background: memo.recommendation === 'BUY' ? 'var(--electric-subtle)' : memo.recommendation === 'WATCH' ? 'var(--gold-subtle)' : 'var(--bg-subtle)',
+                borderRadius: '6px',
+                border: `1px solid ${memo.recommendation === 'BUY' ? 'var(--electric-border)' : memo.recommendation === 'WATCH' ? 'var(--gold-border)' : 'var(--border)'}`,
+              }}>
+                <div style={{
+                  fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700,
+                  color: memo.recommendation === 'BUY' ? 'var(--electric)' : memo.recommendation === 'WATCH' ? 'var(--gold)' : 'var(--text-3)',
+                }}>
+                  {memo.recommendation}
+                </div>
+                <div style={{ fontSize: '13px', color: 'var(--text-2)' }}>
+                  {memo.time_horizon}{memo.target_price?.rationale ? ` · ${memo.target_price.rationale}` : ''}
+                </div>
+              </div>
+
+              {/* Text sections */}
+              {[
+                { title: 'Investment Thesis', content: memo.thesis },
+                { title: 'Artist Context',    content: memo.artist_context },
+                { title: 'Pricing Analysis',  content: memo.pricing_analysis },
+              ].filter(s => s.content).map(({ title, content }) => (
+                <div key={title} style={{ marginBottom: '20px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', marginBottom: '8px' }}>
+                    {title}
+                  </div>
+                  <p style={{ fontSize: '14px', color: 'var(--text)', lineHeight: 1.8, margin: 0 }}>{content}</p>
+                </div>
+              ))}
+
+              {/* Risks */}
+              {memo.risks && memo.risks.length > 0 && (
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', marginBottom: '8px' }}>
+                    Key Risks
+                  </div>
+                  {memo.risks.map((risk: string, i: number) => (
+                    <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '6px' }}>
+                      <span style={{ color: '#C0392B', fontSize: '12px', marginTop: '2px', flexShrink: 0 }}>▲</span>
+                      <span style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.6 }}>{risk}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Footer */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                  {memo.generated_by} · {new Date(memo.generated_at).toLocaleDateString('fr-FR')}
+                </div>
+                <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                  NOT FINANCIAL ADVICE · FOR INFORMATIONAL PURPOSES ONLY
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
