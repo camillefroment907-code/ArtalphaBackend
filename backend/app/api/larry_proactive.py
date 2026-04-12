@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 
 from app.database import get_db
 from app.api.auth_utils import get_current_user
-from app.models.db_models import User, Lot
+from app.models.db_models import User, Lot, MarketType
 
 router = APIRouter(prefix="/larry", tags=["larry"])
 
@@ -81,7 +81,7 @@ async def get_proactive_messages(
         select(Lot)
         .where(
             and_(
-                Lot.market_type == "primary",
+                Lot.market_type == MarketType.PRIMARY,
                 Lot.deal_score >= 65,
                 Lot.created_at >= since,
             )
