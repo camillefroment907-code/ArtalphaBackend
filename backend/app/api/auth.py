@@ -1,9 +1,11 @@
 import asyncio
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from pydantic import BaseModel
 
 from app.database import get_db
 from app.models.db_models import User, UserPreference, AlertChannel
@@ -113,3 +115,22 @@ async def oauth_google_redirect():
     """Google OAuth — not configured. Redirect to login with error."""
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url="/auth/login?error=google_not_configured", status_code=302)
+
+
+class UpdateProfileRequest(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+
+
+@router.patch("/profile")
+async def update_profile(
+    body: UpdateProfileRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if body.full_name is not None:
+        current_user.full_name = body.full_name
+    if body.phone is not None:
+        current_user.phone = body.phone
+    await db.commit()
+    return {"message": "Profile updated", "email": current_user.email}
