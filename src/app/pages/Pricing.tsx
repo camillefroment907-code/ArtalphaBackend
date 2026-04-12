@@ -249,9 +249,9 @@ export default function Pricing() {
         navigate("/app/login");
         return;
       }
-      setError(err || "Could not start checkout. Please try again.");
-    } catch {
-      setError("Network error. Please check your connection.");
+      setError(typeof err === 'string' ? err : (err as any)?.message || 'Could not start checkout. Please try again.');
+    } catch (e: any) {
+      setError(e?.message || 'Network error. Please check your connection.');
     } finally {
       setLoading(null);
     }
@@ -328,7 +328,7 @@ export default function Pricing() {
       {error && (
         <div style={{ maxWidth: "960px", margin: "0 auto 24px", padding: "0 24px" }}>
           <div style={{ padding: "14px 20px", background: "var(--red-subtle)", border: "1px solid rgba(220,38,38,0.2)", borderRadius: "6px", fontSize: "13px", color: "var(--red)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span>{error}</span>
+            <span>{typeof error === 'string' ? error : 'An error occurred. Please try again.'}</span>
             <button onClick={() => setError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--red)", fontSize: "20px", lineHeight: 1 }}>×</button>
           </div>
         </div>
