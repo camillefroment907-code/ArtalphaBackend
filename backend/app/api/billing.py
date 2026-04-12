@@ -574,6 +574,40 @@ async def sync_subscription(
     return {"plan": "free", "status": "no_active_subscription"}
 
 
+@router.get("/invoices")
+async def get_invoices(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return Stripe invoices for the current user."""
+    try:
+        s = _get_stripe()
+        result = await db.execute(
+            select(Subscription).where(Subscription.user_id == current_user.id)
+        )
+        sub = result.scalar_one_or_none()
+        if not sub or not sub.stripe_customer_id:
+            return {"invoices": []}
+        invoices = s.Invoice.list(customer=sub.stripe_customer_id, limit=12)
+        return {
+            "invoices": [
+                {
+                    "id": inv.id,
+                    "created": inv.created,
+                    "amount_paid": inv.amount_paid,
+                    "currency": inv.currency,
+                    "status": inv.status,
+                    "description": inv.lines.data[0].description if inv.lines.data else None,
+                    "invoice_pdf": inv.invoice_pdf,
+                }
+                for inv in invoices.data
+            ]
+        }
+    except Exception as e:
+        logger.warning("invoice_fetch_failed", error=str(e))
+        return {"invoices": []}
+
+
 @router.post("/create-portal-session")
 async def create_portal_session(
     current_user: User = Depends(get_current_user),
