@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { getToken, getPlanLimits } from '../../lib/auth';
+
+const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 import { Logo } from '../components/Logo';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -167,9 +169,9 @@ function AgentPage() {
 
   async function loadAll() {
     const [lim, als, rs] = await Promise.all([
-      fetch('/api/agent/limits', { headers }).then(r => r.ok ? r.json() : null),
-      fetch('/api/agent/alerts', { headers }).then(r => r.ok ? r.json() : []),
-      fetch('/api/agent/recommendations?limit=50', { headers }).then(r => r.ok ? r.json() : []),
+      fetch(`${BACKEND}/api/agent/limits`, { headers }).then(r => r.ok ? r.json() : null),
+      fetch(`${BACKEND}/api/agent/alerts`, { headers }).then(r => r.ok ? r.json() : []),
+      fetch(`${BACKEND}/api/agent/recommendations?limit=50`, { headers }).then(r => r.ok ? r.json() : []),
     ]);
     setLimits(lim);
     setAlerts(als);
@@ -219,7 +221,7 @@ function AgentPage() {
     if (!fname.trim()) { setFnameError('Required'); return; }
     setSaving(true); setFormError('');
     try {
-      const res = await fetch('/api/agent/alerts', {
+      const res = await fetch(`${BACKEND}/api/agent/alerts`, {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify(buildPayload()),
@@ -238,7 +240,7 @@ function AgentPage() {
     if (!editingAlert) return;
     setSaving(true); setFormError('');
     try {
-      const res = await fetch(`/api/agent/alerts/${editingAlert.id}`, {
+      const res = await fetch(`${BACKEND}/api/agent/alerts/${editingAlert.id}`, {
         method: 'PATCH',
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify(buildPayload()),
@@ -253,12 +255,12 @@ function AgentPage() {
   }
 
   async function handleDelete(id: string) {
-    await fetch(`/api/agent/alerts/${id}`, { method: 'DELETE', headers });
+    await fetch(`${BACKEND}/api/agent/alerts/${id}`, { method: 'DELETE', headers });
     await loadAll();
   }
 
   async function handleToggle(id: string, val: boolean) {
-    await fetch(`/api/agent/alerts/${id}`, {
+    await fetch(`${BACKEND}/api/agent/alerts/${id}`, {
       method: 'PATCH',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_active: val }),
@@ -280,14 +282,14 @@ function AgentPage() {
   }
 
   async function markRead(recId: string) {
-    await fetch(`/api/agent/recommendations/${recId}/read`, {
+    await fetch(`${BACKEND}/api/agent/recommendations/${recId}/read`, {
       method: 'PATCH', headers: { Authorization: `Bearer ${token}` },
     });
     handleRead(recId);
   }
 
   async function markActed(recId: string) {
-    await fetch(`/api/agent/recommendations/${recId}/acted`, {
+    await fetch(`${BACKEND}/api/agent/recommendations/${recId}/acted`, {
       method: 'PATCH', headers: { Authorization: `Bearer ${token}` },
     });
     handleActed(recId);

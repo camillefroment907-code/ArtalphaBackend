@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import { Logo } from './Logo';
 import { getUser, logout, getUserPlan, getToken } from '../../lib/auth';
 
+const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
+
 const NAV_ITEMS = [
   { label: 'Dashboard',    to: '/app/dashboard', dropdown: null },
   { label: 'Explorer',     to: '/app/explore',   dropdown: 'explorer' },
@@ -45,7 +47,7 @@ export function Header() {
   useEffect(() => {
     if (!user) return;
     const token = getToken();
-    fetch('/api/agent/unread-count', { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${BACKEND}/api/agent/unread-count`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : { count: 0 })
       .then(d => setAgentUnread(d.count ?? 0))
       .catch(() => {});
@@ -76,7 +78,7 @@ export function Header() {
     if (scanState === 'loading') return;
     setScanState('loading');
     try {
-      await fetch('/api/n8n/trigger-scraping', {
+      await fetch(`${BACKEND}/api/n8n/trigger-scraping`, {
         method: 'POST',
         headers: { 'x-api-key': 'eee50ac99b4fca0ff5c5c205fe3ed79a' },
       });

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { getToken } from '../../lib/auth';
 
+const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
+
 interface Budget {
   min: number;
   max: number | null;
@@ -63,7 +65,7 @@ export default function Onboarding() {
       if (horizon) localStorage.setItem('artalpha-horizon', horizon);
 
       const token = getToken();
-      await fetch('/api/profile/me', {
+      await fetch(`${BACKEND}/api/profile/me`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

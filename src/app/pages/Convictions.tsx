@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { getPlanLimits, getUser } from '../../lib/auth';
 
+const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
+
 function getToken(): string {
   try {
     const raw = localStorage.getItem('artalpha_auth');
@@ -259,7 +261,7 @@ export default function Convictions() {
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    fetch(`/api/lots/for-investor?${qs}`, { headers })
+    fetch(`${BACKEND}/api/lots/for-investor?${qs}`, { headers })
       .then(r => r.ok ? r.json() : { items: [] })
       .then(d => {
         let items: Lot[] = d.items || [];
@@ -290,7 +292,7 @@ export default function Convictions() {
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    fetch(`/api/lots?${qs}`, { headers })
+    fetch(`${BACKEND}/api/lots?${qs}`, { headers })
       .then(r => r.ok ? r.json() : { items: [] })
       .then(d => setTodayLots(d.items || []))
       .catch(() => {});

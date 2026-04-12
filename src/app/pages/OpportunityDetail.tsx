@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router';
 import { getPlanLimits, getToken } from '../../lib/auth';
 import { AIAnalyst } from '../components/AIAnalyst';
 
+const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
+
 // ── UTILS ─────────────────────────────────────────────────────────────────────
 
 function fmt(v?: number | null): string {
@@ -211,7 +213,7 @@ export default function OpportunityDetail() {
 
   useEffect(() => {
     if (!id) return;
-    fetch(`/api/lots/${id}`)
+    fetch(`${BACKEND}/api/lots/${id}`)
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(data => { setLot(data); setLoading(false); })
       .catch(() => setLoading(false));

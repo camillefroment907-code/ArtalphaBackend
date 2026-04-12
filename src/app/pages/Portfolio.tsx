@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { getUser, getPlanLimits, getToken, logout, PLAN_LIMITS } from '../../lib/auth';
+
+const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 import { AlertsContent } from './Alerts';
 import { getSubscription, cancelSubscription } from '../../lib/api';
 import { getUsageStatus, PLAN_LIMITS as USAGE_LIMITS } from '../../lib/analysisUsage';
@@ -304,7 +306,7 @@ export default function Portfolio() {
   useEffect(() => {
     const token = getToken();
     setLotsLoading(true);
-    fetch('/api/lots?sort_by=deal_score&sort_dir=desc&page_size=12', {
+    fetch(`${BACKEND}/api/lots?sort_by=deal_score&sort_dir=desc&page_size=12`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then(r => {
@@ -336,8 +338,8 @@ export default function Portfolio() {
     setPortfolioLoading(true);
     try {
       const [statsRes, itemsRes] = await Promise.all([
-        fetch('/api/portfolio/stats', { headers: authHeaders() }),
-        fetch('/api/portfolio/items', { headers: authHeaders() }),
+        fetch(`${BACKEND}/api/portfolio/stats`, { headers: authHeaders() }),
+        fetch(`${BACKEND}/api/portfolio/items`, { headers: authHeaders() }),
       ]);
       if (statsRes.ok) setPortfolioStats(await statsRes.json());
       if (itemsRes.ok) setPortfolioItems(await itemsRes.json());
@@ -354,7 +356,7 @@ export default function Portfolio() {
     setAddLoading(true);
     setAddError('');
     try {
-      const res = await fetch('/api/portfolio/items', {
+      const res = await fetch(`${BACKEND}/api/portfolio/items`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({
@@ -392,7 +394,7 @@ export default function Portfolio() {
   async function handleSaveEdit(itemId: string) {
     setEditLoading(true);
     try {
-      const res = await fetch(`/api/portfolio/items/${itemId}`, {
+      const res = await fetch(`${BACKEND}/api/portfolio/items/${itemId}`, {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({
@@ -417,7 +419,7 @@ export default function Portfolio() {
   async function handleDeleteItem(itemId: string) {
     setDeletingId(itemId);
     try {
-      await fetch(`/api/portfolio/items/${itemId}`, {
+      await fetch(`${BACKEND}/api/portfolio/items/${itemId}`, {
         method: 'DELETE',
         headers: authHeaders(),
       });
@@ -458,7 +460,7 @@ export default function Portfolio() {
     if (portfolioTab !== 'settings') return;
     setInvoicesLoading(true);
     const token = getToken();
-    fetch('/api/billing/invoices', {
+    fetch(`${BACKEND}/api/billing/invoices`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then(r => r.json())
@@ -470,7 +472,7 @@ export default function Portfolio() {
   async function openBillingPortal() {
     try {
       const token = getToken();
-      const resp = await fetch('/api/billing/portal', {
+      const resp = await fetch(`${BACKEND}/api/billing/portal`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -491,7 +493,7 @@ export default function Portfolio() {
     setSettingsSaving(true);
     try {
       const token = getToken();
-      await fetch('/api/auth/profile', {
+      await fetch(`${BACKEND}/api/auth/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ full_name: settingsForm.fullName || null, phone: settingsForm.phone || null }),

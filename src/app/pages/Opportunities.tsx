@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router";
 import { getPlanLimits, getUser } from "../../lib/auth";
+
+const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 import { FilterSidebar } from "../components/FilterSidebar";
 import type { Filters } from "../components/FilterSidebar";
 
@@ -118,7 +120,7 @@ async function fetchInvestorLots(budgetMin?: number, budgetMax?: number | null, 
   const headers: Record<string, string> = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`/api/lots/for-investor?${qs}`, { headers });
+  const res = await fetch(`${BACKEND}/api/lots/for-investor?${qs}`, { headers });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const d = await res.json();
   return { items: d.items || [], total: d.total || 0, pages: 1 };
@@ -126,7 +128,7 @@ async function fetchInvestorLots(budgetMin?: number, budgetMax?: number | null, 
 
 async function loadSourceStats(): Promise<SourceStat[]> {
   try {
-    const res = await fetch("/api/lots/sources");
+    const res = await fetch(`${BACKEND}/api/lots/sources`);
     if (!res.ok) return [];
     return await res.json();
   } catch { return []; }
