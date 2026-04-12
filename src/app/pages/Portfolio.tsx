@@ -437,14 +437,37 @@ export default function Portfolio() {
   const billingInterval = sub?.billing_interval || 'monthly';
   const isFreePlan = plan === 'free' || plan === 'starter';
 
-  type PortfolioTab = 'collection' | 'alerts' | 'billing';
+  type PortfolioTab = 'collection' | 'alerts' | 'billing' | 'settings';
   const [portfolioTab, setPortfolioTab] = useState<PortfolioTab>('collection');
 
   const PORTFOLIO_TABS: { id: PortfolioTab; label: string }[] = [
     { id: 'collection', label: 'My Collection' },
     { id: 'alerts',     label: 'Alerts'        },
     { id: 'billing',    label: 'Plan & Billing' },
+    { id: 'settings',   label: 'Settings'      },
   ];
+
+  // Settings state
+  const [settingsForm, setSettingsForm] = useState({ fullName: user?.name || '', phone: '' });
+  const [settingsSaved, setSettingsSaved] = useState(false);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+
+  async function saveSettings(e: React.FormEvent) {
+    e.preventDefault();
+    setSettingsSaving(true);
+    try {
+      const token = getToken();
+      await fetch('/api/auth/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ full_name: settingsForm.fullName || null, phone: settingsForm.phone || null }),
+      });
+      setSettingsSaved(true);
+      setTimeout(() => setSettingsSaved(false), 3000);
+    } catch { /* silent */ } finally {
+      setSettingsSaving(false);
+    }
+  }
 
   // Input style helper
   const inputStyle: React.CSSProperties = {
@@ -1103,6 +1126,99 @@ export default function Portfolio() {
 
         {/* Close portfolio tab */}
         </>}
+
+        {/* ── SETTINGS TAB ───────────────────────────────────── */}
+        {portfolioTab === 'settings' && (
+          <div style={{ paddingTop: '8px', maxWidth: '640px' }}>
+
+            {/* Profile section */}
+            <form onSubmit={saveSettings}>
+              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, color: 'var(--text)', margin: '0 0 20px' }}>
+                Profile
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 24px', marginBottom: '8px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '6px' }}>
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    value={settingsForm.fullName}
+                    onChange={e => setSettingsForm(f => ({ ...f, fullName: e.target.value }))}
+                    placeholder="Your full name"
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '6px' }}>
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={user?.email || ''}
+                    disabled
+                    style={{ ...inputStyle, opacity: 0.5, cursor: 'not-allowed' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '6px' }}>
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={settingsForm.phone}
+                    onChange={e => setSettingsForm(f => ({ ...f, phone: e.target.value }))}
+                    placeholder="+33 6 00 00 00 00"
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <button
+                  type="submit"
+                  disabled={settingsSaving}
+                  style={{
+                    padding: '10px 24px', background: 'var(--navy)', color: 'white',
+                    border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
+                    letterSpacing: '0.06em', textTransform: 'uppercase',
+                    cursor: settingsSaving ? 'not-allowed' : 'pointer', opacity: settingsSaving ? 0.6 : 1,
+                  }}
+                >
+                  {settingsSaving ? 'Saving…' : 'Save Changes'}
+                </button>
+                {settingsSaved && (
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#1A7A4A' }}>
+                    ✓ Saved
+                  </span>
+                )}
+              </div>
+            </form>
+
+            <div style={{ height: '1px', background: 'var(--border)', margin: '36px 0' }} />
+
+            {/* Billing link */}
+            <div>
+              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, color: 'var(--text)', margin: '0 0 12px' }}>
+                Billing
+              </h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: '0 0 16px' }}>
+                Manage your subscription and view billing history.
+              </p>
+              <button
+                onClick={() => setPortfolioTab('billing')}
+                style={{
+                  padding: '10px 20px', background: 'transparent', border: '1px solid var(--border)',
+                  borderRadius: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--text-2)',
+                  cursor: 'pointer', letterSpacing: '0.04em',
+                }}
+              >
+                Go to Plan & Billing →
+              </button>
+            </div>
+
+          </div>
+        )}
 
       </div>
 

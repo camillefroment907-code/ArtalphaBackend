@@ -93,12 +93,12 @@ function LockedPage() {
       </h1>
       <div style={{ width: '48px', height: '1px', background: 'var(--gold)', margin: '24px auto' }} />
       <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.7, marginBottom: '40px' }}>
-        Créez des alertes ciblées et laissez GPT-4o surveiller le marché pour vous.
+        Créez des alertes ciblées et laissez Nautilus AI surveiller le marché pour vous.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left', marginBottom: '44px' }}>
         {[
           { title: 'Alertes ciblées', desc: "Définissez vos critères : artiste, catégorie, budget, horizon. L'agent scrute chaque lot entrant." },
-          { title: 'Analyse GPT-4o', desc: 'Chaque lot est analysé selon votre alerte. Verdict FORT ACHAT / ACHAT / SURVEILLER avec raisonnement.' },
+          { title: 'Analyse Nautilus AI', desc: 'Chaque lot est analysé selon votre alerte. Verdict FORT ACHAT / ACHAT / SURVEILLER avec raisonnement.' },
           { title: 'Recommandations personnalisées', desc: "Notification dès qu'un lot correspond. Score de conviction, cas haussier/baissier, prix max suggéré." },
         ].map(({ title, desc }) => (
           <div key={title} style={{ display: 'flex', gap: '14px', padding: '18px 20px', background: 'var(--navy-subtle)', borderRadius: '2px', border: '1px solid var(--border)' }}>
@@ -478,7 +478,7 @@ function AgentPage() {
                 Once you create a strategy, the agent scans every new auction lot and returns AI-graded signals here.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '240px', margin: '0 auto', textAlign: 'left' }}>
-                {['Scans every 15 min', 'GPT-4o analysis', 'Conviction scoring'].map(item => (
+                {['Scans every 15 min', 'Nautilus AI analysis', 'Conviction scoring'].map(item => (
                   <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ color: 'var(--gold)', fontSize: '8px', flexShrink: 0 }}>◆</span>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.06em' }}>

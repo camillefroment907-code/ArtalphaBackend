@@ -312,7 +312,7 @@ export function AIAnalyst({ rawLot }: Props) {
           <div>
             <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>Investment Dossier</div>
             <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>
-              {limits.name} · {limits.projectionYears.length > 0 ? `${limits.projectionYears.join(', ')}yr projections` : 'Basic analysis'} · Powered by Claude
+              {limits.name} · {limits.projectionYears.length > 0 ? `${limits.projectionYears.join(', ')}yr projections` : 'Basic analysis'} · Nautilus Intelligence
             </div>
           </div>
         </div>

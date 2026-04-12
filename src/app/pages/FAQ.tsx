@@ -135,7 +135,7 @@ const SECTIONS: Section[] = [
       },
       {
         q: "Comment fonctionne le score de conviction ?",
-        a: "Le score de conviction (0-100) est calculé par GPT-4o en analysant l'adéquation entre le lot et vos critères. Il prend en compte : la pertinence artistique, la qualité financière du lot (deal score), l'horizon temporel et votre tolérance au risque. Score ≥ 80 = forte conviction.",
+        a: "Le score de conviction (0-100) est calculé par Nautilus AI en analysant l'adéquation entre le lot et vos critères. Il prend en compte : la pertinence artistique, la qualité financière du lot (deal score), l'horizon temporel et votre tolérance au risque. Score ≥ 80 = forte conviction.",
       },
       {
         q: "Puis-je modifier ou supprimer une alerte ?",
@@ -169,7 +169,7 @@ const SECTIONS: Section[] = [
       },
       {
         q: 'Larry peut-il se tromper ?',
-        a: "Larry est configuré pour ne citer que des lots réels présents en base Nautilus. Pour les questions de marché générales, il s'appuie sur ses connaissances GPT-4o. Comme tout conseil, ses recommandations sont indicatives et ne constituent pas un conseil financier réglementé.",
+        a: "Larry est configuré pour ne citer que des lots réels présents en base Nautilus. Pour les questions de marché générales, il s'appuie sur l'intelligence Nautilus AI. Comme tout conseil, ses recommandations sont indicatives et ne constituent pas un conseil financier réglementé.",
       },
     ],
   },
@@ -201,7 +201,7 @@ const SECTIONS: Section[] = [
     items: [
       {
         q: "Quelle est la différence entre les Alertes et l'Agent IA ?",
-        a: 'Les <a href="https://artalpha.io/app/alerts">Alertes</a> sont des notifications simples basées sur des critères (artiste, catégorie, score, prix). L\'<a href="https://artalpha.io/app/agent">Agent IA</a> est plus avancé : il utilise GPT-4o pour analyser chaque lot et générer une recommandation personnalisée avec raisonnement.',
+        a: 'Les <a href="https://artalpha.io/app/alerts">Alertes</a> sont des notifications simples basées sur des critères (artiste, catégorie, score, prix). L\'<a href="https://artalpha.io/app/agent">Agent IA</a> est plus avancé : il utilise Nautilus AI pour analyser chaque lot et générer une recommandation personnalisée avec raisonnement.',
       },
       {
         q: 'Comment créer une alerte simple ?',
