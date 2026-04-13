@@ -169,7 +169,13 @@ export default function Pricing() {
         body: JSON.stringify({ price_key: priceKey }),
       });
       const data = await resp.json();
-      if (!resp.ok) throw new Error(data.detail || data.error || 'Checkout failed');
+      if (!resp.ok) {
+        const detail = data.detail;
+        const errMsg = typeof detail === 'string' ? detail
+          : typeof data.error === 'string' ? data.error
+          : 'Checkout failed';
+        throw new Error(errMsg);
+      }
       const url = data.checkout_url || data.url;
       if (url) window.location.href = url;
       else throw new Error('No checkout URL returned');
