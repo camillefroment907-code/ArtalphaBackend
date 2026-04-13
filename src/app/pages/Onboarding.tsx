@@ -12,11 +12,11 @@ const PROFILES = [
 ];
 
 const BUDGETS = [
-  { value: 'lt_5k',      label: '< €5 000' },
-  { value: '5k_20k',     label: '€5 000 – €20 000' },
-  { value: '20k_100k',   label: '€20 000 – €100 000' },
-  { value: '100k_500k',  label: '€100 000 – €500 000' },
-  { value: 'gt_500k',    label: '> €500 000' },
+  { key: 'under_1k',   label: '< €1 000',           sub: 'Prints, emerging artists' },
+  { key: '1k_5k',      label: '€1 000 – €5 000',    sub: 'Emerging & mid-market' },
+  { key: '5k_20k',     label: '€5 000 – €20 000',   sub: 'Established emerging' },
+  { key: '20k_100k',   label: '€20 000 – €100 000', sub: 'Blue-chip & established' },
+  { key: 'above_100k', label: '> €100 000',          sub: 'Institutional grade' },
 ];
 
 const HORIZONS = [
@@ -200,15 +200,16 @@ export default function Onboarding() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '40px' }}>
               {BUDGETS.map(b => (
                 <button
-                  key={b.value}
-                  style={tileStyle(budget === b.value)}
-                  onClick={() => { setBudget(b.value); setTimeout(goNext, 280); }}
-                  onMouseEnter={e => { if (budget !== b.value) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy, #1A2A44)'; }}
-                  onMouseLeave={e => { if (budget !== b.value) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border, #E8E6E0)'; }}
+                  key={b.key}
+                  style={tileStyle(budget === b.key)}
+                  onClick={() => { setBudget(b.key); setTimeout(goNext, 280); }}
+                  onMouseEnter={e => { if (budget !== b.key) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy, #1A2A44)'; }}
+                  onMouseLeave={e => { if (budget !== b.key) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border, #E8E6E0)'; }}
                 >
-                  <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '15px', fontWeight: 600, color: '#1A2A44' }}>
+                  <div style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '15px', fontWeight: 600, color: '#1A2A44', marginBottom: '4px' }}>
                     {b.label}
-                  </span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#888', lineHeight: 1.4 }}>{b.sub}</div>
                 </button>
               ))}
             </div>
@@ -321,7 +322,7 @@ export default function Onboarding() {
             }}>
               {[
                 { label: 'Profile',  value: PROFILES.find(p => p.value === collectorType)?.label ?? 'Not set' },
-                { label: 'Budget',   value: BUDGETS.find(b => b.value === budget)?.label ?? 'Not set' },
+                { label: 'Budget',   value: BUDGETS.find(b => b.key === budget)?.label ?? 'Not set' },
                 { label: 'Horizon',  value: HORIZONS.find(h => h.value === horizon)?.label ?? 'Not set' },
                 { label: 'Focus',    value: categories.length > 0 ? `${categories.length} categories` : 'All categories' },
               ].map(item => (

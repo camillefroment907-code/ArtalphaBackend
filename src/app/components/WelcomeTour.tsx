@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Logo } from './Logo';
 
 interface WelcomeTourProps {
   onClose: () => void;
@@ -11,7 +12,6 @@ const TOUR_STEPS = [
     body: 'Our algorithm tracks 50+ auction houses and scores each lot against the artist\'s market — flagging below-market entries before anyone else sees them.',
     metric: 'Score 0–100',
     cta: 'Explore deals',
-    visual: '◈',
   },
   {
     tag: 'Market Intelligence',
@@ -19,7 +19,6 @@ const TOUR_STEPS = [
     body: 'Nautilus aggregates auction results, primary sales, and gallery data to build a live price map for thousands of artists — updated after every sale.',
     metric: '15 000+ artists',
     cta: 'Browse artists',
-    visual: '◎',
   },
   {
     tag: 'Auction Alerts',
@@ -27,7 +26,6 @@ const TOUR_STEPS = [
     body: 'Set your criteria once — budget, category, score threshold. Get alerts 48 hours before auction close, with enough time to place a bid.',
     metric: '48h advance',
     cta: 'Set my alerts',
-    visual: '◇',
   },
   {
     tag: 'Portfolio Tracking',
@@ -35,7 +33,6 @@ const TOUR_STEPS = [
     body: 'Add past acquisitions and see your portfolio\'s estimated value, gain/loss, and market position — updated in real time as comparable works sell.',
     metric: 'Live P&L',
     cta: 'My portfolio',
-    visual: '◆',
   },
   {
     tag: 'Larry, your AI analyst',
@@ -43,7 +40,6 @@ const TOUR_STEPS = [
     body: 'Larry answers market questions, explains deal scores, and surfaces overlooked opportunities — in plain language, on demand.',
     metric: 'GPT-4o',
     cta: 'Start exploring',
-    visual: '▲',
   },
 ];
 
@@ -126,13 +122,12 @@ export function WelcomeTour({ onClose }: WelcomeTourProps) {
           </button>
 
           <div style={{
-            fontSize: '52px',
-            color: 'var(--gold, #C6A85A)',
-            fontFamily: 'var(--font-serif, Georgia, serif)',
-            marginBottom: '16px',
-            opacity: 0.9,
+            width: '72px', height: '72px', borderRadius: '50%',
+            background: 'rgba(255,255,255,0.08)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 20px',
           }}>
-            {current.visual}
+            <Logo variant="symbol" color="white" size={36} />
           </div>
 
           {/* Metric pill */}
