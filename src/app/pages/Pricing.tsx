@@ -31,8 +31,8 @@ const PLANS: Plan[] = [
     monthly: 9,
     yearly: 7,
     yearlyTotal: 86,
-    priceKeyMonthly: "starter_monthly",
-    priceKeyYearly: "starter_yearly",
+    priceKeyMonthly: "collector_monthly",
+    priceKeyYearly: "collector_annual",
     highlight: false,
     limit: "15 deals / day",
     features: [
@@ -52,7 +52,7 @@ const PLANS: Plan[] = [
     yearly: 24,
     yearlyTotal: 290,
     priceKeyMonthly: "investor_monthly",
-    priceKeyYearly: "investor_yearly",
+    priceKeyYearly: "investor_annual",
     highlight: true,
     badge: "RECOMMENDED",
     limit: "50 deals / day",
@@ -74,7 +74,7 @@ const PLANS: Plan[] = [
     yearly: 82,
     yearlyTotal: 990,
     priceKeyMonthly: "pro_monthly",
-    priceKeyYearly: "pro_yearly",
+    priceKeyYearly: "pro_annual",
     highlight: false,
     limit: "Unlimited + API",
     features: [
