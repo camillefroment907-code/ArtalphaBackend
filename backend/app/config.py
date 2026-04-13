@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     stripe_price_pro_monthly: str = ""
     stripe_price_pro_annual: str = ""
 
+    # Google OAuth
+    google_client_id: str = ""
+    google_client_secret: str = ""
+
     # n8n integration
     n8n_api_key: Optional[str] = None
 

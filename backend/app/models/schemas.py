@@ -55,6 +55,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user_id: str
     email: str
+    is_new_user: bool = False
 
 
 class UserOut(BaseModel):

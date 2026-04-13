@@ -1,4 +1,5 @@
 import asyncio
+import secrets
 from datetime import timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -147,10 +148,89 @@ async def logout():
     return {"message": "Logged out"}
 
 
+class GoogleAuthRequest(BaseModel):
+    credential: str
+
+
+@router.post("/google", response_model=TokenResponse)
+@limiter.limit("20/minute")
+async def google_auth(request: Request, body: GoogleAuthRequest, db: AsyncSession = Depends(get_db)):
+    """Verify a Google ID token (from Google Identity Services) and return a Nautilus JWT."""
+    if not settings.google_client_id:
+        raise HTTPException(501, "Google OAuth is not configured on this server")
+
+    try:
+        from google.oauth2 import id_token
+        from google.auth.transport import requests as google_requests
+        id_info = id_token.verify_oauth2_token(
+            body.credential,
+            google_requests.Request(),
+            settings.google_client_id,
+        )
+    except Exception:
+        raise HTTPException(400, "Invalid or expired Google token")
+
+    email = id_info.get("email")
+    name = id_info.get("name")
+    if not email:
+        raise HTTPException(400, "Google account has no email address")
+
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    is_new = user is None
+
+    if is_new:
+        try:
+            user = User(
+                email=email,
+                hashed_password=hash_password(secrets.token_urlsafe(32)),
+                full_name=name,
+                is_active=True,
+                is_verified=True,  # Google verifies email addresses
+            )
+            db.add(user)
+            await db.flush()
+
+            prefs = UserPreference(
+                user_id=user.id,
+                favorite_artists=[],
+                categories=[],
+                min_deal_score=75,
+                alert_channel=AlertChannel.EMAIL,
+                alert_email=email,
+                auction_houses=[],
+                is_alerts_enabled=True,
+                language="fr",
+            )
+            db.add(prefs)
+            await db.commit()
+            await db.refresh(user)
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(500, f"Account creation failed: {type(e).__name__}: {e}")
+
+        try:
+            asyncio.create_task(send_welcome_email(
+                to_email=user.email,
+                name=user.full_name or user.email,
+                plan="free",
+                lang="fr",
+            ))
+        except Exception:
+            pass
+
+    token = create_access_token({"sub": str(user.id), "email": user.email})
+    return TokenResponse(
+        access_token=token,
+        user_id=str(user.id),
+        email=user.email,
+        is_new_user=is_new,
+    )
+
+
 @router.get("/oauth/google")
 async def oauth_google_redirect():
-    """Google OAuth — not configured. Redirect to login with error."""
-    from fastapi.responses import RedirectResponse
+    """Legacy GET endpoint — redirect to login."""
     return RedirectResponse(url="/auth/login?error=google_not_configured", status_code=302)
 
 
