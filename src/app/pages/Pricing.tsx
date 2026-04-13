@@ -262,7 +262,7 @@ export default function Pricing() {
       {/* Plan cards — 4-column grid */}
       <div style={{
         display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px',
-        alignItems: 'start',
+        alignItems: 'stretch',
         maxWidth: '1100px', margin: '0 auto', padding: '0 24px 64px',
       }}>
         {PLANS.map(plan => {
@@ -283,6 +283,7 @@ export default function Pricing() {
                 borderRadius: '12px',
                 padding: '28px 24px',
                 display: 'flex', flexDirection: 'column',
+                height: '100%',
                 transition: 'box-shadow 0.2s',
               }}
             >
@@ -364,7 +365,7 @@ export default function Pricing() {
               <div style={{ height: '1px', background: isHighlight ? 'rgba(255,255,255,0.1)' : 'var(--border)', marginBottom: '16px' }} />
 
               {/* Features */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
                 {plan.features.map((feature, i) => (
                   <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                     <span style={{ color: isHighlight ? 'var(--gold)' : 'var(--electric)', fontSize: '10px', marginTop: '3px', flexShrink: 0 }}>✓</span>
