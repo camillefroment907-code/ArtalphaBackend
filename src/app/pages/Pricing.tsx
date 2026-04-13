@@ -152,33 +152,55 @@ export default function Pricing() {
   }, []);
 
   const handleSelect = async (plan: Plan) => {
-    if (!plan.monthlyPriceKey) return;
-    setError(null);
-    setLoading(plan.key);
-    try {
-      const token = getToken();
-      if (!token) { navigate('/app/signup'); return; }
+    if (!plan.monthlyPriceKey) {
+      navigate('/app/dashboard');
+      return;
+    }
 
-      const priceKey = isAnnual ? plan.annualPriceKey! : plan.monthlyPriceKey;
-      const resp = await fetch(`${BACKEND}/api/billing/create-checkout-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ price_key: priceKey }),
-      });
-      const data = await resp.json();
-      if (!resp.ok) {
-        const detail = data.detail;
-        const errMsg = typeof detail === 'string' ? detail
-          : typeof data.error === 'string' ? data.error
-          : 'Checkout failed';
-        throw new Error(errMsg);
+    const token = getToken();
+    if (!token) {
+      navigate('/app/signup');
+      return;
+    }
+
+    setLoading(plan.key);
+    setError(null);
+
+    try {
+      const priceKey = isAnnual ? plan.annualPriceKey : plan.monthlyPriceKey;
+
+      const resp = await fetch(
+        'https://artalpha-backend-production.up.railway.app/api/billing/create-checkout-session',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ price_key: priceKey }),
+        }
+      );
+
+      const text = await resp.text();
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error('Invalid server response');
       }
-      const url = data.checkout_url || data.url;
-      if (url) window.location.href = url;
-      else throw new Error('No checkout URL returned');
+
+      if (!resp.ok) {
+        const msg = data?.detail || data?.error || data?.message || `Server error ${resp.status}`;
+        throw new Error(typeof msg === 'string' ? msg : 'Checkout failed');
+      }
+
+      const url = data?.checkout_url || data?.url;
+      if (!url) {
+        throw new Error('No checkout URL received');
+      }
+
+      window.location.href = url;
+
     } catch (e: any) {
       setError(e?.message || 'Could not start checkout. Please try again.');
     } finally {
