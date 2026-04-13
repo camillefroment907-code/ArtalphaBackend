@@ -135,7 +135,7 @@ const FAQ_ITEMS = [
 
 export default function Pricing() {
   const navigate = useNavigate();
-  const [isAnnual, setIsAnnual] = useState(false);
+  const [isAnnual, setIsAnnual] = useState(true);
   const [currentPlan, setCurrentPlan] = useState('free');
   const [loading, setLoading] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -298,43 +298,49 @@ export default function Pricing() {
                 </div>
               )}
 
-              {/* Plan name */}
-              <div style={{ fontSize: '11px', fontWeight: 700, color: plan.highlight ? 'rgba(255,255,255,0.5)' : 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '6px' }}>
-                {plan.name}
-              </div>
-
-              {/* Price */}
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '13px', color: plan.highlight ? 'rgba(255,255,255,0.6)' : 'var(--text-2)' }}>€</span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '42px', fontWeight: 700, color: plan.highlight ? 'white' : 'var(--text)', lineHeight: 1 }}>
-                  {price}
-                </span>
-                {price > 0 && (
-                  <span style={{ fontSize: '12px', color: plan.highlight ? 'rgba(255,255,255,0.5)' : 'var(--text-3)' }}>/mo</span>
-                )}
-              </div>
-
-              {/* Annual savings */}
-              {isAnnual && price > 0 && (
-                <div style={{ fontSize: '11px', fontWeight: 600, color: plan.highlight ? 'var(--gold)' : 'var(--electric)', marginBottom: '4px' }}>
-                  €{plan.annualPrice * 12}/year · save €{(plan.price - plan.annualPrice) * 12}/year
+              {/* Top section — fixed height so CTAs align */}
+              <div style={{ minHeight: '180px', display: 'flex', flexDirection: 'column' }}>
+                {/* Plan name */}
+                <div style={{ fontSize: '11px', fontWeight: 700, color: plan.highlight ? 'rgba(255,255,255,0.5)' : 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  {plan.name}
                 </div>
-              )}
 
-              {/* Description */}
-              <p style={{ fontSize: '12px', lineHeight: 1.6, margin: '0 0 20px', color: plan.highlight ? 'rgba(255,255,255,0.55)' : 'var(--text-3)' }}>
-                {plan.description}
-              </p>
+                {/* Price */}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '13px', color: plan.highlight ? 'rgba(255,255,255,0.6)' : 'var(--text-2)' }}>€</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '42px', fontWeight: 700, color: plan.highlight ? 'white' : 'var(--text)', lineHeight: 1 }}>
+                    {price}
+                  </span>
+                  {price > 0 && (
+                    <span style={{ fontSize: '12px', color: plan.highlight ? 'rgba(255,255,255,0.5)' : 'var(--text-3)' }}>/mo</span>
+                  )}
+                </div>
 
-              {/* CTA */}
+                {/* Annual savings */}
+                {isAnnual && price > 0 && (
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: plan.highlight ? 'var(--gold)' : 'var(--electric)', marginBottom: '4px' }}>
+                    €{plan.annualPrice * 12}/year · save €{(plan.price - plan.annualPrice) * 12}/year
+                  </div>
+                )}
+
+                {/* Description */}
+                <p style={{ fontSize: '12px', lineHeight: 1.6, margin: '0 0 0', color: plan.highlight ? 'rgba(255,255,255,0.55)' : 'var(--text-3)' }}>
+                  {plan.description}
+                </p>
+
+                {/* Spacer pushes CTA to consistent vertical position */}
+                <div style={{ flex: 1 }} />
+              </div>
+
+              {/* CTA — always at same vertical position */}
               {isCurrentPlan ? (
-                <div style={{ width: '100%', padding: '11px', borderRadius: '6px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', color: 'var(--electric)', fontSize: '12px', fontWeight: 700, textAlign: 'center', marginBottom: '20px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                <div style={{ width: '100%', padding: '11px', borderRadius: '6px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', color: 'var(--electric)', fontSize: '12px', fontWeight: 700, textAlign: 'center', marginTop: '20px', marginBottom: '20px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                   ✓ Current plan
                 </div>
               ) : plan.key === 'free' ? (
                 <button
                   onClick={() => navigate('/app/dashboard')}
-                  style={{ width: '100%', padding: '11px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', marginBottom: '20px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}
+                  style={{ width: '100%', padding: '11px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', marginTop: '20px', marginBottom: '20px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}
                 >
                   {plan.cta}
                 </button>
@@ -348,7 +354,7 @@ export default function Pricing() {
                     color: plan.highlight ? 'var(--navy)' : 'white',
                     border: 'none', fontSize: '12px', fontWeight: 700,
                     cursor: loading === plan.key ? 'not-allowed' : 'pointer',
-                    marginBottom: '20px', letterSpacing: '0.06em', textTransform: 'uppercase' as const,
+                    marginTop: '20px', marginBottom: '20px', letterSpacing: '0.06em', textTransform: 'uppercase' as const,
                     opacity: loading === plan.key ? 0.7 : 1,
                   }}
                 >
