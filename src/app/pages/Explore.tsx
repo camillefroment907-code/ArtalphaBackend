@@ -282,6 +282,7 @@ export default function Explore() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const exploreTab = (searchParams.get('tab') || 'best') as ExploreTab;
+  const searchFromUrl = searchParams.get('search') || '';
 
   // Opportunities state
   const [lots, setLots]             = useState<MappedLot[]>([]);
@@ -297,6 +298,13 @@ export default function Explore() {
   const [filters, setFilters]       = useState<Filters>(DEFAULT_FILTERS);
   const [innerTab, setInnerTab]     = useState<"alpha" | "live">("alpha");
   const [sourceStats, setSourceStats] = useState<SourceStat[]>([]);
+
+  // Initialize search from URL param (e.g. when navigating from header search bar)
+  useEffect(() => {
+    if (searchFromUrl) {
+      setFilters(prev => ({ ...prev, searchQuery: searchFromUrl }));
+    }
+  }, [searchFromUrl]);
 
   const user     = getUser();
   const isAdmin  = user?.email === "camillefroment907@gmail.com";

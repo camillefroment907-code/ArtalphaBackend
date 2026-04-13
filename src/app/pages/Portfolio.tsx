@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { getUser, getPlanLimits, getToken, logout, PLAN_LIMITS } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
@@ -259,6 +260,8 @@ function FeatureRow({ label, value, active }: { label: string; value: string; ac
 // ── Main ─────────────────────────────────────────────────────
 export default function Portfolio() {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
   const user = getUser();
   const plan = user?.email === 'camillefroment907@gmail.com' ? 'elite' : (user?.plan ?? 'free');
   const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
@@ -1230,6 +1233,37 @@ export default function Portfolio() {
                 )}
               </div>
             </form>
+
+            <div style={{ height: '1px', background: 'var(--border)', margin: '36px 0' }} />
+
+            {/* Language */}
+            <div style={{ marginBottom: '32px' }}>
+              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, color: 'var(--text)', margin: '0 0 20px' }}>
+                Language
+              </h3>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                {(['en', 'fr'] as const).map(lang => (
+                  <button
+                    key={lang}
+                    onClick={() => { i18n.changeLanguage(lang); localStorage.setItem('i18nextLng', lang); }}
+                    style={{
+                      padding: '8px 20px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      border: '1px solid',
+                      borderColor: currentLang === lang ? 'var(--electric)' : 'var(--border)',
+                      borderRadius: '6px',
+                      background: currentLang === lang ? 'var(--electric-subtle)' : 'transparent',
+                      color: currentLang === lang ? 'var(--electric)' : 'var(--text-2)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {lang === 'en' ? 'English' : 'Français'}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div style={{ height: '1px', background: 'var(--border)', margin: '36px 0' }} />
 

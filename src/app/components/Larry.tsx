@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getPlanLimits, getToken } from '../../lib/auth';
 
 interface Message {
@@ -21,14 +22,6 @@ interface LarryProps {
 
 const API = 'https://artalpha-backend-production.up.railway.app';
 
-const ALL_SUGGESTIONS = [
-  "What are your best opportunities right now?",
-  "How do I start investing in art with €10,000?",
-  "Which emerging artists should I watch in 2025?",
-  "How do I read a Nautilus deal score?",
-  "Drouot vs Christie's — where should I buy?",
-  "How do I add an artwork to my portfolio?",
-];
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -50,8 +43,10 @@ const cleanLarry = (text: string) =>
     .trim();
 
 export function Larry({ lotId }: LarryProps) {
+  const { t } = useTranslation();
   const limits = getPlanLimits();
   const isLocked = !limits.hasAIVerdict;
+  const ALL_SUGGESTIONS = t('larry.suggestions', { returnObjects: true }) as string[];
 
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -358,15 +353,15 @@ export function Larry({ lotId }: LarryProps) {
           }}>
             <div>
               <div style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', fontWeight: 700 }}>
-                Larry
+                {t('larry.title')}
               </div>
               <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '2px' }}>
-                Nautilus private advisor
+                {t('larry.subtitle')}
               </div>
             </div>
             {usage && usage.limit < 9999 && (
               <div style={{ fontSize: '11px', opacity: 0.8, textAlign: 'right' }}>
-                {usage.used}/{usage.limit} messages
+                {t('larry.usage', { used: usage.used, limit: usage.limit })}
               </div>
             )}
           </div>
@@ -398,10 +393,10 @@ export function Larry({ lotId }: LarryProps) {
               }}>L</div>
               <div>
                 <p style={{ fontWeight: 600, color: 'var(--navy)', margin: 0, fontSize: '15px' }}>
-                  Meet Larry
+                  {t('larry.lockedTitle')}
                 </p>
                 <p style={{ color: 'var(--text-2)', fontSize: '13px', margin: '8px 0 0' }}>
-                  Your private art investment advisor. Available from the Investor plan.
+                  {t('larry.lockedSub')}
                 </p>
               </div>
               <a
@@ -418,7 +413,7 @@ export function Larry({ lotId }: LarryProps) {
                   marginTop: '8px',
                 }}
               >
-                Upgrade to Investor — €29/month
+                {t('larry.lockedCta')}
               </a>
             </div>
           ) : (
@@ -440,7 +435,7 @@ export function Larry({ lotId }: LarryProps) {
                       textAlign: 'center',
                       margin: '0 0 16px',
                     }}>
-                      Hello. I'm Larry, your art advisor.<br />How can I help you today?
+                      {t('larry.welcome')}
                     </p>
 
                     {/* Proactive notification cards */}
@@ -591,7 +586,7 @@ export function Larry({ lotId }: LarryProps) {
                   color: 'var(--text-2)',
                   fontSize: '12px',
                 }}>
-                  Monthly limit reached. Renews on the 1st of each month.
+                  {t('larry.monthlyLimit')}
                 </div>
               ) : (
                 <div style={{
@@ -606,7 +601,7 @@ export function Larry({ lotId }: LarryProps) {
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Ask Larry anything…"
+                    placeholder={t('larry.placeholder')}
                     rows={1}
                     disabled={streaming}
                     style={{

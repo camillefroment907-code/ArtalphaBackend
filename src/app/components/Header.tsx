@@ -1,22 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { Logo } from './Logo';
 import { getUser, logout, getUserPlan, getToken } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',    to: '/app/dashboard', dropdown: null },
-  { label: 'Explorer',     to: '/app/explore',   dropdown: 'explorer' },
-  { label: 'Intelligence', to: '/app/agent',      dropdown: null },
-  { label: 'Portfolio',    to: '/app/portfolio',  dropdown: null },
+  { tKey: 'nav.dashboard',    to: '/app/dashboard', dropdown: null },
+  { tKey: 'nav.explorer',     to: '/app/explore',   dropdown: 'explorer' },
+  { tKey: 'nav.intelligence', to: '/app/agent',      dropdown: null },
+  { tKey: 'nav.portfolio',    to: '/app/portfolio',  dropdown: null },
 ];
 
 const EXPLORER_ITEMS = [
-  { icon: '◆', label: 'Best Lots',    sub: 'AI-detected opportunities',    to: '/app/explore?tab=best' },
-  { icon: '◉', label: 'All Auctions', sub: 'Global auction feed',          to: '/app/explore?tab=auctions' },
-  { icon: '◐', label: 'Primary',      sub: 'Galleries & emerging artists', to: '/app/explore?tab=primary' },
-  { icon: '★', label: 'Convictions',  sub: 'Highest confidence picks',     to: '/app/explore?tab=convictions' },
+  { icon: '◆', labelKey: 'explorer.bestLots',    subKey: 'explorer.bestLotsSub',    to: '/app/explore?tab=best' },
+  { icon: '◉', labelKey: 'explorer.allAuctions', subKey: 'explorer.allAuctionsSub', to: '/app/explore?tab=auctions' },
+  { icon: '◐', labelKey: 'explorer.primary',     subKey: 'explorer.primarySub',     to: '/app/explore?tab=primary' },
+  { icon: '★', labelKey: 'explorer.convictions', subKey: 'explorer.convictionsSub', to: '/app/explore?tab=convictions' },
 ];
 
 const PLAN_LABELS: Record<string, string> = {
@@ -30,6 +31,14 @@ export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const user = getUser();
+  const { t, i18n } = useTranslation();
+
+  const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
+  const toggleLang = () => {
+    const newLang = currentLang === 'fr' ? 'en' : 'fr';
+    i18n.changeLanguage(newLang);
+    localStorage.setItem('i18nextLng', newLang);
+  };
 
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
@@ -37,6 +46,13 @@ export function Header() {
   const [searchValue, setSearchValue] = useState('');
   const [agentUnread, setAgentUnread] = useState(0);
   const [scanState, setScanState] = useState<'idle' | 'loading' | 'done'>('idle');
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchValue.trim()) {
+      navigate(`/app/explore?tab=best&search=${encodeURIComponent(searchValue.trim())}`);
+      setSearchValue('');
+    }
+  };
 
   const avatarRef = useRef<HTMLDivElement>(null);
 
@@ -142,7 +158,7 @@ export function Header() {
                         lineHeight: '42px',
                       }}
                     >
-                      {item.label}
+                      {t(item.tKey)}
                       <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{
                         transition: 'transform 0.15s',
                         transform: explorerOpen ? 'rotate(180deg)' : 'none',
@@ -184,10 +200,10 @@ export function Header() {
                           </span>
                           <div>
                             <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', lineHeight: 1.3 }}>
-                              {sub.label}
+                              {t(sub.labelKey)}
                             </div>
                             <div style={{ fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.3 }}>
-                              {sub.sub}
+                              {t(sub.subKey)}
                             </div>
                           </div>
                         </Link>
@@ -226,7 +242,7 @@ export function Header() {
                     }
                   }}
                 >
-                  {item.label}
+                  {t(item.tKey)}
                   {isIntelligence && agentUnread > 0 && (
                     <span style={{
                       width: '6px', height: '6px', borderRadius: '50%',
@@ -249,17 +265,41 @@ export function Header() {
               boxShadow: '0 0 0 2px rgba(16,185,129,0.25)',
             }} />
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', letterSpacing: '0.06em' }}>
-              LIVE
+              {t('nav.live').toUpperCase()}
             </span>
           </div>
+
+          {/* Language toggle */}
+          <button
+            onClick={toggleLang}
+            style={{
+              padding: '3px 8px',
+              background: 'transparent',
+              border: '1px solid var(--border)',
+              borderRadius: '4px',
+              fontSize: '10px',
+              fontWeight: 700,
+              color: 'var(--text-2)',
+              cursor: 'pointer',
+              fontFamily: 'var(--font-mono)',
+              letterSpacing: '0.08em',
+              transition: 'all 0.15s',
+              flexShrink: 0,
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--electric)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--electric)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-2)'; }}
+          >
+            {currentLang === 'fr' ? 'EN' : 'FR'}
+          </button>
 
           {/* Search */}
           <div style={{ position: 'relative', flexShrink: 0 }}>
             <input
               type="text"
-              placeholder="Search…"
+              placeholder={t('nav.search')}
               value={searchValue}
               onChange={e => setSearchValue(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
               style={{
@@ -358,7 +398,7 @@ export function Header() {
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-subtle)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                   >
-                    <span style={{ opacity: 0.5 }}>◇</span> Mon compte
+                    <span style={{ opacity: 0.5 }}>◇</span> {t('nav.myAccount')}
                   </button>
                   <button
                     onClick={() => { navigate('/app/pricing'); setAvatarOpen(false); }}
