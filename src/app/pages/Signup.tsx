@@ -78,6 +78,7 @@ export default function Signup() {
         plan: (res.plan ?? 'free') as any,
         token: res.access_token,
       });
+      localStorage.setItem('nautilus_show_tour', '1');
       navigate('/app/onboarding');
     } catch (err: any) {
       setError(err.message || 'Registration failed');

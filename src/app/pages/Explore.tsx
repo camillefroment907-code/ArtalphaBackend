@@ -309,8 +309,12 @@ export default function Explore() {
 
   const [showTour, setShowTour] = useState(false);
   useEffect(() => {
+    const pending = localStorage.getItem('nautilus_show_tour');
     const seen = localStorage.getItem('nautilus_tour_seen');
-    if (!seen) { setTimeout(() => setShowTour(true), 1000); }
+    if (pending || !seen) {
+      localStorage.removeItem('nautilus_show_tour');
+      setTimeout(() => setShowTour(true), 1000);
+    }
   }, []);
 
   const user     = getUser();
