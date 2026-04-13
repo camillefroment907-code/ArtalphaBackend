@@ -309,11 +309,11 @@ export default function Explore() {
 
   const [showTour, setShowTour] = useState(false);
   useEffect(() => {
-    const pending = localStorage.getItem('nautilus_show_tour');
-    const seen = localStorage.getItem('nautilus_tour_seen');
-    if (pending || !seen) {
+    const shouldShow = localStorage.getItem('nautilus_show_tour') === '1';
+    const alreadySeen = localStorage.getItem('nautilus_tour_seen') === 'true';
+    if (shouldShow || !alreadySeen) {
       localStorage.removeItem('nautilus_show_tour');
-      setTimeout(() => setShowTour(true), 1000);
+      setShowTour(true);
     }
   }, []);
 
@@ -518,7 +518,7 @@ export default function Explore() {
         overflow: "hidden", background: "var(--bg)",
       }}
     >
-      {showTour && <WelcomeTour onClose={() => setShowTour(false)} />}
+      {showTour && <WelcomeTour onClose={() => { setShowTour(false); localStorage.setItem('nautilus_tour_seen', 'true'); }} />}
       {/* ── Page header ──────────────────────────────────────── */}
       <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)", background: "white", flexShrink: 0, display: "flex", alignItems: "baseline", gap: "12px" }}>
         <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "22px", fontWeight: 600, color: "var(--navy)", margin: 0 }}>Explorer</h1>

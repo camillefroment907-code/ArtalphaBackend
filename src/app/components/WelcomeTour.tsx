@@ -7,39 +7,39 @@ interface WelcomeTourProps {
 
 const TOUR_STEPS = [
   {
-    tag: 'AI Deal Scoring',
-    title: 'Every lot, scored in real time',
-    body: 'Our algorithm tracks 50+ auction houses and scores each lot against the artist\'s market — flagging below-market entries before anyone else sees them.',
-    metric: 'Score 0–100',
-    cta: 'Explore deals',
+    tag: 'WELCOME TO NAUTILUS',
+    title: 'The art market has a dirty secret.',
+    body: 'Every week, hundreds of artworks sell 20–50% below their real market value. Not because they\'re bad — because most buyers don\'t have the data. Until now.',
+    metric: '674 lots analyzed this week',
+    cta: undefined,
   },
   {
-    tag: 'Market Intelligence',
-    title: 'Know what every artist is really worth',
-    body: 'Nautilus aggregates auction results, primary sales, and gallery data to build a live price map for thousands of artists — updated after every sale.',
-    metric: '15 000+ artists',
-    cta: 'Browse artists',
+    tag: 'HOW YOU MAKE MONEY',
+    title: 'Buy undervalued. Sell at market price.',
+    body: 'Nautilus scores every lot from 0 to 100. A score above 65 means the work is priced below what comparable sales suggest. You buy the gap — and profit when the market corrects.',
+    metric: 'Avg. +31% upside on score 65+ lots',
+    cta: undefined,
   },
   {
-    tag: 'Auction Alerts',
-    title: 'Never miss a deal again',
-    body: 'Set your criteria once — budget, category, score threshold. Get alerts 48 hours before auction close, with enough time to place a bid.',
-    metric: '48h advance',
-    cta: 'Set my alerts',
+    tag: 'YOUR AI ANALYST',
+    title: 'You set the strategy. Larry does the work.',
+    body: 'Define your budget and preferences once. Larry — your private AI analyst — monitors every auction house 24/7 and alerts you the moment a matching opportunity appears.',
+    metric: 'Scanning every 15 minutes',
+    cta: undefined,
   },
   {
-    tag: 'Portfolio Tracking',
-    title: 'Track your collection\'s performance',
-    body: 'Add past acquisitions and see your portfolio\'s estimated value, gain/loss, and market position — updated in real time as comparable works sell.',
-    metric: 'Live P&L',
-    cta: 'My portfolio',
+    tag: 'THE EDGE',
+    title: 'You act before the market wakes up.',
+    body: 'Most buyers discover opportunities after the crowd. Nautilus surfaces them 2–4 weeks early. That window is where the money is made.',
+    metric: '24 days avg. lead time vs market',
+    cta: undefined,
   },
   {
-    tag: 'Larry, your AI analyst',
-    title: 'Ask anything about the art market',
-    body: 'Larry answers market questions, explains deal scores, and surfaces overlooked opportunities — in plain language, on demand.',
-    metric: 'GPT-4o',
-    cta: 'Start exploring',
+    tag: 'START NOW',
+    title: 'Your first opportunities are ready.',
+    body: 'Based on your profile, Nautilus has already identified matching lots. Explore them now — and upgrade when you\'re ready to unlock the full suite.',
+    metric: null,
+    cta: 'Show me the opportunities →',
   },
 ];
 
@@ -51,7 +51,8 @@ export function WelcomeTour({ onClose }: WelcomeTourProps) {
   const isLast = slide === TOUR_STEPS.length - 1;
 
   const handleClose = () => {
-    localStorage.setItem('nautilus_tour_seen', '1');
+    localStorage.setItem('nautilus_tour_seen', 'true');
+    localStorage.removeItem('nautilus_show_tour');
     onClose();
   };
 
@@ -140,20 +141,22 @@ export function WelcomeTour({ onClose }: WelcomeTourProps) {
             </div>
 
             {/* Metric pill */}
-            <div style={{
-              display: 'inline-block',
-              padding: '4px 14px',
-              background: 'rgba(198,168,90,0.15)',
-              border: '1px solid rgba(198,168,90,0.35)',
-              borderRadius: '20px',
-              fontSize: '11px',
-              fontWeight: 700,
-              letterSpacing: '0.1em',
-              color: 'var(--gold, #C6A85A)',
-              fontFamily: 'var(--font-mono, monospace)',
-            }}>
-              {current.metric}
-            </div>
+            {current.metric && (
+              <div style={{
+                display: 'inline-block',
+                padding: '4px 14px',
+                background: 'rgba(198,168,90,0.15)',
+                border: '1px solid rgba(198,168,90,0.35)',
+                borderRadius: '20px',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                color: 'var(--gold, #C6A85A)',
+                fontFamily: 'var(--font-mono, monospace)',
+              }}>
+                {current.metric}
+              </div>
+            )}
           </div>
         </div>
 
@@ -247,7 +250,7 @@ export function WelcomeTour({ onClose }: WelcomeTourProps) {
               onMouseEnter={e => (e.currentTarget.style.background = '#0f1e33')}
               onMouseLeave={e => (e.currentTarget.style.background = '#1A2A44')}
             >
-              {isLast ? current.cta + ' →' : 'Next →'}
+              {isLast ? (current.cta ?? 'Get started →') : 'Next →'}
             </button>
           </div>
 
