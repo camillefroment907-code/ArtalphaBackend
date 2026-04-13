@@ -189,7 +189,68 @@ PLANS = [
     },
 ]
 
-PLAN_LIMITS = {p["id"]: p["limits"] for p in PLANS}
+PLAN_LIMITS = {
+    "free": {
+        "lots_per_day": 3,
+        "primary_lots": 3,
+        "convictions": False,
+        "larry_messages": 3,
+        "agent_alerts": 0,
+        "investment_memo": False,
+        "investment_dossier": False,
+        "portfolio_items": 3,
+        "artist_profiles": True,
+        "deal_score": True,
+    },
+    "starter": {  # Collector
+        "lots_per_day": 10,
+        "primary_lots": 10,
+        "convictions": True,
+        "larry_messages": 10,
+        "agent_alerts": 1,
+        "investment_memo": False,
+        "investment_dossier": False,
+        "portfolio_items": 10,
+        "artist_profiles": True,
+        "deal_score": True,
+    },
+    "investor": {
+        "lots_per_day": 99999,
+        "primary_lots": 99999,
+        "convictions": True,
+        "larry_messages": 30,
+        "agent_alerts": 3,
+        "investment_memo": True,
+        "investment_dossier": False,
+        "portfolio_items": 99999,
+        "artist_profiles": True,
+        "deal_score": True,
+    },
+    "pro": {  # Family Office
+        "lots_per_day": 99999,
+        "primary_lots": 99999,
+        "convictions": True,
+        "larry_messages": 99999,
+        "agent_alerts": 99999,
+        "investment_memo": True,
+        "investment_dossier": True,
+        "portfolio_items": 99999,
+        "artist_profiles": True,
+        "deal_score": True,
+    },
+    "institutional": {
+        "lots_per_day": 99999,
+        "primary_lots": 99999,
+        "convictions": True,
+        "larry_messages": 99999,
+        "agent_alerts": 99999,
+        "investment_memo": True,
+        "investment_dossier": True,
+        "portfolio_items": 99999,
+        "artist_profiles": True,
+        "deal_score": True,
+    },
+}
 
 ADMIN_EMAILS = frozenset({
     "camillefroment907@gmail.com",
@@ -269,6 +330,19 @@ def _plan_id(sub: Subscription) -> str:
     return _PLAN_VALUE_TO_ID.get(sub.plan.value, "free")
 
 
+async def _get_user_plan(user: User, db: AsyncSession) -> str:
+    """Return the lowercase plan ID for a user, checking admin override first."""
+    if user.email in ADMIN_EMAILS:
+        return "institutional"
+    result = await db.execute(
+        select(Subscription).where(Subscription.user_id == user.id)
+    )
+    sub = result.scalar_one_or_none()
+    if sub and sub.status.value.lower() in ("active", "trialing"):
+        return _PLAN_VALUE_TO_ID.get(sub.plan.value, "free")
+    return "free"
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.get("/plans")
@@ -314,6 +388,17 @@ async def get_subscription(
         "cancel_at_period_end": sub.cancel_at_period_end or False,
         "limits": PLAN_LIMITS.get(plan_id, PLAN_LIMITS["free"]),
     }
+
+
+@router.get("/limits")
+async def get_plan_limits(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return plan limits for the current user."""
+    plan = await _get_user_plan(current_user, db)
+    limits = PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])
+    return {"plan": plan, "limits": limits}
 
 
 @router.post("/create-checkout-session")

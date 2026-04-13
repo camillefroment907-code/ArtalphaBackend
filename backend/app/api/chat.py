@@ -26,12 +26,12 @@ _settings = get_settings()
 _ADMIN_EMAILS = {e.strip() for e in _settings.admin_emails.split(",")}
 
 CHAT_LIMITS: dict[str, int] = {
-    "free":          0,
-    "starter":       0,        # €9 — no Larry
-    "investor":      30,       # €29 — 30 messages/month
-    "pro":           200,      # €99 — 200 messages/month
-    "institutional": 9999,     # custom — unlimited
-    "expert":        9999,
+    "free":          3,        # 3 lifetime messages (trial)
+    "starter":       10,       # Collector €9 — 10/month
+    "investor":      30,       # €29 — 30/month
+    "pro":           99999,    # Family Office — unlimited
+    "institutional": 99999,    # unlimited
+    "expert":        99999,
 }
 
 LARRY_SYSTEM_PROMPT = """Tu es Larry, le meilleur conseiller en investissement art au monde, intégré à ArtAlpha.
@@ -370,8 +370,8 @@ async def get_history(
     db: AsyncSession = Depends(get_db),
 ):
     plan = await _get_user_plan(current_user, db)
-    if CHAT_LIMITS.get(plan, 0) == 0:
-        raise HTTPException(403, "Larry est disponible à partir du plan Investor.")
+    if CHAT_LIMITS.get(plan, 3) == 0:
+        raise HTTPException(403, "Larry is not available on your current plan.")
 
     result = await db.execute(
         select(ChatMessage)
@@ -398,16 +398,13 @@ async def send_message(
     db: AsyncSession = Depends(get_db),
 ):
     plan = await _get_user_plan(current_user, db)
-    limit = CHAT_LIMITS.get(plan, 0)
-
-    if limit == 0:
-        raise HTTPException(403, "Larry est disponible à partir du plan Investor (€29/mois).")
+    limit = CHAT_LIMITS.get(plan, 3)
 
     used = await _get_monthly_usage(current_user.id, db)
     if used >= limit:
         raise HTTPException(
             429,
-            f"Limite mensuelle atteinte ({limit} messages). Renouvellement le 1er du mois.",
+            f"Monthly limit reached ({limit} messages). Resets on the 1st of each month.",
         )
 
     if not body.message.strip():
