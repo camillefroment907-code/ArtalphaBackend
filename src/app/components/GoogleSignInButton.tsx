@@ -21,6 +21,8 @@ export function GoogleSignInButton({ onError }: Props) {
 
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
+        ux_mode: 'popup',
+        auto_select: false,
         callback: async (response: { credential: string }) => {
           try {
             const resp = await fetch(`${BACKEND}/api/auth/google`, {
