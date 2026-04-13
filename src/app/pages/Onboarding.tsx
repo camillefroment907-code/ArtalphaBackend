@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Logo } from '../components/Logo';
 import { useNavigate } from 'react-router';
 import { getToken } from '../../lib/auth';
 
@@ -124,12 +125,12 @@ export default function Onboarding() {
         {step === 0 && (
           <div style={{ textAlign: 'center' }}>
             <div style={{
-              width: '56px', height: '56px', borderRadius: '50%',
+              width: '72px', height: '72px', borderRadius: '50%',
               background: 'var(--navy, #1A2A44)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 32px',
+              margin: '0 auto 28px',
             }}>
-              <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '22px', color: 'var(--gold, #C6A85A)' }}>◈</span>
+              <Logo variant="symbol" color="white" size={36} />
             </div>
             <h1 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '34px', fontWeight: 600, color: '#1A2A44', margin: '0 0 16px', lineHeight: 1.2 }}>
               Welcome to Nautilus
@@ -297,12 +298,12 @@ export default function Onboarding() {
         {step === 5 && (
           <div style={{ textAlign: 'center' }}>
             <div style={{
-              width: '64px', height: '64px', borderRadius: '50%',
+              width: '72px', height: '72px', borderRadius: '50%',
               background: 'var(--navy, #1A2A44)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 28px',
             }}>
-              <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '26px', color: 'var(--gold, #C6A85A)' }}>◈</span>
+              <Logo variant="symbol" color="white" size={36} />
             </div>
             <h1 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '30px', fontWeight: 600, color: '#1A2A44', margin: '0 0 12px', lineHeight: 1.2 }}>
               Your profile is ready.
