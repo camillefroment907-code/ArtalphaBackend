@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -120,6 +120,12 @@ async def oauth_google_redirect():
 class UpdateProfileRequest(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
+    country: Optional[str] = None
+    address: Optional[str] = None
+    collector_type: Optional[str] = None
+    investment_budget: Optional[str] = None
+    investment_horizon: Optional[str] = None
+    preferred_categories: Optional[List[str]] = None
 
 
 @router.patch("/profile")
@@ -128,9 +134,25 @@ async def update_profile(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if body.full_name is not None:
-        current_user.full_name = body.full_name
-    if body.phone is not None:
-        current_user.phone = body.phone
+    # User-level fields
+    for field in ("full_name", "phone", "country", "address"):
+        value = getattr(body, field, None)
+        if value is not None and hasattr(current_user, field):
+            setattr(current_user, field, value)
+
+    # Preference fields
+    pref_result = await db.execute(select(UserPreference).where(UserPreference.user_id == current_user.id))
+    pref = pref_result.scalar_one_or_none()
+    if pref is None:
+        pref = UserPreference(user_id=current_user.id)
+        db.add(pref)
+
+    if body.collector_type is not None:
+        pref.collector_type = body.collector_type
+    if body.investment_horizon is not None:
+        pref.investment_horizon = body.investment_horizon
+    if body.preferred_categories is not None:
+        pref.categories = body.preferred_categories
+
     await db.commit()
     return {"message": "Profile updated", "email": current_user.email}
