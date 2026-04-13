@@ -231,25 +231,23 @@ PRICE_MAP = {
     "investor_annual":   settings.stripe_investor_annual_price_id,
     "pro_monthly":       settings.stripe_pro_monthly_price_id,
     "pro_annual":        settings.stripe_pro_annual_price_id,
-    # Legacy key aliases (old env var names)
-    "starter_monthly":  settings.stripe_price_starter_monthly or settings.stripe_collector_monthly_price_id,
-    "starter_yearly":   settings.stripe_price_starter_yearly  or settings.stripe_collector_annual_price_id,
-    "investor_yearly":  settings.stripe_price_investor_yearly or settings.stripe_investor_annual_price_id,
-    "pro_yearly":       settings.stripe_price_pro_yearly      or settings.stripe_pro_annual_price_id,
+    # Legacy aliases
+    "starter_monthly":   settings.stripe_collector_monthly_price_id,
+    "starter_annual":    settings.stripe_collector_annual_price_id,
+    "starter_yearly":    settings.stripe_collector_annual_price_id,
+    "investor_yearly":   settings.stripe_investor_annual_price_id,
+    "pro_yearly":        settings.stripe_pro_annual_price_id,
 }
 
 
 def _price_id(price_key: str) -> str:
-    pid = PRICE_MAP.get(price_key)
-    if not pid:
+    price = PRICE_MAP.get(price_key)
+    if not price:
         raise HTTPException(
             400,
-            detail={
-                "error": "price_not_configured",
-                "message": f"Price ID not set for '{price_key}'. Add the corresponding STRIPE_*_PRICE_ID env var.",
-            },
+            f"Price not configured for '{price_key}'. Please contact support."
         )
-    return pid
+    return price
 
 
 def _plan_from_price_id(price_id: str) -> SubscriptionPlan:
