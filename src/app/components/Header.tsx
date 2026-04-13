@@ -121,7 +121,7 @@ export function Header() {
     }}>
 
       {/* Logo */}
-      <Link to={user ? '/app/dashboard' : '/'} style={{ textDecoration: 'none', flexShrink: 0 }}>
+      <Link to={getToken() ? '/app/explore' : '/'} style={{ textDecoration: 'none', flexShrink: 0 }}>
         <Logo variant="horizontal" color="dark" size={26} />
       </Link>
 

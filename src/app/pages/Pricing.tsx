@@ -158,6 +158,8 @@ export default function Pricing() {
     }
 
     const token = getToken();
+    console.log('TOKEN:', token ? token.substring(0, 20) + '...' : 'MISSING');
+
     if (!token) {
       navigate('/app/signup');
       return;
@@ -166,9 +168,10 @@ export default function Pricing() {
     setLoading(plan.key);
     setError(null);
 
-    try {
-      const priceKey = isAnnual ? plan.annualPriceKey : plan.monthlyPriceKey;
+    const priceKey = isAnnual ? plan.annualPriceKey : plan.monthlyPriceKey;
+    console.log('PRICE KEY:', priceKey);
 
+    try {
       const resp = await fetch(
         'https://artalpha-backend-production.up.railway.app/api/billing/create-checkout-session',
         {
@@ -181,27 +184,29 @@ export default function Pricing() {
         }
       );
 
+      console.log('RESPONSE STATUS:', resp.status);
       const text = await resp.text();
+      console.log('RESPONSE BODY:', text);
+
       let data: any;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        throw new Error('Invalid server response');
-      }
+      try { data = JSON.parse(text); } catch { throw new Error('Invalid server response: ' + text); }
 
       if (!resp.ok) {
-        const msg = data?.detail || data?.error || data?.message || `Server error ${resp.status}`;
-        throw new Error(typeof msg === 'string' ? msg : 'Checkout failed');
+        const msg = typeof data?.detail === 'string' ? data.detail
+          : typeof data?.error === 'string' ? data.error
+          : `Server error ${resp.status}`;
+        throw new Error(msg);
       }
 
       const url = data?.checkout_url || data?.url;
-      if (!url) {
-        throw new Error('No checkout URL received');
-      }
+      console.log('CHECKOUT URL:', url);
+
+      if (!url) throw new Error('No checkout URL in response: ' + JSON.stringify(data));
 
       window.location.href = url;
 
     } catch (e: any) {
+      console.error('CHECKOUT ERROR:', e);
       setError(e?.message || 'Could not start checkout. Please try again.');
     } finally {
       setLoading('');
@@ -223,7 +228,9 @@ export default function Pricing() {
         borderBottom: '1px solid var(--border)',
         padding: '12px 32px', display: 'flex', alignItems: 'center', gap: '16px',
       }}>
-        <Logo variant="horizontal" color="dark" size={20} />
+        <div onClick={() => navigate(getToken() ? '/app/explore' : '/')} style={{ cursor: 'pointer' }}>
+          <Logo variant="horizontal" color="dark" size={20} />
+        </div>
         <div style={{ width: '1px', height: '20px', background: 'var(--border)', margin: '0 4px' }} />
         <button
           onClick={() => navigate(-1)}
