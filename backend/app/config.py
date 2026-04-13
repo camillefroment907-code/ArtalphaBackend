@@ -48,28 +48,14 @@ class Settings(BaseSettings):
     stripe_secret_key: Optional[str] = None
     stripe_publishable_key: Optional[str] = None
     stripe_webhook_secret: Optional[str] = None
-    # Legacy (kept for migration)
-    stripe_price_pro: Optional[str] = None
-    stripe_price_expert: Optional[str] = None
-    # Price IDs — match Railway var names exactly (STRIPE_PRICE_COLLECTOR_MONTHLY etc.)
+    # Price IDs — field names must match Railway var names lowercased
+    # STRIPE_PRICE_COLLECTOR_MONTHLY → stripe_price_collector_monthly
     stripe_price_collector_monthly: str = ""
     stripe_price_collector_annual: str = ""
     stripe_price_investor_monthly: str = ""
     stripe_price_investor_annual: str = ""
     stripe_price_pro_monthly: str = ""
     stripe_price_pro_annual: str = ""
-    # Price IDs (legacy naming — kept for backward compatibility)
-    stripe_price_starter_monthly: Optional[str] = None
-    stripe_price_starter_yearly: Optional[str] = None
-    stripe_price_investor_monthly: Optional[str] = None
-    stripe_price_investor_yearly: Optional[str] = None
-    stripe_price_pro_monthly: Optional[str] = None
-    stripe_price_pro_yearly: Optional[str] = None
-    stripe_price_elite_monthly: Optional[str] = None
-    stripe_price_elite_yearly: Optional[str] = None
-    # Legacy
-    stripe_price_expert_monthly: Optional[str] = None
-    stripe_price_expert_yearly: Optional[str] = None
 
     # n8n integration
     n8n_api_key: Optional[str] = None
