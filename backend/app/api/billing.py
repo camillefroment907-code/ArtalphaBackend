@@ -271,6 +271,14 @@ _PLAN_VALUE_TO_ID = {
     "EXPERT": "institutional",   # legacy → maps to institutional
 }
 
+PLAN_HIERARCHY = {
+    "free": 0,
+    "starter": 1,      # Collector
+    "investor": 2,
+    "pro": 3,          # Family Office
+    "institutional": 4,
+}
+
 
 def _get_stripe():
     if not settings.stripe_secret_key:
@@ -342,6 +350,23 @@ async def _get_user_plan(user: User, db: AsyncSession) -> str:
     if sub and sub.status.value.lower() in ("active", "trialing"):
         return _PLAN_VALUE_TO_ID.get(sub.plan.value, "free")
     return "free"
+
+
+async def _can_change_plan(current_plan: str, new_plan: str, is_annual: bool) -> tuple[bool, str]:
+    """
+    Upgrade always allowed.
+    Downgrade blocked if on annual plan.
+    """
+    current_level = PLAN_HIERARCHY.get(current_plan, 0)
+    new_level = PLAN_HIERARCHY.get(new_plan, 0)
+
+    if new_level > current_level:
+        return True, "ok"  # Upgrade always allowed
+
+    if new_level < current_level and is_annual:
+        return False, "You cannot downgrade during an annual subscription. Your current plan will remain active until the end of your billing period."
+
+    return True, "ok"
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -424,24 +449,23 @@ async def create_checkout_session(
     sub = result.scalar_one_or_none()
 
     # ── SERVER-SIDE PLAN ENFORCEMENT ──────────────────────────────
-    PLAN_ORDER = ["free", "starter", "investor", "pro", "institutional"]
     if sub and sub.plan.value.lower() != "free" and sub.status.value.lower() in ("active", "trialing"):
-        current_plan_id = sub.plan.value.lower()
+        current_plan_id = _plan_id(sub)
         target_plan = _plan_from_price_id(price_id)
-        target_plan_id = target_plan.value.lower()
-        current_idx = PLAN_ORDER.index(current_plan_id) if current_plan_id in PLAN_ORDER else 0
-        target_idx = PLAN_ORDER.index(target_plan_id) if target_plan_id in PLAN_ORDER else 0
+        target_plan_id = _PLAN_VALUE_TO_ID.get(target_plan.value, "free")
+        is_annual = sub.billing_interval == "yearly"
 
-        if sub.billing_interval == "yearly" and target_idx < current_idx:
+        can_change, reason = await _can_change_plan(current_plan_id, target_plan_id, is_annual)
+        if not can_change:
             raise HTTPException(403, detail={
                 "error": "yearly_commitment",
-                "message": "Annual plan cannot be downgraded before renewal date.",
+                "message": reason,
                 "renewal_date": sub.current_period_end.isoformat() if sub.current_period_end else None,
             })
 
         current_interval = "yearly" if sub.billing_interval == "yearly" else "monthly"
         target_interval = "yearly" if "year" in price_key else "monthly"
-        if target_idx == current_idx and target_interval == current_interval:
+        if PLAN_HIERARCHY.get(target_plan_id, 0) == PLAN_HIERARCHY.get(current_plan_id, 0) and target_interval == current_interval:
             raise HTTPException(400, detail={
                 "error": "same_plan",
                 "message": "You are already on this plan.",
