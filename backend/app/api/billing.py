@@ -17,6 +17,7 @@ from app.services.email_service import (
     send_trial_ending_email,
     send_payment_failed_email,
     send_subscription_canceled_email,
+    send_admin_notification,
 )
 
 from app.database import get_db
@@ -806,6 +807,15 @@ async def _handle_subscription_update(db: AsyncSession, stripe_sub: dict):
     price_id = items[0]["price"]["id"] if items else None
     plan = _plan_from_price_id(price_id) if price_id else SubscriptionPlan.FREE
 
+    # Fetch customer email upfront for notification
+    customer_email = None
+    try:
+        stripe.api_key = settings.stripe_secret_key
+        cust = stripe.Customer.retrieve(customer_id)
+        customer_email = cust.get("email")
+    except Exception:
+        pass
+
     interval = "monthly"
     if items:
         recurring = items[0].get("price", {}).get("recurring", {})
@@ -883,6 +893,27 @@ async def _handle_subscription_update(db: AsyncSession, stripe_sub: dict):
                 logger.info("New subscription created via webhook", user_id=user_id, plan=plan.value)
             logger.info("New subscription created via webhook", user_id=user_id, plan=plan.value)
 
+    # Notify admin of new/updated subscription
+    try:
+        status_val = stripe_sub.get("status", "")
+        if status_val in ("active", "trialing"):
+            asyncio.create_task(send_admin_notification(
+                subject=f"🎉 New Nautilus subscriber — {plan.value} plan",
+                html=f"""
+                <div style="font-family: Georgia, serif; padding: 32px; max-width: 480px;">
+                  <h2 style="color: #0A1628;">New subscriber on Nautilus</h2>
+                  <p><strong>Plan:</strong> {plan.value}</p>
+                  <p><strong>Status:</strong> {status_val}</p>
+                  <p><strong>Email:</strong> {customer_email or 'unknown'}</p>
+                  <p><strong>Date:</strong> {datetime.utcnow().strftime('%d/%m/%Y %H:%M')} UTC</p>
+                  <hr/>
+                  <p style="color: #8A95A3; font-size: 12px;">Nautilus Market Intelligence</p>
+                </div>
+                """,
+            ))
+    except Exception:
+        pass
+
 
 async def _handle_subscription_canceled(db: AsyncSession, stripe_sub: dict):
     customer_id = stripe_sub["customer"]
@@ -908,6 +939,21 @@ async def _handle_subscription_canceled(db: AsyncSession, stripe_sub: dict):
                 name=canceled_user.full_name or canceled_user.email,
                 end_date=end_date_str,
                 lang="fr",
+            ))
+            # Notify admin of cancellation
+            asyncio.create_task(send_admin_notification(
+                subject=f"❌ Nautilus cancellation — {sub.plan.value} plan",
+                html=f"""
+                <div style="font-family: Georgia, serif; padding: 32px; max-width: 480px;">
+                  <h2 style="color: #0A1628;">Subscription cancelled</h2>
+                  <p><strong>Plan:</strong> {sub.plan.value}</p>
+                  <p><strong>Email:</strong> {canceled_user.email}</p>
+                  <p><strong>Access until:</strong> {end_date_str or 'N/A'}</p>
+                  <p><strong>Date:</strong> {datetime.utcnow().strftime('%d/%m/%Y %H:%M')} UTC</p>
+                  <hr/>
+                  <p style="color: #8A95A3; font-size: 12px;">Nautilus Market Intelligence</p>
+                </div>
+                """,
             ))
 
 

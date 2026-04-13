@@ -106,6 +106,16 @@ async def _send(to_email: str, subject: str, html: str, from_email: str) -> bool
     return await asyncio.to_thread(_send_sync, to_email, subject, html, from_email)
 
 
+async def send_admin_notification(subject: str, html: str) -> bool:
+    """Send a plain notification email to the admin (camillefroment907@gmail.com)."""
+    return await _send(
+        to_email="camillefroment907@gmail.com",
+        subject=subject,
+        html=html,
+        from_email=settings.transac_from_email,
+    )
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # TRANSACTIONAL EMAILS — from: hello@artalpha.io
 # ══════════════════════════════════════════════════════════════════════════════
