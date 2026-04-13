@@ -420,7 +420,7 @@ async def create_checkout_session(
                 "metadata": {"user_id": str(current_user.id)},
             },
             success_url=f"{settings.frontend_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{settings.frontend_url}/pricing?canceled=true",
+            cancel_url=f"{settings.frontend_url}/app/pricing?canceled=true",
             metadata={"user_id": str(current_user.id), "price_key": price_key},
             allow_promotion_codes=True,
             billing_address_collection="auto",
