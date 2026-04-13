@@ -690,11 +690,11 @@ def dedup_cleanup():
         logger.error("dedup_cleanup failed", error=str(exc))
 
 
-async def _generate_rationales_async(max_lots: int = 30):
+async def _generate_rationales_async(max_lots: int = 20):
     """
     Separate task: generate GPT rationales for lots missing them.
     Runs independently from the main scan to avoid timeout pressure.
-    Max 30 lots per run at 0.5s sleep = ~15s total.
+    Max 20 lots per run at 0.5s sleep = ~10s total.
     """
     from app.engines.rationale import generate_rationale
     from app.database import BgSessionLocal as AsyncSessionLocal

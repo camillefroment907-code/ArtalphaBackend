@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from app.database import get_db, AsyncSessionLocal
 from app.api.auth_utils import get_current_user
 from app.config import get_settings
+from app.utils.openai_guard import can_make_request, record_request
 from app.models.db_models import (
     User, ChatMessage, Lot, PortfolioItem,
     UserPreference, Subscription, SubscriptionStatus,
@@ -304,6 +305,10 @@ async def _stream_larry_response(
         yield f"data: {json.dumps({'error': 'Service Larry temporairement indisponible.'})}\n\n"
         return
 
+    if not can_make_request():
+        yield f"data: {json.dumps({'error': 'Service temporairement indisponible — quota journalier atteint. Réessayez demain.'})}\n\n"
+        return
+
     client = AsyncOpenAI(api_key=_settings.openai_api_key)
     full_response = []
 
@@ -322,6 +327,7 @@ async def _stream_larry_response(
                 full_response.append(delta)
                 yield f"data: {json.dumps({'delta': delta})}\n\n"
 
+        record_request()
         full_text = "".join(full_response)
         yield f"data: {json.dumps({'done': True, 'full': full_text})}\n\n"
 
@@ -451,3 +457,48 @@ async def send_message(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.post("/dashboard-brief")
+async def dashboard_brief(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Dashboard AI market brief — Collector+ only. Free users get a locked response."""
+    plan = await _get_user_plan(current_user, db)
+
+    if plan == "free":
+        return {
+            "brief": None,
+            "locked": True,
+            "message": "Upgrade to Collector to unlock the AI Market Brief",
+        }
+
+    if not _settings.openai_api_key or not can_make_request():
+        return {"brief": None, "locked": False, "message": "Brief temporarily unavailable"}
+
+    try:
+        from openai import AsyncOpenAI
+        user_context = await _get_user_context(current_user, db)
+
+        prompt = f"""Tu es Larry, expert en investissement art. Génère un brief de marché ultra-concis (3-4 phrases max) pour un investisseur qui ouvre son dashboard.
+
+{user_context}
+
+Format : 1 signal de marché fort + 1 opportunité concrète si disponible + 1 recommandation d'action.
+Style : factuel, précis, ton premium. Commence directement sans introduction."""
+
+        client = AsyncOpenAI(api_key=_settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=150,
+            temperature=0.5,
+        )
+        record_request()
+        brief = response.choices[0].message.content.strip()
+        return {"brief": brief, "locked": False}
+
+    except Exception as e:
+        logger.warning("dashboard_brief_failed", error=str(e))
+        return {"brief": None, "locked": False, "message": "Brief temporarily unavailable"}

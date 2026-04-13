@@ -7,9 +7,13 @@ Only called for lots with deal_score >= 45 AND confidence_score >= 40.
 import logging
 from typing import Optional
 from app.config import get_settings
+from app.utils.openai_guard import can_make_request, record_request
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+# Hard cap per backfill cycle — avoids burning quota on bulk runs
+MAX_RATIONALES_PER_CYCLE = 20
 
 
 def _fmt(v: Optional[float]) -> str:
@@ -42,6 +46,10 @@ async def generate_rationale(
     Returns 1-2 sentences max. Returns None if OpenAI not configured.
     """
     if not settings.openai_api_key:
+        return None
+
+    if not can_make_request():
+        logger.warning("rationale_skipped_quota_exceeded")
         return None
 
     try:
@@ -95,6 +103,7 @@ Style: factual, precise, financial vocabulary. Ex: "28% below market average —
             temperature=0.3,
         )
 
+        record_request()
         rationale = response.choices[0].message.content.strip()
         # Clean up any quotes
         rationale = rationale.strip('"\'')
