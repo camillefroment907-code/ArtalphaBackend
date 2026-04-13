@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { Logo } from '../components/Logo';
 import { loginApi } from '../../lib/api';
 import { setUser } from '../../lib/auth';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 
 const SIGNAL_CARDS = [
   { badge: '◆ STRONG BUY', badgeColor: '#C6A85A', artist: 'Pierre Soulages', detail: '−28% vs estimate', detailColor: '#2563EB' },
@@ -86,10 +87,6 @@ export default function Login() {
       <div style={{ flex: '0 0 50%', background: 'white', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 48px', borderBottom: '1px solid var(--border)' }}>
           <Logo variant="horizontal" color="dark" size={22} />
-          <span style={{ fontSize: '13px', color: 'var(--text-2)' }}>
-            Don't have an account?{' '}
-            <Link to="/app/signup" style={{ color: 'var(--electric)', fontWeight: 600, textDecoration: 'none' }}>Get access</Link>
-          </span>
         </div>
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 72px', maxWidth: '480px', margin: '0 auto', width: '100%' }}>
@@ -111,46 +108,76 @@ export default function Login() {
             </div>
           )}
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
-              Email
-            </label>
-            <input type="email" className="input" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" autoComplete="email" />
-          </div>
+          <div style={{ width: '100%', maxWidth: '400px' }}>
 
-          <div style={{ marginBottom: '8px' }}>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
-              Password
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                className="input"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                style={{ paddingRight: '44px' }}
-                onKeyDown={e => { if (e.key === 'Enter') handleLogin(); }}
-              />
-              <button type="button" onClick={() => setShowPassword(p => !p)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '12px' }}>
-                {showPassword ? 'Hide' : 'Show'}
-              </button>
+            {/* Google — PRIMARY */}
+            <GoogleSignInButton onError={(err) => setError(err)} />
+
+            {/* OR divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '20px 0' }}>
+              <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+              <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+                OR CONTINUE WITH EMAIL
+              </span>
+              <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
             </div>
-          </div>
 
-          <div style={{ textAlign: 'right', marginBottom: '28px' }}>
-            <span style={{ fontSize: '12px', color: 'var(--text-3)', cursor: 'pointer' }}>Forgot password?</span>
-          </div>
+            {/* Email input */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
+                Email
+              </label>
+              <input type="email" className="input" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" autoComplete="email" />
+            </div>
 
-          <button
-            onClick={handleLogin}
-            disabled={loading}
-            className="btn-electric"
-            style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: '13px', opacity: loading ? 0.7 : 1, textTransform: 'none' as const, letterSpacing: '0.02em' }}
-          >
-            {loading ? 'Signing in...' : 'Sign in'}
-          </button>
+            {/* Password input */}
+            <div style={{ marginBottom: '8px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
+                Password
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="input"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  style={{ paddingRight: '44px' }}
+                  onKeyDown={e => { if (e.key === 'Enter') handleLogin(); }}
+                />
+                <button type="button" onClick={() => setShowPassword(p => !p)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '12px' }}>
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+            </div>
+
+            {/* Forgot password */}
+            <div style={{ textAlign: 'right', marginBottom: '16px' }}>
+              <a href="/forgot-password" style={{ fontSize: '12px', color: 'var(--text-3)', textDecoration: 'none' }}>
+                Forgot password?
+              </a>
+            </div>
+
+            {/* Submit */}
+            <button
+              onClick={handleLogin}
+              disabled={loading}
+              className="btn-electric"
+              style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: '13px', opacity: loading ? 0.7 : 1, textTransform: 'none' as const, letterSpacing: '0.02em' }}
+            >
+              {loading ? 'Signing in...' : 'Sign in →'}
+            </button>
+
+            {/* Sign up link */}
+            <p style={{ fontSize: '13px', color: 'var(--text-3)', textAlign: 'center', marginTop: '20px' }}>
+              Don't have an account?{' '}
+              <Link to="/app/signup" style={{ color: 'var(--electric)', fontWeight: 600, textDecoration: 'none' }}>
+                Get access
+              </Link>
+            </p>
+
+          </div>
         </div>
       </div>
 

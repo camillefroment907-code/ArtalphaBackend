@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { Logo } from '../components/Logo';
 import { registerApi } from '../../lib/api';
 import { setUser } from '../../lib/auth';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 
 const SIGNAL_CARDS = [
   { badge: '◆ STRONG BUY', badgeColor: '#C6A85A', artist: 'Pierre Soulages', detail: '−28% vs estimate', detailColor: '#2563EB' },
@@ -95,10 +96,6 @@ export default function Signup() {
       <div style={{ flex: '0 0 50%', background: 'white', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 48px', borderBottom: '1px solid var(--border)' }}>
           <Logo variant="horizontal" color="dark" size={22} />
-          <span style={{ fontSize: '13px', color: 'var(--text-2)' }}>
-            Already have an account?{' '}
-            <Link to="/app/login" style={{ color: 'var(--electric)', fontWeight: 600, textDecoration: 'none' }}>Sign in</Link>
-          </span>
         </div>
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 72px', maxWidth: '480px', margin: '0 auto', width: '100%', overflowY: 'auto' }}>
@@ -120,67 +117,104 @@ export default function Signup() {
             </div>
           )}
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
-              Full name
-            </label>
-            <input type="text" className="input" value={name} onChange={e => setName(e.target.value)} placeholder="John Smith" autoComplete="name" />
-          </div>
+          <div style={{ width: '100%', maxWidth: '400px' }}>
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
-              Email
-            </label>
-            <input type="email" className="input" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" autoComplete="email" />
-          </div>
+            {/* Google — PRIMARY */}
+            <GoogleSignInButton onError={(err) => setError(err)} />
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
-              Password
-            </label>
-            <div style={{ position: 'relative' }}>
+            {/* OR divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '20px 0' }}>
+              <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+              <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+                OR CONTINUE WITH EMAIL
+              </span>
+              <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+            </div>
+
+            {/* Full name */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
+                Full name
+              </label>
+              <input type="text" className="input" value={name} onChange={e => setName(e.target.value)} placeholder="John Smith" autoComplete="name" />
+            </div>
+
+            {/* Email */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
+                Email
+              </label>
+              <input type="email" className="input" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" autoComplete="email" />
+            </div>
+
+            {/* Password */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
+                Password
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="input"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="8+ characters"
+                  autoComplete="new-password"
+                  style={{ paddingRight: '44px' }}
+                />
+                <button type="button" onClick={() => setShowPassword(p => !p)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '12px' }}>
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm password */}
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
+                Confirm password
+              </label>
               <input
                 type={showPassword ? 'text' : 'password'}
                 className="input"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="8+ characters"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
                 autoComplete="new-password"
-                style={{ paddingRight: '44px' }}
+                onKeyDown={e => { if (e.key === 'Enter') handleRegister(); }}
+                style={passwordMismatch ? { borderColor: 'var(--red)' } : {}}
               />
-              <button type="button" onClick={() => setShowPassword(p => !p)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '12px' }}>
-                {showPassword ? 'Hide' : 'Show'}
-              </button>
+              {passwordMismatch && (
+                <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--red)' }}>Passwords don't match</div>
+              )}
             </div>
-          </div>
 
-          <div style={{ marginBottom: '28px' }}>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
-              Confirm password
-            </label>
-            <input
-              type={showPassword ? 'text' : 'password'}
-              className="input"
-              value={confirmPassword}
-              onChange={e => setConfirmPassword(e.target.value)}
-              placeholder="••••••••"
-              autoComplete="new-password"
-              onKeyDown={e => { if (e.key === 'Enter') handleRegister(); }}
-              style={passwordMismatch ? { borderColor: 'var(--red)' } : {}}
-            />
-            {passwordMismatch && (
-              <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--red)' }}>Passwords don't match</div>
-            )}
-          </div>
+            {/* Submit */}
+            <button
+              onClick={handleRegister}
+              disabled={loading || passwordMismatch}
+              className="btn-electric"
+              style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: '13px', opacity: loading ? 0.7 : 1, textTransform: 'none' as const, letterSpacing: '0.02em' }}
+            >
+              {loading ? 'Creating account...' : 'Create account →'}
+            </button>
 
-          <button
-            onClick={handleRegister}
-            disabled={loading || passwordMismatch}
-            className="btn-electric"
-            style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: '13px', opacity: loading ? 0.7 : 1, textTransform: 'none' as const, letterSpacing: '0.02em' }}
-          >
-            {loading ? 'Creating account...' : 'Create account'}
-          </button>
+            {/* Legal */}
+            <p style={{ fontSize: '11px', color: 'var(--text-3)', textAlign: 'center', marginTop: '16px', lineHeight: 1.6 }}>
+              By creating an account, you agree to our{' '}
+              <a href="/terms" style={{ color: 'var(--text-2)' }}>Terms</a>
+              {' '}and{' '}
+              <a href="/privacy" style={{ color: 'var(--text-2)' }}>Privacy Policy</a>.
+            </p>
+
+            {/* Already have account */}
+            <p style={{ fontSize: '13px', color: 'var(--text-3)', textAlign: 'center', marginTop: '20px' }}>
+              Already have an account?{' '}
+              <Link to="/app/login" style={{ color: 'var(--electric)', fontWeight: 600, textDecoration: 'none' }}>
+                Sign in
+              </Link>
+            </p>
+
+          </div>
         </div>
       </div>
 
