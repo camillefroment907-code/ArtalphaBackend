@@ -55,13 +55,13 @@ export default function Onboarding() {
 
   const handleComplete = async () => {
     setSaving(true);
+    const token = getToken();
     try {
-      const token = getToken();
       await fetch(`${BACKEND}/api/auth/profile`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           collector_type:       collectorType,
@@ -71,11 +71,17 @@ export default function Onboarding() {
         }),
       });
     } catch (e) {
-      console.error('Onboarding save failed:', e);
-    } finally {
-      setSaving(false);
-      navigate('/app/explore');
+      // Silent
     }
+    localStorage.setItem('nautilus_show_tour', '1');
+    localStorage.removeItem('nautilus_tour_seen');
+    navigate('/app/explore');
+  };
+
+  const handleSkip = () => {
+    localStorage.setItem('nautilus_show_tour', '1');
+    localStorage.removeItem('nautilus_tour_seen');
+    navigate('/app/explore');
   };
 
   const tileStyle = (selected: boolean): React.CSSProperties => ({
@@ -160,7 +166,7 @@ export default function Onboarding() {
             </button>
             <div style={{ marginTop: '20px' }}>
               <button
-                onClick={() => navigate('/app/explore')}
+                onClick={handleSkip}
                 style={{ background: 'none', border: 'none', fontSize: '12px', color: '#aaa', cursor: 'pointer' }}
               >
                 Skip for now

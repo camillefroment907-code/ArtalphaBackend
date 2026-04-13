@@ -45,23 +45,31 @@ const TOUR_STEPS = [
 
 export function WelcomeTour({ onClose }: WelcomeTourProps) {
   const [slide, setSlide] = useState(0);
+  const [visible, setVisible] = useState(true);
 
   const current = TOUR_STEPS[slide];
   const isLast = slide === TOUR_STEPS.length - 1;
 
-  const handleNext = () => {
-    if (isLast) {
-      handleClose();
-    } else {
-      setSlide(s => s + 1);
-    }
-  };
-
-  const handlePrev = () => setSlide(s => Math.max(s - 1, 0));
-
   const handleClose = () => {
     localStorage.setItem('nautilus_tour_seen', '1');
     onClose();
+  };
+
+  const goNext = () => {
+    if (isLast) { handleClose(); return; }
+    setVisible(false);
+    setTimeout(() => { setSlide(s => s + 1); setVisible(true); }, 200);
+  };
+
+  const goPrev = () => {
+    setVisible(false);
+    setTimeout(() => { setSlide(s => Math.max(s - 1, 0)); setVisible(true); }, 200);
+  };
+
+  const goToSlide = (i: number) => {
+    if (i === slide) return;
+    setVisible(false);
+    setTimeout(() => { setSlide(i); setVisible(true); }, 200);
   };
 
   return (
@@ -121,68 +129,72 @@ export function WelcomeTour({ onClose }: WelcomeTourProps) {
             ×
           </button>
 
-          <div style={{
-            width: '72px', height: '72px', borderRadius: '50%',
-            background: 'rgba(255,255,255,0.08)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 20px',
-          }}>
-            <Logo variant="symbol" color="white" size={36} />
-          </div>
+          <div style={{ transition: 'opacity 0.2s ease', opacity: visible ? 1 : 0 }}>
+            <div style={{
+              width: '72px', height: '72px', borderRadius: '50%',
+              background: 'rgba(255,255,255,0.08)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 20px',
+            }}>
+              <Logo variant="symbol" color="white" size={36} />
+            </div>
 
-          {/* Metric pill */}
-          <div style={{
-            display: 'inline-block',
-            padding: '4px 14px',
-            background: 'rgba(198,168,90,0.15)',
-            border: '1px solid rgba(198,168,90,0.35)',
-            borderRadius: '20px',
-            fontSize: '11px',
-            fontWeight: 700,
-            letterSpacing: '0.1em',
-            color: 'var(--gold, #C6A85A)',
-            fontFamily: 'var(--font-mono, monospace)',
-          }}>
-            {current.metric}
+            {/* Metric pill */}
+            <div style={{
+              display: 'inline-block',
+              padding: '4px 14px',
+              background: 'rgba(198,168,90,0.15)',
+              border: '1px solid rgba(198,168,90,0.35)',
+              borderRadius: '20px',
+              fontSize: '11px',
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              color: 'var(--gold, #C6A85A)',
+              fontFamily: 'var(--font-mono, monospace)',
+            }}>
+              {current.metric}
+            </div>
           </div>
         </div>
 
         {/* Content */}
         <div style={{ padding: '32px 40px 28px' }}>
-          <div style={{
-            fontSize: '10px',
-            fontWeight: 700,
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
-            color: 'var(--gold, #C6A85A)',
-            marginBottom: '10px',
-          }}>
-            {current.tag}
+          <div style={{ transition: 'opacity 0.2s ease', opacity: visible ? 1 : 0 }}>
+            <div style={{
+              fontSize: '10px',
+              fontWeight: 700,
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+              color: 'var(--gold, #C6A85A)',
+              marginBottom: '10px',
+            }}>
+              {current.tag}
+            </div>
+            <h2 style={{
+              fontFamily: 'var(--font-serif, Georgia, serif)',
+              fontSize: '22px',
+              fontWeight: 600,
+              color: '#1A2A44',
+              margin: '0 0 14px',
+              lineHeight: 1.3,
+            }}>
+              {current.title}
+            </h2>
+            <p style={{
+              fontSize: '14px',
+              color: '#555',
+              lineHeight: 1.7,
+              margin: '0 0 28px',
+            }}>
+              {current.body}
+            </p>
           </div>
-          <h2 style={{
-            fontFamily: 'var(--font-serif, Georgia, serif)',
-            fontSize: '22px',
-            fontWeight: 600,
-            color: '#1A2A44',
-            margin: '0 0 14px',
-            lineHeight: 1.3,
-          }}>
-            {current.title}
-          </h2>
-          <p style={{
-            fontSize: '14px',
-            color: '#555',
-            lineHeight: 1.7,
-            margin: '0 0 28px',
-          }}>
-            {current.body}
-          </p>
 
           {/* Navigation row */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             {/* Prev */}
             <button
-              onClick={handlePrev}
+              onClick={goPrev}
               disabled={slide === 0}
               style={{
                 background: 'none',
@@ -201,7 +213,7 @@ export function WelcomeTour({ onClose }: WelcomeTourProps) {
               {TOUR_STEPS.map((_, i) => (
                 <button
                   key={i}
-                  onClick={() => setSlide(i)}
+                  onClick={() => goToSlide(i)}
                   aria-label={`Go to slide ${i + 1}`}
                   style={{
                     width: i === slide ? '20px' : '7px',
@@ -219,7 +231,7 @@ export function WelcomeTour({ onClose }: WelcomeTourProps) {
 
             {/* Next / CTA */}
             <button
-              onClick={handleNext}
+              onClick={goNext}
               style={{
                 padding: '10px 22px',
                 background: '#1A2A44',
