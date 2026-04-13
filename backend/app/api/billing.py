@@ -92,7 +92,7 @@ PLANS = [
             "api": False,
         },
         "cta": "Start Starter",
-        "price_keys": {"monthly": "starter_monthly", "yearly": "starter_yearly"},
+        "price_keys": {"monthly": "collector_monthly", "annual": "collector_annual"},
     },
     {
         "id": "investor",
@@ -124,7 +124,7 @@ PLANS = [
             "api": False,
         },
         "cta": "Start Investing",
-        "price_keys": {"monthly": "investor_monthly", "yearly": "investor_yearly"},
+        "price_keys": {"monthly": "investor_monthly", "annual": "investor_annual"},
     },
     {
         "id": "pro",
@@ -155,7 +155,7 @@ PLANS = [
             "api": True,
         },
         "cta": "Go Pro",
-        "price_keys": {"monthly": "pro_monthly", "yearly": "pro_yearly"},
+        "price_keys": {"monthly": "pro_monthly", "annual": "pro_annual"},
     },
     {
         "id": "institutional",
@@ -224,42 +224,50 @@ def _get_stripe():
     return stripe
 
 
+PRICE_MAP = {
+    "collector_monthly": settings.stripe_collector_monthly_price_id,
+    "collector_annual":  settings.stripe_collector_annual_price_id,
+    "investor_monthly":  settings.stripe_investor_monthly_price_id,
+    "investor_annual":   settings.stripe_investor_annual_price_id,
+    "pro_monthly":       settings.stripe_pro_monthly_price_id,
+    "pro_annual":        settings.stripe_pro_annual_price_id,
+    # Legacy key aliases (old env var names)
+    "starter_monthly":  settings.stripe_price_starter_monthly or settings.stripe_collector_monthly_price_id,
+    "starter_yearly":   settings.stripe_price_starter_yearly  or settings.stripe_collector_annual_price_id,
+    "investor_yearly":  settings.stripe_price_investor_yearly or settings.stripe_investor_annual_price_id,
+    "pro_yearly":       settings.stripe_price_pro_yearly      or settings.stripe_pro_annual_price_id,
+}
+
+
 def _price_id(price_key: str) -> str:
-    mapping = {
-        "starter_monthly":  settings.stripe_price_starter_monthly,
-        "starter_yearly":   settings.stripe_price_starter_yearly,
-        "investor_monthly": settings.stripe_price_investor_monthly,
-        "investor_yearly":  settings.stripe_price_investor_yearly,
-        "pro_monthly":      settings.stripe_price_pro_monthly,
-        "pro_yearly":       settings.stripe_price_pro_yearly,
-        # institutional has no Stripe price — contact sales
-    }
-    pid = mapping.get(price_key)
+    pid = PRICE_MAP.get(price_key)
     if not pid:
         raise HTTPException(
             400,
             detail={
                 "error": "price_not_configured",
-                "message": f"Price ID not set for '{price_key}'. Add STRIPE_PRICE_{price_key.upper()} to .env",
+                "message": f"Price ID not set for '{price_key}'. Add the corresponding STRIPE_*_PRICE_ID env var.",
             },
         )
     return pid
 
 
 def _plan_from_price_id(price_id: str) -> SubscriptionPlan:
-    mapping = {}
-    if settings.stripe_price_starter_monthly:
-        mapping[settings.stripe_price_starter_monthly] = SubscriptionPlan.STARTER
-    if settings.stripe_price_starter_yearly:
-        mapping[settings.stripe_price_starter_yearly] = SubscriptionPlan.STARTER
-    if settings.stripe_price_investor_monthly:
-        mapping[settings.stripe_price_investor_monthly] = SubscriptionPlan.INVESTOR
-    if settings.stripe_price_investor_yearly:
-        mapping[settings.stripe_price_investor_yearly] = SubscriptionPlan.INVESTOR
-    if settings.stripe_price_pro_monthly:
-        mapping[settings.stripe_price_pro_monthly] = SubscriptionPlan.PRO
-    if settings.stripe_price_pro_yearly:
-        mapping[settings.stripe_price_pro_yearly] = SubscriptionPlan.PRO
+    mapping: dict[str, SubscriptionPlan] = {}
+    # New naming
+    for fld in (settings.stripe_collector_monthly_price_id, settings.stripe_collector_annual_price_id):
+        if fld: mapping[fld] = SubscriptionPlan.STARTER
+    for fld in (settings.stripe_investor_monthly_price_id, settings.stripe_investor_annual_price_id):
+        if fld: mapping[fld] = SubscriptionPlan.INVESTOR
+    for fld in (settings.stripe_pro_monthly_price_id, settings.stripe_pro_annual_price_id):
+        if fld: mapping[fld] = SubscriptionPlan.PRO
+    # Legacy naming
+    for fld in (settings.stripe_price_starter_monthly, settings.stripe_price_starter_yearly):
+        if fld: mapping[fld] = SubscriptionPlan.STARTER
+    for fld in (settings.stripe_price_investor_monthly, settings.stripe_price_investor_yearly):
+        if fld: mapping[fld] = SubscriptionPlan.INVESTOR
+    for fld in (settings.stripe_price_pro_monthly, settings.stripe_price_pro_yearly):
+        if fld: mapping[fld] = SubscriptionPlan.PRO
     # institutional has no Stripe price (contact sales)
     return mapping.get(price_id, SubscriptionPlan.FREE)
 

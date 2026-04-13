@@ -51,7 +51,14 @@ class Settings(BaseSettings):
     # Legacy (kept for migration)
     stripe_price_pro: Optional[str] = None
     stripe_price_expert: Optional[str] = None
-    # Price IDs
+    # Price IDs (new naming convention)
+    stripe_collector_monthly_price_id: str = ""
+    stripe_collector_annual_price_id: str = ""
+    stripe_investor_monthly_price_id: str = ""
+    stripe_investor_annual_price_id: str = ""
+    stripe_pro_monthly_price_id: str = ""
+    stripe_pro_annual_price_id: str = ""
+    # Price IDs (legacy naming — kept for backward compatibility)
     stripe_price_starter_monthly: Optional[str] = None
     stripe_price_starter_yearly: Optional[str] = None
     stripe_price_investor_monthly: Optional[str] = None
