@@ -4,53 +4,84 @@ import { getToken } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
-interface Budget {
-  min: number;
-  max: number | null;
-  label: string;
-}
-
-const BUDGETS: Budget[] = [
-  { min: 0,      max: 5000,   label: '< €5 000' },
-  { min: 5000,   max: 20000,  label: '€5 000 – €20 000' },
-  { min: 20000,  max: 100000, label: '€20 000 – €100 000' },
-  { min: 100000, max: null,   label: '> €100 000' },
+const PROFILES = [
+  { value: 'first_time',    icon: '🎨', label: 'First acquisition',          sub: 'Discovering art investment' },
+  { value: 'collector',     icon: '◆',  label: 'Active collector',            sub: 'Buying regularly at auction' },
+  { value: 'investor',      icon: '◈',  label: 'Pure investor',               sub: 'Returns and tangible assets' },
+  { value: 'family_office', icon: '◇',  label: 'Family office / Institution', sub: 'Structured allocation strategy' },
 ];
 
-const PROFILES = [
-  { value: 'first_time', icon: '🎨', label: 'First acquisition',  sub: "I'm discovering art investment" },
-  { value: 'collector',  icon: '◆', label: 'Active collector',    sub: "I buy regularly at auction" },
-  { value: 'investor',   icon: '◈', label: 'Pure investor',       sub: "I'm looking for returns and tangible assets" },
+const BUDGETS = [
+  { value: 'lt_5k',      label: '< €5 000' },
+  { value: '5k_20k',     label: '€5 000 – €20 000' },
+  { value: '20k_100k',   label: '€20 000 – €100 000' },
+  { value: '100k_500k',  label: '€100 000 – €500 000' },
+  { value: 'gt_500k',    label: '> €500 000' },
 ];
 
 const HORIZONS = [
-  { value: 'short',  icon: '⚡', label: 'Short term — < 2 years',    sub: 'Fast rotation, liquidity first' },
-  { value: 'medium', icon: '◎', label: 'Medium term — 2 to 5 years', sub: 'Balance of return and security' },
-  { value: 'long',   icon: '◇', label: 'Long term — 5+ years',       sub: 'Wealth, estate, slow appreciation' },
+  { value: 'short',  label: 'Short term',  detail: '< 2 years',  sub: 'Fast rotation, liquidity first' },
+  { value: 'medium', label: 'Medium term', detail: '2–5 years',  sub: 'Balance of return and security' },
+  { value: 'long',   label: 'Long term',   detail: '5+ years',   sub: 'Wealth, estate, slow appreciation' },
 ];
 
-const TOTAL_STEPS = 4; // 0..3 (steps 1-3 are questions, step 0 = welcome, step 3 = done but we show progress 0-3)
+const CATEGORIES = [
+  'Paintings', 'Prints & Editions', 'Sculpture', 'Photography',
+  'Works on Paper', 'Street Art', 'NFT & Digital', 'Design & Furniture',
+];
 
-// CSS vars assumed: --navy, --gold, --gold-dim, --border, --font-serif, --font-sans, --text-2, --text-3
+const TOTAL_STEPS = 4;
 
 export default function Onboarding() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(0);
-  const [budget, setBudget] = useState<Budget | null>(null);
-  const [profile, setProfile] = useState<string | null>(null);
-  const [horizon, setHorizon] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [step, setStep]                   = useState(0);
+  const [collectorType, setCollectorType] = useState<string | null>(null);
+  const [budget, setBudget]               = useState<string | null>(null);
+  const [horizon, setHorizon]             = useState<string | null>(null);
+  const [categories, setCategories]       = useState<string[]>([]);
+  const [saving, setSaving]               = useState(false);
 
-  const progressPct = step === 0 ? 0 : Math.round((step / 3) * 100);
+  const progressPct = step === 0 ? 0 : step > TOTAL_STEPS ? 100 : Math.round((step / TOTAL_STEPS) * 100);
 
-  const goNext = () => setStep(s => Math.min(s + 1, 4));
-  const goSkip = () => setStep(s => Math.min(s + 1, 4));
+  const goNext = () => setStep(s => s + 1);
+  const goBack = () => setStep(s => Math.max(s - 1, 1));
+
+  const toggleCategory = (cat: string) => {
+    setCategories(prev =>
+      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    );
+  };
+
+  const handleComplete = async () => {
+    setSaving(true);
+    try {
+      const token = getToken();
+      await fetch(`${BACKEND}/api/auth/profile`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          collector_type:       collectorType,
+          investment_budget:    budget,
+          investment_horizon:   horizon,
+          preferred_categories: categories.length > 0 ? categories : undefined,
+        }),
+      });
+    } catch (e) {
+      console.error('Onboarding save failed:', e);
+    } finally {
+      setSaving(false);
+      navigate('/app/explore');
+    }
+  };
 
   const tileStyle = (selected: boolean): React.CSSProperties => ({
-    background: selected ? 'rgba(26,42,68,0.04)' : '#FFFFFF',
-    border: selected ? '2px solid var(--navy)' : '1px solid var(--border)',
-    borderRadius: '2px',
-    padding: '24px 20px',
+    background: selected ? 'var(--navy-subtle, rgba(26,42,68,0.05))' : '#FFFFFF',
+    border: selected ? '2px solid var(--navy, #1A2A44)' : '1px solid var(--border, #E8E6E0)',
+    borderRadius: '8px',
+    padding: '20px',
     cursor: 'pointer',
     transition: 'border-color 0.15s, background 0.15s',
     textAlign: 'left' as const,
@@ -58,37 +89,12 @@ export default function Onboarding() {
     boxSizing: 'border-box' as const,
   });
 
-  const handleFinish = async () => {
-    setSaving(true);
-    try {
-      localStorage.setItem('artalpha-budget', JSON.stringify({ min: budget?.min ?? 0, max: budget?.max ?? null }));
-      if (horizon) localStorage.setItem('artalpha-horizon', horizon);
-
-      const token = getToken();
-      await fetch(`${BACKEND}/api/profile/me`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          min_lot_budget_eur: budget?.min ?? null,
-          max_lot_budget_eur: budget?.max ?? null,
-          collector_type: profile,
-          investment_horizon: horizon,
-        }),
-      });
-    } catch (e) {
-      console.error('Onboarding save failed:', e);
-    } finally {
-      setSaving(false);
-      navigate('/app/opportunities');
-    }
-  };
-
-  const autoAdvance = (fn: () => void) => {
-    setTimeout(fn, 300);
-  };
+  const horizonStyle = (selected: boolean): React.CSSProperties => ({
+    ...tileStyle(selected),
+    display: 'flex',
+    alignItems: 'center',
+    gap: '20px',
+  });
 
   return (
     <div style={{
@@ -101,8 +107,8 @@ export default function Onboarding() {
     }}>
 
       {/* Progress bar */}
-      {step > 0 && step < 4 && (
-        <div style={{ width: '100%', height: '3px', background: '#E8E6E0', position: 'sticky', top: 0, zIndex: 10 }}>
+      {step > 0 && step <= TOTAL_STEPS && (
+        <div style={{ width: '100%', height: '2px', background: '#E8E6E0', position: 'sticky', top: 0, zIndex: 10 }}>
           <div style={{
             height: '100%',
             width: `${progressPct}%`,
@@ -114,23 +120,28 @@ export default function Onboarding() {
 
       <div style={{ width: '100%', maxWidth: '560px', padding: '60px 24px 80px', flex: 1 }}>
 
-        {/* ── Step 0: Welcome ─────────────────────────────── */}
+        {/* ── Step 0: Welcome ─────────────────────────────────────── */}
         {step === 0 && (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--gold, #C6A85A)', marginBottom: '24px' }}>
-              Nautilus
+            <div style={{
+              width: '56px', height: '56px', borderRadius: '50%',
+              background: 'var(--navy, #1A2A44)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 32px',
+            }}>
+              <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '22px', color: 'var(--gold, #C6A85A)' }}>◈</span>
             </div>
-            <h1 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '36px', fontWeight: 600, color: '#1A2A44', margin: '0 0 16px', lineHeight: 1.2 }}>
+            <h1 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '34px', fontWeight: 600, color: '#1A2A44', margin: '0 0 16px', lineHeight: 1.2 }}>
               Welcome to Nautilus
             </h1>
-            <div style={{ width: '40px', height: '2px', background: 'var(--gold, #C6A85A)', margin: '0 auto 24px' }} />
-            <p style={{ fontSize: '15px', color: '#666', lineHeight: 1.7, margin: '0 0 48px' }}>
-              A few questions to personalise your investment experience. 2 minutes.
+            <div style={{ width: '40px', height: '2px', background: 'var(--gold, #C6A85A)', margin: '0 auto 20px' }} />
+            <p style={{ fontSize: '15px', color: '#666', lineHeight: 1.7, margin: '0 0 48px', maxWidth: '380px', marginLeft: 'auto', marginRight: 'auto' }}>
+              4 quick questions to personalise your deal flow. Takes under 2 minutes.
             </p>
             <button
               onClick={goNext}
               style={{
-                padding: '14px 40px',
+                padding: '14px 44px',
                 background: '#1A2A44',
                 color: '#FFFFFF',
                 border: 'none',
@@ -139,130 +150,183 @@ export default function Onboarding() {
                 letterSpacing: '0.12em',
                 textTransform: 'uppercase',
                 cursor: 'pointer',
+                borderRadius: '4px',
               }}
               onMouseEnter={e => (e.currentTarget.style.background = '#0f1e33')}
               onMouseLeave={e => (e.currentTarget.style.background = '#1A2A44')}
             >
               Get started →
             </button>
+            <div style={{ marginTop: '20px' }}>
+              <button
+                onClick={() => navigate('/app/explore')}
+                style={{ background: 'none', border: 'none', fontSize: '12px', color: '#aaa', cursor: 'pointer' }}
+              >
+                Skip for now
+              </button>
+            </div>
           </div>
         )}
 
-        {/* ── Step 1: Budget ──────────────────────────────── */}
+        {/* ── Step 1: Profile ──────────────────────────────────────── */}
         {step === 1 && (
           <div>
-            <StepHeader step={1} total={3} question="What is your investment budget per lot?" />
+            <StepHeader step={1} total={TOTAL_STEPS} question="Which profile fits you best?" />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '40px' }}>
+              {PROFILES.map(p => (
+                <button
+                  key={p.value}
+                  style={tileStyle(collectorType === p.value)}
+                  onClick={() => { setCollectorType(p.value); setTimeout(goNext, 280); }}
+                  onMouseEnter={e => { if (collectorType !== p.value) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy, #1A2A44)'; }}
+                  onMouseLeave={e => { if (collectorType !== p.value) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border, #E8E6E0)'; }}
+                >
+                  <div style={{ fontSize: '22px', marginBottom: '10px', lineHeight: 1 }}>{p.icon}</div>
+                  <div style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '14px', fontWeight: 600, color: '#1A2A44', marginBottom: '4px' }}>
+                    {p.label}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#888', lineHeight: 1.4 }}>{p.sub}</div>
+                </button>
+              ))}
+            </div>
+            <StepFooter step={1} total={TOTAL_STEPS} onBack={null} onNext={collectorType ? goNext : undefined} onSkip={goNext} canNext={!!collectorType} />
+          </div>
+        )}
+
+        {/* ── Step 2: Budget ───────────────────────────────────────── */}
+        {step === 2 && (
+          <div>
+            <StepHeader step={2} total={TOTAL_STEPS} question="What is your typical budget per lot?" />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '40px' }}>
               {BUDGETS.map(b => (
                 <button
-                  key={b.label}
-                  style={tileStyle(budget?.label === b.label)}
-                  onClick={() => {
-                    setBudget(b);
-                    autoAdvance(goNext);
-                  }}
-                  onMouseEnter={e => { if (budget?.label !== b.label) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy, #1A2A44)'; }}
-                  onMouseLeave={e => { if (budget?.label !== b.label) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border, #E8E6E0)'; }}
+                  key={b.value}
+                  style={tileStyle(budget === b.value)}
+                  onClick={() => { setBudget(b.value); setTimeout(goNext, 280); }}
+                  onMouseEnter={e => { if (budget !== b.value) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy, #1A2A44)'; }}
+                  onMouseLeave={e => { if (budget !== b.value) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border, #E8E6E0)'; }}
                 >
-                  <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '18px', fontWeight: 600, color: '#1A2A44', display: 'block' }}>
+                  <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '15px', fontWeight: 600, color: '#1A2A44' }}>
                     {b.label}
                   </span>
                 </button>
               ))}
             </div>
-            <StepFooter onNext={budget ? goNext : undefined} onSkip={goSkip} canNext={!!budget} />
+            <StepFooter step={2} total={TOTAL_STEPS} onBack={goBack} onNext={budget ? goNext : undefined} onSkip={goNext} canNext={!!budget} />
           </div>
         )}
 
-        {/* ── Step 2: Profile ─────────────────────────────── */}
-        {step === 2 && (
-          <div>
-            <StepHeader step={2} total={3} question="Which profile fits you best?" />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '40px' }}>
-              {PROFILES.map(p => (
-                <button
-                  key={p.value}
-                  style={tileStyle(profile === p.value)}
-                  onClick={() => {
-                    setProfile(p.value);
-                    autoAdvance(goNext);
-                  }}
-                  onMouseEnter={e => { if (profile !== p.value) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy, #1A2A44)'; }}
-                  onMouseLeave={e => { if (profile !== p.value) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border, #E8E6E0)'; }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-                    <span style={{ fontSize: '22px', lineHeight: 1, marginTop: '2px' }}>{p.icon}</span>
-                    <div>
-                      <div style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '16px', fontWeight: 600, color: '#1A2A44', marginBottom: '4px' }}>
-                        {p.label}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#888', lineHeight: 1.5 }}>{p.sub}</div>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-            <StepFooter onNext={profile ? goNext : undefined} onSkip={goSkip} canNext={!!profile} />
-          </div>
-        )}
-
-        {/* ── Step 3: Horizon ─────────────────────────────── */}
+        {/* ── Step 3: Horizon ──────────────────────────────────────── */}
         {step === 3 && (
           <div>
-            <StepHeader step={3} total={3} question="What is your investment time horizon?" />
+            <StepHeader step={3} total={TOTAL_STEPS} question="What is your investment time horizon?" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '40px' }}>
               {HORIZONS.map(h => (
                 <button
                   key={h.value}
-                  style={tileStyle(horizon === h.value)}
-                  onClick={() => {
-                    setHorizon(h.value);
-                    autoAdvance(goNext);
-                  }}
+                  style={horizonStyle(horizon === h.value)}
+                  onClick={() => { setHorizon(h.value); setTimeout(goNext, 280); }}
                   onMouseEnter={e => { if (horizon !== h.value) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy, #1A2A44)'; }}
                   onMouseLeave={e => { if (horizon !== h.value) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border, #E8E6E0)'; }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-                    <span style={{ fontSize: '22px', lineHeight: 1, marginTop: '2px' }}>{h.icon}</span>
-                    <div>
-                      <div style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '16px', fontWeight: 600, color: '#1A2A44', marginBottom: '4px' }}>
-                        {h.label}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#888', lineHeight: 1.5 }}>{h.sub}</div>
+                  <div style={{ flex: 1, textAlign: 'left' }}>
+                    <div style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '15px', fontWeight: 600, color: '#1A2A44', marginBottom: '3px' }}>
+                      {h.label}
                     </div>
+                    <div style={{ fontSize: '11px', color: '#888', lineHeight: 1.4 }}>{h.sub}</div>
+                  </div>
+                  <div style={{
+                    flexShrink: 0,
+                    padding: '4px 10px',
+                    background: horizon === h.value ? 'var(--navy, #1A2A44)' : '#F0EEE8',
+                    color: horizon === h.value ? '#fff' : '#888',
+                    borderRadius: '20px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    fontFamily: 'var(--font-mono, monospace)',
+                    transition: 'background 0.15s, color 0.15s',
+                  }}>
+                    {h.detail}
                   </div>
                 </button>
               ))}
             </div>
-            <StepFooter onNext={horizon ? goNext : undefined} onSkip={goSkip} canNext={!!horizon} />
+            <StepFooter step={3} total={TOTAL_STEPS} onBack={goBack} onNext={horizon ? goNext : undefined} onSkip={goNext} canNext={!!horizon} />
           </div>
         )}
 
-        {/* ── Step 4: Confirmation ────────────────────────── */}
+        {/* ── Step 4: Categories ───────────────────────────────────── */}
         {step === 4 && (
+          <div>
+            <StepHeader step={4} total={TOTAL_STEPS} question="Which categories interest you?" />
+            <p style={{ fontSize: '13px', color: '#888', margin: '-16px 0 24px', lineHeight: 1.5 }}>
+              Select all that apply — we'll filter your deal flow accordingly.
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '40px' }}>
+              {CATEGORIES.map(cat => {
+                const selected = categories.includes(cat);
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => toggleCategory(cat)}
+                    style={{
+                      padding: '9px 18px',
+                      borderRadius: '24px',
+                      border: selected ? '2px solid var(--navy, #1A2A44)' : '1px solid var(--border, #E8E6E0)',
+                      background: selected ? 'var(--navy, #1A2A44)' : '#FFFFFF',
+                      color: selected ? '#FFFFFF' : '#444',
+                      fontSize: '13px',
+                      fontWeight: selected ? 600 : 400,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => { if (!selected) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy, #1A2A44)'; }}
+                    onMouseLeave={e => { if (!selected) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border, #E8E6E0)'; }}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+            <StepFooter step={4} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onSkip={goNext} canNext={true} />
+          </div>
+        )}
+
+        {/* ── Step 5: Confirmation ─────────────────────────────────── */}
+        {step === 5 && (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', marginBottom: '20px' }}>◈</div>
+            <div style={{
+              width: '64px', height: '64px', borderRadius: '50%',
+              background: 'var(--navy, #1A2A44)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 28px',
+            }}>
+              <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '26px', color: 'var(--gold, #C6A85A)' }}>◈</span>
+            </div>
             <h1 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '30px', fontWeight: 600, color: '#1A2A44', margin: '0 0 12px', lineHeight: 1.2 }}>
-              Your profile is set up
+              Your profile is ready.
             </h1>
             <div style={{ width: '40px', height: '2px', background: 'var(--gold, #C6A85A)', margin: '0 auto 32px' }} />
 
             {/* Summary strip */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr 1fr',
+              gridTemplateColumns: '1fr 1fr',
               gap: '1px',
               background: '#E8E6E0',
               border: '1px solid #E8E6E0',
+              borderRadius: '8px',
+              overflow: 'hidden',
               marginBottom: '40px',
             }}>
               {[
-                { label: 'Budget',  value: budget?.label ?? '—' },
-                { label: 'Profile', value: PROFILES.find(p => p.value === profile)?.label ?? 'Not set' },
-                { label: 'Horizon', value: HORIZONS.find(h => h.value === horizon)?.label.split('—')[0].trim() ?? 'Not set' },
+                { label: 'Profile',  value: PROFILES.find(p => p.value === collectorType)?.label ?? 'Not set' },
+                { label: 'Budget',   value: BUDGETS.find(b => b.value === budget)?.label ?? 'Not set' },
+                { label: 'Horizon',  value: HORIZONS.find(h => h.value === horizon)?.label ?? 'Not set' },
+                { label: 'Focus',    value: categories.length > 0 ? `${categories.length} categories` : 'All categories' },
               ].map(item => (
-                <div key={item.label} style={{ background: '#FFFFFF', padding: '20px 16px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gold, #C6A85A)', marginBottom: '8px' }}>
+                <div key={item.label} style={{ background: '#FFFFFF', padding: '18px 16px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gold, #C6A85A)', marginBottom: '6px' }}>
                     {item.label}
                   </div>
                   <div style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '13px', fontWeight: 600, color: '#1A2A44', lineHeight: 1.3 }}>
@@ -273,10 +337,10 @@ export default function Onboarding() {
             </div>
 
             <button
-              onClick={handleFinish}
+              onClick={handleComplete}
               disabled={saving}
               style={{
-                padding: '14px 40px',
+                padding: '14px 44px',
                 background: '#1A2A44',
                 color: '#FFFFFF',
                 border: 'none',
@@ -286,22 +350,14 @@ export default function Onboarding() {
                 textTransform: 'uppercase',
                 cursor: saving ? 'not-allowed' : 'pointer',
                 opacity: saving ? 0.6 : 1,
-                marginBottom: '20px',
+                borderRadius: '4px',
+                marginBottom: '16px',
               }}
               onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLButtonElement).style.background = '#0f1e33'; }}
               onMouseLeave={e => { if (!saving) (e.currentTarget as HTMLButtonElement).style.background = '#1A2A44'; }}
             >
-              {saving ? 'Saving…' : 'View my opportunities →'}
+              {saving ? 'Saving…' : 'See my opportunities →'}
             </button>
-
-            <div>
-              <button
-                onClick={() => navigate('/app/portfolio')}
-                style={{ background: 'none', border: 'none', fontSize: '12px', color: '#999', cursor: 'pointer', textDecoration: 'underline' }}
-              >
-                Edit later in Portfolio
-              </button>
-            </div>
           </div>
         )}
 
@@ -310,13 +366,13 @@ export default function Onboarding() {
   );
 }
 
-// ── Sub-components ───────────────────────────────────────────
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 function StepHeader({ step, total, question }: { step: number; total: number; question: string }) {
   return (
     <div style={{ marginBottom: '32px' }}>
-      <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--gold, #C6A85A)', marginBottom: '16px' }}>
-        Step {step} / {total}
+      <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--gold, #C6A85A)', marginBottom: '14px' }}>
+        Step {step} of {total}
       </div>
       <h2 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '24px', fontWeight: 600, color: '#1A2A44', margin: 0, lineHeight: 1.3 }}>
         {question}
@@ -325,15 +381,34 @@ function StepHeader({ step, total, question }: { step: number; total: number; qu
   );
 }
 
-function StepFooter({ onNext, onSkip, canNext }: { onNext?: () => void; onSkip: () => void; canNext: boolean }) {
+interface StepFooterProps {
+  step: number;
+  total: number;
+  onBack: (() => void) | null;
+  onNext?: () => void;
+  onSkip: () => void;
+  canNext: boolean;
+}
+
+function StepFooter({ onBack, onNext, onSkip, canNext }: StepFooterProps) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <button
-        onClick={onSkip}
-        style={{ background: 'none', border: 'none', fontSize: '12px', color: '#999', cursor: 'pointer' }}
-      >
-        Skip
-      </button>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+      <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+        {onBack && (
+          <button
+            onClick={onBack}
+            style={{ background: 'none', border: 'none', fontSize: '12px', color: '#888', cursor: 'pointer', padding: 0 }}
+          >
+            ← Back
+          </button>
+        )}
+        <button
+          onClick={onSkip}
+          style={{ background: 'none', border: 'none', fontSize: '12px', color: '#bbb', cursor: 'pointer', padding: 0 }}
+        >
+          Skip
+        </button>
+      </div>
       {canNext && onNext && (
         <button
           onClick={onNext}
@@ -346,11 +421,12 @@ function StepFooter({ onNext, onSkip, canNext }: { onNext?: () => void; onSkip: 
             fontWeight: 700,
             letterSpacing: '0.1em',
             cursor: 'pointer',
+            borderRadius: '4px',
           }}
           onMouseEnter={e => (e.currentTarget.style.background = '#0f1e33')}
           onMouseLeave={e => (e.currentTarget.style.background = '#1A2A44')}
         >
-          Suivant →
+          Continue →
         </button>
       )}
     </div>

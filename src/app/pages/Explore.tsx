@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { getUser } from "../../lib/auth";
 import { FilterSidebar } from "../components/FilterSidebar";
 import type { Filters } from "../components/FilterSidebar";
+import { WelcomeTour } from "../components/WelcomeTour";
 import Primary from "./Primary";
 import Convictions from "./Convictions";
 
@@ -306,6 +307,12 @@ export default function Explore() {
     }
   }, [searchFromUrl]);
 
+  const [showTour, setShowTour] = useState(false);
+  useEffect(() => {
+    const seen = localStorage.getItem('nautilus_tour_seen');
+    if (!seen) { setTimeout(() => setShowTour(true), 1000); }
+  }, []);
+
   const user     = getUser();
   const isAdmin  = user?.email === "camillefroment907@gmail.com";
 
@@ -507,6 +514,7 @@ export default function Explore() {
         overflow: "hidden", background: "var(--bg)",
       }}
     >
+      {showTour && <WelcomeTour onClose={() => setShowTour(false)} />}
       {/* ── Page header ──────────────────────────────────────── */}
       <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)", background: "white", flexShrink: 0, display: "flex", alignItems: "baseline", gap: "12px" }}>
         <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "22px", fontWeight: 600, color: "var(--navy)", margin: 0 }}>Explorer</h1>
