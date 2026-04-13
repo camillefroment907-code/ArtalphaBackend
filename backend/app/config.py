@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from functools import lru_cache
 from typing import Optional
 
@@ -19,9 +20,16 @@ class Settings(BaseSettings):
     celery_result_backend: str = "redis://localhost:6379/1"
 
     # Auth
-    jwt_secret: str = "change-me-in-production"
+    jwt_secret: str = "change-me-in-production-set-a-secure-key"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 10080  # 7 days
+
+    @field_validator('jwt_secret')
+    @classmethod
+    def jwt_secret_must_be_strong(cls, v: str) -> str:
+        if len(v) < 32:
+            raise ValueError('JWT_SECRET must be at least 32 characters — set a strong secret in environment variables')
+        return v
 
     # Supabase (optional)
     supabase_url: Optional[str] = None

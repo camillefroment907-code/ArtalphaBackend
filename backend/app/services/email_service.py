@@ -120,6 +120,37 @@ async def send_admin_notification(subject: str, html: str) -> bool:
 # TRANSACTIONAL EMAILS — from: hello@artalpha.io
 # ══════════════════════════════════════════════════════════════════════════════
 
+async def send_verification_email(to_email: str, verify_url: str) -> bool:
+    """Triggered after registration — user must verify email."""
+    html = f"""
+    <div style="font-family: Georgia, serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">
+      <h2 style="color: #0A1628; font-size: 24px; margin-bottom: 16px;">Welcome to Nautilus.</h2>
+      <p style="color: #4A5568; font-size: 14px; line-height: 1.7; margin-bottom: 24px;">
+        One click to verify your email and access your market intelligence platform.
+      </p>
+      <a href="{verify_url}"
+         style="display: inline-block; background: #0A1628; color: white; padding: 14px 32px;
+                border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600;
+                letter-spacing: 0.06em;">
+        Verify my account &rarr;
+      </a>
+      <p style="color: #8A95A3; font-size: 11px; margin-top: 32px; font-family: monospace;">
+        This link expires in 48 hours. If you didn't create a Nautilus account, ignore this email.
+      </p>
+      <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 32px 0;" />
+      <p style="color: #C8CDD4; font-size: 10px; font-family: monospace;">
+        Nautilus &mdash; Market Intelligence for Art Investment
+      </p>
+    </div>
+    """
+    return await _send(
+        to_email=to_email,
+        subject="Verify your Nautilus account",
+        html=html,
+        from_email=settings.transac_from_email,
+    )
+
+
 async def send_welcome_email(
     to_email: str,
     name: str,

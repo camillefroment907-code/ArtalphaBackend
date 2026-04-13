@@ -1,17 +1,23 @@
 import asyncio
+from datetime import timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import RedirectResponse
+from jose import JWTError, jwt as jose_jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from pydantic import BaseModel
 
+from app.config import get_settings
 from app.database import get_db
 from app.models.db_models import User, UserPreference, AlertChannel
 from app.models.schemas import UserRegister, UserLogin, TokenResponse, UserOut
 from app.api.auth_utils import hash_password, verify_password, create_access_token, get_current_user
-from app.services.email_service import send_welcome_email
+from app.services.email_service import send_welcome_email, send_verification_email
+
+settings = get_settings()
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 limiter = Limiter(key_func=get_remote_address)
@@ -71,12 +77,43 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
     except Exception:
         pass
 
+    # Fire-and-forget verification email
+    try:
+        verify_token = create_access_token(
+            {"sub": str(user.id), "purpose": "verify_email"},
+            expires_delta=timedelta(hours=48),
+        )
+        verify_url = f"{settings.frontend_url}/app/verify-email?token={verify_token}"
+        asyncio.create_task(send_verification_email(user.email, verify_url))
+    except Exception:
+        pass
+
     token = create_access_token({"sub": str(user.id), "email": user.email})
     return TokenResponse(
         access_token=token,
         user_id=str(user.id),
         email=user.email,
     )
+
+
+@router.get("/verify-email")
+async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
+    try:
+        payload = jose_jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        if payload.get("purpose") != "verify_email":
+            raise ValueError("wrong purpose")
+        user_id = payload.get("sub")
+    except Exception:
+        raise HTTPException(400, "Invalid or expired verification token.")
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(400, "Invalid verification token.")
+
+    user.is_verified = True
+    await db.commit()
+    return RedirectResponse(url=f"{settings.frontend_url}/app/explore?verified=true")
 
 
 @router.post("/login", response_model=TokenResponse)

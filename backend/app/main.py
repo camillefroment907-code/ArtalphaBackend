@@ -3,10 +3,13 @@ HONO — AI Auction Deal Finder
 FastAPI Application
 """
 from contextlib import asynccontextmanager
+import re
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request as StarletteRequest
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -33,6 +36,26 @@ from app.api.memo import router as memo_router
 from app.api.larry_proactive import router as larry_proactive_router
 
 settings = get_settings()
+
+
+def sanitize_log(data: str) -> str:
+    """Mask emails and tokens in logs."""
+    data = re.sub(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', '***@***.***', data)
+    data = re.sub(r'eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+', '[JWT_REDACTED]', data)
+    data = re.sub(r'sk_(live|test)_[a-zA-Z0-9]+', '[STRIPE_KEY_REDACTED]', data)
+    return data
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: StarletteRequest, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        return response
+
 
 # ── Rate limiter (in-memory; swap storage= to Redis in prod if desired) ────────
 limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
@@ -93,6 +116,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 # ── CORS — allow frontend on 3000 ─────────────────────────────────────────────
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
