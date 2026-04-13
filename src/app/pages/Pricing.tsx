@@ -262,6 +262,7 @@ export default function Pricing() {
       {/* Plan cards — 4-column grid */}
       <div style={{
         display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px',
+        alignItems: 'stretch',
         maxWidth: '1100px', margin: '0 auto', padding: '0 24px 64px',
       }}>
         {PLANS.map(plan => {
@@ -280,96 +281,99 @@ export default function Pricing() {
                   : '1px solid var(--border)',
                 borderRadius: '12px',
                 padding: '28px 24px',
-                position: 'relative',
                 display: 'flex', flexDirection: 'column',
                 transition: 'box-shadow 0.2s',
-                marginTop: plan.badge || isCurrentPlan ? '12px' : '0',
               }}
             >
-              {/* Badge */}
-              {isCurrentPlan && (
-                <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: 'var(--electric)', color: 'white', fontSize: '9px', fontWeight: 700, padding: '3px 12px', borderRadius: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>
-                  YOUR CURRENT PLAN
-                </div>
-              )}
-              {plan.badge && !isCurrentPlan && (
-                <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: 'var(--electric)', color: 'white', fontSize: '9px', fontWeight: 700, padding: '3px 12px', borderRadius: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>
-                  {plan.badge.toUpperCase()}
-                </div>
-              )}
+              {/* 1. Badge slot — always present, reserves 24px so all cards start at same position */}
+              <div style={{ height: '24px', marginBottom: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                {(isCurrentPlan || plan.badge) && (
+                  <div style={{ background: 'var(--electric)', color: 'white', fontSize: '9px', fontWeight: 700, padding: '3px 12px', borderRadius: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>
+                    {isCurrentPlan ? 'YOUR CURRENT PLAN' : plan.badge!.toUpperCase()}
+                  </div>
+                )}
+              </div>
 
-              {/* Top section — fixed height so CTAs align */}
-              <div style={{ minHeight: '180px', display: 'flex', flexDirection: 'column' }}>
-                {/* Plan name */}
-                <div style={{ fontSize: '11px', fontWeight: 700, color: plan.highlight ? 'rgba(255,255,255,0.5)' : 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '6px' }}>
-                  {plan.name}
-                </div>
+              {/* 2. Plan name */}
+              <div style={{ fontSize: '11px', fontWeight: 700, color: plan.highlight ? 'rgba(255,255,255,0.5)' : 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                {plan.name}
+              </div>
 
-                {/* Price */}
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '13px', color: plan.highlight ? 'rgba(255,255,255,0.6)' : 'var(--text-2)' }}>€</span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '42px', fontWeight: 700, color: plan.highlight ? 'white' : 'var(--text)', lineHeight: 1 }}>
-                    {price}
-                  </span>
-                  {price > 0 && (
-                    <span style={{ fontSize: '12px', color: plan.highlight ? 'rgba(255,255,255,0.5)' : 'var(--text-3)' }}>/mo</span>
-                  )}
-                </div>
+              {/* 3. Price */}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '13px', color: plan.highlight ? 'rgba(255,255,255,0.6)' : 'var(--text-2)' }}>€</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '42px', fontWeight: 700, color: plan.highlight ? 'white' : 'var(--text)', lineHeight: 1 }}>
+                  {price}
+                </span>
+                {price > 0 && (
+                  <span style={{ fontSize: '12px', color: plan.highlight ? 'rgba(255,255,255,0.5)' : 'var(--text-3)' }}>/mo</span>
+                )}
+              </div>
 
-                {/* Annual savings */}
-                {isAnnual && price > 0 && (
-                  <div style={{ fontSize: '11px', fontWeight: 600, color: plan.highlight ? 'var(--gold)' : 'var(--electric)', marginBottom: '4px' }}>
+              {/* 4. Savings — fixed height 20px, empty if free or monthly */}
+              <div style={{ height: '20px', marginBottom: '8px' }}>
+                {isAnnual && plan.price > 0 && (
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: plan.highlight ? 'var(--gold)' : 'var(--electric)' }}>
                     €{plan.annualPrice * 12}/year · save €{(plan.price - plan.annualPrice) * 12}/year
                   </div>
                 )}
-
-                {/* Description */}
-                <p style={{ fontSize: '12px', lineHeight: 1.6, margin: '0 0 0', color: plan.highlight ? 'rgba(255,255,255,0.55)' : 'var(--text-3)' }}>
-                  {plan.description}
-                </p>
-
-                {/* Spacer pushes CTA to consistent vertical position */}
-                <div style={{ flex: 1 }} />
               </div>
 
-              {/* CTA — always at same vertical position */}
-              {isCurrentPlan ? (
-                <div style={{ width: '100%', padding: '11px', borderRadius: '6px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', color: 'var(--electric)', fontSize: '12px', fontWeight: 700, textAlign: 'center', marginTop: '20px', marginBottom: '20px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                  ✓ Current plan
-                </div>
-              ) : plan.key === 'free' ? (
-                <button
-                  onClick={() => navigate('/app/dashboard')}
-                  style={{ width: '100%', padding: '11px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', marginTop: '20px', marginBottom: '20px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}
-                >
-                  {plan.cta}
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleSelect(plan)}
-                  disabled={loading === plan.key}
-                  style={{
-                    width: '100%', padding: '11px', borderRadius: '6px',
-                    background: plan.highlight ? 'white' : 'var(--navy)',
-                    color: plan.highlight ? 'var(--navy)' : 'white',
-                    border: 'none', fontSize: '12px', fontWeight: 700,
-                    cursor: loading === plan.key ? 'not-allowed' : 'pointer',
-                    marginTop: '20px', marginBottom: '20px', letterSpacing: '0.06em', textTransform: 'uppercase' as const,
-                    opacity: loading === plan.key ? 0.7 : 1,
-                  }}
-                >
-                  {loading === plan.key
-                    ? <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        <span style={{ width: '12px', height: '12px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: plan.highlight ? 'var(--navy)' : 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
-                        Loading…
-                      </span>
-                    : plan.cta
-                  }
-                </button>
-              )}
+              {/* 5. Description — clamped to 2 lines */}
+              <p style={{
+                fontSize: '12px', lineHeight: 1.6, margin: 0,
+                height: '38px', overflow: 'hidden',
+                color: plan.highlight ? 'rgba(255,255,255,0.55)' : 'var(--text-3)',
+              }}>
+                {plan.description}
+              </p>
 
-              {/* Features */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+              {/* 6. Spacer — pushes CTA to same row across all cards */}
+              <div style={{ flex: 1 }} />
+
+              {/* 7. CTA — always at same vertical position */}
+              <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+                {isCurrentPlan ? (
+                  <div style={{ width: '100%', padding: '11px', borderRadius: '6px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', color: 'var(--electric)', fontSize: '12px', fontWeight: 700, textAlign: 'center', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                    ✓ Current plan
+                  </div>
+                ) : plan.key === 'free' ? (
+                  <button
+                    onClick={() => navigate('/app/dashboard')}
+                    style={{ width: '100%', padding: '11px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}
+                  >
+                    {plan.cta}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleSelect(plan)}
+                    disabled={loading === plan.key}
+                    style={{
+                      width: '100%', padding: '11px', borderRadius: '6px',
+                      background: plan.highlight ? 'white' : 'var(--navy)',
+                      color: plan.highlight ? 'var(--navy)' : 'white',
+                      border: 'none', fontSize: '12px', fontWeight: 700,
+                      cursor: loading === plan.key ? 'not-allowed' : 'pointer',
+                      letterSpacing: '0.06em', textTransform: 'uppercase' as const,
+                      opacity: loading === plan.key ? 0.7 : 1,
+                    }}
+                  >
+                    {loading === plan.key
+                      ? <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                          <span style={{ width: '12px', height: '12px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: plan.highlight ? 'var(--navy)' : 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+                          Loading…
+                        </span>
+                      : plan.cta
+                    }
+                  </button>
+                )}
+              </div>
+
+              {/* 8. Divider */}
+              <div style={{ height: '1px', background: plan.highlight ? 'rgba(255,255,255,0.1)' : 'var(--border)', marginBottom: '16px' }} />
+
+              {/* 9. Features */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {plan.features.map((feature, i) => (
                   <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                     <span style={{ color: plan.highlight ? 'var(--gold)' : 'var(--electric)', fontSize: '10px', marginTop: '3px', flexShrink: 0 }}>✓</span>
