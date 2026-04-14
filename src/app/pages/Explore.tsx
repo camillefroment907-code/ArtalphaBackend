@@ -362,8 +362,25 @@ export default function Explore() {
     tab === "alpha" ? alphaLots.length > maxVisible : lots.length > maxVisible
   );
 
+  const LOTS_CACHE_TTL = 60 * 1000; // 60 seconds
+
   // ── fetchLots — plain async, no useCallback to avoid stale closure loop ──
   const fetchLots = async (opts?: { page?: number }) => {
+    // Show cached data instantly while fetching fresh data in background
+    const cacheKey = `nautilus_lots_${exploreTab}`;
+    if ((opts?.page ?? 1) === 1) {
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const { items, total: cachedTotal, ts } = JSON.parse(cached);
+          if (Date.now() - ts < LOTS_CACHE_TTL && Array.isArray(items) && items.length > 0) {
+            setLots(items);
+            setTotal(cachedTotal || items.length);
+          }
+        }
+      } catch { /* ignore cache errors */ }
+    }
+
     setLoading(true);
     setHasError(false);
     try {
@@ -425,9 +442,17 @@ export default function Explore() {
       const data = await resp.json();
       const rawData = data.items || data.lots || data.results || data;
       const lotsArray = Array.isArray(rawData) ? rawData : [];
-      setLots(lotsArray.map(mapLot));
+      const mapped = lotsArray.map(mapLot);
+      setLots(mapped);
       setTotal(data.total || data.count || lotsArray.length || 0);
       setTotalPages(data.pages || 1);
+
+      // Save to localStorage cache (page 1 only, no filters active)
+      if ((opts?.page ?? 1) === 1 && !hasActiveFilters && !search.trim()) {
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({ items: mapped, total: data.total || lotsArray.length, ts: Date.now() }));
+        } catch { /* quota exceeded — ignore */ }
+      }
     } catch (e) {
       console.error('fetchLots failed:', e);
       setHasError(true);
@@ -743,7 +768,22 @@ export default function Explore() {
               )}
 
               {/* Empty */}
-              {!loading && !hasError && lots.length === 0 && (
+              {!loading && !hasError && lots.length === 0 && exploreTab === 'primary' && (
+                <div style={{ textAlign: "center", padding: "80px 40px" }}>
+                  <div style={{ fontFamily: "var(--font-serif)", fontSize: "22px", color: "var(--text)", marginBottom: "10px" }}>Primary market coming soon</div>
+                  <p style={{ fontSize: "14px", color: "var(--text-3)", maxWidth: "360px", margin: "0 auto", lineHeight: 1.7 }}>
+                    We're integrating gallery and primary market sources. Check back soon — or explore our auction opportunities in the meantime.
+                  </p>
+                  <button
+                    onClick={() => setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('tab', 'best'); return p; })}
+                    className="btn-electric"
+                    style={{ marginTop: "24px", fontSize: "12px", padding: "10px 24px", borderRadius: "6px" }}
+                  >
+                    View best lots →
+                  </button>
+                </div>
+              )}
+              {!loading && !hasError && lots.length === 0 && exploreTab !== 'primary' && (
                 <div style={{ textAlign: "center", padding: "80px 20px" }}>
                   <div style={{ fontFamily: "var(--font-serif)", fontSize: "36px", color: "var(--border)", marginBottom: "16px" }}>◇</div>
                   <div style={{ fontSize: "15px", color: "var(--text-2)", marginBottom: "8px" }}>{tab === "alpha" ? "No high-score opportunities right now" : "No lots match your filters"}</div>
