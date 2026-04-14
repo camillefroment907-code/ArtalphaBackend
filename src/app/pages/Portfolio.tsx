@@ -869,12 +869,23 @@ export default function Portfolio() {
             {/* Collection header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', margin: 0 }}>My Collection</h2>
-              <button
-                onClick={() => { setNewArtwork({}); setShowAddModal(true); }}
-                style={{ padding: '8px 20px', background: 'var(--navy)', color: 'white', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}
-              >
-                + Add artwork
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {portfolioItems.length > 0 && (
+                  <a
+                    href={`${BACKEND}/api/portfolio/export?format=csv`}
+                    download="nautilus_portfolio.csv"
+                    style={{ fontSize: '11px', color: 'var(--text-3)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    ↓ Export CSV
+                  </a>
+                )}
+                <button
+                  onClick={() => { setNewArtwork({}); setShowAddModal(true); }}
+                  style={{ padding: '8px 20px', background: 'var(--navy)', color: 'white', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}
+                >
+                  + Add artwork
+                </button>
+              </div>
             </div>
 
             {showAddModal && (
