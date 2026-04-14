@@ -477,9 +477,24 @@ No introduction, no conclusion, just the 3 lines.`,
           {sentiment && (
             <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px', marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
-                  Market Sentiment
-                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
+                    Market Sentiment
+                  </h3>
+                  <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
+                    onMouseEnter={e => { const t = (e.currentTarget.querySelector('.sentiment-tooltip') as HTMLElement); if (t) t.style.opacity = '1'; }}
+                    onMouseLeave={e => { const t = (e.currentTarget.querySelector('.sentiment-tooltip') as HTMLElement); if (t) t.style.opacity = '0'; }}
+                  >
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '14px', height: '14px', borderRadius: '50%', background: 'var(--bg-subtle)', border: '1px solid var(--border)', fontSize: '9px', color: 'var(--text-3)', cursor: 'default', fontFamily: 'Arial, sans-serif', fontWeight: 700 }}>?</span>
+                    <div className="sentiment-tooltip" style={{ opacity: 0, transition: 'opacity 0.15s', position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', zIndex: 50, width: '220px', background: 'var(--navy)', color: 'white', padding: '10px 12px', borderRadius: '6px', fontSize: '11px', lineHeight: '1.6', fontFamily: 'var(--font-sans)', pointerEvents: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }}>
+                      <strong style={{ display: 'block', marginBottom: '4px', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>How it works</strong>
+                      Momentum + deal score per category.<br />
+                      <span style={{ color: '#4ade80' }}>BULLISH</span> — score ≥70, volume up &gt;5%<br />
+                      <span style={{ color: '#f87171' }}>BEARISH</span> — score &lt;50 or volume down &gt;10%<br />
+                      <span style={{ color: '#94a3b8' }}>NEUTRAL</span> — everything in between
+                    </div>
+                  </div>
+                </div>
                 <div style={{
                   fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)',
                   padding: '3px 10px', borderRadius: '3px', letterSpacing: '0.1em',

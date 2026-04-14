@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router';
+import { useNavigate, Link, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { getUser, getToken, logout, PLAN_LIMITS } from '../../lib/auth';
 import { getSubscription, cancelSubscription } from '../../lib/api';
@@ -243,7 +243,9 @@ export default function Portfolio() {
   const usageStatus = getUsageStatus(plan);
 
   // ── Tab state ──────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState('collection');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'collection';
+  const setActiveTab = (tab: string) => setSearchParams({ tab });
 
   // ── Subscription ───────────────────────────────────────────
   const [sub, setSub] = useState<SubData | null>(null);
