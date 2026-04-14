@@ -29,6 +29,7 @@ interface SubData {
   status: string;
   billing_interval?: string;
   current_period_end?: string;
+  trial_end?: number;
 }
 
 interface PortfolioStats {
@@ -285,7 +286,14 @@ export default function Portfolio() {
   const [artistActionLoading, setArtistActionLoading] = useState(false);
 
   // ── Settings ───────────────────────────────────────────────
-  const [settingsForm, setSettingsForm] = useState({ fullName: user?.name || '', phone: '' });
+  const [settingsForm, setSettingsForm] = useState({
+    fullName: user?.name || '', phone: '',
+    country: '', address: '',
+    collectorType: '', horizon: '',
+    annualBudget: '', expectedReturn: '',
+    preferredStyles: '', preferredRegions: '',
+    goals: '', currency: 'EUR',
+  });
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
 
@@ -312,6 +320,9 @@ export default function Portfolio() {
   const [newArtistName, setNewArtistName] = useState('');
 
   // ── Computed ───────────────────────────────────────────────
+  const subscription = sub;
+  const userPlan = plan;
+
   const PLAN_LABELS: Record<string, string> = {
     free: 'Free', starter: 'Collector', investor: 'Investor',
     pro: 'Family Office', elite: 'Institutional',
@@ -593,36 +604,65 @@ export default function Portfolio() {
 
   // ── Billing ────────────────────────────────────────────────
 
-  async function openBillingPortal() {
+  const openBillingPortal = async () => {
     try {
-      const token = getToken();
       const resp = await fetch(`${BACKEND}/api/billing/portal`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
-      if (!resp.ok) { navigate('/app/pricing'); return; }
       const data = await resp.json();
       if (data.url) window.open(data.url, '_blank');
       else navigate('/app/pricing');
     } catch { navigate('/app/pricing'); }
-  }
+  };
+
+  const handleCancelSubscription = async () => {
+    try {
+      await fetch(`${BACKEND}/api/billing/cancel-subscription`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      setShowCancelModal(false);
+      window.location.reload();
+    } catch { /* silent */ }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') return;
+    try {
+      await fetch(`${BACKEND}/api/auth/delete-account`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      localStorage.clear();
+      navigate('/');
+    } catch { /* silent */ }
+  };
 
   // ── Settings ───────────────────────────────────────────────
 
-  async function saveSettings(e: React.FormEvent) {
-    e.preventDefault();
-    setSettingsSaving(true);
+  const saveSettings = async () => {
     try {
-      const token = getToken();
       await fetch(`${BACKEND}/api/auth/profile`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ full_name: settingsForm.fullName || null, phone: settingsForm.phone || null }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({
+          full_name: settingsForm.fullName,
+          phone: settingsForm.phone,
+          country: settingsForm.country,
+          address: settingsForm.address,
+          collector_type: settingsForm.collectorType,
+          investment_horizon: settingsForm.horizon,
+          annual_budget: settingsForm.annualBudget ? parseFloat(settingsForm.annualBudget) : null,
+          expected_return: settingsForm.expectedReturn ? parseFloat(settingsForm.expectedReturn) : null,
+          preferred_styles: settingsForm.preferredStyles,
+          preferred_regions: settingsForm.preferredRegions,
+        }),
       });
       setSettingsSaved(true);
       setTimeout(() => setSettingsSaved(false), 3000);
-    } catch { /* silent */ } finally { setSettingsSaving(false); }
-  }
+    } catch { /* silent */ }
+  };
 
   function handleSignOut() {
     logout();
@@ -1439,91 +1479,188 @@ export default function Portfolio() {
             SUBSCRIPTION TAB
         ══════════════════════════════════════════════════════ */}
         {activeTab === 'subscription' && (
-          <div style={{ paddingTop: '8px' }}>
-            {/* Current plan card */}
-            <div style={{ border: '2px solid var(--electric-border)', borderRadius: '12px', padding: '32px', background: 'var(--electric-subtle)', marginBottom: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' }}>
-                <div>
-                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em', color: 'var(--electric)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '6px' }}>Current Plan</div>
-                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--text)' }}>{planLabel}</div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--electric)', animation: 'pulseDot 2s infinite' }} />
-                  <span style={{ fontSize: '11px', color: 'var(--electric)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>Active</span>
-                </div>
+          <div style={{ maxWidth: '640px' }}>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 24px' }}>Subscription</h2>
+
+            {/* Current plan hero card */}
+            <div style={{
+              background: 'var(--navy)', borderRadius: '12px', padding: '32px',
+              marginBottom: '16px', position: 'relative', overflow: 'hidden',
+            }}>
+              {/* Decorative spiral */}
+              <div style={{ position: 'absolute', right: '24px', top: '24px', opacity: 0.08 }}>
+                <svg width="120" height="120" viewBox="0 0 40 40" fill="none">
+                  <path d="M 20 4 A 16 16 0 0 1 36 20" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
+                  <path d="M 36 20 A 16 16 0 0 1 20 36" stroke="white" strokeWidth="2.2" strokeLinecap="round" opacity="0.65"/>
+                  <path d="M 20 36 A 8 8 0 0 1 12 28" stroke="#C6A85A" strokeWidth="2.2" strokeLinecap="round"/>
+                  <path d="M 12 28 A 8 8 0 0 1 20 20" stroke="#C6A85A" strokeWidth="2.2" strokeLinecap="round" opacity="0.7"/>
+                  <circle cx="20" cy="20" r="1.8" fill="#C6A85A"/>
+                </svg>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 48px', marginBottom: '24px' }}>
-                <div>
-                  <FeatureRow label="Opportunities" value={limits.maxOpportunities >= 9999 ? 'Unlimited' : String(limits.maxOpportunities)} active={true} />
-                  <FeatureRow label="AI Analyses / month" value={usageLimit === 0 ? '—' : usageLimit >= 999 ? 'Unlimited' : String(usageLimit)} active={usageLimit > 0} />
-                  <FeatureRow label="Investment Analysis" value={limits.hasFullAnalysis ? '✓' : '—'} active={limits.hasFullAnalysis} />
-                  <FeatureRow label="AI Advisor" value={limits.hasAIVerdict ? '✓' : '—'} active={limits.hasAIVerdict} />
-                </div>
-                <div>
-                  <FeatureRow label="Price Projections" value={limits.projectionYears.length > 0 ? limits.projectionYears.map((y: number) => `${y}y`).join(', ') : '—'} active={limits.projectionYears.length > 0} />
-                  <FeatureRow label="Real-time Alerts" value={limits.hasAlerts ? '✓' : '—'} active={limits.hasAlerts} />
-                  <FeatureRow label="Portfolio Tracking" value={limits.hasPortfolio ? '✓' : '—'} active={limits.hasPortfolio} />
-                  <FeatureRow label="Full Artist Profiles" value={limits.hasFullArtistProfile ? '✓' : '—'} active={limits.hasFullArtistProfile} />
-                </div>
+
+              <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.2em', marginBottom: '10px' }}>
+                CURRENT PLAN
               </div>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                {isFreePlan ? (
-                  <Link to="/app/pricing" className="btn-electric" style={{ padding: '10px 24px', fontSize: '12px', letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none' }}>
-                    Upgrade Plan
-                  </Link>
-                ) : (
-                  <>
-                    <button onClick={openBillingPortal} style={{ padding: '10px 20px', background: 'transparent', border: '1px solid var(--electric-border)', borderRadius: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--electric)', cursor: 'pointer', letterSpacing: '0.04em' }}>
-                      Manage in Stripe →
-                    </button>
-                    <button onClick={() => { setShowCancelModal(true); setCancelStep(1); setCancelReason(''); setCancelFeedback(''); }} style={{ padding: '10px 20px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--text-3)', cursor: 'pointer', letterSpacing: '0.04em' }}>
-                      Cancel subscription
-                    </button>
-                  </>
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', fontWeight: 600, color: 'white', marginBottom: '6px', textTransform: 'capitalize' }}>
+                {subscription?.plan || userPlan || 'Explorer'}
+              </div>
+              <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '24px' }}>
+                {subscription?.status === 'active'
+                  ? 'Active · Renews automatically'
+                  : subscription?.status === 'trialing'
+                  ? `Free trial · Ends ${subscription?.trial_end ? new Date(subscription.trial_end * 1000).toLocaleDateString('fr-FR') : 'soon'}`
+                  : 'Free plan — upgrade to unlock the full platform'
+                }
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => navigate('/app/pricing')}
+                  style={{
+                    padding: '10px 24px', background: 'white', color: 'var(--navy)',
+                    border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                    cursor: 'pointer', letterSpacing: '0.06em',
+                  }}
+                >
+                  {userPlan === 'free' ? 'Upgrade plan →' : 'Change plan →'}
+                </button>
+                {subscription?.status === 'active' && (
+                  <button
+                    onClick={openBillingPortal}
+                    style={{
+                      padding: '10px 24px', background: 'transparent', color: 'rgba(255,255,255,0.7)',
+                      border: '1px solid rgba(255,255,255,0.25)', borderRadius: '8px',
+                      fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    Manage billing
+                  </button>
                 )}
               </div>
             </div>
 
-            {/* Billing info */}
-            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '24px', marginBottom: '24px' }}>
-              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '16px' }}>Billing & Invoices</div>
-              <div style={{ display: 'flex', gap: '32px', marginBottom: '20px' }}>
-                <div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-3)', marginBottom: '4px' }}>INTERVAL</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: 'var(--text)', textTransform: 'capitalize' }}>{billingInterval}</div>
-                </div>
-                {sub?.current_period_end && (
-                  <div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-3)', marginBottom: '4px' }}>NEXT RENEWAL</div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>
-                      {new Date(sub.current_period_end).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </div>
-                  </div>
-                )}
+            {/* Plan features summary */}
+            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px 24px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '14px' }}>
+                Your plan includes
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                {(userPlan === 'free' ? [
+                  '3 opportunities/day',
+                  'Basic deal score',
+                  '3 Larry messages',
+                  '3 portfolio items',
+                ] : userPlan === 'starter' ? [
+                  '10 opportunities/day',
+                  'Full deal score + rationale',
+                  '10 Larry messages/month',
+                  'Primary market access',
+                  '10 portfolio items',
+                  'Market signals & alerts',
+                ] : userPlan === 'investor' ? [
+                  'Unlimited opportunities',
+                  'Investment Memo generator',
+                  '30 Larry messages/month',
+                  '3 AI agent strategies',
+                  'Full artist profiles',
+                  'Priority support',
+                ] : [
+                  'Everything in Investor',
+                  'Investment Dossier (50yr)',
+                  'Unlimited Larry',
+                  'Unlimited AI analyses',
+                  'API access',
+                  'Dedicated support',
+                ]).map((feature, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span style={{ color: 'var(--electric)', fontSize: '12px' }}>✓</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-2)' }}>{feature}</span>
+                  </div>
+                ))}
+              </div>
+              {userPlan !== 'pro' && userPlan !== 'institutional' && (
+                <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-3)' }}>Want more? Upgrade for unlimited access.</span>
+                  <button onClick={() => navigate('/app/pricing')} style={{ fontSize: '11px', color: 'var(--electric)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: '0' }}>
+                    See all plans →
+                  </button>
+                </div>
+              )}
+            </div>
 
-              {invoicesLoading ? (
-                <div style={{ textAlign: 'center', padding: '20px 0', fontSize: '12px', color: 'var(--text-3)' }}>Loading invoices…</div>
-              ) : invoices.length === 0 ? (
-                <div style={{ fontSize: '13px', color: 'var(--text-3)', textAlign: 'center', padding: '20px 0' }}>No invoices yet.</div>
+            {/* Stripe billing portal */}
+            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px 24px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '12px' }}>
+                Billing & Payments
+              </div>
+              <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '16px', lineHeight: 1.6 }}>
+                Update your payment method, download invoices, and manage your subscription directly in the Stripe billing portal.
+              </p>
+              <button
+                onClick={openBillingPortal}
+                style={{
+                  width: '100%', padding: '12px', background: 'var(--bg-subtle)',
+                  border: '1px solid var(--border)', borderRadius: '8px',
+                  fontSize: '13px', fontWeight: 600, color: 'var(--text)', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--navy)'; (e.currentTarget as HTMLButtonElement).style.color = 'white'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-subtle)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text)'; }}
+              >
+                <span>Open Stripe billing portal</span>
+                <span>→</span>
+              </button>
+            </div>
+
+            {/* Invoices */}
+            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px 24px', marginBottom: '24px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '14px' }}>
+                Invoice History
+              </div>
+              {invoices.length === 0 ? (
+                <p style={{ fontSize: '13px', color: 'var(--text-3)', textAlign: 'center', padding: '20px 0', margin: 0 }}>
+                  No invoices yet — they'll appear here after your first payment.
+                </p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  {invoices.map((inv: any) => (
-                    <div key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-light)' }}>
+                <div>
+                  {invoices.map((inv: any, idx: number) => (
+                    <div key={inv.id} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '12px 0',
+                      borderBottom: idx < invoices.length - 1 ? '1px solid var(--border-light)' : 'none',
+                    }}>
                       <div>
                         <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>
                           {new Date(inv.created * 1000).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
                         </div>
                         <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>
-                          {inv.description || 'Nautilus subscription'} · {((inv.amount_paid || 0) / 100).toFixed(2)} {(inv.currency || 'EUR').toUpperCase()}
+                          {(inv.amount_paid / 100).toFixed(2)} {inv.currency?.toUpperCase()} · {inv.description || 'Nautilus subscription'}
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: inv.status === 'paid' ? 'var(--electric)' : 'var(--text-3)', background: inv.status === 'paid' ? 'var(--electric-subtle)' : 'var(--bg-subtle)', padding: '2px 8px', borderRadius: '10px', border: `1px solid ${inv.status === 'paid' ? 'var(--electric-border)' : 'var(--border)'}` }}>
-                          {(inv.status || '').toUpperCase()}
+                        <span style={{
+                          fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)',
+                          padding: '2px 8px', borderRadius: '10px',
+                          color: inv.status === 'paid' ? 'var(--electric)' : 'var(--red)',
+                          background: inv.status === 'paid' ? 'var(--electric-subtle)' : 'var(--red-subtle)',
+                          border: `1px solid ${inv.status === 'paid' ? 'var(--electric-border)' : 'var(--red-border)'}`,
+                        }}>
+                          {inv.status?.toUpperCase()}
                         </span>
                         {inv.invoice_pdf && (
-                          <a href={inv.invoice_pdf} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: 'var(--electric)', textDecoration: 'none', fontWeight: 600, padding: '4px 10px', border: '1px solid var(--electric-border)', borderRadius: '4px', background: 'var(--electric-subtle)' }}>
+                          <a
+                            href={inv.invoice_pdf}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              fontSize: '11px', color: 'var(--electric)', fontWeight: 700,
+                              padding: '4px 10px', borderRadius: '4px',
+                              border: '1px solid var(--electric-border)',
+                              background: 'var(--electric-subtle)',
+                              textDecoration: 'none',
+                            }}
+                          >
                             ↓ PDF
                           </a>
                         )}
@@ -1535,28 +1672,89 @@ export default function Portfolio() {
             </div>
 
             {/* Danger zone */}
-            <div style={{ border: '1px solid var(--border-light)', borderRadius: '10px', padding: '24px 28px', background: 'var(--bg-subtle)' }}>
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', fontWeight: 600, color: 'var(--text-2)', margin: '0 0 6px' }}>Danger Zone</h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: '0 0 16px' }}>Permanently delete your account and all associated data.</p>
-              {!showDeleteModal ? (
-                <button onClick={() => setShowDeleteModal(true)} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-3)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+            <div style={{ background: 'white', border: '1px solid #FCA5A5', borderRadius: '8px', padding: '20px 24px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--red)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '16px' }}>
+                Danger Zone
+              </div>
+
+              {subscription?.status === 'active' && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', marginBottom: '16px', borderBottom: '1px solid #FEE2E2' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>Cancel subscription</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Your access continues until the end of the billing period.</div>
+                  </div>
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    style={{ padding: '8px 16px', background: 'transparent', border: '1px solid var(--red)', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: 'var(--red)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    Cancel plan
+                  </button>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--red)', marginBottom: '3px' }}>Delete my account</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Permanently delete all your data. This cannot be undone.</div>
+                </div>
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  style={{ padding: '8px 16px', background: 'var(--red)', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 700, color: 'white', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
                   Delete account
                 </button>
-              ) : (
-                <div>
-                  <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '12px' }}>Type <strong>DELETE</strong> to confirm:</p>
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <input type="text" value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)} placeholder="DELETE" style={{ padding: '10px 14px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '13px', fontFamily: 'var(--font-mono)', background: 'var(--bg-card)', color: 'var(--text)', outline: 'none', width: '160px' }} />
-                    <button disabled={deleteConfirmText !== 'DELETE'} onClick={() => { if (deleteConfirmText === 'DELETE') { logout(); navigate('/'); } }} style={{ padding: '10px 20px', background: deleteConfirmText === 'DELETE' ? '#C0392B' : 'var(--bg-subtle)', border: 'none', borderRadius: '6px', color: deleteConfirmText === 'DELETE' ? 'white' : 'var(--text-3)', fontSize: '12px', fontWeight: 600, cursor: deleteConfirmText === 'DELETE' ? 'pointer' : 'not-allowed', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                      Confirm Delete
+              </div>
+            </div>
+
+            {/* Cancel modal */}
+            {showCancelModal && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,22,40,0.65)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+                <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '420px', width: '100%' }}>
+                  <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '12px' }}>Cancel subscription?</h3>
+                  <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '24px', lineHeight: 1.7 }}>
+                    Your access will continue until the end of the current billing period. After that, you'll be downgraded to the free plan.
+                  </p>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={() => setShowCancelModal(false)} style={{ flex: 1, padding: '11px', background: 'var(--navy)', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, color: 'white', cursor: 'pointer' }}>
+                      Keep my plan
                     </button>
-                    <button onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }} style={{ padding: '10px 16px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-2)', fontSize: '12px', cursor: 'pointer' }}>
-                      Cancel
+                    <button onClick={handleCancelSubscription} style={{ flex: 1, padding: '11px', background: 'transparent', border: '1px solid var(--red)', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--red)', cursor: 'pointer' }}>
+                      Cancel anyway
                     </button>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* Delete modal */}
+            {showDeleteModal && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,22,40,0.65)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+                <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '420px', width: '100%' }}>
+                  <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--red)', marginBottom: '12px' }}>Delete your account?</h3>
+                  <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '16px', lineHeight: 1.7 }}>
+                    This will permanently delete your account, collection, portfolio, and all data. This action cannot be undone.
+                  </p>
+                  <input
+                    placeholder='Type "DELETE" to confirm'
+                    value={deleteConfirmText}
+                    onChange={e => setDeleteConfirmText(e.target.value)}
+                    style={{ marginBottom: '16px', width: '100%', padding: '10px 12px', fontSize: '13px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }} style={{ flex: 1, padding: '11px', background: 'var(--navy)', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, color: 'white', cursor: 'pointer' }}>
+                      Keep account
+                    </button>
+                    <button
+                      onClick={handleDeleteAccount}
+                      disabled={deleteConfirmText !== 'DELETE'}
+                      style={{ flex: 1, padding: '11px', background: deleteConfirmText === 'DELETE' ? 'var(--red)' : 'var(--bg-hover)', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, color: deleteConfirmText === 'DELETE' ? 'white' : 'var(--text-3)', cursor: deleteConfirmText === 'DELETE' ? 'pointer' : 'not-allowed' }}
+                    >
+                      Delete forever
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1564,100 +1762,144 @@ export default function Portfolio() {
             SETTINGS TAB
         ══════════════════════════════════════════════════════ */}
         {activeTab === 'settings' && (
-          <div style={{ paddingTop: '8px', maxWidth: '640px' }}>
-            <form onSubmit={saveSettings}>
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, color: 'var(--text)', margin: '0 0 20px' }}>Profile</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 24px', marginBottom: '8px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '6px' }}>Full Name</label>
-                  <input type="text" value={settingsForm.fullName} onChange={e => setSettingsForm(f => ({ ...f, fullName: e.target.value }))} placeholder="Your full name" style={inputStyle} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '6px' }}>Email</label>
-                  <input type="email" value={user?.email || ''} disabled style={{ ...inputStyle, opacity: 0.5, cursor: 'not-allowed' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '6px' }}>Phone</label>
-                  <input type="tel" value={settingsForm.phone} onChange={e => setSettingsForm(f => ({ ...f, phone: e.target.value }))} placeholder="+33 6 00 00 00 00" style={inputStyle} />
-                </div>
-              </div>
-              <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <button type="submit" disabled={settingsSaving} style={{ padding: '10px 24px', background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: settingsSaving ? 'not-allowed' : 'pointer', opacity: settingsSaving ? 0.6 : 1 }}>
-                  {settingsSaving ? 'Saving…' : 'Save Changes'}
-                </button>
-                {settingsSaved && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#1A7A4A' }}>✓ Saved</span>}
-              </div>
-            </form>
+          <div style={{ maxWidth: '640px' }}>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 24px' }}>Account Settings</h2>
 
-            <div style={{ height: '1px', background: 'var(--border)', margin: '36px 0' }} />
-
-            {/* Language */}
-            <div style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, color: 'var(--text)', margin: '0 0 20px' }}>Language</h3>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                {(['en', 'fr'] as const).map(lang => (
-                  <button key={lang} onClick={() => { i18n.changeLanguage(lang); localStorage.setItem('i18nextLng', lang); }} style={{ padding: '8px 20px', fontSize: '13px', fontWeight: 600, border: '1px solid', borderColor: currentLang === lang ? 'var(--electric)' : 'var(--border)', borderRadius: '6px', background: currentLang === lang ? 'var(--electric-subtle)' : 'transparent', color: currentLang === lang ? 'var(--electric)' : 'var(--text-2)', cursor: 'pointer', transition: 'all 0.15s' }}>
-                    {lang === 'en' ? 'English' : 'Français'}
-                  </button>
-                ))}
+            {/* Profile */}
+            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '24px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '18px' }}>
+                Personal Information
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Full name</label>
+                  <input style={inputStyle} value={settingsForm.fullName} onChange={e => setSettingsForm(f => ({ ...f, fullName: e.target.value }))} placeholder="Your full name" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Email</label>
+                  <input style={{ ...inputStyle, opacity: 0.5, cursor: 'not-allowed' }} value={user?.email || ''} disabled />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Phone</label>
+                  <input style={inputStyle} value={settingsForm.phone} onChange={e => setSettingsForm(f => ({ ...f, phone: e.target.value }))} placeholder="+33 6 00 00 00 00" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Country</label>
+                  <select style={inputStyle} value={settingsForm.country} onChange={e => setSettingsForm(f => ({ ...f, country: e.target.value }))}>
+                    <option value="">Select country</option>
+                    <option value="FR">France</option>
+                    <option value="BE">Belgium</option>
+                    <option value="CH">Switzerland</option>
+                    <option value="LU">Luxembourg</option>
+                    <option value="MC">Monaco</option>
+                    <option value="GB">United Kingdom</option>
+                    <option value="US">United States</option>
+                    <option value="AE">UAE</option>
+                    <option value="SG">Singapore</option>
+                    <option value="HK">Hong Kong</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Address</label>
+                  <input style={inputStyle} value={settingsForm.address} onChange={e => setSettingsForm(f => ({ ...f, address: e.target.value }))} placeholder="123 Rue de Rivoli, 75001 Paris" />
+                </div>
+              </div>
+            </div>
+
+            {/* Investment profile */}
+            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '24px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '18px' }}>
+                Investment Profile
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Investor type</label>
+                  <select style={inputStyle} value={settingsForm.collectorType} onChange={e => setSettingsForm(f => ({ ...f, collectorType: e.target.value }))}>
+                    <option value="">Select type</option>
+                    <option value="first_time">First-time buyer</option>
+                    <option value="collector">Art collector</option>
+                    <option value="investor">Pure investor</option>
+                    <option value="family_office">Family office / Wealth manager</option>
+                    <option value="gallery">Gallery or art dealer</option>
+                    <option value="institution">Institution / Museum</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Investment horizon</label>
+                  <select style={inputStyle} value={settingsForm.horizon} onChange={e => setSettingsForm(f => ({ ...f, horizon: e.target.value }))}>
+                    <option value="">Select horizon</option>
+                    <option value="short">{'Short term (< 2 years)'}</option>
+                    <option value="medium">Medium term (2–5 years)</option>
+                    <option value="long">Long term (5+ years)</option>
+                    <option value="permanent">Permanent collection</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Annual budget (€)</label>
+                  <input style={inputStyle} type="number" value={settingsForm.annualBudget} onChange={e => setSettingsForm(f => ({ ...f, annualBudget: e.target.value }))} placeholder="e.g. 50000" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Expected annual return (%)</label>
+                  <input style={inputStyle} type="number" value={settingsForm.expectedReturn} onChange={e => setSettingsForm(f => ({ ...f, expectedReturn: e.target.value }))} placeholder="e.g. 15" />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Preferred art styles & movements</label>
+                  <input style={inputStyle} value={settingsForm.preferredStyles} onChange={e => setSettingsForm(f => ({ ...f, preferredStyles: e.target.value }))} placeholder="e.g. Impressionism, Contemporary, Street Art, Photography..." />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Preferred regions & schools</label>
+                  <input style={inputStyle} value={settingsForm.preferredRegions} onChange={e => setSettingsForm(f => ({ ...f, preferredRegions: e.target.value }))} placeholder="e.g. French school, American abstract, Asian contemporary..." />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Currency display</label>
+                  <select style={inputStyle} value={settingsForm.currency} onChange={e => setSettingsForm(f => ({ ...f, currency: e.target.value }))}>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="CHF">CHF</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Language</label>
+                  <select style={inputStyle}
+                    value={localStorage.getItem('i18nextLng') || 'en'}
+                    onChange={e => { localStorage.setItem('i18nextLng', e.target.value); window.location.reload(); }}>
+                    <option value="en">English</option>
+                    <option value="fr">Français</option>
+                  </select>
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>What do you want to achieve with Nautilus?</label>
+                  <textarea
+                    style={{ ...inputStyle, resize: 'vertical', minHeight: '80px' }}
+                    value={settingsForm.goals}
+                    onChange={e => setSettingsForm(f => ({ ...f, goals: e.target.value }))}
+                    placeholder="e.g. Build a diversified collection of 20 works under €500K, find undervalued impressionist prints, resell within 3 years at +30%..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Save */}
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <button
+                onClick={saveSettings}
+                className="btn-electric"
+                style={{ fontSize: '13px', padding: '12px 32px', borderRadius: '8px' }}
+              >
+                Save changes
+              </button>
+              {settingsSaved && (
+                <span style={{ fontSize: '12px', color: 'var(--electric)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  ✓ Saved successfully
+                </span>
+              )}
             </div>
           </div>
         )}
 
       </div>
-
-      {/* ══════════════════════════════════════════════════════
-          CANCEL SUBSCRIPTION MODAL
-      ══════════════════════════════════════════════════════ */}
-      {showCancelModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px' }}>
-          <div style={{ background: 'white', borderRadius: '12px', padding: '40px', maxWidth: '480px', width: '100%', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '28px' }}>
-              {([1, 2] as const).map(step => (
-                <div key={step} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, background: cancelStep >= step ? 'var(--electric)' : 'var(--bg-subtle)', color: cancelStep >= step ? 'white' : 'var(--text-3)' }}>{step}</div>
-                  {step < 2 && <div style={{ width: '32px', height: '1px', background: cancelStep > step ? 'var(--electric)' : 'var(--border)' }} />}
-                </div>
-              ))}
-              <span style={{ fontSize: '12px', color: 'var(--text-3)', marginLeft: '8px' }}>Step {cancelStep} of 2</span>
-            </div>
-
-            {cancelStep === 1 && (
-              <>
-                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px' }}>Cancel subscription?</h2>
-                <p style={{ fontSize: '13px', color: 'var(--text-2)', margin: '0 0 24px', lineHeight: 1.6 }}>We're sorry to see you go. Could you tell us why you're cancelling?</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '28px' }}>
-                  {['Too expensive', 'Not using it enough', 'Missing features I need', 'Found a better alternative', 'Technical issues', 'Other'].map(reason => (
-                    <label key={reason} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', border: `1px solid ${cancelReason === reason ? 'var(--electric)' : 'var(--border)'}`, borderRadius: '6px', cursor: 'pointer', background: cancelReason === reason ? 'var(--electric-subtle)' : 'white' }}>
-                      <input type="radio" name="cancelReason" value={reason} checked={cancelReason === reason} onChange={() => setCancelReason(reason)} style={{ accentColor: 'var(--electric)' }} />
-                      <span style={{ fontSize: '13px', color: 'var(--text)' }}>{reason}</span>
-                    </label>
-                  ))}
-                </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button onClick={() => setCancelStep(2)} disabled={!cancelReason} className="btn-electric" style={{ padding: '11px 24px', fontSize: '13px', opacity: cancelReason ? 1 : 0.4, cursor: cancelReason ? 'pointer' : 'not-allowed' }}>Next</button>
-                  <button onClick={() => setShowCancelModal(false)} style={{ padding: '11px 20px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '13px', color: 'var(--text-2)', cursor: 'pointer' }}>Keep subscription</button>
-                </div>
-              </>
-            )}
-
-            {cancelStep === 2 && (
-              <>
-                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px' }}>Any additional feedback?</h2>
-                <p style={{ fontSize: '13px', color: 'var(--text-2)', margin: '0 0 20px', lineHeight: 1.6 }}>Your feedback helps us improve. This is optional.</p>
-                <textarea value={cancelFeedback} onChange={e => setCancelFeedback(e.target.value)} placeholder="Tell us more..." rows={4} style={{ width: '100%', padding: '12px 14px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '13px', color: 'var(--text)', background: 'var(--bg-subtle)', resize: 'vertical', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '24px' }} />
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button disabled={cancelLoading} onClick={async () => { setCancelLoading(true); try { await cancelSubscription(); } catch {} setCancelLoading(false); setShowCancelModal(false); getSubscription().then(setSub).catch(() => {}); }} style={{ padding: '11px 20px', background: '#C0392B', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 600, color: 'white', cursor: cancelLoading ? 'not-allowed' : 'pointer', opacity: cancelLoading ? 0.7 : 1 }}>
-                    {cancelLoading ? 'Cancelling...' : 'Confirm cancellation'}
-                  </button>
-                  <button onClick={() => setCancelStep(1)} style={{ padding: '11px 20px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '13px', color: 'var(--text-2)', cursor: 'pointer' }}>Back</button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
