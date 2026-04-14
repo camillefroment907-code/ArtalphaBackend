@@ -38,7 +38,8 @@ async def analyze_portfolio(
     """AI portfolio analysis — Investor+ only."""
 
     plan = await _get_user_plan(current_user, db)
-    if plan not in ("investor", "pro", "expert"):
+    BLOCKED_PLANS = ("free", "starter")
+    if plan in BLOCKED_PLANS:
         raise HTTPException(403, "Portfolio AI analysis requires the Investor plan (€29/month).")
 
     # Check cache

@@ -50,7 +50,8 @@ async def generate_investment_memo(
 
     # Plan check
     plan = await _get_user_plan(current_user, db)
-    if plan not in ("investor", "pro", "institutional", "expert", "elite"):
+    BLOCKED_PLANS = ("free", "starter")
+    if plan in BLOCKED_PLANS:
         raise HTTPException(
             403,
             "Investment memos are available from the Investor plan (€29/month)."
