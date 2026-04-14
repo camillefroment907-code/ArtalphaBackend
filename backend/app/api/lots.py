@@ -227,12 +227,17 @@ async def list_lots(
                 Lot.title.ilike(f"%{search}%"),
                 Lot.artist_name_raw.ilike(f"%{search}%"),
                 Lot.auction_house_name.ilike(f"%{search}%"),
+                Lot.category.ilike(f"%{search}%"),
             )
         )
-    if min_price is not None:
-        filters.append(Lot.current_price >= min_price)
-    if max_price is not None:
-        filters.append(Lot.current_price <= max_price)
+    if min_price is not None and min_price > 0:
+        filters.append(
+            or_(Lot.current_price >= min_price, Lot.estimate_low >= min_price)
+        )
+    if max_price is not None and max_price > 0:
+        filters.append(
+            or_(Lot.current_price <= max_price, Lot.estimate_low <= max_price)
+        )
     if resolved_from:
         filters.append(Lot.auction_date >= resolved_from)
     if resolved_to:
