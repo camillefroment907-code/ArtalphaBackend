@@ -20,13 +20,30 @@ router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 class PortfolioItemCreate(BaseModel):
     title: str
     artist_name: Optional[str] = None
-    purchase_price_eur: float
-    purchase_date: Optional[datetime] = None
     medium: Optional[str] = None
     dimensions: Optional[str] = None
     image_url: Optional[str] = None
     notes: Optional[str] = None
     lot_id: Optional[UUID] = None
+    year: Optional[int] = None
+    location: Optional[str] = None
+    condition: Optional[str] = None
+    target_sell_date: Optional[str] = None
+    # Accept purchase_price_eur (legacy) or purchase_price (new modal)
+    purchase_price_eur: Optional[float] = None
+    purchase_price: Optional[float] = None
+    # Accept purchase_date (legacy) or acquisition_date (new modal)
+    purchase_date: Optional[datetime] = None
+    acquisition_date: Optional[str] = None
+    # Accept purchase_source (legacy) or acquisition_source (new modal)
+    purchase_source: Optional[str] = None
+    acquisition_source: Optional[str] = None
+    # Accept estimated_current_value_eur (legacy) or current_value (new modal)
+    estimated_current_value_eur: Optional[float] = None
+    current_value: Optional[float] = None
+    # Accept asking_price_eur (legacy) or target_sell_price (new modal)
+    asking_price_eur: Optional[float] = None
+    target_sell_price: Optional[float] = None
 
 
 class PortfolioItemUpdate(BaseModel):
@@ -154,17 +171,40 @@ async def create_item(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    price_eur = body.purchase_price_eur or body.purchase_price
+    if price_eur is None:
+        raise HTTPException(422, "purchase_price_eur is required")
+
+    acq_date = body.purchase_date
+    if acq_date is None and body.acquisition_date:
+        try:
+            acq_date = datetime.fromisoformat(body.acquisition_date)
+        except ValueError:
+            acq_date = None
+
+    # Compose notes (merge base notes + location + condition)
+    notes_parts = [p for p in [
+        body.notes,
+        f"Location: {body.location}" if body.location else None,
+        f"Condition: {body.condition}" if body.condition else None,
+    ] if p]
+    combined_notes = "\n".join(notes_parts) or None
+
     item = PortfolioItem(
         user_id=current_user.id,
         lot_id=body.lot_id,
         title=body.title,
         artist_name=body.artist_name,
-        purchase_price_eur=body.purchase_price_eur,
-        purchase_date=body.purchase_date,
+        purchase_price_eur=price_eur,
+        purchase_date=acq_date,
+        purchase_source=body.purchase_source or body.acquisition_source,
         medium=body.medium,
         dimensions=body.dimensions,
         image_url=body.image_url,
-        notes=body.notes,
+        notes=combined_notes,
+        estimated_current_value_eur=body.estimated_current_value_eur or body.current_value,
+        asking_price_eur=body.asking_price_eur or body.target_sell_price,
+        year_created=body.year,
     )
     db.add(item)
     await db.commit()
