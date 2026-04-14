@@ -26,6 +26,7 @@ const FAQ           = lazy(() => import('./pages/FAQ'));
 const BillingSuccess = lazy(() => import('./pages/BillingSuccess'));
 const Primary       = lazy(() => import('./pages/Primary'));
 const Convictions   = lazy(() => import('./pages/Convictions'));
+const MarketIndex   = lazy(() => import('./pages/MarketIndex'));
 
 export const router = createBrowserRouter([
   {
@@ -47,6 +48,10 @@ export const router = createBrowserRouter([
   {
     path: '/faq',
     Component: FAQ,
+  },
+  {
+    path: '/market-index',
+    Component: MarketIndex,
   },
   {
     path: '/billing/success',
