@@ -20,6 +20,19 @@ export default defineConfig({
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 
+  build: {
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          router: ['react-router'],
+          i18n: ['i18next', 'react-i18next'],
+        },
+      },
+    },
+  },
+
   server: {
     port: 5173,
     proxy: {

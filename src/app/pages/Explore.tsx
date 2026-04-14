@@ -365,25 +365,57 @@ export default function Explore() {
     tab === "alpha" ? alphaLots.length > maxVisible : lots.length > maxVisible
   );
 
-  // ── fetchLots — simplified + debug logs ──────────────────────
+  // ── fetchLots ─────────────────────────────────────────────────
   const fetchLots = async () => {
-    console.log('fetchLots called, exploreTab:', exploreTab, 'BACKEND:', BACKEND);
-    setLoading(true);
     setHasError(false);
+    const p: Record<string, any> = {
+      page: 1, page_size: 24,
+      sort_by: sortBy,
+      sort_dir: sortDir,
+      search: search || undefined,
+      min_price: minPrice > 0 ? minPrice : undefined,
+      max_price: maxPrice > 0 ? maxPrice : undefined,
+      category: category || undefined,
+      auction_house: auctionHouse || undefined,
+      artist_tier: artistTier || undefined,
+      size_category: sizeFilter || undefined,
+      min_upside: minUpside || undefined,
+      ...getDateParams(dateFilter),
+    };
+    if (exploreTab === 'best') { p.min_score = Math.max(minScore, 60); p.sort_by = 'deal_score'; p.sort_dir = 'desc'; }
+    else if (exploreTab === 'auctions') { if (minScore > 0) p.min_score = minScore; }
+
+    // Build cache key for localStorage stale-while-revalidate
+    const cacheKey = `explore_lots_${JSON.stringify(p)}`;
+    const stored = localStorage.getItem(cacheKey);
+    if (stored) {
+      try {
+        const { data, ts } = JSON.parse(stored);
+        if (Date.now() - ts < 5 * 60 * 1000) {
+          setLots(data.items.map(mapLot));
+          setTotal(data.total);
+          setTotalPages(data.pages);
+          setCurrentPage(1);
+          setLoading(false);
+          return;
+        }
+        // stale — show immediately then refresh in background
+        setLots(data.items.map(mapLot));
+        setTotal(data.total);
+        setTotalPages(data.pages);
+        setCurrentPage(1);
+      } catch { /* ignore */ }
+    }
+
+    setLoading(true);
     try {
-      const url = `${BACKEND}/api/lots?sort_by=deal_score&sort_dir=desc&min_score=60&page_size=24`;
-      console.log('Fetching:', url);
-      const resp = await fetch(url);
-      console.log('API response status:', resp.status);
-      const data = await resp.json();
-      console.log('API response data:', data);
-      const items = Array.isArray(data) ? data : (data.items || data.lots || []);
-      console.log('Items found:', items.length);
-      setLots(items.map(mapLot));
-      setTotal(data.total || items.length);
-      setTotalPages(data.pages || 1);
+      const result = await fetchLotsFromAPI(p);
+      localStorage.setItem(cacheKey, JSON.stringify({ data: result, ts: Date.now() }));
+      setLots(result.items.map(mapLot));
+      setTotal(result.total);
+      setTotalPages(result.pages);
+      setCurrentPage(1);
     } catch (e) {
-      console.error('Fetch error:', e);
       setHasError(true);
     } finally {
       setLoading(false);
@@ -393,7 +425,7 @@ export default function Explore() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchLots();
-  }, [exploreTab]);
+  }, [exploreTab, sortBy, sortDir, search, minScore, minUpside, minPrice, maxPrice, category, artistTier, auctionHouse, sizeFilter, dateFilter]);
 
   const doFetch = () => fetchLots();
 
