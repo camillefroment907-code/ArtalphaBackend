@@ -8,7 +8,7 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from app.database import get_db
-from app.models.db_models import PortfolioItem, User
+from app.models.db_models import PortfolioItem, User, Wishlist, UserPreference, Lot
 from app.api.auth_utils import get_current_user
 from app.engines.projections import project_value
 
@@ -215,6 +215,126 @@ async def delete_item(
         raise HTTPException(status_code=404, detail="Item not found")
     await db.delete(item)
     await db.commit()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# WATCHLIST
+# ══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/watchlist")
+async def get_watchlist(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return user's watchlist with lot details."""
+    result = await db.execute(
+        select(Wishlist, Lot)
+        .join(Lot, Wishlist.lot_id == Lot.id)
+        .where(Wishlist.user_id == current_user.id)
+        .order_by(Wishlist.created_at.desc())
+    )
+    rows = result.all()
+    return [
+        {
+            "watchlist_id": str(w.id),
+            "lot_id": str(w.lot_id),
+            "note": w.note,
+            "added_at": w.created_at.isoformat() if w.created_at else None,
+            "lot": {
+                "id": str(l.id),
+                "title": l.title,
+                "artist_name": l.artist_name_raw,
+                "image_url": l.image_url,
+                "auction_house": l.auction_house_name,
+                "estimate_low": l.estimate_low,
+                "estimate_high": l.estimate_high,
+                "current_price": l.current_price,
+                "deal_score": l.deal_score,
+                "auction_date": l.auction_date.isoformat() if l.auction_date else None,
+                "status": l.status.value if l.status else None,
+            },
+        }
+        for w, l in rows
+    ]
+
+
+@router.delete("/watchlist/{lot_id}", status_code=204)
+async def remove_from_watchlist(
+    lot_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Wishlist).where(
+            Wishlist.lot_id == lot_id,
+            Wishlist.user_id == current_user.id,
+        )
+    )
+    item = result.scalar_one_or_none()
+    if not item:
+        raise HTTPException(404, "Not in watchlist")
+    await db.delete(item)
+    await db.commit()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FAVORITE ARTISTS
+# ══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/favorite-artists")
+async def get_favorite_artists(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(UserPreference).where(UserPreference.user_id == current_user.id)
+    )
+    pref = result.scalar_one_or_none()
+    return {"artists": list(pref.favorite_artists or []) if pref else []}
+
+
+@router.post("/favorite-artists", status_code=201)
+async def add_favorite_artist(
+    body: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    artist_name = (body.get("artist_name") or "").strip()
+    if not artist_name:
+        raise HTTPException(400, "artist_name required")
+    result = await db.execute(
+        select(UserPreference).where(UserPreference.user_id == current_user.id)
+    )
+    pref = result.scalar_one_or_none()
+    if not pref:
+        pref = UserPreference(user_id=current_user.id, favorite_artists=[artist_name])
+        db.add(pref)
+    else:
+        current_list = list(pref.favorite_artists or [])
+        if artist_name not in current_list:
+            current_list.append(artist_name)
+            pref.favorite_artists = current_list
+    await db.commit()
+    return {"success": True}
+
+
+@router.delete("/favorite-artists/{artist_name}", status_code=204)
+async def remove_favorite_artist(
+    artist_name: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(UserPreference).where(UserPreference.user_id == current_user.id)
+    )
+    pref = result.scalar_one_or_none()
+    if not pref:
+        return
+    current_list = list(pref.favorite_artists or [])
+    if artist_name in current_list:
+        current_list.remove(artist_name)
+        pref.favorite_artists = current_list
+        await db.commit()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
