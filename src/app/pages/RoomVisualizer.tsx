@@ -417,6 +417,15 @@ export default function RoomVisualizer() {
               </div>
             )}
 
+            {/* Estimated dimensions warning */}
+            {(!searchParams.get('w') || searchParams.get('w') === '80') && (
+              <div style={{ position: 'absolute', bottom: '50px', left: '16px', background: 'rgba(198,168,90,0.15)', border: '1px solid rgba(198,168,90,0.3)', borderRadius: '6px', padding: '6px 12px' }}>
+                <span style={{ fontSize: '10px', color: '#C6A85A', fontFamily: 'monospace' }}>
+                  ⚠ Estimated dimensions — enter real size for accuracy
+                </span>
+              </div>
+            )}
+
             {/* Size ruler */}
             <div style={{ position: 'absolute', bottom: '16px', left: '16px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', borderRadius: '6px', padding: '8px 12px' }}>
               <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace' }}>

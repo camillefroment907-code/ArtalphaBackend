@@ -398,11 +398,11 @@ export default function OpportunityDetail() {
               onClick={() => {
                 const params = new URLSearchParams({
                   lot: lot.id,
-                  img: encodeURIComponent(lot.image_url || ''),
-                  title: encodeURIComponent(lot.title || ''),
-                  artist: encodeURIComponent(lot.artist_name_raw || ''),
-                  w: String(lot.width_cm || 80),
-                  h: String(lot.height_cm || 60),
+                  img: lot.image_url || '',
+                  title: lot.title || '',
+                  artist: lot.artist_name_raw || lot.artist?.name || '',
+                  w: String(lot.width_cm || lot.dimensions_parsed?.width_cm || 80),
+                  h: String(lot.height_cm || lot.dimensions_parsed?.height_cm || 60),
                 });
                 navigate(`/app/visualizer?${params.toString()}`);
               }}
