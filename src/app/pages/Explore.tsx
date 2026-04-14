@@ -365,85 +365,25 @@ export default function Explore() {
     tab === "alpha" ? alphaLots.length > maxVisible : lots.length > maxVisible
   );
 
-  // ── fetchLots — simple plain async, no cache, no useCallback ──
+  // ── fetchLots — simplified + debug logs ──────────────────────
   const fetchLots = async () => {
+    console.log('fetchLots called, exploreTab:', exploreTab, 'BACKEND:', BACKEND);
     setLoading(true);
     setHasError(false);
     try {
-      const params = new URLSearchParams();
-      params.set('page_size', '24');
-      params.set('page', '1');
-
-      if (exploreTab === 'primary') {
-        // Primary has its own endpoint — just pass basic params
-        const token = getToken();
-        const resp = await fetch(`${BACKEND}/api/lots/primary?${params.toString()}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data = await resp.json();
-        const items = Array.isArray(data) ? data : (data.items || data.lots || data.results || []);
-        setLots(items.map(mapLot));
-        setTotal(data.total || items.length || 0);
-        setTotalPages(data.pages || 1);
-        return;
-      }
-
-      if (exploreTab === 'best') {
-        params.set('sort_by', sortBy);
-        params.set('sort_dir', sortDir);
-        params.set('min_score', String(minScore > 0 ? minScore : 60));
-      } else if (exploreTab === 'auctions') {
-        params.set('sort_by', sortBy);
-        params.set('sort_dir', sortDir);
-      } else if (exploreTab === 'convictions') {
-        params.set('sort_by', sortBy);
-        params.set('sort_dir', sortDir);
-        params.set('min_score', '75');
-      }
-
-      if (minScore > 0 && exploreTab !== 'best') params.set('min_score', String(minScore));
-      if (minPrice > 0)  params.set('min_price', String(minPrice));
-      if (maxPrice > 0)  params.set('max_price', String(maxPrice));
-      if (category)      params.set('category', category);
-      if (auctionHouse)  params.set('auction_house', auctionHouse);
-      if (sizeFilter)    params.set('size_category', sizeFilter);
-      if (search.trim()) params.set('search', search.trim());
-      if (minUpside)     params.set('min_upside', minUpside);
-      if (artistTier)    params.set('artist_tier', artistTier);
-
-      const now = new Date();
-      const today = now.toISOString().split('T')[0];
-      if (dateFilter === 'today') {
-        params.set('auction_date_from', today);
-        params.set('auction_date_to', today);
-      } else if (dateFilter === '3days') {
-        const d = new Date(now); d.setDate(d.getDate() + 3);
-        params.set('auction_date_from', today);
-        params.set('auction_date_to', d.toISOString().split('T')[0]);
-      } else if (dateFilter === 'week') {
-        const d = new Date(now); d.setDate(d.getDate() + 7);
-        params.set('auction_date_from', today);
-        params.set('auction_date_to', d.toISOString().split('T')[0]);
-      } else if (dateFilter === 'month') {
-        const d = new Date(now); d.setMonth(d.getMonth() + 1);
-        params.set('auction_date_from', today);
-        params.set('auction_date_to', d.toISOString().split('T')[0]);
-      }
-
-      const token = getToken();
-      const resp = await fetch(`${BACKEND}/api/lots?${params.toString()}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const url = `${BACKEND}/api/lots?sort_by=deal_score&sort_dir=desc&min_score=60&page_size=24`;
+      console.log('Fetching:', url);
+      const resp = await fetch(url);
+      console.log('API response status:', resp.status);
       const data = await resp.json();
-      const rawData = data.items || data.lots || data.results || data;
-      const lotsArray = Array.isArray(rawData) ? rawData : [];
-      setLots(lotsArray.map(mapLot));
-      setTotal(data.total || data.count || lotsArray.length || 0);
+      console.log('API response data:', data);
+      const items = Array.isArray(data) ? data : (data.items || data.lots || []);
+      console.log('Items found:', items.length);
+      setLots(items.map(mapLot));
+      setTotal(data.total || items.length);
       setTotalPages(data.pages || 1);
     } catch (e) {
-      console.error('fetchLots failed:', e);
+      console.error('Fetch error:', e);
       setHasError(true);
     } finally {
       setLoading(false);
@@ -451,8 +391,9 @@ export default function Explore() {
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { setCurrentPage(1); fetchLots(); },
-    [exploreTab, dateFilter, search, minScore, minUpside, minPrice, maxPrice, category, artistTier, auctionHouse, sizeFilter, sortBy, sortDir]);
+  useEffect(() => {
+    fetchLots();
+  }, [exploreTab]);
 
   const doFetch = () => fetchLots();
 
