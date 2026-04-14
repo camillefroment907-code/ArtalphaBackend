@@ -4,7 +4,7 @@ import { getUser } from "../../lib/auth";
 import { WelcomeTour } from "../components/WelcomeTour";
 
 type ExploreTab = "best" | "auctions" | "primary" | "convictions";
-type ViewMode = "grid4" | "grid6" | "list";
+type ViewMode = "grid-large" | "grid" | "list";
 
 // ── Source metadata ──────────────────────────────────────────
 const SOURCE_FLAG: Record<string, string> = {
@@ -263,10 +263,6 @@ function LiveListRow({ lot, onClick }: { lot: MappedLot; onClick: () => void }) 
   );
 }
 
-// ── Icons ────────────────────────────────────────────────────
-function IconGrid4() { return <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><rect x="1" y="1" width="5.5" height="5.5" rx="1" /><rect x="8.5" y="1" width="5.5" height="5.5" rx="1" /><rect x="1" y="8.5" width="5.5" height="5.5" rx="1" /><rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1" /></svg>; }
-function IconGrid6() { return <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><rect x="1" y="1" width="3.5" height="3.5" rx="0.5" /><rect x="5.75" y="1" width="3.5" height="3.5" rx="0.5" /><rect x="10.5" y="1" width="3.5" height="3.5" rx="0.5" /><rect x="1" y="5.75" width="3.5" height="3.5" rx="0.5" /><rect x="5.75" y="5.75" width="3.5" height="3.5" rx="0.5" /><rect x="10.5" y="5.75" width="3.5" height="3.5" rx="0.5" /><rect x="1" y="10.5" width="3.5" height="3.5" rx="0.5" /><rect x="5.75" y="10.5" width="3.5" height="3.5" rx="0.5" /><rect x="10.5" y="10.5" width="3.5" height="3.5" rx="0.5" /></svg>; }
-function IconList() { return <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><rect x="1" y="2" width="3.5" height="3" rx="0.5" /><rect x="6" y="2.5" width="8" height="1" rx="0.5" /><rect x="6" y="4" width="5" height="1" rx="0.5" /><rect x="1" y="6" width="3.5" height="3" rx="0.5" /><rect x="6" y="6.5" width="8" height="1" rx="0.5" /><rect x="6" y="8" width="5" height="1" rx="0.5" /><rect x="1" y="10" width="3.5" height="3" rx="0.5" /><rect x="6" y="10.5" width="8" height="1" rx="0.5" /><rect x="6" y="12" width="5" height="1" rx="0.5" /></svg>; }
 
 
 // ── Explore component ─────────────────────────────────────────
@@ -286,7 +282,7 @@ export default function Explore() {
   const [hasError, setHasError]     = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [primaryStats, setPrimaryStats] = useState<{ total?: number; avg_score?: number; avg_price?: number; new_this_week?: number } | null>(null);
-  const [viewMode, setViewMode]     = useState<ViewMode>("grid4");
+  const [viewMode, setViewMode]     = useState<ViewMode>("grid");
   const [dateFilter, setDateFilter] = useState("all");
   const [sourceStats, setSourceStats] = useState<SourceStat[]>([]);
 
@@ -304,11 +300,11 @@ export default function Explore() {
   const resetFilters = () => {
     setMinScore(0); setMinUpside(''); setMinPrice(0); setMaxPrice(0);
     setCategory(''); setArtistTier(''); setAuctionHouse(''); setSizeFilter('');
-    setSearch('');
+    setSearch(''); setDateFilter('all');
     setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete('search'); return p; });
   };
 
-  const hasActiveFilters = minScore > 0 || minUpside !== '' || minPrice > 0 || maxPrice > 0 || category !== '' || artistTier !== '' || auctionHouse !== '' || sizeFilter !== '';
+  const hasActiveFilters = minScore > 0 || minUpside !== '' || minPrice > 0 || maxPrice > 0 || category !== '' || artistTier !== '' || auctionHouse !== '' || sizeFilter !== '' || dateFilter !== 'all';
 
   // Sync search from URL (e.g. navigating from header search bar)
   useEffect(() => {
@@ -473,13 +469,8 @@ export default function Explore() {
     } catch { /* silent */ } finally { setLoadingMore(false); }
   };
 
-  const cols = viewMode === "list" ? 1 : viewMode === "grid6" ? 6 : tab === "live" ? 5 : 4;
+  const cols = viewMode === "list" ? 1 : viewMode === "grid" ? (tab === "live" ? 5 : 4) : (tab === "live" ? 4 : 3);
   const gap  = cols >= 5 ? "12px" : "16px";
-  const VIEW_MODES: { mode: ViewMode; icon: React.ReactNode; title: string }[] = [
-    { mode: "grid4", icon: <IconGrid4 />, title: "4 columns" },
-    { mode: "grid6", icon: <IconGrid6 />, title: "6 columns" },
-    { mode: "list",  icon: <IconList />,  title: "List view" },
-  ];
 
 
   return (
@@ -494,241 +485,214 @@ export default function Explore() {
       {showTour && <WelcomeTour onClose={() => { setShowTour(false); localStorage.setItem('nautilus_tour_seen', 'true'); }} />}
       {/* ── Compact toolbar ── */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: '8px',
-        padding: '12px 24px', background: 'white',
+        display: 'flex', alignItems: 'center',
+        padding: '10px 24px', background: 'white',
         borderBottom: '1px solid var(--border)',
-        flexShrink: 0, flexWrap: 'wrap',
+        flexShrink: 0,
       }}>
-        {/* Tab pills */}
-        {([
-          { key: 'best', label: 'Best Lots' },
-          { key: 'auctions', label: 'All Auctions' },
-          { key: 'primary', label: 'Primary Market' },
-          { key: 'convictions', label: 'Convictions' },
-        ] as { key: ExploreTab; label: string }[]).map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('tab', key); return p; })}
-            style={{
-              padding: '6px 14px', borderRadius: '20px', border: 'none',
-              background: exploreTab === key ? 'var(--navy)' : 'transparent',
-              color: exploreTab === key ? 'white' : 'var(--text-3)',
-              fontSize: '12px', fontWeight: exploreTab === key ? 700 : 400,
-              cursor: 'pointer', transition: 'all 0.15s',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {label}
-          </button>
-        ))}
-
-        {/* Divider */}
-        <div style={{ width: '1px', height: '20px', background: 'var(--border)', margin: '0 4px' }} />
-
-        {/* Date filters — only on Best Lots + All Auctions */}
-        {(exploreTab === 'best' || exploreTab === 'auctions') && (
-          <>
-            {['All dates', 'Today', '3 days', 'This week', 'This month'].map(d => {
-              const val = d === 'All dates' ? 'all' : d === '3 days' ? '3days' : d === 'This week' ? 'week' : d === 'This month' ? 'month' : d.toLowerCase();
-              return (
-                <button
-                  key={d}
-                  onClick={() => setDateFilter(val)}
-                  style={{
-                    padding: '5px 12px', borderRadius: '20px',
-                    border: `1px solid ${dateFilter === val ? 'var(--navy)' : 'var(--border)'}`,
-                    background: dateFilter === val ? 'var(--navy)' : 'transparent',
-                    color: dateFilter === val ? 'white' : 'var(--text-3)',
-                    fontSize: '11px', cursor: 'pointer', transition: 'all 0.15s',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {d}
-                </button>
-              );
-            })}
-            <div style={{ width: '1px', height: '20px', background: 'var(--border)', margin: '0 4px' }} />
-          </>
-        )}
-
-        {/* Search */}
-        <div style={{ flex: 1, position: 'relative', maxWidth: '240px' }}>
-          <input
-            className="input"
-            placeholder="Artist, title..."
-            value={search}
-            onChange={e => {
-              setSearch(e.target.value);
-              setSearchParams(prev => { const p = new URLSearchParams(prev); if (e.target.value) p.set('search', e.target.value); else p.delete('search'); return p; });
-            }}
-            style={{ padding: '6px 12px 6px 32px', fontSize: '12px', height: '32px' }}
-          />
-          <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: 'var(--text-3)' }}>⌕</span>
+        {/* LEFT: Tab pills */}
+        <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
+          {([
+            { key: 'best', label: 'Best Lots' },
+            { key: 'auctions', label: 'All Auctions' },
+            { key: 'primary', label: 'Primary Market' },
+            { key: 'convictions', label: 'Convictions' },
+          ] as { key: ExploreTab; label: string }[]).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('tab', key); return p; })}
+              style={{
+                padding: '6px 14px', borderRadius: '20px', border: 'none',
+                background: exploreTab === key ? 'var(--navy)' : 'transparent',
+                color: exploreTab === key ? 'white' : 'var(--text-3)',
+                fontSize: '12px', fontWeight: exploreTab === key ? 700 : 400,
+                cursor: 'pointer', transition: 'all 0.15s',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
-        {/* Filters toggle */}
-        {(exploreTab === 'best' || exploreTab === 'auctions') && (
+        {/* RIGHT: Filters + View mode + LIVE */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+          {/* Filters button */}
           <button
             onClick={() => setShowFilters(f => !f)}
             style={{
-              padding: '6px 14px', borderRadius: '20px',
-              border: `1px solid ${showFilters ? 'var(--navy)' : 'var(--border)'}`,
+              padding: '6px 12px', borderRadius: '6px',
+              border: `1px solid ${showFilters || hasActiveFilters ? 'var(--navy)' : 'var(--border)'}`,
               background: showFilters ? 'var(--navy)' : 'transparent',
               color: showFilters ? 'white' : 'var(--text-3)',
-              fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: '6px',
+              fontSize: '12px', fontWeight: 500, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '5px',
               transition: 'all 0.15s', whiteSpace: 'nowrap',
             }}
           >
-            <span>⚙</span>
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <line x1="1" y1="3" x2="12" y2="3" />
+              <line x1="1" y1="7" x2="12" y2="7" />
+              <line x1="1" y1="11" x2="12" y2="11" />
+              <circle cx="4" cy="3" r="1.5" fill="currentColor" stroke="none" />
+              <circle cx="9" cy="7" r="1.5" fill="currentColor" stroke="none" />
+              <circle cx="4" cy="11" r="1.5" fill="currentColor" stroke="none" />
+            </svg>
             Filters
             {hasActiveFilters && (
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)', display: 'inline-block' }} />
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: showFilters ? 'white' : 'var(--gold)', display: 'inline-block' }} />
             )}
           </button>
-        )}
 
-        {/* View mode */}
-        <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, marginLeft: 'auto' }}>
-          {VIEW_MODES.map(({ mode, icon, title }, idx) => (
-            <button key={mode} onClick={() => setViewMode(mode)} title={title} style={{ padding: '5px 10px', border: 'none', borderRight: idx < 2 ? '1px solid var(--border)' : 'none', cursor: 'pointer', background: viewMode === mode ? 'var(--navy)' : 'white', color: viewMode === mode ? 'white' : 'var(--text-3)', transition: 'all 0.1s', display: 'flex', alignItems: 'center' }}>{icon}</button>
-          ))}
-        </div>
+          {/* View mode */}
+          <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 }}>
+            {([
+              { mode: 'grid-large' as ViewMode, label: '⊟', title: 'Large grid' },
+              { mode: 'grid' as ViewMode, label: '⊞', title: 'Grid' },
+              { mode: 'list' as ViewMode, label: '☰', title: 'List' },
+            ]).map(({ mode, label, title }, idx) => (
+              <button key={mode} onClick={() => setViewMode(mode)} title={title}
+                style={{ padding: '5px 10px', border: 'none', borderRight: idx < 2 ? '1px solid var(--border)' : 'none', cursor: 'pointer', background: viewMode === mode ? 'var(--navy)' : 'white', color: viewMode === mode ? 'white' : 'var(--text-3)', transition: 'all 0.1s', fontSize: '13px', lineHeight: 1 }}
+              >{label}</button>
+            ))}
+          </div>
 
-        {/* Live dot — Best Lots + All Auctions only */}
-        {(exploreTab === 'best' || exploreTab === 'auctions') && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+          {/* LIVE dot */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: '4px' }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--electric)', animation: 'pulse 2s infinite' }} />
             <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>LIVE</span>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* ── Primary stats bar ── */}
-      {exploreTab === 'primary' && primaryStats && (
-        <div style={{ padding: '6px 24px', display: 'flex', gap: '20px', alignItems: 'center', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-subtle)', flexShrink: 0 }}>
-          {[
-            { label: 'Listings', value: primaryStats.total?.toLocaleString() },
-            { label: 'Avg score', value: `${primaryStats.avg_score}/100` },
-            { label: 'Avg price', value: `€${primaryStats.avg_price?.toLocaleString()}` },
-            { label: 'New this week', value: primaryStats.new_this_week },
-          ].map(({ label, value }) => (
-            <div key={label} style={{ display: 'flex', gap: '4px', alignItems: 'baseline' }}>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: 'var(--text)' }}>{value}</span>
-              <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>{label}</span>
-            </div>
-          ))}
-        </div>
-      )}
 
-      {/* ── All tabs — unified content ──────────────────────── */}
+{/* ── All tabs — unified content ──────────────────────── */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        {/* Sidebar — best / auctions only */}
-        {(exploreTab === 'best' || exploreTab === 'auctions') && (
+        {/* Sidebar — slide-in filter panel */}
+        {showFilters && (
           <div
             className="no-scrollbar"
             style={{
-              width: showFilters ? "280px" : "0px", minWidth: showFilters ? "280px" : "0px",
-              height: "100%", overflowY: showFilters ? "auto" : "hidden", overflowX: "hidden",
-              borderRight: showFilters ? "1px solid var(--border)" : "none",
-              background: "white", flexShrink: 0,
-              transition: "width 0.25s ease, min-width 0.25s ease",
+              width: '260px', minWidth: '260px',
+              height: '100%', overflowY: 'auto', overflowX: 'hidden',
+              borderRight: '1px solid var(--border)',
+              background: 'white', flexShrink: 0,
+              animation: 'slideInLeft 0.2s ease',
             }}
           >
-            {showFilters && (
-              <div style={{ padding: '20px 20px 40px' }}>
-                {/* 1. CONVICTION SCORE */}
-                <div style={{ marginBottom: '24px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Conviction Score</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {[{ label: 'All opportunities', value: 0, sub: '' }, { label: 'Strong signal', value: 55, sub: 'Score 55+' }, { label: 'High conviction', value: 65, sub: 'Score 65+' }, { label: 'Exceptional only', value: 80, sub: 'Score 80+' }].map(({ label, value, sub }) => (
-                      <button key={value} onClick={() => setMinScore(value)} style={{ padding: '8px 12px', textAlign: 'left', background: minScore === value ? 'var(--navy)' : 'white', color: minScore === value ? 'white' : 'var(--text-2)', border: `1px solid ${minScore === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.15s' }}>
-                        <span>{label}</span>
-                        {sub && <span style={{ fontSize: '10px', opacity: 0.6, fontFamily: 'var(--font-mono)' }}>{sub}</span>}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 2. UPSIDE POTENTIAL */}
-                <div style={{ marginBottom: '24px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Upside Potential</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {[{ label: 'Any upside', value: '' }, { label: '+10% and above', value: '10' }, { label: '+20% and above', value: '20' }, { label: '+33% and above', value: '33' }, { label: '+50% and above', value: '50' }].map(({ label, value }) => (
-                      <button key={value} onClick={() => setMinUpside(value)} style={{ padding: '8px 12px', textAlign: 'left', background: minUpside === value ? 'var(--navy)' : 'white', color: minUpside === value ? 'white' : 'var(--text-2)', border: `1px solid ${minUpside === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', transition: 'all 0.15s' }}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 3. BUDGET */}
-                <div style={{ marginBottom: '24px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Budget</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {[{ label: '< €1K', min: 0, max: 1000 }, { label: '€1K–10K', min: 1000, max: 10000 }, { label: '€10K–50K', min: 10000, max: 50000 }, { label: '€50K–200K', min: 50000, max: 200000 }, { label: '> €200K', min: 200000, max: 0 }].map(({ label, min, max }) => (
-                      <button key={label} onClick={() => { setMinPrice(min); setMaxPrice(max); }} style={{ padding: '6px 12px', background: (minPrice === min && maxPrice === max && (min > 0 || max > 0)) ? 'var(--navy)' : 'white', color: (minPrice === min && maxPrice === max && (min > 0 || max > 0)) ? 'white' : 'var(--text-2)', border: `1px solid ${(minPrice === min && maxPrice === max && (min > 0 || max > 0)) ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '20px', fontSize: '11px', cursor: 'pointer', transition: 'all 0.15s' }}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 4. CATEGORY */}
-                <div style={{ marginBottom: '24px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Category</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {['Paintings', 'Drawings', 'Sculpture', 'Prints', 'Photography', 'Street Art', 'Contemporary', 'Modern'].map(cat => (
-                      <button key={cat} onClick={() => setCategory(category === cat ? '' : cat)} style={{ padding: '6px 12px', background: category === cat ? 'var(--navy)' : 'white', color: category === cat ? 'white' : 'var(--text-2)', border: `1px solid ${category === cat ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '20px', fontSize: '11px', cursor: 'pointer', transition: 'all 0.15s' }}>
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 5. ARTIST TIER */}
-                <div style={{ marginBottom: '24px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Artist Tier</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {[{ label: 'All artists', value: '', sub: '' }, { label: 'Blue chip', value: 'blue_chip', sub: 'Warhol, Hirst, Basquiat...' }, { label: 'Established', value: 'established', sub: 'Secondary market presence' }, { label: 'Emerging', value: 'emerging', sub: 'High growth potential' }].map(({ label, value, sub }) => (
-                      <button key={value} onClick={() => setArtistTier(value)} style={{ padding: '8px 12px', textAlign: 'left', background: artistTier === value ? 'var(--navy)' : 'white', color: artistTier === value ? 'white' : 'var(--text-2)', border: `1px solid ${artistTier === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', transition: 'all 0.15s' }}>
-                        <span>{label}</span>
-                        {sub && <span style={{ fontSize: '10px', opacity: 0.5 }}>{sub}</span>}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 6. AUCTION HOUSE */}
-                <div style={{ marginBottom: '24px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Auction House</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {["Christie's", "Sotheby's", 'Phillips', 'Drouot', 'Artcurial', 'Invaluable', 'Artsy'].map(house => (
-                      <button key={house} onClick={() => setAuctionHouse(auctionHouse === house ? '' : house)} style={{ padding: '6px 12px', background: auctionHouse === house ? 'var(--navy)' : 'white', color: auctionHouse === house ? 'white' : 'var(--text-2)', border: `1px solid ${auctionHouse === house ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '20px', fontSize: '11px', cursor: 'pointer', transition: 'all 0.15s' }}>
-                        {house}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 7. SIZE */}
-                <div style={{ marginBottom: '24px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Artwork Size</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {[{ label: 'Any size', value: '' }, { label: 'Small (< 40cm)', value: 'small' }, { label: 'Medium (40–100cm)', value: 'medium' }, { label: 'Large (> 100cm)', value: 'large' }].map(({ label, value }) => (
-                      <button key={value} onClick={() => setSizeFilter(value)} style={{ padding: '8px 12px', textAlign: 'left', background: sizeFilter === value ? 'var(--navy)' : 'white', color: sizeFilter === value ? 'white' : 'var(--text-2)', border: `1px solid ${sizeFilter === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', transition: 'all 0.15s' }}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Reset */}
-                <button onClick={resetFilters} style={{ width: '100%', padding: '10px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-3)', cursor: 'pointer' }}>
-                  Reset all filters
-                </button>
+            <div style={{ padding: '16px 16px 40px' }}>
+              {/* Filter header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text)', letterSpacing: '0.04em' }}>Filters</span>
+                {hasActiveFilters && (
+                  <button onClick={resetFilters} style={{ fontSize: '11px', color: 'var(--electric)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0' }}>Reset all</button>
+                )}
               </div>
-            )}
+
+              {/* 0. DATE */}
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Auction Date</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {[
+                    { label: 'All upcoming', value: 'all' },
+                    { label: 'Today', value: 'today' },
+                    { label: 'Next 3 days', value: '3days' },
+                    { label: 'This week', value: 'week' },
+                    { label: 'This month', value: 'month' },
+                  ].map(({ label, value }) => (
+                    <button key={value} onClick={() => setDateFilter(value)} style={{ padding: '8px 12px', textAlign: 'left', background: dateFilter === value ? 'var(--navy)' : 'white', color: dateFilter === value ? 'white' : 'var(--text-2)', border: `1px solid ${dateFilter === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 1. CONVICTION SCORE */}
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Conviction Score</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {[{ label: 'All opportunities', value: 0, sub: '' }, { label: 'Strong signal', value: 55, sub: 'Score 55+' }, { label: 'High conviction', value: 65, sub: 'Score 65+' }, { label: 'Exceptional only', value: 80, sub: 'Score 80+' }].map(({ label, value, sub }) => (
+                    <button key={value} onClick={() => setMinScore(value)} style={{ padding: '8px 12px', textAlign: 'left', background: minScore === value ? 'var(--navy)' : 'white', color: minScore === value ? 'white' : 'var(--text-2)', border: `1px solid ${minScore === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.15s' }}>
+                      <span>{label}</span>
+                      {sub && <span style={{ fontSize: '10px', opacity: 0.6, fontFamily: 'var(--font-mono)' }}>{sub}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. UPSIDE POTENTIAL */}
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Upside Potential</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {[{ label: 'Any upside', value: '' }, { label: '+10% and above', value: '10' }, { label: '+20% and above', value: '20' }, { label: '+33% and above', value: '33' }, { label: '+50% and above', value: '50' }].map(({ label, value }) => (
+                    <button key={value} onClick={() => setMinUpside(value)} style={{ padding: '8px 12px', textAlign: 'left', background: minUpside === value ? 'var(--navy)' : 'white', color: minUpside === value ? 'white' : 'var(--text-2)', border: `1px solid ${minUpside === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. BUDGET */}
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Budget</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {[{ label: '< €1K', min: 0, max: 1000 }, { label: '€1K–10K', min: 1000, max: 10000 }, { label: '€10K–50K', min: 10000, max: 50000 }, { label: '€50K–200K', min: 50000, max: 200000 }, { label: '> €200K', min: 200000, max: 0 }].map(({ label, min, max }) => (
+                    <button key={label} onClick={() => { setMinPrice(min); setMaxPrice(max); }} style={{ padding: '6px 12px', background: (minPrice === min && maxPrice === max && (min > 0 || max > 0)) ? 'var(--navy)' : 'white', color: (minPrice === min && maxPrice === max && (min > 0 || max > 0)) ? 'white' : 'var(--text-2)', border: `1px solid ${(minPrice === min && maxPrice === max && (min > 0 || max > 0)) ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '20px', fontSize: '11px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. CATEGORY */}
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Category</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {['Paintings', 'Drawings', 'Sculpture', 'Prints', 'Photography', 'Street Art', 'Contemporary', 'Modern'].map(cat => (
+                    <button key={cat} onClick={() => setCategory(category === cat ? '' : cat)} style={{ padding: '6px 12px', background: category === cat ? 'var(--navy)' : 'white', color: category === cat ? 'white' : 'var(--text-2)', border: `1px solid ${category === cat ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '20px', fontSize: '11px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 5. ARTIST TIER */}
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Artist Tier</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {[{ label: 'All artists', value: '', sub: '' }, { label: 'Blue chip', value: 'blue_chip', sub: 'Warhol, Hirst, Basquiat...' }, { label: 'Established', value: 'established', sub: 'Secondary market presence' }, { label: 'Emerging', value: 'emerging', sub: 'High growth potential' }].map(({ label, value, sub }) => (
+                    <button key={value} onClick={() => setArtistTier(value)} style={{ padding: '8px 12px', textAlign: 'left', background: artistTier === value ? 'var(--navy)' : 'white', color: artistTier === value ? 'white' : 'var(--text-2)', border: `1px solid ${artistTier === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', transition: 'all 0.15s' }}>
+                      <span>{label}</span>
+                      {sub && <span style={{ fontSize: '10px', opacity: 0.5 }}>{sub}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 6. AUCTION HOUSE */}
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Auction House</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {["Christie's", "Sotheby's", 'Phillips', 'Drouot', 'Artcurial', 'Invaluable', 'Artsy'].map(house => (
+                    <button key={house} onClick={() => setAuctionHouse(auctionHouse === house ? '' : house)} style={{ padding: '6px 12px', background: auctionHouse === house ? 'var(--navy)' : 'white', color: auctionHouse === house ? 'white' : 'var(--text-2)', border: `1px solid ${auctionHouse === house ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '20px', fontSize: '11px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                      {house}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 7. SIZE */}
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Artwork Size</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {[{ label: 'Any size', value: '' }, { label: 'Small (< 40cm)', value: 'small' }, { label: 'Medium (40–100cm)', value: 'medium' }, { label: 'Large (> 100cm)', value: 'large' }].map(({ label, value }) => (
+                    <button key={value} onClick={() => setSizeFilter(value)} style={{ padding: '8px 12px', textAlign: 'left', background: sizeFilter === value ? 'var(--navy)' : 'white', color: sizeFilter === value ? 'white' : 'var(--text-2)', border: `1px solid ${sizeFilter === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -749,25 +713,19 @@ export default function Explore() {
             </div>
           ) : (
             <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "0 24px 60px" }}>
-              {/* Convictions subtitle */}
-              {exploreTab === 'convictions' && (
-                <div style={{ padding: '8px 0 0', fontSize: '11px', color: 'var(--text-3)' }}>
-                  AI-selected · Score 75+ · Updated every 15 min
+              {/* Per-tab description */}
+              {!loading && (
+                <div style={{ padding: '12px 0 4px', fontSize: '12px', color: 'var(--text-3)', fontStyle: 'italic', lineHeight: 1.5 }}>
+                  {exploreTab === 'best' && 'Lots priced below their real market value — ranked by conviction score.'}
+                  {exploreTab === 'auctions' && 'Every lot currently on the market, across all tracked auction houses.'}
+                  {exploreTab === 'primary' && 'Gallery and primary market listings — buy directly from galleries and artists.'}
+                  {exploreTab === 'convictions' && 'AI-selected opportunities with score ≥ 75 — our highest-conviction signals.'}
                 </div>
               )}
               {/* Count line */}
               {total > 0 && !loading && (
-                <div style={{ padding: '8px 0 0', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                <div style={{ padding: '4px 0 8px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
                   {total.toLocaleString()} lots
-                </div>
-              )}
-
-              {/* Best Lots stats */}
-              {exploreTab === 'best' && !loading && alphaLots.length > 0 && (
-                <div style={{ display: "flex", gap: "24px", padding: "12px 0 16px", marginBottom: "8px", borderBottom: "1px solid var(--border-light)", flexWrap: "wrap", alignItems: "center" }}>
-                  {[{ label: "Exceptional", value: EXCEPTIONAL.length, color: "#C0392B" }, { label: "Strong", value: STRONG.length, color: "var(--navy)" }, { label: "Interesting", value: INTERESTING.length, color: "var(--gold-dim)" }, { label: "Avg score", value: `${avgScore.toFixed(0)}/100`, color: "var(--text-2)" }].map(({ label, value, color }) => (
-                    <div key={label}><div style={{ fontFamily: "var(--font-mono)", fontSize: "20px", fontWeight: 700, color }}>{value}</div><div className="label-caps" style={{ marginTop: "2px" }}>{label}</div></div>
-                  ))}
                 </div>
               )}
 
