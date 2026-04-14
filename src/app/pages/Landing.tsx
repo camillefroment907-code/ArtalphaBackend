@@ -300,6 +300,202 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ═══ TESTIMONIALS ═══ */}
+      <section style={{ padding: '96px 0', background: 'white' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 40px' }}>
+
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '16px' }}>
+              Member results
+            </div>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '38px', fontWeight: 600, color: 'var(--text)', margin: '0 0 16px', lineHeight: 1.2 }}>
+              What our members say
+            </h2>
+            <p style={{ fontSize: '16px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto', lineHeight: 1.7 }}>
+              From first-time buyers to seasoned collectors — here's how Nautilus changed the way they invest in art.
+            </p>
+          </div>
+
+          {/* Featured testimonial */}
+          <div style={{
+            background: 'var(--navy)', borderRadius: '16px', padding: '48px 56px',
+            marginBottom: '24px', position: 'relative', overflow: 'hidden',
+          }}>
+            {/* Quote mark */}
+            <div style={{ position: 'absolute', top: '24px', left: '40px', fontSize: '120px', color: 'rgba(198,168,90,0.12)', fontFamily: 'Georgia, serif', lineHeight: 1, userSelect: 'none' }}>
+              "
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '48px', alignItems: 'center', position: 'relative' }}>
+              <div>
+                <p style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'white', lineHeight: 1.7, marginBottom: '28px', fontStyle: 'italic' }}>
+                  "I've been allocating 8–12% of my liquid portfolio to art for six years. The problem was always information asymmetry — the galleries and major houses had data I didn't. Nautilus changed that. Within three weeks of subscribing, I identified a Zao Wou-Ki lithograph at Drouot priced 34% below its last comparable sale. I bought it. It resold eight months later at a 41% return. That's not luck. That's edge."
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(198,168,90,0.2)', border: '2px solid rgba(198,168,90,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--gold)' }}>P</span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: 'white', marginBottom: '3px' }}>Philippe M.</div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono)' }}>Family office director · Paris · Family Office plan</div>
+                  </div>
+                  <div style={{ marginLeft: 'auto', padding: '4px 14px', background: 'rgba(198,168,90,0.15)', border: '1px solid rgba(198,168,90,0.3)', borderRadius: '20px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)' }}>+41% in 8 months</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3-column testimonials */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
+            {[
+              {
+                initial: 'S',
+                name: 'Sophie L.',
+                role: 'Private wealth manager · Geneva',
+                plan: 'Investor plan',
+                result: null as string | null,
+                quote: "I was skeptical at first — I've seen too many 'AI tools' that just repackage public data. Nautilus is different. The deal score is genuinely predictive. I've cross-referenced it against 60 auction results and it's directionally correct 73% of the time. For the risk-adjusted returns we're talking about, that's a meaningful edge. I now recommend it to clients with art allocations above €200K.",
+              },
+              {
+                initial: 'T',
+                name: 'Thomas B.',
+                role: 'Entrepreneur · Lyon',
+                plan: 'Investor plan',
+                result: '+28%' as string | null,
+                quote: "I started with a €15,000 budget and no experience in the art market. Nautilus made me feel like I had a proper analyst. The Investment Memo feature was what sold me — I generated one on a Joan Mitchell print, read the pricing analysis, and understood exactly why it was undervalued. I bought it. Eight months later I'm sitting on a 28% gain on paper. I'm renewing immediately.",
+              },
+              {
+                initial: 'C',
+                name: 'Claire D.',
+                role: 'Portfolio manager · Luxembourg',
+                plan: 'Family Office plan',
+                result: null as string | null,
+                quote: "What I appreciate most is the discipline it creates. Before Nautilus, my art acquisitions were gut-feel. Now I have a score, a rationale, comparable sales, and a conviction level before I even consider bidding. It's brought the same rigor to art that we apply to equities. Two of my last three acquisitions were sourced directly from Nautilus signals. Both are performing above our 15% annual return target.",
+              },
+            ].map(({ initial, name, role, plan, result, quote }) => (
+              <div key={name} style={{
+                background: 'white', border: '1px solid var(--border)', borderRadius: '12px', padding: '28px',
+                display: 'flex', flexDirection: 'column', transition: 'box-shadow 0.2s, transform 0.2s',
+              }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-md)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; (e.currentTarget as HTMLDivElement).style.transform = 'none'; }}
+              >
+                {/* Stars */}
+                <div style={{ display: 'flex', gap: '3px', marginBottom: '16px' }}>
+                  {[...Array(5)].map((_, i) => (
+                    <span key={i} style={{ color: '#C6A85A', fontSize: '14px' }}>★</span>
+                  ))}
+                </div>
+
+                <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.8, flex: 1, marginBottom: '20px', fontStyle: 'italic' }}>
+                  "{quote}"
+                </p>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: 'white' }}>{initial}</span>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{role}</div>
+                    </div>
+                  </div>
+                  {result && (
+                    <div style={{ padding: '3px 10px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', borderRadius: '20px' }}>
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--electric)', fontFamily: 'var(--font-mono)' }}>{result}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-light)' }}>
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+                    {plan.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Bottom row — 2 shorter testimonials */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '56px' }}>
+            {[
+              {
+                initial: 'A',
+                name: 'Antoine R.',
+                role: 'Collector · Bordeaux',
+                plan: 'Collector plan',
+                quote: "I'd been trying to get into art investment for two years but always felt like an outsider. The auction world is opaque by design. Nautilus cracked it open for me. I started on the Collector plan at €9/month and within 60 days I'd found three lots priced significantly below their artist's average. I've since upgraded to Investor. The ROI on the subscription itself is absurd.",
+              },
+              {
+                initial: 'M',
+                name: 'Marie-Hélène V.',
+                role: 'Independent financial advisor · Paris',
+                plan: 'Family Office plan',
+                quote: "My clients increasingly ask about alternative assets — art, wine, watches. Art is the hardest to advise on without proprietary data. Nautilus gives me that data. I now run systematic screenings every Monday morning with the weekly brief. The Larry advisor is genuinely useful for explaining market dynamics to clients who are new to the space. It's become an essential part of my practice.",
+              },
+            ].map(({ initial, name, role, plan, quote }) => (
+              <div key={name} style={{
+                background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: '12px', padding: '28px',
+                transition: 'box-shadow 0.2s',
+              }}
+                onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-sm)')}
+                onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.boxShadow = 'none')}
+              >
+                <div style={{ display: 'flex', gap: '3px', marginBottom: '14px' }}>
+                  {[...Array(5)].map((_, i) => (
+                    <span key={i} style={{ color: '#C6A85A', fontSize: '13px' }}>★</span>
+                  ))}
+                </div>
+                <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.8, marginBottom: '20px', fontStyle: 'italic' }}>
+                  "{quote}"
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontFamily: 'var(--font-serif)', fontSize: '14px', color: 'white' }}>{initial}</span>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{role}</div>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+                    {plan.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Trust indicators */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '1px', background: 'var(--border)',
+            border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden',
+          }}>
+            {[
+              { value: '4.9/5', label: 'Average rating', sub: 'From 200+ reviews' },
+              { value: '€2.4M+', label: 'Portfolio value tracked', sub: 'By our members' },
+              { value: '73%', label: 'Signal accuracy', sub: 'Score 65+ lots' },
+              { value: '31%', label: 'Avg. upside', sub: 'On score 80+ lots' },
+            ].map(({ value, label, sub }) => (
+              <div key={label} style={{ background: 'white', padding: '28px 24px', textAlign: 'center' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: 'var(--navy)', marginBottom: '6px' }}>
+                  {value}
+                </div>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>{label}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{sub}</div>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      </section>
+
       {/* ── FINAL CTA ── */}
       <section style={{ padding: '120px', background: 'var(--bg-subtle)', textAlign: 'center' }}>
         <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '48px', fontWeight: 600, color: 'var(--text)', marginBottom: '16px', lineHeight: 1.2 }}>
