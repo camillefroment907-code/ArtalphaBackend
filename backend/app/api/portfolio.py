@@ -1,7 +1,7 @@
 """HONO Portfolio API — track artwork acquisitions and project values."""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, text
 from typing import Optional
 from datetime import datetime
 from uuid import UUID
@@ -335,6 +335,26 @@ async def remove_favorite_artist(
         current_list.remove(artist_name)
         pref.favorite_artists = current_list
         await db.commit()
+
+
+@router.patch("/favorite-artists/{artist_id}")
+async def update_favorite_artist(
+    artist_id: str,
+    body: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await db.execute(
+        text("UPDATE favorite_artists SET alert_new_lot = :new_lot, alert_price_change = :price WHERE id = :id AND user_id = :uid"),
+        {
+            "new_lot": body.get("alert_new_lot", True),
+            "price": body.get("alert_price_change", True),
+            "id": artist_id,
+            "uid": str(current_user.id),
+        }
+    )
+    await db.commit()
+    return {"message": "Updated"}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
