@@ -365,69 +365,96 @@ export default function Explore() {
     tab === "alpha" ? alphaLots.length > maxVisible : lots.length > maxVisible
   );
 
+  const [refreshKey, setRefreshKey] = useState(0);
+  const doFetch = () => { sessionStorage.removeItem(`lots_${exploreTab}`); setRefreshKey(k => k + 1); };
+
   // ── fetchLots ─────────────────────────────────────────────────
-  const fetchLots = async () => {
-    setHasError(false);
-    const p: Record<string, any> = {
-      page: 1, page_size: 24,
-      sort_by: sortBy,
-      sort_dir: sortDir,
-      search: search || undefined,
-      min_price: minPrice > 0 ? minPrice : undefined,
-      max_price: maxPrice > 0 ? maxPrice : undefined,
-      category: category || undefined,
-      auction_house: auctionHouse || undefined,
-      artist_tier: artistTier || undefined,
-      size_category: sizeFilter || undefined,
-      min_upside: minUpside || undefined,
-      ...getDateParams(dateFilter),
-    };
-    if (exploreTab === 'best') { p.min_score = Math.max(minScore, 60); p.sort_by = 'deal_score'; p.sort_dir = 'desc'; }
-    else if (exploreTab === 'auctions') { if (minScore > 0) p.min_score = minScore; }
-
-    // Build cache key for localStorage stale-while-revalidate
-    const cacheKey = `explore_lots_${JSON.stringify(p)}`;
-    const stored = localStorage.getItem(cacheKey);
-    if (stored) {
-      try {
-        const { data, ts } = JSON.parse(stored);
-        if (Date.now() - ts < 5 * 60 * 1000) {
-          setLots(data.items.map(mapLot));
-          setTotal(data.total);
-          setTotalPages(data.pages);
-          setCurrentPage(1);
-          setLoading(false);
-          return;
-        }
-        // stale — show immediately then refresh in background
-        setLots(data.items.map(mapLot));
-        setTotal(data.total);
-        setTotalPages(data.pages);
-        setCurrentPage(1);
-      } catch { /* ignore */ }
-    }
-
-    setLoading(true);
-    try {
-      const result = await fetchLotsFromAPI(p);
-      localStorage.setItem(cacheKey, JSON.stringify({ data: result, ts: Date.now() }));
-      setLots(result.items.map(mapLot));
-      setTotal(result.total);
-      setTotalPages(result.pages);
-      setCurrentPage(1);
-    } catch (e) {
-      setHasError(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    fetchLots();
-  }, [exploreTab, sortBy, sortDir, search, minScore, minUpside, minPrice, maxPrice, category, artistTier, auctionHouse, sizeFilter, dateFilter]);
+    let cancelled = false;
 
-  const doFetch = () => fetchLots();
+    const load = async () => {
+      setLoading(true);
+      setHasError(false);
+
+      // Show cached instantly while we fetch fresh data
+      const cacheKey = `lots_${exploreTab}`;
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (!cancelled) {
+            setLots((parsed.items || []).map(mapLot));
+            setTotal(parsed.total || 0);
+          }
+        }
+      } catch { /* ignore bad cache */ }
+
+      try {
+        const p = new URLSearchParams();
+        p.set('page_size', '24');
+
+        if (exploreTab === 'best') {
+          p.set('sort_by', 'deal_score');
+          p.set('sort_dir', 'desc');
+          p.set('min_score', minScore > 0 ? String(minScore) : '60');
+        } else if (exploreTab === 'auctions') {
+          p.set('sort_by', sortBy || 'created_at');
+          p.set('sort_dir', sortDir || 'desc');
+          if (minScore > 0) p.set('min_score', String(minScore));
+        } else if (exploreTab === 'convictions') {
+          p.set('sort_by', 'deal_score');
+          p.set('sort_dir', 'desc');
+          p.set('min_score', '75');
+        }
+
+        // Active filters
+        if (minPrice > 0)    p.set('min_price', String(minPrice));
+        if (maxPrice > 0)    p.set('max_price', String(maxPrice));
+        if (category)        p.set('category', category);
+        if (auctionHouse)    p.set('auction_house', auctionHouse);
+        if (sizeFilter)      p.set('size_category', sizeFilter);
+        if (minUpside)       p.set('min_upside', minUpside);
+        if (artistTier)      p.set('artist_tier', artistTier);
+        if (search.trim())   p.set('search', search.trim());
+        Object.entries(getDateParams(dateFilter)).forEach(([k, v]) => p.set(k, v));
+
+        // Override sort for non-best tabs if user set one
+        if (exploreTab === 'auctions' && sortBy) {
+          p.set('sort_by', sortBy);
+          p.set('sort_dir', sortDir || 'desc');
+        }
+
+        const url = exploreTab === 'primary'
+          ? `${BACKEND}/api/lots/primary?page_size=24`
+          : `${BACKEND}/api/lots?${p.toString()}`;
+
+        const token = getToken();
+        const resp = await fetch(url, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        const items = Array.isArray(data) ? data : (data.items || data.lots || data.results || []);
+
+        if (!cancelled) {
+          setLots(items.map(mapLot));
+          setTotal(data.total || items.length || 0);
+          setTotalPages(data.pages || 1);
+          setCurrentPage(1);
+          try { sessionStorage.setItem(cacheKey, JSON.stringify({ items, total: data.total })); } catch { /* quota */ }
+        }
+      } catch (e) {
+        console.error('load error:', e);
+        if (!cancelled) setHasError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exploreTab, refreshKey, minScore, minPrice, maxPrice, category, auctionHouse, sizeFilter, minUpside, artistTier, search, sortBy, sortDir, dateFilter]);
 
   const loadMore = async () => {
     if (loadingMore || currentPage >= totalPages) return;
