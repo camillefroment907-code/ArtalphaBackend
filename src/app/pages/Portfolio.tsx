@@ -293,6 +293,30 @@ export default function Portfolio() {
   const [editLoading, setEditLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // AI Analysis state
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const generatePortfolioAnalysis = async () => {
+    setAiLoading(true);
+    try {
+      const resp = await fetch(`${BACKEND}/api/portfolio-ai/analyze`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const data = await resp.json();
+      if (resp.status === 403) {
+        navigate('/app/pricing');
+        return;
+      }
+      setAiAnalysis(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   // Plan display label
   const PLAN_LABELS: Record<string, string> = {
     free: 'Free', starter: 'Collector', investor: 'Investor',
@@ -937,6 +961,97 @@ export default function Portfolio() {
               >
                 + Add Your First Artwork
               </button>
+            </div>
+          )}
+
+          {portfolioItems.length >= 2 && (
+            <div style={{ marginTop: '32px', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+              {/* Header */}
+              <div style={{ padding: '16px 20px', background: 'var(--bg-subtle)', borderBottom: aiAnalysis ? '1px solid var(--border)' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>◎ AI Portfolio Analysis</span>
+                    <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--electric)', fontFamily: 'var(--font-mono)', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', padding: '2px 7px', borderRadius: '10px' }}>INVESTOR+</span>
+                  </div>
+                  <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>
+                    Diversification · Risk assessment · Rebalancing recommendations
+                  </span>
+                </div>
+                <button
+                  onClick={generatePortfolioAnalysis}
+                  disabled={aiLoading}
+                  style={{
+                    padding: '8px 18px', borderRadius: '6px', border: 'none',
+                    background: aiLoading ? 'var(--bg-hover)' : 'var(--navy)',
+                    color: aiLoading ? 'var(--text-3)' : 'white',
+                    fontSize: '11px', fontWeight: 700,
+                    cursor: aiLoading ? 'not-allowed' : 'pointer',
+                    letterSpacing: '0.06em', whiteSpace: 'nowrap',
+                  }}
+                >
+                  {aiLoading ? 'Analyzing...' : aiAnalysis ? '↺ Refresh' : '+ Analyze'}
+                </button>
+              </div>
+
+              {/* Results */}
+              {aiAnalysis && !aiAnalysis.insufficient_data && (
+                <div style={{ padding: '20px' }}>
+                  {/* Score grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border)', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden', marginBottom: '20px' }}>
+                    {[
+                      { label: 'PORTFOLIO SCORE', value: `${aiAnalysis.score}/100` },
+                      { label: 'DIVERSIFICATION', value: `${aiAnalysis.diversification_score}/100` },
+                      { label: 'LIQUIDITY', value: `${aiAnalysis.liquidity_score}/100` },
+                      { label: 'GROWTH POTENTIAL', value: `${aiAnalysis.growth_potential}/100` },
+                    ].map(({ label, value }) => (
+                      <div key={label} style={{ padding: '12px 16px', background: 'white' }}>
+                        <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '4px' }}>{label}</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>{value}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Summary */}
+                  <p style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.8, marginBottom: '16px', padding: '12px 16px', background: 'var(--bg-subtle)', borderRadius: '6px', fontStyle: 'italic' }}>
+                    {aiAnalysis.summary}
+                  </p>
+
+                  {/* Recommendations */}
+                  {aiAnalysis.recommendations?.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', marginBottom: '10px' }}>
+                        Recommendations
+                      </div>
+                      {aiAnalysis.recommendations.map((rec: any, i: number) => (
+                        <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '10px 0', borderBottom: i < aiAnalysis.recommendations.length - 1 ? '1px solid var(--border-light)' : 'none' }}>
+                          <span style={{
+                            fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)',
+                            padding: '2px 8px', borderRadius: '3px', flexShrink: 0, marginTop: '2px',
+                            background: rec.priority === 'HIGH' ? 'var(--red-subtle)' : rec.priority === 'MEDIUM' ? 'var(--gold-subtle)' : 'var(--bg-subtle)',
+                            color: rec.priority === 'HIGH' ? 'var(--red)' : rec.priority === 'MEDIUM' ? 'var(--gold-dim)' : 'var(--text-3)',
+                          }}>
+                            {rec.priority}
+                          </span>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>{rec.action}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>{rec.rationale}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: '16px', fontSize: '10px', color: 'var(--text-ghost)', fontFamily: 'var(--font-mono)' }}>
+                    Nautilus Intelligence · {new Date(aiAnalysis.generated_at).toLocaleDateString('fr-FR')} · NOT FINANCIAL ADVICE
+                  </div>
+                </div>
+              )}
+
+              {aiAnalysis?.insufficient_data && (
+                <div style={{ padding: '24px', textAlign: 'center', fontSize: '13px', color: 'var(--text-3)' }}>
+                  {aiAnalysis.message}
+                </div>
+              )}
             </div>
           )}
 

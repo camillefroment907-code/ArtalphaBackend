@@ -146,6 +146,7 @@ export default function Dashboard() {
   const [recsLoading, setRecsLoading]       = useState(true);
   const [portfolioLoading, setPortfolioLoading] = useState(true);
   const [aiBrief, setAiBrief]               = useState<string>('');
+  const [sentiment, setSentiment]           = useState<any>(null);
 
   useEffect(() => {
     const token = getToken();
@@ -182,6 +183,10 @@ export default function Dashboard() {
     } else {
       setPortfolioLoading(false);
     }
+
+    cachedFetch(`${API}/api/market/sentiment`)
+      .then(data => { if (data?.segments) setSentiment(data); })
+      .catch(() => {});
   }, [canSeeRecs, user]);
 
   useEffect(() => {
@@ -467,6 +472,45 @@ No introduction, no conclusion, just the 3 lines.`,
               ))}
             </div>
           </div>
+
+          {/* Market Sentiment */}
+          {sentiment && (
+            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
+                  Market Sentiment
+                </h3>
+                <div style={{
+                  fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)',
+                  padding: '3px 10px', borderRadius: '3px', letterSpacing: '0.1em',
+                  background: sentiment.overall === 'BULLISH' ? 'var(--electric-subtle)' : sentiment.overall === 'BEARISH' ? 'var(--red-subtle)' : 'var(--bg-subtle)',
+                  color: sentiment.overall === 'BULLISH' ? 'var(--electric)' : sentiment.overall === 'BEARISH' ? 'var(--red)' : 'var(--text-3)',
+                }}>
+                  {sentiment.overall}
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {sentiment.segments?.slice(0, 4).map((seg: any) => (
+                  <div key={seg.segment} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--border-light, rgba(0,0,0,0.06))' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>{seg.segment}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>
+                        {seg.avg_score}/100
+                      </div>
+                      <div style={{
+                        fontSize: '8px', fontWeight: 700, fontFamily: 'var(--font-mono)',
+                        padding: '1px 6px', borderRadius: '2px',
+                        background: seg.sentiment === 'BULLISH' ? 'var(--electric-subtle)' : seg.sentiment === 'BEARISH' ? 'var(--red-subtle)' : 'var(--bg-subtle)',
+                        color: seg.sentiment === 'BULLISH' ? 'var(--electric)' : seg.sentiment === 'BEARISH' ? 'var(--red)' : 'var(--text-3)',
+                      }}>
+                        {seg.sentiment === 'BULLISH' ? '↑' : seg.sentiment === 'BEARISH' ? '↓' : '→'} {seg.sentiment}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* New This Cycle */}
           <div>
