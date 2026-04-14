@@ -6,14 +6,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from jose import JWTError, jwt as jose_jwt
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, text
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from pydantic import BaseModel
 
 from app.config import get_settings
 from app.database import get_db
-from app.models.db_models import User, UserPreference, AlertChannel
+from app.models.db_models import User, UserPreference, AlertChannel, Subscription
 from app.models.schemas import UserRegister, UserLogin, TokenResponse, UserOut
 from app.api.auth_utils import hash_password, verify_password, create_access_token, get_current_user
 from app.services.email_service import send_welcome_email, send_verification_email
@@ -273,3 +273,32 @@ async def update_profile(
 
     await db.commit()
     return {"message": "Profile updated", "email": current_user.email}
+
+
+@router.delete("/delete-account")
+async def delete_account(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Permanently delete user account and all data."""
+    try:
+        import stripe as stripe_lib
+        stripe_lib.api_key = settings.stripe_secret_key
+        result = await db.execute(
+            select(Subscription).where(Subscription.user_id == current_user.id)
+        )
+        sub = result.scalar_one_or_none()
+        if sub and sub.stripe_subscription_id:
+            try:
+                stripe_lib.Subscription.cancel(sub.stripe_subscription_id)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    await db.execute(
+        text("DELETE FROM users WHERE id = :uid"),
+        {"uid": str(current_user.id)}
+    )
+    await db.commit()
+    return {"message": "Account deleted"}
