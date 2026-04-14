@@ -26,38 +26,50 @@ async def get_market_sentiment(db: AsyncSession = Depends(get_db)):
     since_7d = now - timedelta(days=7)
 
     SEGMENTS = [
-        ("Paintings", ["painting", "peinture", "oil", "acrylic", "huile"]),
-        ("Prints & Multiples", ["print", "gravure", "lithograph", "etching", "sérigraphie"]),
-        ("Photography", ["photo", "photograph"]),
-        ("Sculpture", ["sculpture", "bronze", "ceramic"]),
-        ("Drawings", ["drawing", "dessin", "crayon", "ink"]),
-        ("Contemporary", ["contemporary", "contemporain"]),
+        ("Paintings", ["painting", "peinture", "oil", "acrylic", "huile", "canvas", "toile"]),
+        ("Prints & Multiples", ["print", "gravure", "lithograph", "etching", "sérigraphie", "edition", "multiple"]),
+        ("Photography", ["photo", "photograph", "tirage"]),
+        ("Sculpture", ["sculpture", "bronze", "ceramic", "céramique", "statue"]),
+        ("Drawings", ["drawing", "dessin", "crayon", "ink", "encre", "pastel"]),
+        ("Contemporary", ["contemporary", "contemporain", "modern", "moderne"]),
     ]
 
     sentiments = []
 
     for segment_name, keywords in SEGMENTS:
-        keyword_filters = or_(*[
-            Lot.category.ilike(f"%{kw}%") for kw in keywords
-        ])
+        # Match against both category and medium to handle null category
+        keyword_filters = or_(
+            *[Lot.category.ilike(f"%{kw}%") for kw in keywords],
+            *[Lot.medium.ilike(f"%{kw}%") for kw in keywords],
+        )
+
+        # Include lots with null created_at (treat as recent)
+        date_filter_30d = or_(
+            Lot.created_at >= since_30d,
+            Lot.created_at.is_(None),
+        )
+        date_filter_7d = or_(
+            Lot.created_at >= since_7d,
+            Lot.created_at.is_(None),
+        )
 
         total_result = await db.execute(
             select(func.count(Lot.id)).where(
-                and_(keyword_filters, Lot.created_at >= since_30d)
+                and_(keyword_filters, date_filter_30d)
             )
         )
         total = total_result.scalar() or 0
 
         recent_result = await db.execute(
             select(func.count(Lot.id)).where(
-                and_(keyword_filters, Lot.created_at >= since_7d)
+                and_(keyword_filters, date_filter_7d)
             )
         )
         recent = recent_result.scalar() or 0
 
         score_result = await db.execute(
             select(func.avg(Lot.deal_score)).where(
-                and_(keyword_filters, Lot.created_at >= since_30d, Lot.deal_score.isnot(None))
+                and_(keyword_filters, date_filter_30d, Lot.deal_score.isnot(None))
             )
         )
         avg_score = round(score_result.scalar() or 0, 1)
