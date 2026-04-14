@@ -264,6 +264,7 @@ export default function Portfolio() {
   const [addForm, setAddForm] = useState<AddForm>({ title: '', artist_name: '', purchase_price_eur: '', purchase_date: '', medium: '', notes: '' });
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState('');
+  const [newArtwork, setNewArtwork] = useState<Record<string, any>>({});
 
   // ── Edit form ──────────────────────────────────────────────
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -480,6 +481,36 @@ export default function Portfolio() {
       setAddLoading(false);
     }
   }
+
+  const handleAddArtwork = async () => {
+    if (!newArtwork.artist_name || !newArtwork.title || !newArtwork.purchase_price) return;
+    try {
+      const resp = await fetch(`${BACKEND}/api/portfolio/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({
+          artist_name: newArtwork.artist_name,
+          title: newArtwork.title,
+          year: newArtwork.year ? parseInt(newArtwork.year) : null,
+          medium: newArtwork.medium,
+          purchase_price: parseFloat(newArtwork.purchase_price),
+          current_value: newArtwork.current_value ? parseFloat(newArtwork.current_value) : parseFloat(newArtwork.purchase_price),
+          acquisition_date: newArtwork.acquisition_date,
+          acquisition_source: newArtwork.acquisition_source,
+          target_sell_price: newArtwork.target_sell_price ? parseFloat(newArtwork.target_sell_price) : null,
+          target_sell_date: newArtwork.target_sell_date,
+          location: newArtwork.location,
+          condition: newArtwork.condition,
+          notes: newArtwork.notes,
+        }),
+      });
+      if (resp.ok) {
+        setNewArtwork({});
+        setShowAddModal(false);
+        await loadPortfolio();
+      }
+    } catch {}
+  };
 
   function openEditModal(item: PortfolioItem) {
     setEditingId(item.id);
@@ -772,57 +803,179 @@ export default function Portfolio() {
               ))}
             </div>
 
+            {portfolioItems.length >= 2 && (
+              <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px 24px', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <div>
+                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px' }}>
+                      Portfolio Performance
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: returnPct >= 0 ? 'var(--electric)' : 'var(--red)' }}>
+                      {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(1)}% total return
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    {['Paintings', 'Prints', 'Photography', 'Sculpture', 'Other'].map(cat => {
+                      const count = portfolioItems.filter(i => (i.medium || '').toLowerCase().includes(cat.toLowerCase())).length;
+                      if (count === 0) return null;
+                      return (
+                        <div key={cat} style={{ padding: '3px 10px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: '20px', fontSize: '10px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
+                          {cat} · {count}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'flex-end', height: '48px' }}>
+                  {portfolioItems.map((item) => {
+                    const val = item.estimated_current_value_eur || item.purchase_price_eur || 0;
+                    const maxVal = Math.max(...portfolioItems.map(x => x.estimated_current_value_eur || x.purchase_price_eur || 0));
+                    const height = maxVal > 0 ? Math.max(8, (val / maxVal) * 48) : 8;
+                    const ret = item.purchase_price_eur && item.estimated_current_value_eur
+                      ? (item.estimated_current_value_eur - item.purchase_price_eur) / item.purchase_price_eur
+                      : 0;
+                    return (
+                      <div
+                        key={item.id}
+                        title={`${item.artist_name || item.title} — €${val.toLocaleString()}`}
+                        style={{
+                          flex: 1, height: `${height}px`, borderRadius: '3px',
+                          background: ret > 0.1 ? 'var(--electric)' : ret < -0.05 ? 'var(--red)' : 'var(--border)',
+                          transition: 'opacity 0.15s', cursor: 'pointer', opacity: 0.8,
+                        }}
+                        onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.opacity = '1'}
+                        onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.opacity = '0.8'}
+                      />
+                    );
+                  })}
+                </div>
+                <div style={{ display: 'flex', gap: '16px', marginTop: '10px' }}>
+                  {[
+                    { color: 'var(--electric)', label: 'Appreciation (>10%)' },
+                    { color: 'var(--border)', label: 'Stable' },
+                    { color: 'var(--red)', label: 'Depreciation' },
+                  ].map(({ color, label }) => (
+                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: color }} />
+                      <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Collection header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', margin: 0 }}>My Collection</h2>
               <button
-                onClick={() => { setShowAddModal(v => !v); setAddError(''); }}
-                style={{ padding: '8px 20px', background: showAddModal ? 'var(--bg-subtle)' : 'var(--navy)', color: showAddModal ? 'var(--text-2)' : 'white', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}
+                onClick={() => { setNewArtwork({}); setShowAddModal(true); }}
+                style={{ padding: '8px 20px', background: 'var(--navy)', color: 'white', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}
               >
-                {showAddModal ? 'Cancel' : '+ Add artwork'}
+                + Add artwork
               </button>
             </div>
 
-            {/* Add artwork form */}
             {showAddModal && (
-              <form onSubmit={handleAddItem} style={{ background: 'var(--bg-card)', border: '2px solid var(--border)', borderRadius: '10px', padding: '28px 32px', marginBottom: '24px' }}>
-                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, color: 'var(--text)', margin: '0 0 20px' }}>Add an Artwork</h3>
-                {addError && (
-                  <div style={{ marginBottom: '16px', padding: '10px 14px', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: '6px', fontSize: '12px', color: '#C0392B' }}>{addError}</div>
-                )}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 24px' }}>
-                  {[
-                    { label: 'Title *', key: 'title', type: 'text', required: true, placeholder: 'e.g. Composition No. 12' },
-                    { label: 'Artist', key: 'artist_name', type: 'text', required: false, placeholder: 'e.g. Joan Miró' },
-                    { label: 'Purchase Price (EUR) *', key: 'purchase_price_eur', type: 'number', required: true, placeholder: 'e.g. 12000' },
-                    { label: 'Purchase Date', key: 'purchase_date', type: 'date', required: false, placeholder: '' },
-                    { label: 'Medium', key: 'medium', type: 'text', required: false, placeholder: 'e.g. Oil on canvas' },
-                    { label: 'Notes', key: 'notes', type: 'text', required: false, placeholder: 'Provenance, condition, etc.' },
-                  ].map(({ label, key, type, required, placeholder }) => (
-                    <div key={key}>
-                      <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '6px' }}>{label}</label>
-                      <input
-                        type={type}
-                        required={required}
-                        value={addForm[key as keyof AddForm]}
-                        onChange={e => setAddForm(f => ({ ...f, [key]: e.target.value }))}
-                        placeholder={placeholder}
-                        style={inputStyle}
-                        min={type === 'number' ? '0' : undefined}
-                        step={type === 'number' ? 'any' : undefined}
-                      />
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,22,40,0.65)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
+                onClick={e => { if (e.target === e.currentTarget) setShowAddModal(false); }}
+              >
+                <div style={{ background: 'white', borderRadius: '12px', padding: '32px', width: '100%', maxWidth: '560px', maxHeight: '90vh', overflow: 'auto' }}>
+                  <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '6px' }}>Add artwork</h3>
+                  <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '24px' }}>Track this work in your collection</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Artist *</label>
+                      <input className="input" placeholder="e.g. Joan Miró" value={newArtwork.artist_name || ''} onChange={e => setNewArtwork(f => ({ ...f, artist_name: e.target.value }))} />
                     </div>
-                  ))}
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Title *</label>
+                      <input className="input" placeholder="e.g. Composition No. 12" value={newArtwork.title || ''} onChange={e => setNewArtwork(f => ({ ...f, title: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Year</label>
+                      <input className="input" placeholder="e.g. 1968" value={newArtwork.year || ''} onChange={e => setNewArtwork(f => ({ ...f, year: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Medium</label>
+                      <select className="input" value={newArtwork.medium || ''} onChange={e => setNewArtwork(f => ({ ...f, medium: e.target.value }))}>
+                        <option value="">Select medium</option>
+                        <option value="Oil on canvas">Oil on canvas</option>
+                        <option value="Acrylic on canvas">Acrylic on canvas</option>
+                        <option value="Watercolor">Watercolor</option>
+                        <option value="Drawing">Drawing</option>
+                        <option value="Print / Lithograph">Print / Lithograph</option>
+                        <option value="Photography">Photography</option>
+                        <option value="Sculpture">Sculpture</option>
+                        <option value="Mixed media">Mixed media</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Purchase price (€) *</label>
+                      <input className="input" type="number" placeholder="e.g. 12000" value={newArtwork.purchase_price || ''} onChange={e => setNewArtwork(f => ({ ...f, purchase_price: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Est. current value (€)</label>
+                      <input className="input" type="number" placeholder="Leave blank if same" value={newArtwork.current_value || ''} onChange={e => setNewArtwork(f => ({ ...f, current_value: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Acquisition date</label>
+                      <input className="input" type="date" value={newArtwork.acquisition_date || ''} onChange={e => setNewArtwork(f => ({ ...f, acquisition_date: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Source</label>
+                      <select className="input" value={newArtwork.acquisition_source || ''} onChange={e => setNewArtwork(f => ({ ...f, acquisition_source: e.target.value }))}>
+                        <option value="">Select source</option>
+                        <option value="auction">Auction house</option>
+                        <option value="gallery">Gallery</option>
+                        <option value="private">Private sale</option>
+                        <option value="art_fair">Art fair</option>
+                        <option value="online">Online platform</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Target exit price (€)</label>
+                      <input className="input" type="number" placeholder="e.g. 18000" value={newArtwork.target_sell_price || ''} onChange={e => setNewArtwork(f => ({ ...f, target_sell_price: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Target exit date</label>
+                      <input className="input" type="date" value={newArtwork.target_sell_date || ''} onChange={e => setNewArtwork(f => ({ ...f, target_sell_date: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Location</label>
+                      <input className="input" placeholder="e.g. Home, storage, on loan..." value={newArtwork.location || ''} onChange={e => setNewArtwork(f => ({ ...f, location: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Condition</label>
+                      <select className="input" value={newArtwork.condition || ''} onChange={e => setNewArtwork(f => ({ ...f, condition: e.target.value }))}>
+                        <option value="">Select</option>
+                        <option value="mint">Mint</option>
+                        <option value="excellent">Excellent</option>
+                        <option value="good">Good</option>
+                        <option value="fair">Fair</option>
+                      </select>
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Notes</label>
+                      <textarea className="input" placeholder="Provenance, exhibitions, certificate of authenticity..." value={newArtwork.notes || ''} onChange={e => setNewArtwork(f => ({ ...f, notes: e.target.value }))} style={{ minHeight: '60px', resize: 'vertical' }} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                    <button onClick={() => setShowAddModal(false)} style={{ flex: 1, padding: '11px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '13px', color: 'var(--text-2)', cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAddArtwork}
+                      disabled={!newArtwork.artist_name || !newArtwork.title || !newArtwork.purchase_price}
+                      className="btn-electric"
+                      style={{ flex: 2, fontSize: '13px', padding: '11px', justifyContent: 'center', borderRadius: '8px', opacity: (!newArtwork.artist_name || !newArtwork.title || !newArtwork.purchase_price) ? 0.4 : 1 }}
+                    >
+                      Add to collection →
+                    </button>
+                  </div>
                 </div>
-                <div style={{ marginTop: '20px', display: 'flex', gap: '12px' }}>
-                  <button type="submit" disabled={addLoading} style={{ padding: '10px 24px', background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: addLoading ? 'not-allowed' : 'pointer', opacity: addLoading ? 0.6 : 1 }}>
-                    {addLoading ? 'Adding…' : 'Add to Collection'}
-                  </button>
-                  <button type="button" onClick={() => { setShowAddModal(false); setAddError(''); }} style={{ padding: '10px 20px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', cursor: 'pointer' }}>
-                    Cancel
-                  </button>
-                </div>
-              </form>
+              </div>
             )}
 
             {/* Loading */}
@@ -916,6 +1069,18 @@ export default function Portfolio() {
                             </button>
                           </div>
                         </div>
+                        {/* Market timing indicator */}
+                        {gainPct !== null && (
+                          <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{
+                              width: '6px', height: '6px', borderRadius: '50%',
+                              background: gainPct >= 20 ? 'var(--electric)' : gainPct >= 10 ? 'var(--gold)' : 'var(--text-ghost)',
+                            }} />
+                            <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                              {gainPct >= 20 ? 'SELL WINDOW' : gainPct >= 10 ? 'HOLD' : 'BUILDING VALUE'}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Inline edit */}
