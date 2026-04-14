@@ -13,6 +13,7 @@ import asyncio
 import threading
 import time
 import logging
+import httpx
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
@@ -112,6 +113,18 @@ def _weekly_report_loop():
         _run(maybe_send_weekly_report, "weekly_report")
 
 
+def _keep_warm_loop():
+    """Ping /health every 5 minutes to prevent Railway cold starts."""
+    time.sleep(60)  # Wait 1 min after launch before first ping
+    while True:
+        try:
+            with httpx.Client(timeout=5) as client:
+                client.get("http://localhost:8000/health")
+        except Exception:
+            pass
+        time.sleep(5 * 60)  # Every 5 minutes
+
+
 def start_beat_in_background():
     """Start all scheduler loops as daemon threads."""
     threads = [
@@ -121,6 +134,7 @@ def start_beat_in_background():
         threading.Thread(target=_rationale_loop,         daemon=True, name="sched-rationale"),
         threading.Thread(target=_artist_enrichment_loop, daemon=True, name="sched-artist-enrich"),
         threading.Thread(target=_weekly_report_loop,     daemon=True, name="sched-weekly-report"),
+        threading.Thread(target=_keep_warm_loop,         daemon=True, name="sched-keep-warm"),
     ]
     for t in threads:
         t.start()
