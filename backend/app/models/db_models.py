@@ -513,3 +513,89 @@ class ArtistProfile(Base):
         Index("ix_artist_profiles_momentum", "momentum_score"),
         Index("ix_artist_profiles_investment_tier", "investment_tier"),
     )
+
+
+# ── Proprietary data accumulation ────────────────────────────────────────────
+
+class HammerPrice(Base):
+    """Historical hammer prices — scarce data, huge moat."""
+    __tablename__ = "hammer_prices"
+
+    id            = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    artist_name   = Column(String(500), index=True, nullable=False)
+    artwork_title = Column(String(1000), nullable=True)
+    year_created  = Column(Integer, nullable=True)
+    medium        = Column(String(300), nullable=True)
+    dimensions    = Column(String(200), nullable=True)
+    sale_date     = Column(DateTime, index=True, nullable=False)
+    hammer_price  = Column(Float, nullable=False)
+    currency      = Column(String(10), default="EUR")
+    auction_house = Column(String(300), index=True, nullable=True)
+    estimate_low  = Column(Float, nullable=True)
+    estimate_high = Column(Float, nullable=True)
+    premium_paid  = Column(Float, nullable=True)   # hammer / estimate_low ratio
+    lot_id        = Column(UUID(as_uuid=True), ForeignKey("lots.id"), nullable=True)
+    created_at    = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_hammer_prices_artist_date", "artist_name", "sale_date"),
+    )
+
+
+class ScorePerformance(Base):
+    """Nautilus score performance tracking — proves our edge over time."""
+    __tablename__ = "score_performance"
+
+    id                   = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    lot_id               = Column(UUID(as_uuid=True), ForeignKey("lots.id"), nullable=False, index=True)
+    nautilus_score       = Column(Float, nullable=False)   # score at time of recommendation
+    predicted_upside     = Column(Float, nullable=True)
+    actual_hammer_price  = Column(Float, nullable=True)    # filled after auction
+    actual_upside        = Column(Float, nullable=True)
+    prediction_correct   = Column(Boolean, nullable=True)
+    auction_date         = Column(DateTime, nullable=False, index=True)
+    verified_at          = Column(DateTime, nullable=True)
+    created_at           = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("lot_id", name="uq_score_performance_lot"),
+    )
+
+
+class ArtistMarketData(Base):
+    """Artist market trajectory — proprietary momentum data by quarter."""
+    __tablename__ = "artist_market_data"
+
+    id                     = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    artist_name            = Column(String(500), index=True, nullable=False)
+    period                 = Column(String(20), nullable=False)   # e.g. "2024-Q1"
+    total_lots             = Column(Integer, default=0)
+    total_hammer_value     = Column(Float, default=0.0)
+    avg_premium            = Column(Float, nullable=True)          # avg hammer/estimate ratio
+    sell_through_rate      = Column(Float, nullable=True)          # % lots that sold
+    price_index            = Column(Float, nullable=True)          # normalized price index
+    nautilus_momentum_score = Column(Float, nullable=True)
+    created_at             = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("artist_name", "period", name="uq_artist_market_data_period"),
+        Index("ix_artist_market_data_artist", "artist_name"),
+        Index("ix_artist_market_data_period", "period"),
+    )
+
+
+class UserSignal(Base):
+    """User behavior signals — personalization moat."""
+    __tablename__ = "user_signals"
+
+    id               = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id          = Column(UUID(as_uuid=True), ForeignKey("users.id"), index=True, nullable=False)
+    lot_id           = Column(UUID(as_uuid=True), ForeignKey("lots.id"), nullable=True)
+    signal_type      = Column(String(50), nullable=False)   # "view", "watchlist", "memo_generated", "purchased"
+    duration_seconds = Column(Integer, nullable=True)
+    created_at       = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_user_signals_user_type", "user_id", "signal_type"),
+        Index("ix_user_signals_lot", "lot_id"),
+    )

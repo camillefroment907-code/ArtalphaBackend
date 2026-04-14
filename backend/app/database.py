@@ -92,6 +92,11 @@ async def create_tables():
         # lots columns added after initial deploy
         "ALTER TABLE lots ADD COLUMN IF NOT EXISTS market_type VARCHAR(50) DEFAULT 'auction'",
         "ALTER TABLE lots ADD COLUMN IF NOT EXISTS size_category VARCHAR(50)",
+        # proprietary data tables — create_all handles new tables,
+        # but ensure any future column additions are listed here
+        "ALTER TABLE hammer_prices ADD COLUMN IF NOT EXISTS premium_paid FLOAT",
+        "ALTER TABLE score_performance ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP",
+        "ALTER TABLE user_signals ADD COLUMN IF NOT EXISTS duration_seconds INTEGER",
     ]
     for sql in migrations:
         try:
