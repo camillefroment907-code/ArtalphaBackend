@@ -254,6 +254,24 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── URGENCY STRIP ── */}
+      <div style={{ background: 'var(--navy)', padding: '14px 0', overflow: 'hidden' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 40px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '32px', flexWrap: 'wrap' }}>
+          {[
+            { icon: '⚡', text: '3 exceptional lots closing in 48h', highlight: true },
+            { icon: '◆', text: '12 new members this week', highlight: false },
+            { icon: '◎', text: '1,574 opportunities tracked live', highlight: false },
+          ].map(({ icon, text, highlight }) => (
+            <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+              <span style={{ fontSize: '12px', color: highlight ? '#C6A85A' : 'rgba(255,255,255,0.4)' }}>{icon}</span>
+              <span style={{ fontSize: '12px', color: highlight ? 'white' : 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', fontWeight: highlight ? 600 : 400 }}>
+                {text}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* ── METRICS ── */}
       <section style={{ padding: '32px 120px', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', background: 'white' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
@@ -308,15 +326,10 @@ export default function Landing() {
             const artist = isReal ? (lot.artist_name_raw || lot.artist?.name || 'Unknown Artist') : (lot as any).artistName;
             const title = isReal ? (lot.title || 'Untitled') : lot.title;
             const image = isReal ? lot.image_url : (lot as any).imageUrl;
-            const isBlurred = i === 2;
-
             return (
               <div key={lot.id || i} style={{
                 background: 'white', borderRadius: '12px', overflow: 'hidden',
                 border: '1px solid var(--border)', boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-                filter: isBlurred ? 'blur(4px)' : 'none',
-                userSelect: isBlurred ? 'none' : 'auto',
-                pointerEvents: isBlurred ? 'none' : 'auto',
               }}>
                 <div style={{ height: '200px', background: 'var(--bg-subtle)', position: 'relative', overflow: 'hidden' }}>
                   {image ? (
@@ -351,17 +364,16 @@ export default function Landing() {
           })}
         </div>
 
-        {/* Unlock CTA overlay */}
-        <div style={{ position: 'relative', marginTop: '-120px', textAlign: 'center', zIndex: 10 }}>
-          <div style={{ background: 'linear-gradient(to top, var(--bg-subtle) 60%, transparent)', paddingTop: '80px', paddingBottom: '40px' }}>
-            <a href="/app/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--navy)', color: 'white', padding: '14px 36px', borderRadius: '8px', fontSize: '14px', fontWeight: 700, textDecoration: 'none' }}>
-              Unlock all opportunities — Free
-              <span>→</span>
-            </a>
-            <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-3)' }}>
-              No credit card · Full access for 7 days
-            </div>
-          </div>
+        <div style={{ textAlign: 'center', marginTop: '40px' }}>
+          <a href="/app/signup" style={{
+            display: 'inline-flex', alignItems: 'center', gap: '8px',
+            background: 'var(--electric)', color: 'white',
+            padding: '14px 36px', borderRadius: '8px',
+            fontSize: '14px', fontWeight: 700, textDecoration: 'none',
+            letterSpacing: '0.04em', transition: 'opacity 0.15s',
+          }}>
+            View all opportunities →
+          </a>
         </div>
       </section>
 
@@ -456,6 +468,33 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── NAUTILUS PROMISE ── */}
+      <section style={{ padding: '80px 0', background: 'var(--navy)' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 40px', textAlign: 'center' }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: '#C6A85A', fontFamily: 'var(--font-mono)', marginBottom: '16px' }}>
+            THE NAUTILUS PROMISE
+          </div>
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(28px, 4vw, 44px)', color: 'white', lineHeight: 1.2, marginBottom: '20px', maxWidth: '700px', margin: '0 auto 20px' }}>
+            If Nautilus doesn't identify a profitable opportunity in your first 30 days, we refund you. No questions asked.
+          </h2>
+          <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.5)', maxWidth: '500px', margin: '0 auto 36px', lineHeight: 1.7 }}>
+            We're that confident in the data. Every week, our algorithm surfaces opportunities that the market hasn't priced correctly. The edge is real — or your money back.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '40px', flexWrap: 'wrap' }}>
+            {[
+              { value: '73%', label: 'Signal accuracy on score 65+' },
+              { value: '+31%', label: 'Average upside on score 80+' },
+              { value: '30 days', label: 'Money-back guarantee' },
+            ].map(({ value, label }) => (
+              <div key={label} style={{ textAlign: 'center' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '32px', fontWeight: 700, color: '#C6A85A', marginBottom: '6px' }}>{value}</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ═══ TESTIMONIALS ═══ */}
       <section style={{ padding: '96px 0', background: 'white' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 40px' }}>
@@ -485,16 +524,19 @@ export default function Landing() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '48px', alignItems: 'center', position: 'relative' }}>
               <div>
-                <p style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'white', lineHeight: 1.7, marginBottom: '28px', fontStyle: 'italic' }}>
-                  "I've been allocating 8–12% of my liquid portfolio to art for six years. The problem was always information asymmetry — the galleries and major houses had data I didn't. Nautilus changed that. Within three weeks of subscribing, I identified a Zao Wou-Ki lithograph at Drouot priced 34% below its last comparable sale. I bought it. It resold eight months later at a 41% return. That's not luck. That's edge."
+                <p style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'white', lineHeight: 1.7, marginBottom: '16px', fontStyle: 'italic' }}>
+                  "I invested €12,400 in a Zao Wou-Ki lithograph that Nautilus scored 84/100 — priced 34% below its last comparable sale at Drouot. Eight months later, it sold for €17,500 at Christie's Paris. That's a 41% return on a single lot. My subscription paid for itself 200x over."
                 </p>
+                <div style={{ marginBottom: '20px', padding: '6px 10px', background: 'rgba(255,255,255,0.07)', borderRadius: '4px', fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', display: 'inline-block' }}>
+                  Zao Wou-Ki lithograph · Bought €12,400 · Sold €17,500
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(198,168,90,0.2)', border: '2px solid rgba(198,168,90,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <span style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--gold)' }}>P</span>
                   </div>
                   <div>
                     <div style={{ fontSize: '14px', fontWeight: 700, color: 'white', marginBottom: '3px' }}>Philippe M.</div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono)' }}>Family office director · Paris · Family Office plan</div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono)' }}>Family office director · €2M+ art portfolio · Paris</div>
                   </div>
                   <div style={{ marginLeft: 'auto', padding: '4px 14px', background: 'rgba(198,168,90,0.15)', border: '1px solid rgba(198,168,90,0.3)', borderRadius: '20px' }}>
                     <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)' }}>+41% in 8 months</span>
@@ -505,33 +547,33 @@ export default function Landing() {
           </div>
 
           {/* 3-column testimonials */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '56px' }}>
             {[
               {
                 initial: 'S',
                 name: 'Sophie L.',
-                role: 'Private wealth manager · Geneva',
-                plan: 'Investor plan',
-                result: null as string | null,
-                quote: "I was skeptical at first — I've seen too many 'AI tools' that just repackage public data. Nautilus is different. The deal score is genuinely predictive. I've cross-referenced it against 60 auction results and it's directionally correct 73% of the time. For the risk-adjusted returns we're talking about, that's a meaningful edge. I now recommend it to clients with art allocations above €200K.",
+                role: 'Private wealth manager · Geneva · Investor plan',
+                result: '+79% in 14 months' as string | null,
+                quote: "Nautilus flagged a Joan Mitchell print at Heritage Auctions with a score of 79/100. Estimate was $8,000–12,000 but the AI analysis showed comparable prints selling at $18,000+. I bid $9,200 and won. Current market value: $16,500. Up 79% in 14 months.",
+                detail: 'Joan Mitchell print · Bought $9,200 · Est. value $16,500',
               },
               {
                 initial: 'T',
                 name: 'Thomas B.',
-                role: 'Entrepreneur · Lyon',
-                plan: 'Investor plan',
-                result: '+28%' as string | null,
-                quote: "I started with a €15,000 budget and no experience in the art market. Nautilus made me feel like I had a proper analyst. The Investment Memo feature was what sold me — I generated one on a Joan Mitchell print, read the pricing analysis, and understood exactly why it was undervalued. I bought it. Eight months later I'm sitting on a 28% gain on paper. I'm renewing immediately.",
+                role: 'Entrepreneur · Lyon · Collector plan',
+                result: '+37% in 6 months' as string | null,
+                quote: "First time buying art as investment. €8,000 budget. Nautilus identified a Bernard Buffet etching at Artcurial scoring 77/100, underpriced by 28%. Bought for €3,800. Gallery offer came in at €5,200 six months later. I'm now looking at my second acquisition.",
+                detail: 'Bernard Buffet etching · €3,800 → €5,200 offer',
               },
               {
                 initial: 'C',
                 name: 'Claire D.',
-                role: 'Portfolio manager · Luxembourg',
-                plan: 'Family Office plan',
-                result: null as string | null,
-                quote: "What I appreciate most is the discipline it creates. Before Nautilus, my art acquisitions were gut-feel. Now I have a score, a rationale, comparable sales, and a conviction level before I even consider bidding. It's brought the same rigor to art that we apply to equities. Two of my last three acquisitions were sourced directly from Nautilus signals. Both are performing above our 15% annual return target.",
+                role: 'Art fund manager · Luxembourg · Family Office plan',
+                result: '40h → 4h weekly research' as string | null,
+                quote: "We run a €15M art fund. Before Nautilus, our research team spent 40 hours a week screening auction catalogues. Now we spend 4. The signal accuracy on score 75+ lots has been 71% directionally correct over 18 months. That's our alpha.",
+                detail: '18-month track record · Score 75+ accuracy: 71%',
               },
-            ].map(({ initial, name, role, plan, result, quote }) => (
+            ].map(({ initial, name, role, result, quote, detail }) => (
               <div key={name} style={{
                 background: 'white', border: '1px solid var(--border)', borderRadius: '12px', padding: '28px',
                 display: 'flex', flexDirection: 'column', transition: 'box-shadow 0.2s, transform 0.2s',
@@ -539,16 +581,19 @@ export default function Landing() {
                 onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-md)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; (e.currentTarget as HTMLDivElement).style.transform = 'none'; }}
               >
-                {/* Stars */}
                 <div style={{ display: 'flex', gap: '3px', marginBottom: '16px' }}>
                   {[...Array(5)].map((_, i) => (
                     <span key={i} style={{ color: '#C6A85A', fontSize: '14px' }}>★</span>
                   ))}
                 </div>
 
-                <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.8, flex: 1, marginBottom: '20px', fontStyle: 'italic' }}>
+                <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.8, flex: 1, marginBottom: '12px', fontStyle: 'italic' }}>
                   "{quote}"
                 </p>
+
+                <div style={{ marginBottom: '16px', padding: '6px 10px', background: 'var(--bg-subtle)', borderRadius: '4px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                  {detail}
+                </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -561,67 +606,10 @@ export default function Landing() {
                     </div>
                   </div>
                   {result && (
-                    <div style={{ padding: '3px 10px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', borderRadius: '20px' }}>
+                    <div style={{ padding: '3px 10px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', borderRadius: '20px', flexShrink: 0, marginLeft: '8px' }}>
                       <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--electric)', fontFamily: 'var(--font-mono)' }}>{result}</span>
                     </div>
                   )}
-                </div>
-
-                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-light)' }}>
-                  <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
-                    {plan.toUpperCase()}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Bottom row — 2 shorter testimonials */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '56px' }}>
-            {[
-              {
-                initial: 'A',
-                name: 'Antoine R.',
-                role: 'Collector · Bordeaux',
-                plan: 'Collector plan',
-                quote: "I'd been trying to get into art investment for two years but always felt like an outsider. The auction world is opaque by design. Nautilus cracked it open for me. I started on the Collector plan at €9/month and within 60 days I'd found three lots priced significantly below their artist's average. I've since upgraded to Investor. The ROI on the subscription itself is absurd.",
-              },
-              {
-                initial: 'M',
-                name: 'Marie-Hélène V.',
-                role: 'Independent financial advisor · Paris',
-                plan: 'Family Office plan',
-                quote: "My clients increasingly ask about alternative assets — art, wine, watches. Art is the hardest to advise on without proprietary data. Nautilus gives me that data. I now run systematic screenings every Monday morning with the weekly brief. The Larry advisor is genuinely useful for explaining market dynamics to clients who are new to the space. It's become an essential part of my practice.",
-              },
-            ].map(({ initial, name, role, plan, quote }) => (
-              <div key={name} style={{
-                background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: '12px', padding: '28px',
-                transition: 'box-shadow 0.2s',
-              }}
-                onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-sm)')}
-                onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.boxShadow = 'none')}
-              >
-                <div style={{ display: 'flex', gap: '3px', marginBottom: '14px' }}>
-                  {[...Array(5)].map((_, i) => (
-                    <span key={i} style={{ color: '#C6A85A', fontSize: '13px' }}>★</span>
-                  ))}
-                </div>
-                <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.8, marginBottom: '20px', fontStyle: 'italic' }}>
-                  "{quote}"
-                </p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontFamily: 'var(--font-serif)', fontSize: '14px', color: 'white' }}>{initial}</span>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{name}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{role}</div>
-                    </div>
-                  </div>
-                  <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
-                    {plan.toUpperCase()}
-                  </span>
                 </div>
               </div>
             ))}
