@@ -7,8 +7,7 @@ const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-produc
 
 export default function Landing() {
   const navigate = useNavigate();
-  const [topLots, setTopLots]       = useState<any[]>([]);
-  const [heroLot, setHeroLot]       = useState<any>(null);
+  const [topLots, setTopLots]         = useState<any[]>([]);
   const [weeklyStats, setWeeklyStats] = useState<any>(null);
 
   useEffect(() => {
@@ -21,24 +20,12 @@ export default function Landing() {
       })
       .catch(() => {});
 
-    // Hero lot — highest score
-    fetch(`${BACKEND}/api/lots?sort_by=deal_score&sort_dir=desc&min_score=75&page_size=1`)
-      .then(r => r.json())
-      .then(d => setHeroLot(d.items?.[0] || null))
-      .catch(() => {});
-
-    // Weekly stats
+    // Weekly stats for urgency bar
     fetch(`${BACKEND}/api/market/sentiment`)
       .then(r => r.json())
       .then(d => setWeeklyStats(d))
       .catch(() => {});
   }, []);
-
-  const heroUpside = heroLot?.upside_percentage
-    ? `+${heroLot.upside_percentage.toFixed(0)}%`
-    : heroLot?.estimate_low && heroLot?.current_price && heroLot.current_price < heroLot.estimate_low
-    ? `+${((heroLot.estimate_low - heroLot.current_price) / heroLot.current_price * 100).toFixed(0)}%`
-    : '+34%';
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
@@ -60,54 +47,39 @@ export default function Landing() {
 
       {/* ── HERO ── */}
       <section style={{ padding: '80px 120px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'center', background: 'white' }}>
-        {/* Left — dynamic */}
-        <div style={{ maxWidth: '680px' }}>
-          {/* Live ticker */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', background: 'rgba(198,168,90,0.08)', border: '1px solid rgba(198,168,90,0.3)', borderRadius: '20px', marginBottom: '24px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C6A85A', animation: 'pulseDot 2s infinite' }} />
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#A07840', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
-              THIS WEEK · {weeklyStats?.segments?.reduce((a: number, s: any) => a + (s.total_lots_30d || 0), 0) || '1,574'} LOTS ANALYZED
-            </span>
+        {/* Left — static */}
+        <div>
+          <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.18em', color: 'var(--electric)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '20px' }}>
+            MARKET INTELLIGENCE · ART INVESTMENT
           </div>
 
-          {/* Dynamic headline */}
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(36px, 5vw, 58px)', fontWeight: 600, color: 'var(--text)', lineHeight: 1.15, marginBottom: '20px' }}>
-            {heroLot ? (
-              <>
-                {heroLot.artist_name_raw || heroLot.artist?.name || 'Marc Chagall'} just appeared<br />
-                at <span style={{ color: '#C6A85A' }}>{heroUpside} below market value.</span>
-              </>
-            ) : (
-              <>
-                The art market has<br />
-                a <span style={{ color: '#C6A85A' }}>€2.4B blind spot.</span>
-              </>
-            )}
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(40px, 5vw, 62px)', fontWeight: 700, color: 'var(--text)', lineHeight: 1.1, marginBottom: '20px' }}>
+            Uncover hidden value<br />in the art market.
           </h1>
 
-          <p style={{ fontSize: '18px', color: 'var(--text-2)', lineHeight: 1.7, marginBottom: '32px', maxWidth: '520px' }}>
-            {heroLot
-              ? `Every week, hundreds of artworks sell ${heroUpside} below their real market value. Most buyers never find out. Nautilus does — before the auction closes.`
-              : `Every week, hundreds of artworks sell 20–50% below their real market value. Nautilus identifies them before the market corrects.`
-            }
+          <p style={{ fontSize: '17px', color: 'var(--text-2)', lineHeight: 1.7, marginBottom: '32px', maxWidth: '480px' }}>
+            Nautilus identifies undervalued artworks before prices correct. AI-powered intelligence for serious investors.
           </p>
 
-          {/* CTA row */}
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <a href="/app/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--navy)', color: 'white', padding: '14px 32px', borderRadius: '8px', fontSize: '14px', fontWeight: 700, textDecoration: 'none', letterSpacing: '0.04em' }}>
-              See today's opportunities
-              <span style={{ fontSize: '16px' }}>→</span>
+          <div style={{ width: '40px', height: '2px', background: '#C6A85A', marginBottom: '32px' }} />
+
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <a href="/app/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--electric)', color: 'white', padding: '14px 28px', borderRadius: '8px', fontSize: '13px', fontWeight: 700, textDecoration: 'none', letterSpacing: '0.06em', textTransform: 'uppercase' as const, transition: 'opacity 0.15s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = '0.9'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = '1'; }}
+            >
+              GET ACCESS
             </a>
-            <span style={{ fontSize: '13px', color: 'var(--text-3)' }}>
-              Free · No credit card
-            </span>
+            <a href="/pricing" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', color: 'var(--text-2)', padding: '13px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: 500, textDecoration: 'none', border: '1px solid var(--border)', transition: 'all 0.15s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--text-2)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--border)'; }}
+            >
+              View pricing →
+            </a>
           </div>
 
-          {/* Social proof */}
-          <div style={{ marginTop: '20px', fontSize: '12px', color: 'var(--text-3)', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-            <span>✓ 200+ collectors</span>
-            <span>✓ 10+ auction houses</span>
-            <span>✓ Updated continuously</span>
+          <div style={{ marginTop: '16px', fontSize: '12px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+            Tracking 10+ global auction houses · Updated continuously
           </div>
         </div>
 
