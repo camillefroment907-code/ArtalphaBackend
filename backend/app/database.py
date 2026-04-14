@@ -97,6 +97,12 @@ async def create_tables():
         "ALTER TABLE hammer_prices ADD COLUMN IF NOT EXISTS premium_paid FLOAT",
         "ALTER TABLE score_performance ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP",
         "ALTER TABLE user_signals ADD COLUMN IF NOT EXISTS duration_seconds INTEGER",
+        # performance indexes
+        "CREATE INDEX IF NOT EXISTS idx_lots_deal_score ON lots(deal_score DESC) WHERE deal_score IS NOT NULL",
+        "CREATE INDEX IF NOT EXISTS idx_lots_created_at ON lots(created_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_lots_artist_name ON lots(artist_name_raw)",
+        "CREATE INDEX IF NOT EXISTS idx_lots_category ON lots(category)",
+        "CREATE INDEX IF NOT EXISTS idx_lots_auction_date ON lots(auction_date)",
     ]
     for sql in migrations:
         try:

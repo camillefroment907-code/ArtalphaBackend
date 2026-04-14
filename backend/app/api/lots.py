@@ -9,6 +9,44 @@ import math
 import asyncio
 import json
 import re
+import time
+
+
+# ── In-memory lots cache ──────────────────────────────────────────────────────
+_lots_cache: dict = {}
+LOTS_CACHE_TTL = 60  # seconds
+
+
+def get_cached_lots(key: str):
+    entry = _lots_cache.get(key)
+    if entry and time.time() - entry["ts"] < LOTS_CACHE_TTL:
+        return entry["data"]
+    return None
+
+
+def set_cached_lots(key: str, data) -> None:
+    _lots_cache[key] = {"data": data, "ts": time.time()}
+
+
+def lot_to_list_dict(lot) -> dict:
+    """Minimal lot payload for list views — skip heavy fields."""
+    return {
+        "id": str(lot.id),
+        "title": lot.title,
+        "artist_name_raw": lot.artist_name_raw,
+        "current_price": lot.current_price,
+        "estimate_low": lot.estimate_low,
+        "estimate_high": lot.estimate_high,
+        "deal_score": lot.deal_score,
+        "pct_below_low_estimate": lot.pct_below_low_estimate,
+        "image_url": lot.image_url,
+        "auction_house_name": lot.auction_house_name,
+        "auction_date": lot.auction_date.isoformat() if lot.auction_date else None,
+        "category": lot.category,
+        "source": lot.source.value if lot.source else None,
+        "currency": lot.currency,
+        "medium": lot.medium,
+    }
 
 
 def parse_dimensions(dimensions_str: str) -> dict:
@@ -206,6 +244,12 @@ async def list_lots(
     if page_size > max_per_page:
         page_size = max_per_page
 
+    # ── Cache lookup ─────────────────────────────────────────────────────────
+    cache_key = f"lots:{plan}:{sort_by}:{sort_dir}:{min_score}:{page}:{page_size}:{category}:{search}:{source}:{sources}"
+    cached = get_cached_lots(cache_key)
+    if cached:
+        return cached
+
     # Coalesce date param names — frontend may send either form
     resolved_from = auction_date_from or auction_from
     resolved_to   = auction_date_to   or auction_to
@@ -306,13 +350,15 @@ async def list_lots(
     result = await db.execute(stmt)
     lots = result.scalars().all()
 
-    return LotListResponse(
-        items=lots,
-        total=total,
-        page=page,
-        page_size=page_size,
-        pages=math.ceil(total / page_size) if total > 0 else 0,
-    )
+    response = {
+        "items": [lot_to_list_dict(lot) for lot in lots],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "pages": math.ceil(total / page_size) if total > 0 else 0,
+    }
+    set_cached_lots(cache_key, response)
+    return response
 
 
 @router.get("/hot-deals")
