@@ -296,11 +296,14 @@ export default function Explore() {
   const [artistTier, setArtistTier]   = useState('');
   const [auctionHouse, setAuctionHouse] = useState('');
   const [sizeFilter, setSizeFilter]   = useState('');
+  const [sortBy, setSortBy]           = useState('deal_score');
+  const [sortDir, setSortDir]         = useState('desc');
 
   const resetFilters = () => {
     setMinScore(0); setMinUpside(''); setMinPrice(0); setMaxPrice(0);
     setCategory(''); setArtistTier(''); setAuctionHouse(''); setSizeFilter('');
     setSearch(''); setDateFilter('all');
+    setSortBy('deal_score'); setSortDir('desc');
     setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete('search'); return p; });
   };
 
@@ -387,15 +390,15 @@ export default function Explore() {
       }
 
       if (exploreTab === 'best') {
-        params.set('sort_by', 'deal_score');
-        params.set('sort_dir', 'desc');
+        params.set('sort_by', sortBy);
+        params.set('sort_dir', sortDir);
         params.set('min_score', String(minScore > 0 ? minScore : 60));
       } else if (exploreTab === 'auctions') {
-        params.set('sort_by', 'created_at');
-        params.set('sort_dir', 'desc');
+        params.set('sort_by', sortBy);
+        params.set('sort_dir', sortDir);
       } else if (exploreTab === 'convictions') {
-        params.set('sort_by', 'deal_score');
-        params.set('sort_dir', 'desc');
+        params.set('sort_by', sortBy);
+        params.set('sort_dir', sortDir);
         params.set('min_score', '75');
       }
 
@@ -449,7 +452,7 @@ export default function Explore() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { setCurrentPage(1); fetchLots(); },
-    [exploreTab, dateFilter, search, minScore, minUpside, minPrice, maxPrice, category, artistTier, auctionHouse, sizeFilter]);
+    [exploreTab, dateFilter, search, minScore, minUpside, minPrice, maxPrice, category, artistTier, auctionHouse, sizeFilter, sortBy, sortDir]);
 
   const doFetch = () => fetchLots();
 
@@ -460,8 +463,8 @@ export default function Explore() {
     try {
       const p: Record<string, any> = {
         page: nextPage, page_size: 24,
-        sort_by: exploreTab === 'best' ? 'deal_score' : 'created_at',
-        sort_dir: 'desc',
+        sort_by: sortBy,
+        sort_dir: sortDir,
         search: search || undefined,
         min_price: minPrice > 0 ? minPrice : undefined,
         max_price: maxPrice > 0 ? maxPrice : undefined,
@@ -617,14 +620,74 @@ export default function Explore() {
                 </div>
               </div>
 
-              {/* 1. CONVICTION SCORE */}
+              {/* 1. SORT BY */}
               <div style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Conviction Score</div>
+                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>
+                  Sort by
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {[{ label: 'All opportunities', value: 0, sub: '' }, { label: 'Strong signal', value: 55, sub: 'Score 55+' }, { label: 'High conviction', value: 65, sub: 'Score 65+' }, { label: 'Exceptional only', value: 80, sub: 'Score 80+' }].map(({ label, value, sub }) => (
-                    <button key={value} onClick={() => setMinScore(value)} style={{ padding: '8px 12px', textAlign: 'left', background: minScore === value ? 'var(--navy)' : 'white', color: minScore === value ? 'white' : 'var(--text-2)', border: `1px solid ${minScore === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.15s' }}>
+                  {[
+                    { label: 'Best score first', sortBy: 'deal_score', sortDir: 'desc' },
+                    { label: 'Recently added', sortBy: 'created_at', sortDir: 'desc' },
+                    { label: 'Price: low to high', sortBy: 'current_price', sortDir: 'asc' },
+                    { label: 'Price: high to low', sortBy: 'current_price', sortDir: 'desc' },
+                    { label: 'Closing soon', sortBy: 'auction_date', sortDir: 'asc' },
+                  ].map(({ label, sortBy: sb, sortDir: sd }) => (
+                    <button
+                      key={label}
+                      onClick={() => { setSortBy(sb); setSortDir(sd); }}
+                      style={{
+                        padding: '8px 12px', textAlign: 'left',
+                        background: sortBy === sb && sortDir === sd ? 'var(--navy)' : 'white',
+                        color: sortBy === sb && sortDir === sd ? 'white' : 'var(--text-2)',
+                        border: `1px solid ${sortBy === sb && sortDir === sd ? 'var(--navy)' : 'var(--border)'}`,
+                        borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. SIGNAL TIER */}
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>
+                  Signal Tier
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {[
+                    { label: 'All signals', value: 0, tag: null, color: '', bg: '', border: '' },
+                    { label: 'Exceptional', value: 80, tag: 'EXCEPTIONAL', color: '#C6A85A', bg: 'rgba(198,168,90,0.1)', border: 'rgba(198,168,90,0.3)' },
+                    { label: 'Strong', value: 65, tag: 'STRONG', color: 'var(--electric)', bg: 'var(--electric-subtle)', border: 'var(--electric-border)' },
+                    { label: 'Interesting', value: 50, tag: 'INTERESTING', color: 'var(--text-2)', bg: 'var(--bg-subtle)', border: 'var(--border)' },
+                  ].map(({ label, value, tag, color, bg, border }) => (
+                    <button
+                      key={value}
+                      onClick={() => setMinScore(value)}
+                      style={{
+                        padding: '9px 12px', textAlign: 'left',
+                        background: minScore === value ? 'var(--navy)' : 'white',
+                        color: minScore === value ? 'white' : 'var(--text-2)',
+                        border: `1px solid ${minScore === value ? 'var(--navy)' : 'var(--border)'}`,
+                        borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        transition: 'all 0.15s',
+                      }}
+                    >
                       <span>{label}</span>
-                      {sub && <span style={{ fontSize: '10px', opacity: 0.6, fontFamily: 'var(--font-mono)' }}>{sub}</span>}
+                      {tag && (
+                        <span style={{
+                          fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)',
+                          padding: '2px 7px', borderRadius: '3px', letterSpacing: '0.08em',
+                          color: minScore === value ? 'white' : color,
+                          background: minScore === value ? 'rgba(255,255,255,0.15)' : bg,
+                          border: `1px solid ${minScore === value ? 'rgba(255,255,255,0.3)' : border}`,
+                        }}>
+                          {tag}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
