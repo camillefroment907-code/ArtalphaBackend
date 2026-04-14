@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
-import { Logo } from "../components/Logo";
 import { getToken } from "../../lib/auth";
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
@@ -228,10 +227,6 @@ export default function Pricing() {
         borderBottom: '1px solid var(--border)',
         padding: '12px 32px', display: 'flex', alignItems: 'center', gap: '16px',
       }}>
-        <div onClick={() => navigate(getToken() ? '/app/explore' : '/')} style={{ cursor: 'pointer' }}>
-          <Logo variant="horizontal" color="dark" size={20} />
-        </div>
-        <div style={{ width: '1px', height: '20px', background: 'var(--border)', margin: '0 4px' }} />
         <button
           onClick={() => navigate(-1)}
           style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '13px', padding: '6px 0', transition: 'color 0.15s' }}

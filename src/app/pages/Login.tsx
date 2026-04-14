@@ -85,10 +85,6 @@ export default function Login() {
     <div style={{ display: 'flex', minHeight: '100vh', background: '#FAFAFA' }}>
       {/* Left — form */}
       <div style={{ flex: '0 0 50%', background: 'white', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 48px', borderBottom: '1px solid var(--border)' }}>
-          <Logo variant="horizontal" color="dark" size={22} />
-        </div>
-
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 72px', maxWidth: '480px', margin: '0 auto', width: '100%' }}>
           <div style={{ marginBottom: '8px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--electric)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>
             Nautilus Terminal

@@ -125,6 +125,46 @@ body {
 .stagger > *:nth-child(5) { animation-delay: 0.25s; }
 .stagger > *:nth-child(6) { animation-delay: 0.30s; }
 
+/* ── PAGE ENTRY ANIMATIONS ──────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-fade-in-up { animation: fadeInUp 0.35s ease forwards; }
+.animate-fade-in    { animation: fadeIn  0.25s ease forwards; }
+
+.animate-stagger > * { opacity: 0; animation: fadeInUp 0.35s ease both; }
+.animate-stagger > *:nth-child(1)  { animation-delay: 0.05s; }
+.animate-stagger > *:nth-child(2)  { animation-delay: 0.10s; }
+.animate-stagger > *:nth-child(3)  { animation-delay: 0.15s; }
+.animate-stagger > *:nth-child(4)  { animation-delay: 0.20s; }
+.animate-stagger > *:nth-child(5)  { animation-delay: 0.25s; }
+.animate-stagger > *:nth-child(6)  { animation-delay: 0.30s; }
+.animate-stagger > *:nth-child(7)  { animation-delay: 0.32s; }
+.animate-stagger > *:nth-child(8)  { animation-delay: 0.34s; }
+.animate-stagger > *:nth-child(n+9){ animation-delay: 0.36s; }
+
+/* Lot card hover */
+.lot-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.lot-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(10,22,40,0.1); }
+
+/* Skeleton shimmer */
+@keyframes skeletonShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-subtle) 25%, var(--border) 50%, var(--bg-subtle) 75%);
+  background-size: 200% 100%;
+  border-radius: 8px;
+  animation: skeletonShimmer 1.5s infinite;
+}
+
 /* ── CARDS ──────────────────────────────────────────────────── */
 .card {
   background: var(--bg-card);

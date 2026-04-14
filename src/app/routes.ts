@@ -1,29 +1,31 @@
+import { lazy } from 'react';
 import { createBrowserRouter, redirect } from 'react-router';
 import Root from './Root';
-import Landing from './pages/Landing';
-import Pricing from './pages/Pricing';
-import About from './pages/About';
-import Contact from './pages/Contact';
-import ContactSales from './pages/ContactSales';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import Onboarding from './pages/Onboarding';
-import Home from './pages/Home';
-import Dashboard from './pages/Dashboard';
-import Explore from './pages/Explore';
-import Opportunities from './pages/Opportunities';
-import OpportunityDetail from './pages/OpportunityDetail';
-import Artists from './pages/Artists';
-import ArtistDetail from './pages/ArtistDetail';
-import Market from './pages/Market';
-import Alerts from './pages/Alerts';
-import Portfolio from './pages/Portfolio';
-import Agent from './pages/Agent';
-import FAQ from './pages/FAQ';
-import BillingSuccess from './pages/BillingSuccess';
-import Primary from './pages/Primary';
-import Convictions from './pages/Convictions';
 import { ProtectedRoute } from './components/ProtectedRoute';
+
+const Landing       = lazy(() => import('./pages/Landing'));
+const Pricing       = lazy(() => import('./pages/Pricing'));
+const About         = lazy(() => import('./pages/About'));
+const Contact       = lazy(() => import('./pages/Contact'));
+const ContactSales  = lazy(() => import('./pages/ContactSales'));
+const Login         = lazy(() => import('./pages/Login'));
+const Signup        = lazy(() => import('./pages/Signup'));
+const Onboarding    = lazy(() => import('./pages/Onboarding'));
+const Home          = lazy(() => import('./pages/Home'));
+const Dashboard     = lazy(() => import('./pages/Dashboard'));
+const Explore       = lazy(() => import('./pages/Explore'));
+const Opportunities = lazy(() => import('./pages/Opportunities'));
+const OpportunityDetail = lazy(() => import('./pages/OpportunityDetail'));
+const Artists       = lazy(() => import('./pages/Artists'));
+const ArtistDetail  = lazy(() => import('./pages/ArtistDetail'));
+const Market        = lazy(() => import('./pages/Market'));
+const Alerts        = lazy(() => import('./pages/Alerts'));
+const Portfolio     = lazy(() => import('./pages/Portfolio'));
+const Agent         = lazy(() => import('./pages/Agent'));
+const FAQ           = lazy(() => import('./pages/FAQ'));
+const BillingSuccess = lazy(() => import('./pages/BillingSuccess'));
+const Primary       = lazy(() => import('./pages/Primary'));
+const Convictions   = lazy(() => import('./pages/Convictions'));
 
 export const router = createBrowserRouter([
   {

@@ -250,7 +250,7 @@ No introduction, no conclusion, just the 3 lines.`,
 
   return (
     <div style={{ minHeight: 'calc(100vh - 56px)', background: 'var(--bg)' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '24px', padding: '32px 40px', alignItems: 'start', maxWidth: '1400px', margin: '0 auto' }}>
+      <div className="animate-fade-in-up" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '24px', padding: '32px 40px', alignItems: 'start', maxWidth: '1400px', margin: '0 auto' }}>
 
         {/* ── LEFT COLUMN ───────────────────────────────────── */}
         <div>

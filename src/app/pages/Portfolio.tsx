@@ -789,7 +789,7 @@ export default function Portfolio() {
             COLLECTION TAB
         ══════════════════════════════════════════════════════ */}
         {activeTab === 'collection' && (
-          <div>
+          <div className="animate-fade-in">
             {/* Stats row */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
               {[
@@ -1267,7 +1267,7 @@ export default function Portfolio() {
             WATCHLIST TAB
         ══════════════════════════════════════════════════════ */}
         {activeTab === 'watchlist' && (
-          <div>
+          <div className="animate-fade-in">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
               <div>
                 <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 6px' }}>Auction Watchlist</h2>
@@ -1395,7 +1395,7 @@ export default function Portfolio() {
             ARTISTS TAB
         ══════════════════════════════════════════════════════ */}
         {activeTab === 'artists' && (
-          <div>
+          <div className="animate-fade-in">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
               <div>
                 <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 6px' }}>Favorite Artists</h2>
@@ -1551,7 +1551,7 @@ export default function Portfolio() {
             ALERTS TAB
         ══════════════════════════════════════════════════════ */}
         {activeTab === 'alerts' && (
-          <div>
+          <div className="animate-fade-in">
             <div style={{ marginBottom: '28px' }}>
               <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 6px' }}>Alert Center</h2>
               <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>Configure exactly when Nautilus contacts you — and how</p>
@@ -1674,7 +1674,7 @@ export default function Portfolio() {
             SUBSCRIPTION TAB
         ══════════════════════════════════════════════════════ */}
         {activeTab === 'subscription' && (
-          <div>
+          <div className="animate-fade-in">
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 24px' }}>Subscription</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}><div>
 
@@ -1960,7 +1960,7 @@ export default function Portfolio() {
             SETTINGS TAB
         ══════════════════════════════════════════════════════ */}
         {activeTab === 'settings' && (
-          <div>
+          <div className="animate-fade-in">
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 24px' }}>Account Settings</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}><div>
 
