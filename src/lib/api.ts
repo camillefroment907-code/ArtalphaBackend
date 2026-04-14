@@ -36,6 +36,19 @@ export async function loginApi(email: string, password: string): Promise<LoginRe
   return res.json();
 }
 
+export async function googleAuthApi(credential: string): Promise<LoginResponse & { is_new_user?: boolean }> {
+  const res = await fetch(`${API}/api/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ credential }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Google sign-in failed (${res.status})`);
+  }
+  return res.json();
+}
+
 export async function registerApi(email: string, password: string, name?: string): Promise<LoginResponse> {
   const res = await fetch(`${API}/api/auth/register`, {
     method: "POST",
