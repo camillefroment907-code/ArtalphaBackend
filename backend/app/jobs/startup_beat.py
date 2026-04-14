@@ -113,6 +113,19 @@ def _weekly_report_loop():
         _run(maybe_send_weekly_report, "weekly_report")
 
 
+def _score_validator_loop():
+    """Run score validation every Monday at 10:00 UTC — after weekly report."""
+    from app.jobs.score_validator import validate_past_predictions
+    while True:
+        now = datetime.now(timezone.utc)
+        # Fire on Mondays (weekday 0) at 10:00 UTC
+        if now.weekday() == 0 and now.hour == 10 and now.minute < 60:
+            _run(validate_past_predictions, "score_validator")
+        # Sleep until next top of the hour
+        seconds_to_next_hour = 3600 - (now.minute * 60 + now.second)
+        time.sleep(seconds_to_next_hour)
+
+
 def _keep_warm_loop():
     """Ping /health every 5 minutes to prevent Railway cold starts."""
     time.sleep(60)  # Wait 1 min after launch before first ping
@@ -134,6 +147,7 @@ def start_beat_in_background():
         threading.Thread(target=_rationale_loop,         daemon=True, name="sched-rationale"),
         threading.Thread(target=_artist_enrichment_loop, daemon=True, name="sched-artist-enrich"),
         threading.Thread(target=_weekly_report_loop,     daemon=True, name="sched-weekly-report"),
+        threading.Thread(target=_score_validator_loop,   daemon=True, name="sched-score-validator"),
         threading.Thread(target=_keep_warm_loop,         daemon=True, name="sched-keep-warm"),
     ]
     for t in threads:
