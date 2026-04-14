@@ -2,8 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { getUser } from "../../lib/auth";
 import { WelcomeTour } from "../components/WelcomeTour";
-import Primary from "./Primary";
-import Convictions from "./Convictions";
 
 type ExploreTab = "best" | "auctions" | "primary" | "convictions";
 type ViewMode = "grid4" | "grid6" | "list";
@@ -370,7 +368,6 @@ export default function Explore() {
 
   // ── New loadLots — closes over all filter state ─────────────
   const loadLots = useCallback(async () => {
-    if (exploreTab !== 'best' && exploreTab !== 'auctions') return;
     setLoading(true);
     setHasError(false);
     try {
@@ -622,38 +619,10 @@ export default function Explore() {
         </div>
       )}
 
-      {/* ── Primary / Convictions inline ───────────────────── */}
-      {exploreTab === "primary" && (
-        <div style={{ flex: 1, overflowY: "auto" }}>
-          <Primary />
-        </div>
-      )}
-      {exploreTab === "convictions" && (
-        <div style={{ flex: 1, overflowY: "auto" }}>
-          {!isAdmin && userPlan === "free" ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: "60px 20px", textAlign: "center" }}>
-              <div style={{ fontSize: "32px", marginBottom: "20px" }}>★</div>
-              <div style={{ fontFamily: "var(--font-serif)", fontSize: "22px", color: "var(--text)", marginBottom: "10px" }}>
-                Convictions IA
-              </div>
-              <p style={{ fontSize: "13px", color: "var(--text-2)", marginBottom: "28px", lineHeight: 1.7, maxWidth: "380px" }}>
-                Our curated high-conviction picks are reserved for Starter and above. Upgrade to access Nautilus AI's top-rated opportunities.
-              </p>
-              <button onClick={() => navigate("/app/pricing")} className="btn btn-navy" style={{ fontSize: "13px", padding: "12px 36px", marginBottom: "10px" }}>
-                Unlock Convictions →
-              </button>
-              <div style={{ fontSize: "11px", color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>From €9/month · Cancel anytime</div>
-            </div>
-          ) : (
-            <Convictions />
-          )}
-        </div>
-      )}
-
-      {/* ── Auction content (best / auctions) ──────────────── */}
-      {(exploreTab === "best" || exploreTab === "auctions") && (
-        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-          {/* Sidebar */}
+      {/* ── All tabs — unified content ──────────────────────── */}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        {/* Sidebar — best / auctions only */}
+        {(exploreTab === 'best' || exploreTab === 'auctions') && (
           <div
             className="no-scrollbar"
             style={{
@@ -759,11 +728,31 @@ export default function Explore() {
               </div>
             )}
           </div>
+        )}
 
-          {/* Main */}
-          <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
-            {/* Scrollable content */}
+        {/* Main */}
+        <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+          {/* Convictions paywall for free users */}
+          {exploreTab === "convictions" && !isAdmin && userPlan === "free" ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: "60px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: "32px", marginBottom: "20px" }}>★</div>
+              <div style={{ fontFamily: "var(--font-serif)", fontSize: "22px", color: "var(--text)", marginBottom: "10px" }}>Convictions IA</div>
+              <p style={{ fontSize: "13px", color: "var(--text-2)", marginBottom: "28px", lineHeight: 1.7, maxWidth: "380px" }}>
+                Our curated high-conviction picks are reserved for Starter and above. Upgrade to access Nautilus AI's top-rated opportunities.
+              </p>
+              <button onClick={() => navigate("/app/pricing")} className="btn btn-navy" style={{ fontSize: "13px", padding: "12px 36px", marginBottom: "10px" }}>
+                Unlock Convictions →
+              </button>
+              <div style={{ fontSize: "11px", color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>From €9/month · Cancel anytime</div>
+            </div>
+          ) : (
             <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "0 24px 60px" }}>
+              {/* Convictions subtitle */}
+              {exploreTab === 'convictions' && (
+                <div style={{ padding: '8px 0 0', fontSize: '11px', color: 'var(--text-3)' }}>
+                  AI-selected · Score 75+ · Updated every 15 min
+                </div>
+              )}
               {/* Count line */}
               {total > 0 && !loading && (
                 <div style={{ padding: '8px 0 0', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
@@ -771,8 +760,8 @@ export default function Explore() {
                 </div>
               )}
 
-              {/* Alpha stats */}
-              {tab === "alpha" && !loading && alphaLots.length > 0 && (
+              {/* Best Lots stats */}
+              {exploreTab === 'best' && !loading && alphaLots.length > 0 && (
                 <div style={{ display: "flex", gap: "24px", padding: "12px 0 16px", marginBottom: "8px", borderBottom: "1px solid var(--border-light)", flexWrap: "wrap", alignItems: "center" }}>
                   {[{ label: "Exceptional", value: EXCEPTIONAL.length, color: "#C0392B" }, { label: "Strong", value: STRONG.length, color: "var(--navy)" }, { label: "Interesting", value: INTERESTING.length, color: "var(--gold-dim)" }, { label: "Avg score", value: `${avgScore.toFixed(0)}/100`, color: "var(--text-2)" }].map(({ label, value, color }) => (
                     <div key={label}><div style={{ fontFamily: "var(--font-mono)", fontSize: "20px", fontWeight: 700, color }}>{value}</div><div className="label-caps" style={{ marginTop: "2px" }}>{label}</div></div>
@@ -862,7 +851,7 @@ export default function Explore() {
                     </div>
                   )}
 
-                  {tab === "live" && !loading && !hasError && lots.length > 0 && currentPage < totalPages && (
+                  {!loading && !hasError && lots.length > 0 && currentPage < totalPages && (
                     <div style={{ display: "flex", justifyContent: "center", marginTop: "32px" }}>
                       <button onClick={loadMore} disabled={loadingMore} className="btn btn-ghost" style={{ fontSize: "12px", padding: "10px 32px" }}>{loadingMore ? "Loading…" : "Load more"}</button>
                     </div>
@@ -870,9 +859,9 @@ export default function Explore() {
                 </>
               )}
             </div>
-          </main>
-        </div>
-      )}
+          )}
+        </main>
+      </div>
     </div>
   );
 }
