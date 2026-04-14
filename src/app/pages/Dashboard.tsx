@@ -72,6 +72,24 @@ function SkeletonLine({ width = '100%', height = '12px' }: { width?: string; hei
   return <div className="skeleton" style={{ width, height, borderRadius: '4px', marginBottom: '6px' }} />;
 }
 
+function cleanTitle(lot: any): string {
+  const artist = lot.artist_name_raw || lot.artist?.name;
+  const title = lot.title?.replace(/^\d+h\s*\d+m.*?-\s*/i, '').trim();
+  if (artist && artist !== '—') return `${artist} — ${title?.slice(0, 30) || 'Untitled'}`;
+  return title?.slice(0, 40) || 'Untitled';
+}
+
+function getUpside(lot: any): string | null {
+  if (lot.upside_percentage) return `+${lot.upside_percentage.toFixed(0)}%`;
+  if (lot.estimate_low && lot.current_price && lot.current_price < lot.estimate_low) {
+    return `+${((lot.estimate_low - lot.current_price) / lot.current_price * 100).toFixed(0)}%`;
+  }
+  if ((lot.pct_below_low_estimate ?? 0) > 5) {
+    return `+${Math.round(lot.pct_below_low_estimate)}%`;
+  }
+  return null;
+}
+
 function PickCard({ lot, onClick }: { lot: any; onClick: () => void }) {
   const score = lot.deal_score ?? 0;
   return (
@@ -92,14 +110,16 @@ function PickCard({ lot, onClick }: { lot: any; onClick: () => void }) {
         </div>
       </div>
       <div style={{ padding: '10px 12px' }}>
-        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--navy)', letterSpacing: '0.08em', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>{lot.artist_name ?? '—'}</div>
+        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {lot.artist_name_raw || lot.artist?.name || lot.artist_name || 'Unknown artist'}
+        </div>
         <div style={{ fontFamily: 'var(--font-serif)', fontSize: '13px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '6px' }}>{lot.title ?? 'Untitled'}</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: lot.score_rationale ? '6px' : '0' }}>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{fmtPrice(lot.current_price ?? lot.estimate_low)}</span>
-          {(lot.pct_below_low_estimate ?? 0) > 5 && (
-            <span style={{ fontSize: '10px', fontWeight: 700, color: '#1A7A4A', background: 'rgba(26,122,74,0.08)', padding: '2px 6px', borderRadius: '3px' }}>
-              +{Math.round(lot.pct_below_low_estimate)}%
-            </span>
+          {getUpside(lot) && (
+            <div style={{ padding: '3px 8px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', borderRadius: '4px', fontSize: '10px', fontWeight: 700, color: 'var(--electric)', fontFamily: 'var(--font-mono)' }}>
+              {getUpside(lot)} upside
+            </div>
           )}
         </div>
         {lot.score_rationale && (
@@ -259,7 +279,7 @@ No introduction, no conclusion, just the 3 lines.`,
           <div style={{ marginBottom: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '16px' }}>
               <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 600, color: 'var(--navy)', margin: 0 }}>Today's Picks</h2>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)' }}>AI SELECTION · 15MIN</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)' }}>AI SELECTION</span>
             </div>
             {lotsLoading ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
@@ -378,26 +398,55 @@ No introduction, no conclusion, just the 3 lines.`,
               )}
             </div>
 
-            {/* Quick Actions */}
+            {/* Intelligence Signals */}
             <div>
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', fontWeight: 600, color: 'var(--navy)', margin: '0 0 14px' }}>Quick Actions</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', fontWeight: 600, color: 'var(--navy)', margin: '0 0 14px' }}>Intelligence Signals</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {[
-                  { icon: '◆', label: 'Explore Lots',    to: '/app/explore',   color: 'var(--electric)' },
-                  { icon: '◈', label: 'Configure Agent', to: '/app/agent',     color: 'var(--gold)' },
-                  { icon: '◇', label: 'My Portfolio',     to: '/app/portfolio', color: 'var(--navy)' },
-                  { icon: '⚡', label: 'Alerts',          to: '/app/alerts',    color: '#1A7A4A' },
-                ].map(({ icon, label, to, color }) => (
-                  <button
-                    key={to}
-                    onClick={() => navigate(to)}
-                    style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '14px', background: 'white', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', textAlign: 'left', transition: 'border-color 0.15s' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--electric-border)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; }}
+                  {
+                    icon: '◆',
+                    color: 'var(--gold)',
+                    label: 'Best opportunity',
+                    value: topLots?.[0]?.artist_name_raw || topLots?.[0]?.artist_name || 'Loading...',
+                    sub: topLots?.[0] ? `Score ${topLots[0].deal_score != null ? Math.round(topLots[0].deal_score) : '—'}/100 · ${fmtPrice(topLots[0].current_price ?? topLots[0].estimate_low)}` : '',
+                    action: () => navigate('/app/explore?tab=best'),
+                    cta: 'View lot →',
+                  },
+                  {
+                    icon: '◎',
+                    color: 'var(--electric)',
+                    label: 'Market signal',
+                    value: sentiment?.overall || 'NEUTRAL',
+                    sub: `${sentiment?.overall_score != null ? sentiment.overall_score.toFixed(0) : '--'}/100 overall score`,
+                    action: () => navigate('/app/explore?tab=best'),
+                    cta: 'Explore →',
+                  },
+                  {
+                    icon: '◐',
+                    color: 'var(--navy)',
+                    label: 'Your portfolio',
+                    value: portfolioStats
+                      ? ((portfolioStats.gain_pct ?? 0) >= 0 ? `+${(portfolioStats.gain_pct ?? 0).toFixed(1)}%` : `${(portfolioStats.gain_pct ?? 0).toFixed(1)}%`)
+                      : '—',
+                    sub: `${portfolioStats?.total_items || 0} works · ${fmtPrice(portfolioStats?.estimated_total_value)}`,
+                    action: () => navigate('/app/portfolio'),
+                    cta: 'Manage →',
+                  },
+                ].map(({ icon, color, label, value, sub, action, cta }) => (
+                  <div key={label}
+                    onClick={action}
+                    style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '14px 16px', cursor: 'pointer', transition: 'all 0.15s' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--navy)'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-sm)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; }}
                   >
-                    <span style={{ fontSize: '16px', color }}>{icon}</span>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--navy)' }}>{label}</span>
-                  </button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '13px', color }}>{icon}</span>
+                      <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</span>
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: 'var(--text)', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '8px', lineHeight: 1.4 }}>{sub}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--electric)', fontWeight: 600 }}>{cta}</div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -458,7 +507,7 @@ No introduction, no conclusion, just the 3 lines.`,
           <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px 20px', marginBottom: '20px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {[
-                { label: 'Auction lots', value: sources.reduce((a: number, s: any) => a + (s.lot_count ?? s.total ?? 0), 0).toLocaleString(), sub: 'Updated every 15min' },
+                { label: 'Auction lots', value: sources.reduce((a: number, s: any) => a + (s.lot_count ?? s.total ?? 0), 0).toLocaleString(), sub: 'Global coverage' },
                 { label: 'Active sources', value: String(sources.filter((s: any) => s.status === 'fresh').length || sources.filter((s: any) => (s.lot_count ?? 0) > 0).length || '—'), sub: 'Global coverage' },
                 { label: 'Avg deal score', value: topLots.length > 0 ? `${Math.round(topLots.reduce((a: number, l: any) => a + (l.deal_score ?? 0), 0) / topLots.length)}/100` : '—', sub: 'Current selection' },
               ].map(({ label, value, sub }) => (
@@ -549,8 +598,7 @@ No introduction, no conclusion, just the 3 lines.`,
                       {lot.image_url && <img src={lot.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--navy)', letterSpacing: '0.06em', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lot.artist_name ?? '—'}</div>
-                      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '12px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lot.title ?? 'Untitled'}</div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cleanTitle(lot)}</div>
                       <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', marginTop: '2px' }}>{fmtPrice(lot.current_price ?? lot.estimate_low)}</div>
                     </div>
                   </div>
