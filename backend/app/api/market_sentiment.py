@@ -9,6 +9,57 @@ from app.models.db_models import Lot
 
 router = APIRouter(prefix="/market", tags=["market"])
 
+
+@router.get("/sentiment/debug")
+async def sentiment_debug(db: AsyncSession = Depends(get_db)):
+    """Diagnostic — raw counts to debug why segments are empty."""
+    from sqlalchemy import text
+    rows = {}
+
+    # 1. Total lots
+    r = await db.execute(select(func.count(Lot.id)))
+    rows["total_lots"] = r.scalar()
+
+    # 2. Lots with non-null category
+    r = await db.execute(select(func.count(Lot.id)).where(Lot.category.isnot(None)))
+    rows["with_category"] = r.scalar()
+
+    # 3. Lots with null created_at
+    r = await db.execute(select(func.count(Lot.id)).where(Lot.created_at.is_(None)))
+    rows["null_created_at"] = r.scalar()
+
+    # 4. Lots matching 'print' in category
+    r = await db.execute(select(func.count(Lot.id)).where(Lot.category.ilike("%print%")))
+    rows["category_print"] = r.scalar()
+
+    # 5. Lots matching 'painting' in category
+    r = await db.execute(select(func.count(Lot.id)).where(Lot.category.ilike("%painting%")))
+    rows["category_painting"] = r.scalar()
+
+    # 6. Lots matching 'print' in category AND (created_at is null OR recent)
+    since_30d = datetime.utcnow() - timedelta(days=30)
+    r = await db.execute(
+        select(func.count(Lot.id)).where(
+            and_(
+                Lot.category.ilike("%print%"),
+                or_(Lot.created_at >= since_30d, Lot.created_at.is_(None)),
+            )
+        )
+    )
+    rows["print_with_date_fix"] = r.scalar()
+
+    # 7. Sample categories
+    r = await db.execute(
+        select(Lot.category, func.count(Lot.id).label("n"))
+        .where(Lot.category.isnot(None))
+        .group_by(Lot.category)
+        .order_by(func.count(Lot.id).desc())
+        .limit(10)
+    )
+    rows["top_categories"] = {row.category: row.n for row in r.all()}
+
+    return rows
+
 _sentiment_cache: dict = {"data": None, "generated_at": None}
 CACHE_MINUTES = 30
 
