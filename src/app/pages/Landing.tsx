@@ -677,41 +677,102 @@ export default function Landing() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer style={{ padding: '48px 120px', borderTop: '1px solid var(--border)', background: 'white' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '48px', marginBottom: '32px' }}>
-          <div>
-            <Logo variant="full" color="dark" size={24} />
-            <p style={{ fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic', marginTop: '12px', lineHeight: 1.6 }}>
-              Uncover hidden value.
-            </p>
-          </div>
-          <div>
-            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '16px' }}>Product</div>
-            {[
-              { label: 'Pricing', to: '/pricing' },
-              { label: 'FAQ', to: '/faq' },
-              { label: 'Contact', to: '/contact' },
-            ].map(({ label, to }) => (
-              <div key={label} style={{ marginBottom: '8px' }}>
-                <Link to={to} style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>{label}</Link>
+      <footer style={{ background: 'var(--navy)', padding: '60px 0 0' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 40px' }}>
+
+          {/* Top row — 4 columns */}
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '48px', marginBottom: '48px' }}>
+
+            {/* Col 1 — Brand */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <svg width="20" height="20" viewBox="0 0 40 40" fill="none">
+                  <path d="M 20 4 A 16 16 0 0 1 36 20" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+                  <path d="M 36 20 A 16 16 0 0 1 20 36" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.5"/>
+                  <path d="M 20 36 A 8 8 0 0 1 12 28" stroke="#C6A85A" strokeWidth="2.5" strokeLinecap="round"/>
+                  <circle cx="20" cy="20" r="2" fill="#C6A85A"/>
+                </svg>
+                <span style={{ fontFamily: 'Georgia, serif', fontSize: '16px', color: 'white', letterSpacing: '0.06em', fontWeight: 600 }}>Nautilus</span>
               </div>
-            ))}
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '14px' }}>
+                MARKET INTELLIGENCE
+              </div>
+              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', lineHeight: 1.7, maxWidth: '240px' }}>
+                AI-powered intelligence for art investors. Identify undervalued artworks before the market corrects.
+              </p>
+              <div style={{ marginTop: '20px', fontSize: '12px', color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-mono)' }}>
+                contact@get-nautilus.com
+              </div>
+            </div>
+
+            {/* Col 2 — Platform */}
+            <div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '16px' }}>
+                Platform
+              </div>
+              {[
+                { label: 'Explorer', href: '/app/explore' },
+                { label: 'Dashboard', href: '/app/dashboard' },
+                { label: 'Portfolio', href: '/app/portfolio' },
+                { label: 'Market Index', href: '/market-index' },
+              ].map(({ label, href }) => (
+                <a key={label} href={href} style={{ display: 'block', fontSize: '13px', color: 'rgba(255,255,255,0.5)', textDecoration: 'none', marginBottom: '10px', transition: 'color 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = 'white'}
+                  onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.5)'}
+                >
+                  {label}
+                </a>
+              ))}
+            </div>
+
+            {/* Col 3 — Company */}
+            <div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '16px' }}>
+                Company
+              </div>
+              {[
+                { label: 'About', href: '/about' },
+                { label: 'Pricing', href: '/app/pricing' },
+                { label: 'FAQ', href: '/faq' },
+                { label: 'Contact', href: '/contact' },
+              ].map(({ label, href }) => (
+                <a key={label} href={href} style={{ display: 'block', fontSize: '13px', color: 'rgba(255,255,255,0.5)', textDecoration: 'none', marginBottom: '10px', transition: 'color 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = 'white'}
+                  onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.5)'}
+                >
+                  {label}
+                </a>
+              ))}
+            </div>
+
+            {/* Col 4 — Legal */}
+            <div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '16px' }}>
+                Legal
+              </div>
+              {[
+                { label: 'Privacy Policy', href: '/privacy' },
+                { label: 'Terms of Service', href: '/terms' },
+                { label: 'Cookie Policy', href: '/cookies' },
+              ].map(({ label, href }) => (
+                <a key={label} href={href} style={{ display: 'block', fontSize: '13px', color: 'rgba(255,255,255,0.5)', textDecoration: 'none', marginBottom: '10px', transition: 'color 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = 'white'}
+                  onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.5)'}
+                >
+                  {label}
+                </a>
+              ))}
+            </div>
           </div>
-          <div>
-            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '16px' }}>Intelligence</div>
-            <p style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.7 }}>
-              Data aggregated from global auction houses and primary market platforms.
-            </p>
-            <p style={{ fontSize: '11px', color: 'var(--text-ghost)', marginTop: '16px', fontFamily: 'var(--font-mono)' }}>
-              Nautilus — Market Intelligence for Art Investment
-            </p>
-          </div>
-        </div>
-        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '12px', color: 'var(--text-3)' }}>© 2026 Nautilus</span>
-          <div style={{ display: 'flex', gap: '24px' }}>
-            <Link to="/about" style={{ fontSize: '12px', color: 'var(--text-3)', textDecoration: 'none' }}>About</Link>
-            <Link to="/contact" style={{ fontSize: '12px', color: 'var(--text-3)', textDecoration: 'none' }}>Contact</Link>
+
+          {/* Bottom bar */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-mono)' }}>
+              © 2026 Nautilus. All rights reserved. Not financial advice.
+            </span>
+            <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)', fontFamily: 'var(--font-mono)' }}>
+              Market Intelligence for Art Investment
+            </span>
           </div>
         </div>
       </footer>

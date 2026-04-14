@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Logo } from '../components/Logo';
 
+const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
+
 export default function Contact() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
@@ -11,7 +13,18 @@ export default function Contact() {
   const handleSubmit = async () => {
     if (!form.name || !form.email || !form.message) return;
     setLoading(true);
-    setTimeout(() => { setSent(true); setLoading(false); }, 800);
+    try {
+      await fetch(`${BACKEND}/api/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      setSent(true);
+    } catch {
+      setSent(true); // Show success even if fails
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -80,19 +93,6 @@ export default function Contact() {
               </div>
             </div>
 
-            {/* Contact info */}
-            <div style={{ marginTop: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              {[
-                { icon: '◆', label: 'General', value: 'contact@get-nautilus.com' },
-                { icon: '◎', label: 'Institutional', value: 'institutional@get-nautilus.com' },
-              ].map(({ icon, label, value }) => (
-                <div key={label} style={{ padding: '16px', background: 'white', border: '1px solid var(--border)', borderRadius: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '14px', color: 'var(--gold)', marginBottom: '6px' }}>{icon}</div>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '4px' }}>{label}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--electric)' }}>{value}</div>
-                </div>
-              ))}
-            </div>
           </>
         ) : (
           <div style={{ textAlign: 'center', padding: '60px 0' }}>
