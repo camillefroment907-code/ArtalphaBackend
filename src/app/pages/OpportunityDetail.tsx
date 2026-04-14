@@ -392,6 +392,43 @@ export default function OpportunityDetail() {
             >
               View original listing ↗
             </a>
+
+            {/* Visualize in room */}
+            <button
+              onClick={() => {
+                const params = new URLSearchParams({
+                  lot: lot.id,
+                  img: encodeURIComponent(lot.image_url || ''),
+                  title: encodeURIComponent(lot.title || ''),
+                  artist: encodeURIComponent(lot.artist_name_raw || ''),
+                  w: String(lot.width_cm || 80),
+                  h: String(lot.height_cm || 60),
+                });
+                navigate(`/app/visualizer?${params.toString()}`);
+              }}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                width: '100%', marginTop: '10px',
+                padding: '10px 18px', background: 'var(--bg-subtle)',
+                border: '1px solid var(--border)', borderRadius: '0',
+                fontSize: '11px', fontWeight: 700, color: 'var(--text)',
+                fontFamily: 'var(--font-mono)', letterSpacing: '0.08em',
+                cursor: 'pointer', transition: 'all 0.15s', textTransform: 'uppercase',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'var(--navy)';
+                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy)';
+                (e.currentTarget as HTMLButtonElement).style.color = 'white';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-subtle)';
+                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
+                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text)';
+              }}
+            >
+              <span style={{ fontSize: '13px' }}>🖼</span>
+              Visualize in room
+            </button>
           </div>
 
           {/* Right: hero info */}
