@@ -36,9 +36,9 @@ export function GoogleSignInButton({ onError }: Props) {
             if (!resp.ok) throw new Error(data.detail || 'Google sign in failed');
 
             setUser({
-              id: data.user.id,
-              email: data.user.email,
-              name: data.user.name,
+              id: data.user_id,
+              email: data.email,
+              name: data.email,
               plan: 'free',
               token: data.access_token,
             });
