@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { getUser } from "../../lib/auth";
 import { WelcomeTour } from "../components/WelcomeTour";
@@ -281,7 +281,7 @@ export default function Explore() {
   const [total, setTotal]           = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
-  const [loading, setLoading]       = useState(true);
+  const [loading, setLoading]       = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasError, setHasError]     = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -366,21 +366,25 @@ export default function Explore() {
     tab === "alpha" ? alphaLots.length > maxVisible : lots.length > maxVisible
   );
 
-  // ── New loadLots — closes over all filter state ─────────────
-  const loadLots = useCallback(async () => {
+  // ── fetchLots — plain async, no useCallback to avoid stale closure loop ──
+  const fetchLots = async (opts?: { page?: number }) => {
     setLoading(true);
     setHasError(false);
     try {
       const params = new URLSearchParams();
       params.set('page_size', '24');
-      params.set('page', String(currentPage));
+      params.set('page', String(opts?.page ?? currentPage));
 
       if (exploreTab === 'best') {
         params.set('sort_by', 'deal_score');
         params.set('sort_dir', 'desc');
-        params.set('min_score', String(Math.max(minScore, 60)));
+        params.set('min_score', String(minScore > 0 ? minScore : 60));
       } else if (exploreTab === 'auctions') {
         params.set('sort_by', 'created_at');
+        params.set('sort_dir', 'desc');
+      } else if (exploreTab === 'primary') {
+        params.set('source', 'primary');
+        params.set('sort_by', 'deal_score');
         params.set('sort_dir', 'desc');
       } else if (exploreTab === 'convictions') {
         params.set('min_score', '75');
@@ -394,24 +398,25 @@ export default function Explore() {
       if (category)      params.set('category', category);
       if (auctionHouse)  params.set('auction_house', auctionHouse);
       if (sizeFilter)    params.set('size_category', sizeFilter);
-      if (search)        params.set('search', search);
+      if (search.trim()) params.set('search', search.trim());
       if (minUpside)     params.set('min_upside', minUpside);
       if (artistTier)    params.set('artist_tier', artistTier);
 
-      const today = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const today = now.toISOString().split('T')[0];
       if (dateFilter === 'today') {
         params.set('auction_date_from', today);
         params.set('auction_date_to', today);
       } else if (dateFilter === '3days') {
-        const d = new Date(); d.setDate(d.getDate() + 3);
+        const d = new Date(now); d.setDate(d.getDate() + 3);
         params.set('auction_date_from', today);
         params.set('auction_date_to', d.toISOString().split('T')[0]);
       } else if (dateFilter === 'week') {
-        const d = new Date(); d.setDate(d.getDate() + 7);
+        const d = new Date(now); d.setDate(d.getDate() + 7);
         params.set('auction_date_from', today);
         params.set('auction_date_to', d.toISOString().split('T')[0]);
       } else if (dateFilter === 'month') {
-        const d = new Date(); d.setMonth(d.getMonth() + 1);
+        const d = new Date(now); d.setMonth(d.getMonth() + 1);
         params.set('auction_date_from', today);
         params.set('auction_date_to', d.toISOString().split('T')[0]);
       }
@@ -420,32 +425,29 @@ export default function Explore() {
       const resp = await fetch(`${BACKEND}/api/lots?${params.toString()}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
-      const items = Array.isArray(data) ? data : (data.items || data.lots || []);
-      setLots(items.map(mapLot));
-      setTotal(data.total || items.length);
+      const rawData = data.items || data.lots || data.results || data;
+      const lotsArray = Array.isArray(rawData) ? rawData : [];
+      setLots(lotsArray.map(mapLot));
+      setTotal(data.total || data.count || lotsArray.length || 0);
       setTotalPages(data.pages || 1);
     } catch (e) {
-      console.error('loadLots error', e);
+      console.error('fetchLots failed:', e);
       setHasError(true);
     } finally {
       setLoading(false);
     }
-  }, [exploreTab, dateFilter, search, minScore, minUpside, minPrice, maxPrice, category, artistTier, auctionHouse, sizeFilter, currentPage]);
+  };
 
-  // Reset page to 1 on any filter/tab change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [exploreTab, dateFilter, search, minScore, minUpside, minPrice, maxPrice, category, artistTier, auctionHouse, sizeFilter]);
+  // Fetch on tab/filter change — always reset to page 1
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setCurrentPage(1); fetchLots({ page: 1 }); },
+    [exploreTab, dateFilter, search, minScore, minUpside, minPrice, maxPrice, category, artistTier, auctionHouse, sizeFilter]);
 
-  // Fetch whenever loadLots reference changes (i.e. any dep changes)
-  useEffect(() => {
-    loadLots();
-  }, [loadLots]);
+  const doFetch = () => fetchLots({ page: 1 });
 
-  const doFetch = useCallback(() => { loadLots(); }, [loadLots]);
-
-  const loadMore = useCallback(async () => {
+  const loadMore = async () => {
     if (loadingMore || currentPage >= totalPages) return;
     const nextPage = currentPage + 1;
     setLoadingMore(true);
@@ -469,7 +471,7 @@ export default function Explore() {
       setLots(prev => [...prev, ...data.items.map(mapLot)]);
       setCurrentPage(nextPage);
     } catch { /* silent */ } finally { setLoadingMore(false); }
-  }, [loadingMore, currentPage, totalPages, exploreTab, minScore, minUpside, minPrice, maxPrice, category, artistTier, auctionHouse, sizeFilter, search]);
+  };
 
   const cols = viewMode === "list" ? 1 : viewMode === "grid6" ? 6 : tab === "live" ? 5 : 4;
   const gap  = cols >= 5 ? "12px" : "16px";
