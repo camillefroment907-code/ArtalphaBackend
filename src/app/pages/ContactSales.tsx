@@ -33,7 +33,7 @@ export default function ContactSales() {
         const body = encodeURIComponent(
           `Name: ${form.name}\nEmail: ${form.email}\nCompany: ${form.company}\nType: ${form.employees}\nBudget: ${form.budget}\n\nMessage:\n${form.message}`
         );
-        window.open(`mailto:contact@artalpha.art?subject=${subject}&body=${body}`);
+        window.open(`mailto:contact@get-nautilus.com?subject=${subject}&body=${body}`);
       }
 
       setStatus("sent");
@@ -155,7 +155,7 @@ export default function ContactSales() {
             {status === "error" && (
               <div style={{ padding: "12px 16px", background: "rgba(192,57,43,0.06)", border: "1px solid rgba(192,57,43,0.2)", borderRadius: "6px", fontSize: "13px", color: "#C0392B" }}>
                 Something went wrong. Please email us at{" "}
-                <a href="mailto:contact@artalpha.art" style={{ color: "#C0392B", fontWeight: 600 }}>contact@artalpha.art</a>
+                <a href="mailto:contact@get-nautilus.com" style={{ color: "#C0392B", fontWeight: 600 }}>contact@get-nautilus.com</a>
               </div>
             )}
 
@@ -170,7 +170,7 @@ export default function ContactSales() {
             </button>
 
             <p style={{ textAlign: "center", fontSize: "12px", color: "#9A9A9A" }}>
-              We respond within 24 hours · contact@artalpha.art
+              We respond within 24 hours · contact@get-nautilus.com
             </p>
           </form>
         </div>

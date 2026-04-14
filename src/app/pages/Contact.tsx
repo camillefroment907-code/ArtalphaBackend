@@ -1,351 +1,114 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { useNavigate } from 'react-router';
 import { Logo } from '../components/Logo';
-import { Mail } from 'lucide-react';
 
 export default function Contact() {
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    message: '',
-  });
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle form submission
-    console.log('Form submitted:', formData);
+  const handleSubmit = async () => {
+    if (!form.name || !form.email || !form.message) return;
+    setLoading(true);
+    setTimeout(() => { setSent(true); setLoading(false); }, 800);
   };
 
-  const contactEmails = [
-    {
-      label: 'General Inquiries',
-      email: 'contact@artalpha.com',
-      description: 'Questions about the platform, features, or membership',
-    },
-    {
-      label: 'Partnerships',
-      email: 'partnerships@artalpha.com',
-      description: 'Institutional partnerships, galleries, and auction houses',
-    },
-    {
-      label: 'Investors',
-      email: 'investors@artalpha.com',
-      description: 'Investment opportunities and corporate information',
-    },
-  ];
-
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#FAFAF8' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       {/* Header */}
-      <header className="px-16 py-6 bg-white sticky top-0 z-40" style={{ borderBottom: '1px solid #E5E5E5' }}>
-        <div className="flex items-center justify-between max-w-[1800px] mx-auto">
-          <Link to="/" className="hover:opacity-80 transition-opacity">
-            <Logo variant="horizontal" color="dark" size={28} />
-          </Link>
-          <div className="flex items-center gap-6">
-            <Link to="/opportunities" className="text-[14px] text-[#666666] hover:text-[#111111] transition-colors">
-              Opportunities
-            </Link>
-            <Link to="/pricing" className="text-[14px] text-[#666666] hover:text-[#111111] transition-colors">
-              Pricing
-            </Link>
-            <Link to="/about" className="text-[14px] text-[#666666] hover:text-[#111111] transition-colors">
-              About
-            </Link>
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="text-[14px] text-[#666666] hover:text-[#111111] transition-colors"
-            >
-              Log In
-            </button>
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="border border-[#111111] px-6 py-2 text-[13px] tracking-wide hover:bg-[#111111] hover:text-white transition-colors"
-            >
-              START TRIAL
-            </button>
-          </div>
+      <div style={{ background: 'white', borderBottom: '1px solid var(--border)', padding: '16px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
+          <Logo variant="horizontal" color="dark" size={24} />
         </div>
-      </header>
+        <button onClick={() => navigate('/app/signup')} className="btn-electric" style={{ fontSize: '11px', padding: '8px 20px', borderRadius: '6px' }}>
+          Get access →
+        </button>
+      </div>
 
-      {/* Hero */}
-      <section className="px-16 py-24 max-w-[1000px] mx-auto text-center">
-        <div className="inline-block border px-4 py-2 mb-8" style={{ borderColor: '#E5E5E5' }}>
-          <div className="text-[11px] tracking-[0.15em] uppercase" style={{ color: '#737373' }}>
-            Contact
-          </div>
-        </div>
-        <h1 className="mb-8 text-[64px] leading-[1.05]" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>
-          Get in touch with our team
-        </h1>
-        <div className="w-24 h-px mb-12 mx-auto" style={{ backgroundColor: '#1A1A1A' }}></div>
-        <p className="text-[18px] leading-[1.7] max-w-[600px] mx-auto" style={{ color: '#666666' }}>
-          Whether you're exploring membership, have questions about our platform, or seeking institutional partnerships, we're here to help.
-        </p>
-      </section>
-
-      {/* Contact Form & Direct Contact */}
-      <section className="px-16 py-20">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="grid grid-cols-5 gap-16">
-            {/* Contact Form - 3 columns */}
-            <div className="col-span-3">
-              <div className="bg-white border p-12" style={{ borderColor: '#E5E5E5' }}>
-                <h2 className="mb-2 text-[32px]" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>
-                  Send us a message
-                </h2>
-                <p className="text-[15px] mb-10" style={{ color: '#666666' }}>
-                  We typically respond within 24 hours
-                </p>
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <label className="block text-[13px] mb-3 tracking-[0.05em] uppercase" style={{ color: '#737373' }}>
-                      Full Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full border px-4 py-3.5 text-[15px] focus:outline-none focus:border-[#111111] transition-colors"
-                      style={{ borderColor: '#E5E5E5', backgroundColor: '#FAFAF8' }}
-                      placeholder="John Smith"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[13px] mb-3 tracking-[0.05em] uppercase" style={{ color: '#737373' }}>
-                      Email Address
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full border px-4 py-3.5 text-[15px] focus:outline-none focus:border-[#111111] transition-colors"
-                      style={{ borderColor: '#E5E5E5', backgroundColor: '#FAFAF8' }}
-                      placeholder="your@email.com"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[13px] mb-3 tracking-[0.05em] uppercase" style={{ color: '#737373' }}>
-                      Message
-                    </label>
-                    <textarea
-                      value={formData.message}
-                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                      rows={8}
-                      className="w-full border px-4 py-3.5 text-[15px] focus:outline-none focus:border-[#111111] transition-colors resize-none"
-                      style={{ borderColor: '#E5E5E5', backgroundColor: '#FAFAF8' }}
-                      placeholder="Tell us how we can help you..."
-                      required
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full bg-[#111111] text-white py-4 text-[13px] tracking-[0.1em] hover:bg-[#000000] transition-colors"
-                  >
-                    SEND MESSAGE
-                  </button>
-                </form>
+      <div style={{ maxWidth: '560px', margin: '80px auto', padding: '0 24px' }}>
+        {!sent ? (
+          <>
+            <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '12px' }}>
+                Contact
               </div>
-            </div>
-
-            {/* Direct Contact - 2 columns */}
-            <div className="col-span-2">
-              <div className="mb-8">
-                <h3 className="mb-6 text-[24px]" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>
-                  Direct Contact
-                </h3>
-                <p className="text-[15px] leading-[1.7]" style={{ color: '#666666' }}>
-                  For specific inquiries, you can reach us directly at the following addresses.
-                </p>
-              </div>
-
-              <div className="space-y-6">
-                {contactEmails.map((contact, index) => (
-                  <div
-                    key={index}
-                    className="bg-white border p-6"
-                    style={{ borderColor: '#E5E5E5' }}
-                  >
-                    <div className="flex items-start gap-3 mb-3">
-                      <Mail className="w-4 h-4 mt-1 flex-shrink-0" style={{ color: '#737373' }} />
-                      <div className="flex-1">
-                        <div className="text-[13px] mb-2 tracking-[0.05em] uppercase" style={{ color: '#737373' }}>
-                          {contact.label}
-                        </div>
-                        <a
-                          href={`mailto:${contact.email}`}
-                          className="text-[16px] hover:underline block mb-2"
-                          style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}
-                        >
-                          {contact.email}
-                        </a>
-                        <p className="text-[13px] leading-[1.6]" style={{ color: '#999999' }}>
-                          {contact.description}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Additional Information */}
-      <section className="px-16 py-20 bg-white">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="grid grid-cols-3 gap-12">
-            <div className="border-l pl-6" style={{ borderColor: '#E5E5E5' }}>
-              <h3 className="mb-4 text-[20px]" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>
-                Office Hours
-              </h3>
-              <p className="text-[15px] leading-[1.7] mb-2" style={{ color: '#666666' }}>
-                Monday – Friday
-              </p>
-              <p className="text-[15px] leading-[1.7]" style={{ color: '#666666' }}>
-                9:00 AM – 6:00 PM CET
+              <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '36px', fontWeight: 600, color: 'var(--text)', margin: '0 0 12px' }}>
+                Get in touch
+              </h1>
+              <p style={{ fontSize: '15px', color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Questions about Nautilus, partnership inquiries, or institutional access — we respond within 24 hours.
               </p>
             </div>
 
-            <div className="border-l pl-6" style={{ borderColor: '#E5E5E5' }}>
-              <h3 className="mb-4 text-[20px]" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>
-                Response Time
-              </h3>
-              <p className="text-[15px] leading-[1.7]" style={{ color: '#666666' }}>
-                We aim to respond to all inquiries within 24 hours during business days.
-              </p>
-            </div>
-
-            <div className="border-l pl-6" style={{ borderColor: '#E5E5E5' }}>
-              <h3 className="mb-4 text-[20px]" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>
-                Support
-              </h3>
-              <p className="text-[15px] leading-[1.7]" style={{ color: '#666666' }}>
-                Members have access to dedicated account managers and priority support.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="px-16 py-24 text-center" style={{ backgroundColor: '#FAFAF8' }}>
-        <div className="max-w-[700px] mx-auto">
-          <h2 className="mb-6 text-[42px] leading-[1.15]" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>
-            Ready to get started?
-          </h2>
-          <p className="text-[17px] mb-10" style={{ color: '#666666' }}>
-            Join collectors and institutions using data to invest smarter
-          </p>
-          <button
-            onClick={() => setShowAuthModal(true)}
-            className="bg-[#111111] text-white px-10 py-4 text-[13px] tracking-[0.1em] hover:bg-[#000000] transition-colors"
-          >
-            START 5-DAY TRIAL
-          </button>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="px-16 py-12 bg-white">
-        <div className="max-w-[1800px] mx-auto">
-          <div className="flex items-center justify-between" style={{ borderTop: '1px solid #E5E5E5', paddingTop: '3rem' }}>
-            <Logo variant="horizontal" color="dark" size={24} />
-            <div className="flex items-center gap-8 text-[14px]" style={{ color: '#666666' }}>
-              <Link to="/" className="hover:text-[#111111] transition-colors">Home</Link>
-              <Link to="/opportunities" className="hover:text-[#111111] transition-colors">Opportunities</Link>
-              <Link to="/pricing" className="hover:text-[#111111] transition-colors">Pricing</Link>
-              <Link to="/about" className="hover:text-[#111111] transition-colors">About</Link>
-              <Link to="/contact" className="hover:text-[#111111] transition-colors">Contact</Link>
-            </div>
-            <div className="text-[13px]" style={{ color: '#666666' }}>
-              © 2026 Nautilus. All rights reserved.
-            </div>
-          </div>
-        </div>
-      </footer>
-
-      {/* Auth Modal */}
-      {showAuthModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setShowAuthModal(false)}>
-          <div className="bg-white w-full max-w-[1200px] grid grid-cols-2 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="p-16">
-              <div className="max-w-[400px]">
-                <h2 className="mb-2 text-[32px]" style={{ fontFamily: 'var(--font-serif)' }}>
-                  Start Your Free Trial
-                </h2>
-                <p className="text-[15px] text-[#666666] mb-12">
-                  7 days free. No credit card required.
-                </p>
-
-                <form className="space-y-6">
+            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '12px', padding: '32px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div>
-                    <label className="block text-[13px] text-[#666666] mb-2 tracking-wide uppercase">Full Name</label>
-                    <input
-                      type="text"
-                      className="w-full border border-[#EAEAEA] px-4 py-3 text-[15px] focus:outline-none focus:border-[#111111] transition-colors"
-                      placeholder="John Smith"
-                    />
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Name</label>
+                    <input className="input" placeholder="Your name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
                   </div>
                   <div>
-                    <label className="block text-[13px] text-[#666666] mb-2 tracking-wide uppercase">Email</label>
-                    <input
-                      type="email"
-                      className="w-full border border-[#EAEAEA] px-4 py-3 text-[15px] focus:outline-none focus:border-[#111111] transition-colors"
-                      placeholder="your@email.com"
-                    />
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Email</label>
+                    <input className="input" type="email" placeholder="your@email.com" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
                   </div>
-                  <div>
-                    <label className="block text-[13px] text-[#666666] mb-2 tracking-wide uppercase">Password</label>
-                    <input
-                      type="password"
-                      className="w-full border border-[#EAEAEA] px-4 py-3 text-[15px] focus:outline-none focus:border-[#111111] transition-colors"
-                      placeholder="••••••••"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full bg-[#111111] text-white py-4 text-[14px] tracking-wide hover:bg-[#1A2A44] transition-colors"
-                  >
-                    START FREE TRIAL
-                  </button>
-                </form>
-
-                <div className="mt-8 text-center">
-                  <p className="text-[14px] text-[#666666]">
-                    Already have an account?{' '}
-                    <button className="text-[#111111] hover:underline">
-                      Log in
-                    </button>
-                  </p>
                 </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Subject</label>
+                  <select className="input" value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}>
+                    <option value="">Select subject</option>
+                    <option value="general">General inquiry</option>
+                    <option value="institutional">Institutional access</option>
+                    <option value="partnership">Partnership</option>
+                    <option value="press">Press & media</option>
+                    <option value="support">Technical support</option>
+                    <option value="billing">Billing</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Message</label>
+                  <textarea className="input" placeholder="How can we help you?" value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} style={{ minHeight: '120px', resize: 'vertical' }} />
+                </div>
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading || !form.name || !form.email || !form.message}
+                  className="btn-electric"
+                  style={{ fontSize: '13px', padding: '13px', justifyContent: 'center', borderRadius: '8px', opacity: (!form.name || !form.email || !form.message) ? 0.5 : 1 }}
+                >
+                  {loading ? 'Sending...' : 'Send message →'}
+                </button>
               </div>
             </div>
 
-            <div className="relative">
-              <img
-                src="https://images.unsplash.com/photo-1720727226875-44a17a151320?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080"
-                alt="Art"
-                className="w-full h-full object-cover"
-              />
-              <button
-                onClick={() => setShowAuthModal(false)}
-                className="absolute top-8 right-8 w-10 h-10 bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors"
-              >
-                <span className="text-[20px]">×</span>
-              </button>
+            {/* Contact info */}
+            <div style={{ marginTop: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              {[
+                { icon: '◆', label: 'General', value: 'contact@get-nautilus.com' },
+                { icon: '◎', label: 'Institutional', value: 'institutional@get-nautilus.com' },
+              ].map(({ icon, label, value }) => (
+                <div key={label} style={{ padding: '16px', background: 'white', border: '1px solid var(--border)', borderRadius: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '14px', color: 'var(--gold)', marginBottom: '6px' }}>{icon}</div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '4px' }}>{label}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--electric)' }}>{value}</div>
+                </div>
+              ))}
             </div>
+          </>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '60px 0' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border, rgba(37,99,235,0.2))', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '24px', color: 'var(--electric)' }}>✓</span>
+            </div>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', color: 'var(--text)', marginBottom: '12px' }}>Message sent</h2>
+            <p style={{ fontSize: '14px', color: 'var(--text-2)', marginBottom: '28px', lineHeight: 1.7 }}>
+              Thank you for reaching out. We'll get back to you within 24 hours at {form.email}.
+            </p>
+            <button onClick={() => navigate('/')} className="btn-electric" style={{ fontSize: '13px', padding: '12px 32px', borderRadius: '8px' }}>
+              Back to Nautilus →
+            </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

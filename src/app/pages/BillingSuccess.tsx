@@ -86,7 +86,7 @@ export default function BillingSuccess() {
             </h2>
             <p style={{ color: "#666", marginBottom: "24px", lineHeight: 1.7 }}>
               Your payment was processed but we couldn't sync your plan. Please contact{" "}
-              <a href="mailto:contact@artalpha.art" style={{ color: "#1A2A44" }}>contact@artalpha.art</a>
+              <a href="mailto:contact@get-nautilus.com" style={{ color: "#1A2A44" }}>contact@get-nautilus.com</a>
             </p>
             <button
               onClick={() => navigate("/app/opportunities")}
