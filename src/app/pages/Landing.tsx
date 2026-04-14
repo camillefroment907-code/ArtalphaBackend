@@ -59,19 +59,19 @@ export default function Landing() {
       </header>
 
       {/* ── HERO ── */}
-      <section style={{ padding: '80px 120px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'center', background: '#0A1628' }}>
+      <section style={{ padding: '80px 120px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'center', background: 'white' }}>
         {/* Left — dynamic */}
         <div style={{ maxWidth: '680px' }}>
           {/* Live ticker */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', background: 'rgba(198,168,90,0.12)', border: '1px solid rgba(198,168,90,0.25)', borderRadius: '20px', marginBottom: '24px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', background: 'rgba(198,168,90,0.08)', border: '1px solid rgba(198,168,90,0.3)', borderRadius: '20px', marginBottom: '24px' }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C6A85A', animation: 'pulseDot 2s infinite' }} />
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#A07840', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
               THIS WEEK · {weeklyStats?.segments?.reduce((a: number, s: any) => a + (s.total_lots_30d || 0), 0) || '1,574'} LOTS ANALYZED
             </span>
           </div>
 
           {/* Dynamic headline */}
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(36px, 5vw, 58px)', fontWeight: 600, color: 'white', lineHeight: 1.15, marginBottom: '20px' }}>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(36px, 5vw, 58px)', fontWeight: 600, color: 'var(--text)', lineHeight: 1.15, marginBottom: '20px' }}>
             {heroLot ? (
               <>
                 {heroLot.artist_name_raw || heroLot.artist?.name || 'Marc Chagall'} just appeared<br />
@@ -85,7 +85,7 @@ export default function Landing() {
             )}
           </h1>
 
-          <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.7, marginBottom: '32px', maxWidth: '520px' }}>
+          <p style={{ fontSize: '18px', color: 'var(--text-2)', lineHeight: 1.7, marginBottom: '32px', maxWidth: '520px' }}>
             {heroLot
               ? `Every week, hundreds of artworks sell ${heroUpside} below their real market value. Most buyers never find out. Nautilus does — before the auction closes.`
               : `Every week, hundreds of artworks sell 20–50% below their real market value. Nautilus identifies them before the market corrects.`
@@ -94,17 +94,17 @@ export default function Landing() {
 
           {/* CTA row */}
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <a href="/app/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'white', color: 'var(--navy)', padding: '14px 32px', borderRadius: '8px', fontSize: '14px', fontWeight: 700, textDecoration: 'none', letterSpacing: '0.04em' }}>
+            <a href="/app/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--navy)', color: 'white', padding: '14px 32px', borderRadius: '8px', fontSize: '14px', fontWeight: 700, textDecoration: 'none', letterSpacing: '0.04em' }}>
               See today's opportunities
               <span style={{ fontSize: '16px' }}>→</span>
             </a>
-            <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>
+            <span style={{ fontSize: '13px', color: 'var(--text-3)' }}>
               Free · No credit card
             </span>
           </div>
 
           {/* Social proof */}
-          <div style={{ marginTop: '20px', fontSize: '12px', color: 'rgba(255,255,255,0.35)', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <div style={{ marginTop: '20px', fontSize: '12px', color: 'var(--text-3)', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
             <span>✓ 200+ collectors</span>
             <span>✓ 10+ auction houses</span>
             <span>✓ Updated continuously</span>
@@ -565,20 +565,20 @@ export default function Landing() {
       </section>
 
       {/* ── URGENCY BAR ── */}
-      <div style={{ background: 'var(--navy)', padding: '12px 0', textAlign: 'center' }}>
+      <div style={{ background: 'var(--bg-subtle)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '12px 0', textAlign: 'center' }}>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C6A85A', animation: 'pulseDot 2s infinite' }} />
-            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-mono)' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
               {weeklyStats?.segments?.reduce((a: number, s: any) => a + (s.total_lots_30d || 0), 0) || '1,574'} lots tracked this week
             </span>
           </div>
-          <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>
-          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-mono)' }}>
+          <span style={{ color: 'var(--border)' }}>·</span>
+          <span style={{ fontSize: '12px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
             12 exceptional opportunities identified
           </span>
-          <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>
-          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-mono)' }}>
+          <span style={{ color: 'var(--border)' }}>·</span>
+          <span style={{ fontSize: '12px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
             3 closing in 48h
           </span>
         </div>
