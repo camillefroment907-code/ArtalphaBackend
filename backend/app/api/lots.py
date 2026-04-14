@@ -9,23 +9,8 @@ import math
 import asyncio
 import json
 import re
-import time
 
-
-# ── In-memory lots cache ──────────────────────────────────────────────────────
-_lots_cache: dict = {}
-LOTS_CACHE_TTL = 60  # seconds
-
-
-def get_cached_lots(key: str):
-    entry = _lots_cache.get(key)
-    if entry and time.time() - entry["ts"] < LOTS_CACHE_TTL:
-        return entry["data"]
-    return None
-
-
-def set_cached_lots(key: str, data) -> None:
-    _lots_cache[key] = {"data": data, "ts": time.time()}
+from app.utils.cache import get_cached, set_cached
 
 
 def lot_to_list_dict(lot) -> dict:
@@ -246,7 +231,7 @@ async def list_lots(
 
     # ── Cache lookup ─────────────────────────────────────────────────────────
     cache_key = f"lots:{plan}:{sort_by}:{sort_dir}:{min_score}:{page}:{page_size}:{category}:{search}:{source}:{sources}"
-    cached = get_cached_lots(cache_key)
+    cached = get_cached(cache_key)
     if cached:
         return cached
 
@@ -357,7 +342,7 @@ async def list_lots(
         "page_size": page_size,
         "pages": math.ceil(total / page_size) if total > 0 else 0,
     }
-    set_cached_lots(cache_key, response)
+    set_cached(cache_key, response)
     return response
 
 
