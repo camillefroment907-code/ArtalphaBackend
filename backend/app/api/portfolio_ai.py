@@ -21,7 +21,15 @@ settings = get_settings()
 _analysis_cache: dict = {}
 CACHE_HOURS = 6
 
+ADMIN_EMAILS = frozenset({
+    "camillefroment907@gmail.com",
+    "demo@hono.art",
+    "demo@balthus.art",
+})
+
 async def _get_user_plan(user: User, db: AsyncSession) -> str:
+    if user.email.strip() in ADMIN_EMAILS:
+        return "institutional"
     result = await db.execute(
         select(Subscription).where(Subscription.user_id == user.id)
     )
