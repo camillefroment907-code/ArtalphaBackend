@@ -1,5 +1,9 @@
 """HONO Portfolio API — track artwork acquisitions and project values."""
-from fastapi import APIRouter, Depends, HTTPException
+import csv
+import io
+import json
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, text
 from typing import Optional
@@ -504,6 +508,58 @@ async def patch_portfolio_item(
     item.updated_at = datetime.utcnow()
     await db.commit()
     return {"success": True}
+
+
+@router.get("/export")
+async def export_portfolio(
+    format: str = Query("csv", enum=["csv", "json"]),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Export full portfolio data as CSV or JSON."""
+    result = await db.execute(
+        select(PortfolioItem).where(PortfolioItem.user_id == current_user.id)
+    )
+    items = result.scalars().all()
+
+    if format == "json":
+        data = [
+            {
+                "artist": i.artist_name,
+                "title": i.title,
+                "purchase_price_eur": i.purchase_price_eur,
+                "current_value_eur": i.estimated_current_value_eur,
+                "acquisition_date": str(i.acquisition_date) if i.acquisition_date else None,
+            }
+            for i in items
+        ]
+        return StreamingResponse(
+            io.StringIO(json.dumps(data, indent=2, ensure_ascii=False)),
+            media_type="application/json",
+            headers={"Content-Disposition": "attachment; filename=nautilus_portfolio.json"},
+        )
+    else:
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["Artist", "Title", "Purchase Price (€)", "Current Value (€)", "Return %", "Acquisition Date"])
+        for i in items:
+            buy = i.purchase_price_eur or 0
+            val = i.estimated_current_value_eur or buy
+            ret = ((val - buy) / buy * 100) if buy > 0 else 0
+            writer.writerow([
+                i.artist_name or "",
+                i.title or "",
+                f"{buy:.0f}" if buy else "",
+                f"{val:.0f}" if val else "",
+                f"{ret:.1f}%",
+                i.acquisition_date or "",
+            ])
+        output.seek(0)
+        return StreamingResponse(
+            output,
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=nautilus_portfolio.csv"},
+        )
 
 
 @router.delete("/{item_id}")
