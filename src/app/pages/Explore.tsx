@@ -362,31 +362,29 @@ export default function Explore() {
     tab === "alpha" ? alphaLots.length > maxVisible : lots.length > maxVisible
   );
 
-  const LOTS_CACHE_TTL = 60 * 1000; // 60 seconds
-
-  // ── fetchLots — plain async, no useCallback to avoid stale closure loop ──
-  const fetchLots = async (opts?: { page?: number }) => {
-    // Show cached data instantly while fetching fresh data in background
-    const cacheKey = `nautilus_lots_${exploreTab}`;
-    if ((opts?.page ?? 1) === 1) {
-      try {
-        const cached = localStorage.getItem(cacheKey);
-        if (cached) {
-          const { items, total: cachedTotal, ts } = JSON.parse(cached);
-          if (Date.now() - ts < LOTS_CACHE_TTL && Array.isArray(items) && items.length > 0) {
-            setLots(items);
-            setTotal(cachedTotal || items.length);
-          }
-        }
-      } catch { /* ignore cache errors */ }
-    }
-
+  // ── fetchLots — simple plain async, no cache, no useCallback ──
+  const fetchLots = async () => {
     setLoading(true);
     setHasError(false);
     try {
       const params = new URLSearchParams();
       params.set('page_size', '24');
-      params.set('page', String(opts?.page ?? currentPage));
+      params.set('page', '1');
+
+      if (exploreTab === 'primary') {
+        // Primary has its own endpoint — just pass basic params
+        const token = getToken();
+        const resp = await fetch(`${BACKEND}/api/lots/primary?${params.toString()}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        const items = Array.isArray(data) ? data : (data.items || data.lots || data.results || []);
+        setLots(items.map(mapLot));
+        setTotal(data.total || items.length || 0);
+        setTotalPages(data.pages || 1);
+        return;
+      }
 
       if (exploreTab === 'best') {
         params.set('sort_by', 'deal_score');
@@ -396,9 +394,9 @@ export default function Explore() {
         params.set('sort_by', 'created_at');
         params.set('sort_dir', 'desc');
       } else if (exploreTab === 'convictions') {
-        params.set('min_score', '75');
         params.set('sort_by', 'deal_score');
         params.set('sort_dir', 'desc');
+        params.set('min_score', '75');
       }
 
       if (minScore > 0 && exploreTab !== 'best') params.set('min_score', String(minScore));
@@ -430,27 +428,17 @@ export default function Explore() {
         params.set('auction_date_to', d.toISOString().split('T')[0]);
       }
 
-      // Primary tab has its own dedicated endpoint
-      const apiPath = exploreTab === 'primary' ? `${BACKEND}/api/lots/primary` : `${BACKEND}/api/lots`;
       const token = getToken();
-      const resp = await fetch(`${apiPath}?${params.toString()}`, {
+      const resp = await fetch(`${BACKEND}/api/lots?${params.toString()}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
       const rawData = data.items || data.lots || data.results || data;
       const lotsArray = Array.isArray(rawData) ? rawData : [];
-      const mapped = lotsArray.map(mapLot);
-      setLots(mapped);
+      setLots(lotsArray.map(mapLot));
       setTotal(data.total || data.count || lotsArray.length || 0);
       setTotalPages(data.pages || 1);
-
-      // Save to localStorage cache (page 1 only, no filters active)
-      if ((opts?.page ?? 1) === 1 && !hasActiveFilters && !search.trim()) {
-        try {
-          localStorage.setItem(cacheKey, JSON.stringify({ items: mapped, total: data.total || lotsArray.length, ts: Date.now() }));
-        } catch { /* quota exceeded — ignore */ }
-      }
     } catch (e) {
       console.error('fetchLots failed:', e);
       setHasError(true);
@@ -459,12 +447,11 @@ export default function Explore() {
     }
   };
 
-  // Fetch on tab/filter change — always reset to page 1
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { setCurrentPage(1); fetchLots({ page: 1 }); },
+  useEffect(() => { setCurrentPage(1); fetchLots(); },
     [exploreTab, dateFilter, search, minScore, minUpside, minPrice, maxPrice, category, artistTier, auctionHouse, sizeFilter]);
 
-  const doFetch = () => fetchLots({ page: 1 });
+  const doFetch = () => fetchLots();
 
   const loadMore = async () => {
     if (loadingMore || currentPage >= totalPages) return;
