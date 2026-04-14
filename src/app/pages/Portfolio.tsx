@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { getUser, getToken, logout, PLAN_LIMITS } from '../../lib/auth';
-import { AlertsContent } from './Alerts';
 import { getSubscription, cancelSubscription } from '../../lib/api';
 import { getUsageStatus, PLAN_LIMITS as USAGE_LIMITS } from '../../lib/analysisUsage';
 
@@ -280,7 +279,7 @@ export default function Portfolio() {
   const [watchlistLoading, setWatchlistLoading] = useState(false);
 
   // ── Favorite artists ───────────────────────────────────────
-  const [favoriteArtists, setFavoriteArtists] = useState<string[]>([]);
+  const [favoriteArtists, setFavoriteArtists] = useState<any[]>([]);
   const [artistsLoading, setArtistsLoading] = useState(false);
   const [newArtistInput, setNewArtistInput] = useState('');
   const [artistActionLoading, setArtistActionLoading] = useState(false);
@@ -304,6 +303,13 @@ export default function Portfolio() {
   // ── Delete account ─────────────────────────────────────────
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+
+  // ── Notification prefs ─────────────────────────────────────
+  const [notificationPrefs, setNotificationPrefs] = useState<Record<string, boolean>>({});
+
+  // ── Add artist modal ───────────────────────────────────────
+  const [showAddArtist, setShowAddArtist] = useState(false);
+  const [newArtistName, setNewArtistName] = useState('');
 
   // ── Computed ───────────────────────────────────────────────
   const PLAN_LABELS: Record<string, string> = {
@@ -513,30 +519,62 @@ export default function Portfolio() {
 
   // ── Watchlist actions ──────────────────────────────────────
 
-  async function removeFromWatchlist(lotId: string) {
-    await fetch(`${BACKEND}/api/portfolio/watchlist/${lotId}`, { method: 'DELETE', headers: authHeaders() });
-    setWatchlist(items => items.filter(i => i.lot_id !== lotId));
-  }
+  const removeFromWatchlist = async (id: string) => {
+    await fetch(`${BACKEND}/api/portfolio/watchlist/${id}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    setWatchlist(prev => prev.filter((w: any) => w.id !== id));
+  };
 
   // ── Artist actions ─────────────────────────────────────────
 
-  async function addFavoriteArtist() {
-    if (!newArtistInput.trim()) return;
-    setArtistActionLoading(true);
+  const addFavoriteArtist = async () => {
+    if (!newArtistName.trim()) return;
     try {
       await fetch(`${BACKEND}/api/portfolio/favorite-artists`, {
-        method: 'POST', headers: authHeaders(),
-        body: JSON.stringify({ artist_name: newArtistInput.trim() }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ artist_name: newArtistName.trim() }),
       });
-      setFavoriteArtists(a => [...a, newArtistInput.trim()]);
-      setNewArtistInput('');
-    } catch { /* silent */ } finally { setArtistActionLoading(false); }
-  }
+      setNewArtistName('');
+      setShowAddArtist(false);
+      const r = await fetch(`${BACKEND}/api/portfolio/favorite-artists`, { headers: { Authorization: `Bearer ${getToken()}` } });
+      const d = await r.json();
+      setFavoriteArtists(d.artists || []);
+    } catch { /* silent */ }
+  };
 
-  async function removeFavoriteArtist(name: string) {
-    await fetch(`${BACKEND}/api/portfolio/favorite-artists/${encodeURIComponent(name)}`, { method: 'DELETE', headers: authHeaders() });
-    setFavoriteArtists(a => a.filter(n => n !== name));
-  }
+  const removeFavoriteArtist = async (id: string) => {
+    await fetch(`${BACKEND}/api/portfolio/favorite-artists/${id}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    setFavoriteArtists(prev => prev.filter((a: any) => a.id !== id));
+  };
+
+  const toggleArtistAlert = async (artistId: string, key: string, value: boolean) => {
+    setFavoriteArtists(prev => prev.map((a: any) => a.id === artistId ? { ...a, [key]: value } : a));
+    await fetch(`${BACKEND}/api/portfolio/favorite-artists/${artistId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify({ [key]: value }),
+    }).catch(() => {});
+  };
+
+  const toggleNotification = (key: string) => {
+    setNotificationPrefs(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const saveNotificationPrefs = async () => {
+    try {
+      await fetch(`${BACKEND}/api/auth/profile`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify(notificationPrefs),
+      });
+      setSettingsSaved(true);
+      setTimeout(() => setSettingsSaved(false), 3000);
+    } catch { /* silent */ }
+  };
 
   // ── AI analysis ────────────────────────────────────────────
 
@@ -995,64 +1033,120 @@ export default function Portfolio() {
         ══════════════════════════════════════════════════════ */}
         {activeTab === 'watchlist' && (
           <div>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
               <div>
-                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, color: 'var(--text)', margin: '0 0 4px' }}>Watchlist</h2>
-                <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>Lots you've saved to monitor</p>
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 6px' }}>Auction Watchlist</h2>
+                <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>Lots you're monitoring — alerted 24h before closing</p>
               </div>
+              <button onClick={() => navigate('/app/explore')} className="btn-electric" style={{ fontSize: '11px', padding: '8px 18px', borderRadius: '6px' }}>
+                Browse lots →
+              </button>
             </div>
 
-            {watchlistLoading && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {[0, 1, 2].map(i => <div key={i} className="skeleton" style={{ height: '72px', borderRadius: '8px' }} />)}
+            {watchlist.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '80px 40px', background: 'var(--bg-subtle)', borderRadius: '12px', border: '2px dashed var(--border)' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--navy)', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ color: 'white', fontSize: '22px' }}>◎</span>
+                </div>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '10px' }}>No lots on your watchlist</div>
+                <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '24px', maxWidth: '340px', margin: '0 auto 24px', lineHeight: 1.7 }}>
+                  Browse opportunities and click "Watch" on any lot to track it here and receive closing alerts.
+                </p>
+                <button onClick={() => navigate('/app/explore')} className="btn-electric" style={{ fontSize: '12px', padding: '12px 28px', borderRadius: '6px' }}>
+                  Find opportunities →
+                </button>
               </div>
-            )}
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {watchlist.map((item: any) => {
+                  const auctionDate = item.auction_date ? new Date(item.auction_date) : null;
+                  const daysLeft = auctionDate ? Math.ceil((auctionDate.getTime() - Date.now()) / 86400000) : null;
+                  const isUrgent = daysLeft !== null && daysLeft <= 3 && daysLeft >= 0;
+                  const isPast = daysLeft !== null && daysLeft < 0;
+                  const isToday = daysLeft === 0;
 
-            {!watchlistLoading && watchlist.length === 0 && (
-              <div style={{ border: '2px dashed var(--border)', borderRadius: '10px', padding: '64px 40px', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '36px', color: 'var(--border)', marginBottom: '16px' }}>◇</div>
-                <div style={{ fontSize: '16px', color: 'var(--text-2)', marginBottom: '6px' }}>No lots saved yet</div>
-                <div style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '24px' }}>Save lots from the opportunities page to track them here</div>
-                <Link to="/app/opportunities" style={{ padding: '12px 24px', background: 'var(--navy)', color: 'white', borderRadius: '6px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none' }}>
-                  Browse Opportunities
-                </Link>
-              </div>
-            )}
-
-            {!watchlistLoading && watchlist.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                {watchlist.map(item => {
-                  const lot = item.lot;
-                  const price = lot.current_price || lot.estimate_low;
-                  const ds = lot.deal_score || 0;
-                  const dsColor = ds >= 80 ? '#C0392B' : ds >= 65 ? 'var(--navy)' : 'var(--text-3)';
                   return (
-                    <div key={item.watchlist_id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '56px 1fr auto', alignItems: 'center' }}>
-                        <div style={{ width: '56px', height: '56px', background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                          {lot.image_url ? <img src={lot.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--border)' }}>◇</span>}
-                        </div>
-                        <div style={{ padding: '14px 16px', minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '3px' }}>
-                            {lot.artist_name && <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--navy)', letterSpacing: '0.1em', textTransform: 'uppercase', flexShrink: 0 }}>{lot.artist_name}</span>}
-                            <span style={{ fontFamily: 'var(--font-serif)', fontSize: '14px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lot.title}</span>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            {price && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{fmt(price)}</span>}
-                            {lot.auction_house && <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>{lot.auction_house.split('—')[0].trim()}</span>}
-                            {lot.auction_date && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)' }}>{new Date(lot.auction_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 16px', flexShrink: 0 }}>
-                          {ds > 0 && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: dsColor }}>{Math.round(ds)}</span>
-                              <span style={{ fontSize: '9px', color: 'var(--text-3)' }}>/100</span>
-                            </div>
+                    <div key={item.id} style={{
+                      background: 'white',
+                      border: `1px solid ${isUrgent ? 'var(--gold)' : 'var(--border)'}`,
+                      borderLeft: `3px solid ${isUrgent ? 'var(--gold)' : isPast ? 'var(--border)' : 'var(--electric)'}`,
+                      borderRadius: '8px', padding: '16px 20px',
+                      display: 'flex', gap: '16px', alignItems: 'center',
+                      opacity: isPast ? 0.6 : 1,
+                      transition: 'box-shadow 0.15s',
+                    }}
+                      onMouseEnter={e => !isPast && ((e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-sm)')}
+                      onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.boxShadow = 'none')}
+                    >
+                      {/* Image */}
+                      <div style={{ width: '72px', height: '72px', background: 'var(--bg-subtle)', borderRadius: '6px', flexShrink: 0, overflow: 'hidden' }}>
+                        {item.image_url && <img src={item.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                      </div>
+
+                      {/* Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
+                          <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                            {item.artist_name_raw || item.artist_name}
+                          </span>
+                          {item.deal_score >= 80 && (
+                            <span style={{ fontSize: '8px', fontWeight: 700, color: 'var(--gold-dim)', background: 'var(--gold-subtle)', padding: '1px 6px', borderRadius: '3px', fontFamily: 'var(--font-mono)' }}>
+                              EXCEPTIONAL
+                            </span>
                           )}
-                          <button onClick={() => navigate(`/app/opportunities/${lot.id}`)} style={{ padding: '6px 12px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '5px', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', cursor: 'pointer' }}>View</button>
-                          <button onClick={() => removeFromWatchlist(item.lot_id)} style={{ padding: '6px 12px', background: 'transparent', border: '1px solid rgba(192,57,43,0.3)', borderRadius: '5px', fontSize: '11px', fontWeight: 600, color: '#C0392B', cursor: 'pointer' }}>Remove</button>
                         </div>
+                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '6px' }}>
+                          {item.title}
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          {item.current_price && (
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>
+                              €{Number(item.current_price).toLocaleString()}
+                            </span>
+                          )}
+                          {item.deal_score && (
+                            <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--electric)', background: 'var(--electric-subtle)', padding: '2px 7px', borderRadius: '3px', border: '1px solid var(--electric-border)' }}>
+                              Score {item.deal_score}/100
+                            </span>
+                          )}
+                          {item.auction_house_name && (
+                            <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>{item.auction_house_name}</span>
+                          )}
+                          {isToday && (
+                            <span style={{ fontSize: '10px', fontWeight: 700, color: 'white', background: 'var(--red)', padding: '2px 8px', borderRadius: '3px', fontFamily: 'var(--font-mono)' }}>
+                              🔴 CLOSES TODAY
+                            </span>
+                          )}
+                          {isUrgent && !isToday && (
+                            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold-dim)', background: 'var(--gold-subtle)', padding: '2px 8px', borderRadius: '3px', fontFamily: 'var(--font-mono)' }}>
+                              ⚡ {daysLeft}d left
+                            </span>
+                          )}
+                          {!isUrgent && !isPast && daysLeft !== null && (
+                            <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>
+                              {auctionDate?.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} · {daysLeft}d
+                            </span>
+                          )}
+                          {isPast && <span style={{ fontSize: '11px', color: 'var(--text-ghost)' }}>Auction ended</span>}
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                        {!isPast && (
+                          <button
+                            onClick={() => navigate(`/app/opportunities/${item.lot_id}`)}
+                            style={{ padding: '7px 14px', background: 'var(--navy)', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 700, color: 'white', cursor: 'pointer', letterSpacing: '0.04em' }}
+                          >
+                            View →
+                          </button>
+                        )}
+                        <button
+                          onClick={() => removeFromWatchlist(item.id)}
+                          style={{ padding: '7px 10px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-3)', cursor: 'pointer' }}
+                        >
+                          ×
+                        </button>
                       </div>
                     </div>
                   );
@@ -1066,63 +1160,153 @@ export default function Portfolio() {
             ARTISTS TAB
         ══════════════════════════════════════════════════════ */}
         {activeTab === 'artists' && (
-          <div style={{ maxWidth: '720px' }}>
-            <div style={{ marginBottom: '24px' }}>
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, color: 'var(--text)', margin: '0 0 4px' }}>Artists</h2>
-              <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>Artists you follow — alerts will be triggered when new lots appear</p>
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '28px' }}>
-              <input
-                type="text"
-                value={newArtistInput}
-                onChange={e => setNewArtistInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && addFavoriteArtist()}
-                placeholder="Artist name (e.g. Joan Miró)"
-                style={{ flex: 1, padding: '10px 14px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '13px', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }}
-              />
-              <button onClick={addFavoriteArtist} disabled={artistActionLoading || !newArtistInput.trim()} style={{ padding: '10px 20px', background: newArtistInput.trim() ? 'var(--navy)' : 'var(--bg-subtle)', color: newArtistInput.trim() ? 'white' : 'var(--text-3)', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: newArtistInput.trim() ? 'pointer' : 'not-allowed' }}>
-                {artistActionLoading ? '…' : '+ Follow'}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 6px' }}>Favorite Artists</h2>
+                <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>Follow artists — get alerted when their works appear on Nautilus</p>
+              </div>
+              <button onClick={() => setShowAddArtist(true)} className="btn-electric" style={{ fontSize: '11px', padding: '8px 18px', borderRadius: '6px' }}>
+                + Follow artist
               </button>
             </div>
 
-            {artistsLoading && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {[0, 1, 2].map(i => <div key={i} className="skeleton" style={{ height: '52px', borderRadius: '8px' }} />)}
+            {favoriteArtists.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '80px 40px', background: 'var(--bg-subtle)', borderRadius: '12px', border: '2px dashed var(--border)' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--navy)', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ color: '#C6A85A', fontSize: '22px' }}>★</span>
+                </div>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '10px' }}>No favorite artists yet</div>
+                <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '24px', maxWidth: '340px', margin: '0 auto 24px', lineHeight: 1.7 }}>
+                  Follow Picasso, Basquiat, or any artist — and be the first to know when their work appears on the market.
+                </p>
+                <button onClick={() => setShowAddArtist(true)} className="btn-electric" style={{ fontSize: '12px', padding: '12px 28px', borderRadius: '6px' }}>
+                  Follow your first artist →
+                </button>
               </div>
-            )}
-
-            {!artistsLoading && favoriteArtists.length === 0 && (
-              <div style={{ border: '2px dashed var(--border)', borderRadius: '10px', padding: '48px 40px', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', color: 'var(--border)', marginBottom: '12px' }}>◈</div>
-                <div style={{ fontSize: '15px', color: 'var(--text-2)', marginBottom: '6px' }}>No artists followed yet</div>
-                <div style={{ fontSize: '13px', color: 'var(--text-3)' }}>Add artists above to get notified when they appear at auction</div>
-              </div>
-            )}
-
-            {!artistsLoading && favoriteArtists.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                {favoriteArtists.map(name => (
-                  <div key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', padding: '14px 20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-subtle)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-serif)', fontSize: '14px', color: 'var(--text-3)' }}>
-                        {name.charAt(0).toUpperCase()}
-                      </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                {favoriteArtists.map((artist: any) => (
+                  <div key={artist.id} style={{
+                    background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px',
+                    transition: 'box-shadow 0.15s',
+                  }}
+                    onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-sm)')}
+                    onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.boxShadow = 'none')}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
                       <div>
-                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>{name}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Following · alerts active</div>
+                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '17px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>
+                          {artist.artist_name}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                          Since {new Date(artist.created_at).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
+                        </div>
                       </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Link to={`/app/opportunities?artist=${encodeURIComponent(name)}`} style={{ padding: '6px 12px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '5px', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', textDecoration: 'none' }}>
-                        Browse lots
-                      </Link>
-                      <button onClick={() => removeFavoriteArtist(name)} style={{ padding: '6px 12px', background: 'transparent', border: '1px solid rgba(192,57,43,0.3)', borderRadius: '5px', fontSize: '11px', fontWeight: 600, color: '#C0392B', cursor: 'pointer' }}>
-                        Unfollow
+                      <button
+                        onClick={() => removeFavoriteArtist(artist.id)}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-ghost)', cursor: 'pointer', fontSize: '18px', lineHeight: 1, padding: '0' }}
+                      >
+                        ×
                       </button>
                     </div>
+
+                    {/* Alert toggles */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+                      {[
+                        { key: 'alert_new_lot', label: 'New lot on Nautilus', sub: 'Instant alert' },
+                        { key: 'alert_price_change', label: 'Price movement', sub: 'Market signal' },
+                      ].map(({ key, label, sub }) => (
+                        <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-light)' }}>
+                          <div>
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>{label}</div>
+                            <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>{sub}</div>
+                          </div>
+                          <div
+                            onClick={() => toggleArtistAlert(artist.id, key, !artist[key])}
+                            style={{
+                              width: '36px', height: '20px', borderRadius: '10px',
+                              background: artist[key] !== false ? 'var(--electric)' : 'var(--bg-hover)',
+                              cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                            }}
+                          >
+                            <div style={{
+                              position: 'absolute', top: '2px',
+                              left: artist[key] !== false ? '17px' : '2px',
+                              width: '16px', height: '16px', borderRadius: '50%',
+                              background: 'white', transition: 'left 0.2s',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                            }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => navigate(`/app/explore?tab=best&search=${encodeURIComponent(artist.artist_name)}`)}
+                      style={{ width: '100%', padding: '8px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', cursor: 'pointer', transition: 'all 0.15s' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--navy)'; (e.currentTarget as HTMLButtonElement).style.color = 'white'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-subtle)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-2)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; }}
+                    >
+                      See lots on Nautilus →
+                    </button>
                   </div>
                 ))}
+
+                {/* Add artist card */}
+                <div
+                  onClick={() => setShowAddArtist(true)}
+                  style={{
+                    background: 'var(--bg-subtle)', border: '2px dashed var(--border)', borderRadius: '8px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', minHeight: '180px', gap: '8px', transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--navy)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'; }}
+                >
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ color: 'white', fontSize: '20px', lineHeight: 1 }}>+</span>
+                  </div>
+                  <span style={{ fontSize: '13px', color: 'var(--text-2)', fontWeight: 600 }}>Follow an artist</span>
+                </div>
+              </div>
+            )}
+
+            {/* Add artist modal */}
+            {showAddArtist && (
+              <div
+                style={{ position: 'fixed', inset: 0, background: 'rgba(10,22,40,0.65)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
+                onClick={e => { if (e.target === e.currentTarget) setShowAddArtist(false); }}
+              >
+                <div style={{ background: 'white', borderRadius: '12px', padding: '32px', width: '100%', maxWidth: '420px' }}>
+                  <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '6px' }}>Follow an artist</h3>
+                  <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '20px' }}>You'll be notified when their work appears on Nautilus.</p>
+                  <input
+                    className="input"
+                    placeholder="Artist name, e.g. Joan Miró, Basquiat..."
+                    value={newArtistName}
+                    onChange={e => setNewArtistName(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addFavoriteArtist()}
+                    style={{ marginBottom: '16px', width: '100%', padding: '10px 12px', fontSize: '13px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }}
+                    autoFocus
+                  />
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      onClick={() => { setShowAddArtist(false); setNewArtistName(''); }}
+                      style={{ flex: 1, padding: '11px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '13px', color: 'var(--text-2)', cursor: 'pointer' }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={addFavoriteArtist}
+                      disabled={!newArtistName.trim()}
+                      className="btn-electric"
+                      style={{ flex: 1, fontSize: '13px', padding: '11px', justifyContent: 'center', borderRadius: '8px', opacity: newArtistName.trim() ? 1 : 0.4 }}
+                    >
+                      Follow →
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -1131,7 +1315,125 @@ export default function Portfolio() {
         {/* ══════════════════════════════════════════════════════
             ALERTS TAB
         ══════════════════════════════════════════════════════ */}
-        {activeTab === 'alerts' && <AlertsContent />}
+        {activeTab === 'alerts' && (
+          <div>
+            <div style={{ marginBottom: '28px' }}>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 6px' }}>Alert Center</h2>
+              <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>Configure exactly when Nautilus contacts you — and how</p>
+            </div>
+
+            {[
+              {
+                title: 'Market signals',
+                subtitle: 'Real-time opportunities',
+                icon: '◆',
+                color: 'var(--gold)',
+                alerts: [
+                  { key: 'notify_exceptional_deals', label: 'Exceptional opportunity detected', sub: 'Score ≥ 80 — immediate email notification' },
+                  { key: 'notify_price_alert', label: 'Lot priced below market value', sub: 'When estimate is 30%+ below comparable sales' },
+                  { key: 'notify_new_auction', label: 'New auction house added', sub: 'When Nautilus integrates a new source' },
+                ]
+              },
+              {
+                title: 'Artist alerts',
+                subtitle: 'Your followed artists',
+                icon: '★',
+                color: 'var(--electric)',
+                alerts: [
+                  { key: 'notify_new_lot_by_artist', label: 'New lot by followed artist', sub: 'When a work by one of your artists appears' },
+                  { key: 'notify_artist_momentum', label: 'Artist momentum change', sub: "When an artist's market score rises significantly" },
+                  { key: 'notify_artist_exhibition', label: 'Exhibition or auction result', sub: 'Major events for artists you follow' },
+                ]
+              },
+              {
+                title: 'Auction alerts',
+                subtitle: 'Your watchlist',
+                icon: '⏱',
+                color: 'var(--navy)',
+                alerts: [
+                  { key: 'notify_auction_reminder', label: 'Auction closing in 24h', sub: 'For lots on your watchlist' },
+                  { key: 'notify_auction_result', label: 'Auction result available', sub: 'Final hammer price after the sale' },
+                  { key: 'notify_outbid', label: 'Estimate revised', sub: "When a lot's estimate is updated" },
+                ]
+              },
+              {
+                title: 'Portfolio alerts',
+                subtitle: 'Your collection',
+                icon: '◈',
+                color: 'var(--electric)',
+                alerts: [
+                  { key: 'notify_portfolio_value', label: 'Portfolio value change ±10%', sub: 'Based on comparable market sales' },
+                  { key: 'notify_sell_opportunity', label: 'Optimal sell window detected', sub: 'When market conditions favour selling a work you own' },
+                  { key: 'notify_similar_lot_selling', label: 'Similar work going to auction', sub: 'A comparable work is selling — useful for valuation' },
+                ]
+              },
+              {
+                title: 'Intelligence reports',
+                subtitle: 'Weekly & monthly briefings',
+                icon: '◐',
+                color: 'var(--text-2)',
+                alerts: [
+                  { key: 'notify_weekly_brief', label: 'Weekly market brief', sub: 'Every Monday 8am — top 5 opportunities + market recap' },
+                  { key: 'notify_monthly_report', label: 'Monthly portfolio report', sub: 'Performance, trends, and AI recommendations' },
+                  { key: 'notify_email', label: 'Email notifications', sub: 'Master switch — all alerts sent by email' },
+                ]
+              },
+            ].map(({ title, subtitle, icon, color, alerts: alertGroup }) => (
+              <div key={title} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px 24px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border-light)' }}>
+                  <span style={{ fontSize: '14px', color }}>{icon}</span>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{title}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{subtitle}</div>
+                  </div>
+                </div>
+
+                {alertGroup.map(({ key, label, sub }, idx) => (
+                  <div key={key} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '10px 0',
+                    borderBottom: idx < alertGroup.length - 1 ? '1px solid var(--border-light)' : 'none',
+                  }}>
+                    <div style={{ flex: 1, paddingRight: '16px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', marginBottom: '2px' }}>{label}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.5 }}>{sub}</div>
+                    </div>
+                    <div
+                      onClick={() => toggleNotification(key)}
+                      style={{
+                        width: '44px', height: '24px', borderRadius: '12px',
+                        background: notificationPrefs[key] !== false ? 'var(--electric)' : '#E2E8F0',
+                        cursor: 'pointer', position: 'relative', transition: 'background 0.25s',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <div style={{
+                        position: 'absolute', top: '3px',
+                        left: notificationPrefs[key] !== false ? '21px' : '3px',
+                        width: '18px', height: '18px', borderRadius: '50%',
+                        background: 'white', transition: 'left 0.25s',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                      }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '8px' }}>
+              <button
+                onClick={saveNotificationPrefs}
+                className="btn-electric"
+                style={{ fontSize: '12px', padding: '11px 28px', borderRadius: '8px' }}
+              >
+                Save preferences
+              </button>
+              {settingsSaved && (
+                <span style={{ fontSize: '12px', color: 'var(--electric)', fontWeight: 600 }}>✓ Saved</span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ══════════════════════════════════════════════════════
             SUBSCRIPTION TAB
