@@ -395,10 +395,6 @@ export default function Explore() {
       } else if (exploreTab === 'auctions') {
         params.set('sort_by', 'created_at');
         params.set('sort_dir', 'desc');
-      } else if (exploreTab === 'primary') {
-        params.set('source', 'primary');
-        params.set('sort_by', 'deal_score');
-        params.set('sort_dir', 'desc');
       } else if (exploreTab === 'convictions') {
         params.set('min_score', '75');
         params.set('sort_by', 'deal_score');
@@ -434,8 +430,10 @@ export default function Explore() {
         params.set('auction_date_to', d.toISOString().split('T')[0]);
       }
 
+      // Primary tab has its own dedicated endpoint
+      const apiPath = exploreTab === 'primary' ? `${BACKEND}/api/lots/primary` : `${BACKEND}/api/lots`;
       const token = getToken();
-      const resp = await fetch(`${BACKEND}/api/lots?${params.toString()}`, {
+      const resp = await fetch(`${apiPath}?${params.toString()}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -768,22 +766,7 @@ export default function Explore() {
               )}
 
               {/* Empty */}
-              {!loading && !hasError && lots.length === 0 && exploreTab === 'primary' && (
-                <div style={{ textAlign: "center", padding: "80px 40px" }}>
-                  <div style={{ fontFamily: "var(--font-serif)", fontSize: "22px", color: "var(--text)", marginBottom: "10px" }}>Primary market coming soon</div>
-                  <p style={{ fontSize: "14px", color: "var(--text-3)", maxWidth: "360px", margin: "0 auto", lineHeight: 1.7 }}>
-                    We're integrating gallery and primary market sources. Check back soon — or explore our auction opportunities in the meantime.
-                  </p>
-                  <button
-                    onClick={() => setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('tab', 'best'); return p; })}
-                    className="btn-electric"
-                    style={{ marginTop: "24px", fontSize: "12px", padding: "10px 24px", borderRadius: "6px" }}
-                  >
-                    View best lots →
-                  </button>
-                </div>
-              )}
-              {!loading && !hasError && lots.length === 0 && exploreTab !== 'primary' && (
+              {!loading && !hasError && lots.length === 0 && (
                 <div style={{ textAlign: "center", padding: "80px 20px" }}>
                   <div style={{ fontFamily: "var(--font-serif)", fontSize: "36px", color: "var(--border)", marginBottom: "16px" }}>◇</div>
                   <div style={{ fontSize: "15px", color: "var(--text-2)", marginBottom: "8px" }}>{tab === "alpha" ? "No high-score opportunities right now" : "No lots match your filters"}</div>
