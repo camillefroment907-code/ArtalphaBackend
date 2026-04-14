@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { getUser } from "../../lib/auth";
-import { FilterSidebar } from "../components/FilterSidebar";
-import type { Filters } from "../components/FilterSidebar";
 import { WelcomeTour } from "../components/WelcomeTour";
 import Primary from "./Primary";
 import Convictions from "./Convictions";
@@ -93,6 +91,9 @@ async function loadLots(params: Record<string, any>) {
   if (params.category)           qs.set("category", params.category);
   if (params.medium)             qs.set("medium", params.medium);
   if (params.auction_house)      qs.set("auction_house", params.auction_house);
+  if (params.artist_tier)        qs.set("artist_tier", params.artist_tier);
+  if (params.size_category)      qs.set("size_category", params.size_category);
+  if (params.min_upside)         qs.set("min_upside", String(params.min_upside));
   const url = `${BACKEND}/api/lots?${qs.toString()}`;
   const token = getToken();
   const headers: Record<string, string> = {};
@@ -269,19 +270,11 @@ function IconGrid4() { return <svg width="15" height="15" viewBox="0 0 15 15" fi
 function IconGrid6() { return <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><rect x="1" y="1" width="3.5" height="3.5" rx="0.5" /><rect x="5.75" y="1" width="3.5" height="3.5" rx="0.5" /><rect x="10.5" y="1" width="3.5" height="3.5" rx="0.5" /><rect x="1" y="5.75" width="3.5" height="3.5" rx="0.5" /><rect x="5.75" y="5.75" width="3.5" height="3.5" rx="0.5" /><rect x="10.5" y="5.75" width="3.5" height="3.5" rx="0.5" /><rect x="1" y="10.5" width="3.5" height="3.5" rx="0.5" /><rect x="5.75" y="10.5" width="3.5" height="3.5" rx="0.5" /><rect x="10.5" y="10.5" width="3.5" height="3.5" rx="0.5" /></svg>; }
 function IconList() { return <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><rect x="1" y="2" width="3.5" height="3" rx="0.5" /><rect x="6" y="2.5" width="8" height="1" rx="0.5" /><rect x="6" y="4" width="5" height="1" rx="0.5" /><rect x="1" y="6" width="3.5" height="3" rx="0.5" /><rect x="6" y="6.5" width="8" height="1" rx="0.5" /><rect x="6" y="8" width="5" height="1" rx="0.5" /><rect x="1" y="10" width="3.5" height="3" rx="0.5" /><rect x="6" y="10.5" width="8" height="1" rx="0.5" /><rect x="6" y="12" width="5" height="1" rx="0.5" /></svg>; }
 
-const DEFAULT_FILTERS: Filters = {
-  searchQuery: "", sortBy: "", sources: [], auctionHouseSearch: "",
-  platforms: [], scoreRange: [0, 5], upsideRange: "all",
-  categories: [], mediums: [], minPrice: 0, maxPrice: 0,
-  artistSearch: "", auctionDateFrom: "", auctionDateTo: "",
-  countries: [], artistRating: "all", auctionTiming: "all",
-  priceRange: [0, 1000000], artworkTypes: [], artists: [], sizes: [],
-};
 
 // ── Explore component ─────────────────────────────────────────
 export default function Explore() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const exploreTab = (searchParams.get('tab') || 'best') as ExploreTab;
   const searchFromUrl = searchParams.get('search') || '';
 
@@ -296,15 +289,30 @@ export default function Explore() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [viewMode, setViewMode]     = useState<ViewMode>("grid4");
   const [dateFilter, setDateFilter] = useState("all");
-  const [filters, setFilters]       = useState<Filters>(DEFAULT_FILTERS);
   const [innerTab, setInnerTab]     = useState<"alpha" | "live">("alpha");
   const [sourceStats, setSourceStats] = useState<SourceStat[]>([]);
 
-  // Initialize search from URL param (e.g. when navigating from header search bar)
+  // ── Filter state ─────────────────────────────────────────────
+  const [search, setSearch]           = useState(searchFromUrl);
+  const [minScore, setMinScore]       = useState(0);
+  const [minUpside, setMinUpside]     = useState('');
+  const [minPrice, setMinPrice]       = useState(0);
+  const [maxPrice, setMaxPrice]       = useState(0);
+  const [category, setCategory]       = useState('');
+  const [artistTier, setArtistTier]   = useState('');
+  const [auctionHouse, setAuctionHouse] = useState('');
+  const [sizeFilter, setSizeFilter]   = useState('');
+
+  const resetFilters = () => {
+    setMinScore(0); setMinUpside(''); setMinPrice(0); setMaxPrice(0);
+    setCategory(''); setArtistTier(''); setAuctionHouse(''); setSizeFilter('');
+    setSearch('');
+    setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete('search'); return p; });
+  };
+
+  // Sync search from URL (e.g. navigating from header search bar)
   useEffect(() => {
-    if (searchFromUrl) {
-      setFilters(prev => ({ ...prev, searchQuery: searchFromUrl }));
-    }
+    if (searchFromUrl) setSearch(searchFromUrl);
   }, [searchFromUrl]);
 
   const [showTour, setShowTour] = useState(false);
@@ -368,43 +376,34 @@ export default function Explore() {
   );
 
   const buildFetchParams = useCallback((page = 1): Record<string, any> => {
+    const dateDates = getDateParams(dateFilter);
     if (tab === "live") {
-      const sort = LIVE_SORT_MAP[filters.sortBy || "auction_date_asc"] || { by: "auction_date", dir: "asc" };
-      const dateFrom = filters.auctionDateFrom || getDateParams(dateFilter).auction_date_from;
-      const dateTo   = filters.auctionDateTo   || getDateParams(dateFilter).auction_date_to;
-      const sourcesStr = filters.sources?.length ? filters.sources.join(",") : undefined;
       return {
-        page, page_size: 60, sort_by: sort.by, sort_dir: sort.dir,
-        search: filters.searchQuery || undefined, sources: sourcesStr,
-        auction_date_from: dateFrom || undefined, auction_date_to: dateTo || undefined,
-        min_price: filters.minPrice > 0 ? filters.minPrice : undefined,
-        max_price: filters.maxPrice > 0 ? filters.maxPrice : undefined,
-        artist: filters.artistSearch || undefined,
-        category: filters.categories?.length === 1 ? filters.categories[0] : undefined,
-        medium: filters.mediums?.length === 1 ? filters.mediums[0] : undefined,
-        auction_house: filters.auctionHouseSearch || undefined,
+        page, page_size: 60, sort_by: "auction_date", sort_dir: "asc",
+        search: search || undefined,
+        auction_date_from: dateDates.auction_date_from || undefined,
+        auction_date_to:   dateDates.auction_date_to   || undefined,
+        min_price:    minPrice > 0 ? minPrice : undefined,
+        max_price:    maxPrice > 0 ? maxPrice : undefined,
+        category:     category || undefined,
+        auction_house: auctionHouse || undefined,
       };
     } else {
-      const sort = ALPHA_SORT_MAP[filters.sortBy || "deal_score_desc"] || { by: "deal_score", dir: "desc" };
-      const scoreMin = filters.scoreRange?.[0] > 0 ? filters.scoreRange[0] * 20 : undefined;
-      const sourceKey = filters.platforms?.length === 1 ? filters.platforms[0] : null;
-      const source = sourceKey ? (PLATFORM_API[sourceKey] || sourceKey.toLowerCase()) : undefined;
-      const timingDates = filters.auctionTiming && filters.auctionTiming !== "all"
-        ? getDateParams(filters.auctionTiming === "24h" ? "today" : filters.auctionTiming === "week" ? "week" : "month")
-        : getDateParams(dateFilter);
       return {
-        page, page_size: 48, sort_by: sort.by, sort_dir: sort.dir,
-        search: filters.searchQuery || undefined, source,
-        min_score: scoreMin,
-        min_price: filters.minPrice > 0 ? filters.minPrice : undefined,
-        max_price: filters.maxPrice > 0 ? filters.maxPrice : undefined,
-        category: filters.categories?.length === 1 ? filters.categories[0] : undefined,
-        artist_tier: filters.artistRating !== "all" ? filters.artistRating : undefined,
-        size_category: filters.sizes?.length === 1 ? filters.sizes[0] : undefined,
-        ...timingDates,
+        page, page_size: 48, sort_by: "deal_score", sort_dir: "desc",
+        search:       search || undefined,
+        min_score:    minScore > 0 ? minScore : undefined,
+        min_upside:   minUpside || undefined,
+        min_price:    minPrice > 0 ? minPrice : undefined,
+        max_price:    maxPrice > 0 ? maxPrice : undefined,
+        category:     category || undefined,
+        artist_tier:  artistTier || undefined,
+        size_category: sizeFilter || undefined,
+        auction_house: auctionHouse || undefined,
+        ...dateDates,
       };
     }
-  }, [filters, dateFilter, tab]);
+  }, [tab, dateFilter, search, minScore, minUpside, minPrice, maxPrice, category, artistTier, auctionHouse, sizeFilter]);
 
   const buildFetchParamsRef = useRef(buildFetchParams);
   buildFetchParamsRef.current = buildFetchParams;
@@ -433,28 +432,15 @@ export default function Explore() {
       }).catch(() => { if (id === fetchIdRef.current) setHasError(true); })
         .finally(() => { if (id === fetchIdRef.current) setLoading(false); });
     };
-    const isTextChange = filters.searchQuery !== prevSearchRef.current.q || filters.artistSearch !== prevSearchRef.current.artist || filters.auctionHouseSearch !== prevSearchRef.current.house;
-    prevSearchRef.current = { q: filters.searchQuery, artist: filters.artistSearch, house: filters.auctionHouseSearch };
+    const isTextChange = search !== prevSearchRef.current.q;
+    prevSearchRef.current = { q: search, artist: '', house: '' };
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(run, isTextChange ? 300 : 0);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [
     exploreTab, tab, dateFilter,
-    filters.searchQuery, filters.artistSearch, filters.auctionHouseSearch,
-    filters.sortBy, filters.minPrice, filters.maxPrice,
-    filters.auctionDateFrom, filters.auctionDateTo,
-    filters.artistRating, filters.auctionTiming, filters.upsideRange,
-    filters.scoreRange[0],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    JSON.stringify(filters.categories),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    JSON.stringify(filters.mediums),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    JSON.stringify(filters.sources),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    JSON.stringify(filters.platforms),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    JSON.stringify(filters.countries),
+    search, minScore, minUpside, minPrice, maxPrice,
+    category, artistTier, auctionHouse, sizeFilter,
   ]);
 
   const doFetch = useCallback(() => {
@@ -482,16 +468,9 @@ export default function Explore() {
   }, [tab]);
 
   const activeFilterCount = [
-    filters.searchQuery,
-    ...(filters.sources || []),
-    ...(tab === "alpha" ? (filters.platforms || []) : []),
-    ...(filters.categories || []),
-    ...(filters.mediums || []),
-    ...(filters.countries || []),
-    filters.scoreRange?.[0] > 0, filters.upsideRange !== "all",
-    filters.artistRating !== "all", filters.auctionTiming !== "all",
-    filters.minPrice > 0 || filters.maxPrice > 0,
-    filters.auctionDateFrom, filters.artistSearch, filters.auctionHouseSearch,
+    search, minScore > 0, minUpside !== '',
+    minPrice > 0 || maxPrice > 0, category !== '',
+    artistTier !== '', auctionHouse !== '', sizeFilter !== '',
   ].filter(Boolean).length;
 
   const cols = viewMode === "list" ? 1 : viewMode === "grid6" ? 6 : tab === "live" ? 5 : 4;
@@ -567,7 +546,100 @@ export default function Explore() {
               transition: "width 0.25s ease, min-width 0.25s ease",
             }}
           >
-            {sidebarOpen && <FilterSidebar onFilterChange={setFilters} tab={innerTab} />}
+            {sidebarOpen && (
+              <div style={{ padding: '20px 20px 40px' }}>
+                {/* 1. CONVICTION SCORE */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Conviction Score</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {[{ label: 'All opportunities', value: 0, sub: '' }, { label: 'Strong signal', value: 55, sub: 'Score 55+' }, { label: 'High conviction', value: 65, sub: 'Score 65+' }, { label: 'Exceptional only', value: 80, sub: 'Score 80+' }].map(({ label, value, sub }) => (
+                      <button key={value} onClick={() => setMinScore(value)} style={{ padding: '8px 12px', textAlign: 'left', background: minScore === value ? 'var(--navy)' : 'white', color: minScore === value ? 'white' : 'var(--text-2)', border: `1px solid ${minScore === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.15s' }}>
+                        <span>{label}</span>
+                        {sub && <span style={{ fontSize: '10px', opacity: 0.6, fontFamily: 'var(--font-mono)' }}>{sub}</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. UPSIDE POTENTIAL */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Upside Potential</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {[{ label: 'Any upside', value: '' }, { label: '+10% and above', value: '10' }, { label: '+20% and above', value: '20' }, { label: '+33% and above', value: '33' }, { label: '+50% and above', value: '50' }].map(({ label, value }) => (
+                      <button key={value} onClick={() => setMinUpside(value)} style={{ padding: '8px 12px', textAlign: 'left', background: minUpside === value ? 'var(--navy)' : 'white', color: minUpside === value ? 'white' : 'var(--text-2)', border: `1px solid ${minUpside === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. BUDGET */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Budget</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {[{ label: '< €1K', min: 0, max: 1000 }, { label: '€1K–10K', min: 1000, max: 10000 }, { label: '€10K–50K', min: 10000, max: 50000 }, { label: '€50K–200K', min: 50000, max: 200000 }, { label: '> €200K', min: 200000, max: 0 }].map(({ label, min, max }) => (
+                      <button key={label} onClick={() => { setMinPrice(min); setMaxPrice(max); }} style={{ padding: '6px 12px', background: (minPrice === min && maxPrice === max && (min > 0 || max > 0)) ? 'var(--navy)' : 'white', color: (minPrice === min && maxPrice === max && (min > 0 || max > 0)) ? 'white' : 'var(--text-2)', border: `1px solid ${(minPrice === min && maxPrice === max && (min > 0 || max > 0)) ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '20px', fontSize: '11px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 4. CATEGORY */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Category</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {['Paintings', 'Drawings', 'Sculpture', 'Prints', 'Photography', 'Street Art', 'Contemporary', 'Modern'].map(cat => (
+                      <button key={cat} onClick={() => setCategory(category === cat ? '' : cat)} style={{ padding: '6px 12px', background: category === cat ? 'var(--navy)' : 'white', color: category === cat ? 'white' : 'var(--text-2)', border: `1px solid ${category === cat ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '20px', fontSize: '11px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 5. ARTIST TIER */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Artist Tier</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {[{ label: 'All artists', value: '', sub: '' }, { label: 'Blue chip', value: 'blue_chip', sub: 'Warhol, Hirst, Basquiat...' }, { label: 'Established', value: 'established', sub: 'Secondary market presence' }, { label: 'Emerging', value: 'emerging', sub: 'High growth potential' }].map(({ label, value, sub }) => (
+                      <button key={value} onClick={() => setArtistTier(value)} style={{ padding: '8px 12px', textAlign: 'left', background: artistTier === value ? 'var(--navy)' : 'white', color: artistTier === value ? 'white' : 'var(--text-2)', border: `1px solid ${artistTier === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', transition: 'all 0.15s' }}>
+                        <span>{label}</span>
+                        {sub && <span style={{ fontSize: '10px', opacity: 0.5 }}>{sub}</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 6. AUCTION HOUSE */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Auction House</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {["Christie's", "Sotheby's", 'Phillips', 'Drouot', 'Artcurial', 'Invaluable', 'Artsy'].map(house => (
+                      <button key={house} onClick={() => setAuctionHouse(auctionHouse === house ? '' : house)} style={{ padding: '6px 12px', background: auctionHouse === house ? 'var(--navy)' : 'white', color: auctionHouse === house ? 'white' : 'var(--text-2)', border: `1px solid ${auctionHouse === house ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '20px', fontSize: '11px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                        {house}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 7. SIZE */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Artwork Size</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {[{ label: 'Any size', value: '' }, { label: 'Small (< 40cm)', value: 'small' }, { label: 'Medium (40–100cm)', value: 'medium' }, { label: 'Large (> 100cm)', value: 'large' }].map(({ label, value }) => (
+                      <button key={value} onClick={() => setSizeFilter(value)} style={{ padding: '8px 12px', textAlign: 'left', background: sizeFilter === value ? 'var(--navy)' : 'white', color: sizeFilter === value ? 'white' : 'var(--text-2)', border: `1px solid ${sizeFilter === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Reset */}
+                <button onClick={resetFilters} style={{ width: '100%', padding: '10px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-3)', cursor: 'pointer' }}>
+                  Reset all filters
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Main */}
@@ -583,6 +655,19 @@ export default function Explore() {
                 {!sidebarOpen && activeFilterCount > 0 && <span style={{ position: "absolute", top: "-6px", right: "-6px", minWidth: "17px", height: "17px", borderRadius: "9px", background: "var(--gold)", color: "white", fontSize: "9px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>{activeFilterCount}</span>}
               </div>
 
+
+              {/* Search */}
+              <input
+                type="text"
+                placeholder="Search artist, title…"
+                value={search}
+                onChange={e => {
+                  const val = e.target.value;
+                  setSearch(val);
+                  setSearchParams(prev => { const p = new URLSearchParams(prev); if (val) p.set('search', val); else p.delete('search'); return p; });
+                }}
+                style={{ padding: '7px 12px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', width: '190px', flexShrink: 0, outline: 'none', color: 'var(--text)', background: 'white' }}
+              />
 
               {/* Title */}
               <div style={{ display: "flex", alignItems: "baseline", gap: "10px", flex: 1, minWidth: 0 }}>
@@ -606,7 +691,7 @@ export default function Explore() {
             </div>
 
             {/* Scrollable content */}
-            <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "20px 24px 60px" }}>
+            <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "0 24px 60px" }}>
               {/* Alpha stats */}
               {tab === "alpha" && !loading && alphaLots.length > 0 && (
                 <div style={{ display: "flex", gap: "24px", padding: "12px 0 16px", marginBottom: "8px", borderBottom: "1px solid var(--border-light)", flexWrap: "wrap", alignItems: "center" }}>
@@ -617,12 +702,22 @@ export default function Explore() {
                 </div>
               )}
 
-              {/* Live stats */}
+              {/* Live stats bar */}
               {tab === "live" && !loading && (
-                <div style={{ display: "flex", gap: "32px", padding: "14px 0", marginBottom: "16px", borderBottom: "1px solid var(--border)" }}>
-                  {[{ label: "Total lots", value: total.toLocaleString() }, { label: "Sources active", value: String(sourceStats.filter(s => s.status === "fresh").length || sourceStats.filter(s => s.lot_count > 0).length || "—") }, { label: "Updated", value: "< 15 min" }].map(({ label, value }) => (
-                    <div key={label}><div style={{ fontFamily: "var(--font-mono)", fontSize: "20px", fontWeight: 700, color: "var(--navy)" }}>{value}</div><div className="label-caps" style={{ marginTop: "3px" }}>{label}</div></div>
-                  ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-3)' }}>
+                      <span style={{ fontWeight: 700, color: 'var(--text-2)' }}>{total?.toLocaleString()}</span> opportunities
+                    </span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>·</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>
+                      Updated regularly
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--electric)', animation: 'pulse 2s infinite' }} />
+                    <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>LIVE</span>
+                  </div>
                 </div>
               )}
 
