@@ -101,6 +101,17 @@ def _artist_enrichment_loop():
         time.sleep(6 * 3600)  # Every 6 hours
 
 
+def _weekly_report_loop():
+    """Check every hour whether it's Monday 8am UTC and fire the weekly report."""
+    from app.jobs.weekly_report import maybe_send_weekly_report
+    while True:
+        now = datetime.now(timezone.utc)
+        # Sleep until the next top of the hour
+        seconds_to_next_hour = 3600 - (now.minute * 60 + now.second)
+        time.sleep(seconds_to_next_hour)
+        _run(maybe_send_weekly_report, "weekly_report")
+
+
 def start_beat_in_background():
     """Start all scheduler loops as daemon threads."""
     threads = [
@@ -109,6 +120,7 @@ def start_beat_in_background():
         threading.Thread(target=_cleanup_loop,           daemon=True, name="sched-cleanup"),
         threading.Thread(target=_rationale_loop,         daemon=True, name="sched-rationale"),
         threading.Thread(target=_artist_enrichment_loop, daemon=True, name="sched-artist-enrich"),
+        threading.Thread(target=_weekly_report_loop,     daemon=True, name="sched-weekly-report"),
     ]
     for t in threads:
         t.start()

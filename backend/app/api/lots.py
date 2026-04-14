@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, Request
+from fastapi import APIRouter, Depends, Query, HTTPException, Request, Header
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_, desc
@@ -932,6 +932,26 @@ async def trigger_rationale_generation(
     from app.jobs.tasks import _generate_rationales_async
     generated = await _generate_rationales_async(max_lots=30)
     return {"generated": generated, "status": "done"}
+
+
+@router.post("/admin/send-weekly-report")
+async def trigger_weekly_report(
+    x_api_key: str = Header(None, alias="x-api-key"),
+):
+    """Manual trigger for weekly report — admin only."""
+    import asyncio
+    from app.config import get_settings
+    settings = get_settings()
+
+    if not x_api_key or x_api_key != settings.n8n_api_key:
+        raise HTTPException(403, "Unauthorized")
+
+    try:
+        from app.jobs.weekly_report import send_weekly_report
+        asyncio.create_task(send_weekly_report())
+        return {"message": "Weekly report sending started"}
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
 
 @router.get("/{lot_id}", response_model=LotOut)
