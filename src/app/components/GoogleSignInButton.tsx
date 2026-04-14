@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { setUser } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '641757535865-3mgk4b4a7lc1ajcbphu40jip5d1rbe84.apps.googleusercontent.com';
@@ -34,8 +35,13 @@ export function GoogleSignInButton({ onError }: Props) {
             const data = await resp.json();
             if (!resp.ok) throw new Error(data.detail || 'Google sign in failed');
 
-            localStorage.setItem('nautilus_token', data.access_token);
-            localStorage.setItem('nautilus_user', JSON.stringify(data.user));
+            setUser({
+              id: data.user.id,
+              email: data.user.email,
+              name: data.user.name,
+              plan: 'free',
+              token: data.access_token,
+            });
 
             if (data.is_new_user) {
               localStorage.setItem('nautilus_show_tour', '1');
