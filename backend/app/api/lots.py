@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, Request, Header, Response
+from fastapi import APIRouter, Depends, Query, HTTPException, Request, Header
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_, desc
@@ -143,7 +143,6 @@ async def stream_lots(
 
 @router.get("", response_model=LotListResponse)
 async def list_lots(
-    response: Response,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     min_score: Optional[float] = Query(None, ge=0, le=100),
@@ -279,8 +278,6 @@ async def list_lots(
 
     result = await db.execute(stmt)
     lots = result.scalars().all()
-
-    response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=120"
 
     return LotListResponse(
         items=lots,
