@@ -286,7 +286,8 @@ export default function Explore() {
   const [loading, setLoading]       = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasError, setHasError]     = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [primaryStats, setPrimaryStats] = useState<{ total?: number; avg_score?: number; avg_price?: number; new_this_week?: number } | null>(null);
   const [viewMode, setViewMode]     = useState<ViewMode>("grid4");
   const [dateFilter, setDateFilter] = useState("all");
   const [innerTab, setInnerTab]     = useState<"alpha" | "live">("alpha");
@@ -309,6 +310,8 @@ export default function Explore() {
     setSearch('');
     setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete('search'); return p; });
   };
+
+  const hasActiveFilters = minScore > 0 || minUpside !== '' || minPrice > 0 || maxPrice > 0 || category !== '' || artistTier !== '' || auctionHouse !== '' || sizeFilter !== '';
 
   // Sync search from URL (e.g. navigating from header search bar)
   useEffect(() => {
@@ -467,12 +470,6 @@ export default function Explore() {
     loadSourceStats().then(setSourceStats);
   }, [tab]);
 
-  const activeFilterCount = [
-    search, minScore > 0, minUpside !== '',
-    minPrice > 0 || maxPrice > 0, category !== '',
-    artistTier !== '', auctionHouse !== '', sizeFilter !== '',
-  ].filter(Boolean).length;
-
   const cols = viewMode === "list" ? 1 : viewMode === "grid6" ? 6 : tab === "live" ? 5 : 4;
   const gap  = cols >= 5 ? "12px" : "16px";
   const VIEW_MODES: { mode: ViewMode; icon: React.ReactNode; title: string }[] = [
@@ -480,12 +477,6 @@ export default function Explore() {
     { mode: "grid6", icon: <IconGrid6 />, title: "6 columns" },
     { mode: "list",  icon: <IconList />,  title: "List view" },
   ];
-  const DATE_CHIPS = [
-    { v: "all", l: "All dates" }, { v: "today", l: "Today" },
-    { v: "3days", l: "3 days" }, { v: "week", l: "This week" }, { v: "month", l: "This month" },
-  ];
-  const sourceDotColor = (status: string) =>
-    status === "fresh" ? "var(--navy)" : status === "stale" ? "#B8961E" : "var(--text-3)";
 
 
   return (
@@ -498,11 +489,134 @@ export default function Explore() {
       }}
     >
       {showTour && <WelcomeTour onClose={() => { setShowTour(false); localStorage.setItem('nautilus_tour_seen', 'true'); }} />}
-      {/* ── Page header ──────────────────────────────────────── */}
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)", background: "white", flexShrink: 0, display: "flex", alignItems: "baseline", gap: "12px" }}>
-        <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "22px", fontWeight: 600, color: "var(--navy)", margin: 0 }}>Explorer</h1>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--text-3)", letterSpacing: "0.06em" }}>Global auctions · Primary market · AI selection</span>
+      {/* ── Compact toolbar ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '8px',
+        padding: '12px 24px', background: 'white',
+        borderBottom: '1px solid var(--border)',
+        flexShrink: 0, flexWrap: 'wrap',
+      }}>
+        {/* Tab pills */}
+        {([
+          { key: 'best', label: 'Best Lots' },
+          { key: 'auctions', label: 'All Auctions' },
+          { key: 'primary', label: 'Primary Market' },
+          { key: 'convictions', label: 'Convictions' },
+        ] as { key: ExploreTab; label: string }[]).map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('tab', key); return p; })}
+            style={{
+              padding: '6px 14px', borderRadius: '20px', border: 'none',
+              background: exploreTab === key ? 'var(--navy)' : 'transparent',
+              color: exploreTab === key ? 'white' : 'var(--text-3)',
+              fontSize: '12px', fontWeight: exploreTab === key ? 700 : 400,
+              cursor: 'pointer', transition: 'all 0.15s',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+
+        {/* Divider */}
+        <div style={{ width: '1px', height: '20px', background: 'var(--border)', margin: '0 4px' }} />
+
+        {/* Date filters — only on Best Lots + All Auctions */}
+        {(exploreTab === 'best' || exploreTab === 'auctions') && (
+          <>
+            {['All dates', 'Today', '3 days', 'This week', 'This month'].map(d => {
+              const val = d === 'All dates' ? 'all' : d === '3 days' ? '3days' : d === 'This week' ? 'week' : d === 'This month' ? 'month' : d.toLowerCase();
+              return (
+                <button
+                  key={d}
+                  onClick={() => setDateFilter(val)}
+                  style={{
+                    padding: '5px 12px', borderRadius: '20px',
+                    border: `1px solid ${dateFilter === val ? 'var(--navy)' : 'var(--border)'}`,
+                    background: dateFilter === val ? 'var(--navy)' : 'transparent',
+                    color: dateFilter === val ? 'white' : 'var(--text-3)',
+                    fontSize: '11px', cursor: 'pointer', transition: 'all 0.15s',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {d}
+                </button>
+              );
+            })}
+            <div style={{ width: '1px', height: '20px', background: 'var(--border)', margin: '0 4px' }} />
+          </>
+        )}
+
+        {/* Search */}
+        <div style={{ flex: 1, position: 'relative', maxWidth: '240px' }}>
+          <input
+            className="input"
+            placeholder="Artist, title..."
+            value={search}
+            onChange={e => {
+              setSearch(e.target.value);
+              setSearchParams(prev => { const p = new URLSearchParams(prev); if (e.target.value) p.set('search', e.target.value); else p.delete('search'); return p; });
+            }}
+            style={{ padding: '6px 12px 6px 32px', fontSize: '12px', height: '32px' }}
+          />
+          <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: 'var(--text-3)' }}>⌕</span>
+        </div>
+
+        {/* Filters toggle */}
+        {(exploreTab === 'best' || exploreTab === 'auctions') && (
+          <button
+            onClick={() => setShowFilters(f => !f)}
+            style={{
+              padding: '6px 14px', borderRadius: '20px',
+              border: `1px solid ${showFilters ? 'var(--navy)' : 'var(--border)'}`,
+              background: showFilters ? 'var(--navy)' : 'transparent',
+              color: showFilters ? 'white' : 'var(--text-3)',
+              fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              transition: 'all 0.15s', whiteSpace: 'nowrap',
+            }}
+          >
+            <span>⚙</span>
+            Filters
+            {hasActiveFilters && (
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)', display: 'inline-block' }} />
+            )}
+          </button>
+        )}
+
+        {/* View mode */}
+        <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, marginLeft: 'auto' }}>
+          {VIEW_MODES.map(({ mode, icon, title }, idx) => (
+            <button key={mode} onClick={() => setViewMode(mode)} title={title} style={{ padding: '5px 10px', border: 'none', borderRight: idx < 2 ? '1px solid var(--border)' : 'none', cursor: 'pointer', background: viewMode === mode ? 'var(--navy)' : 'white', color: viewMode === mode ? 'white' : 'var(--text-3)', transition: 'all 0.1s', display: 'flex', alignItems: 'center' }}>{icon}</button>
+          ))}
+        </div>
+
+        {/* Live dot — Best Lots + All Auctions only */}
+        {(exploreTab === 'best' || exploreTab === 'auctions') && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--electric)', animation: 'pulse 2s infinite' }} />
+            <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>LIVE</span>
+          </div>
+        )}
       </div>
+
+      {/* ── Primary stats bar ── */}
+      {exploreTab === 'primary' && primaryStats && (
+        <div style={{ padding: '6px 24px', display: 'flex', gap: '20px', alignItems: 'center', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-subtle)', flexShrink: 0 }}>
+          {[
+            { label: 'Listings', value: primaryStats.total?.toLocaleString() },
+            { label: 'Avg score', value: `${primaryStats.avg_score}/100` },
+            { label: 'Avg price', value: `€${primaryStats.avg_price?.toLocaleString()}` },
+            { label: 'New this week', value: primaryStats.new_this_week },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ display: 'flex', gap: '4px', alignItems: 'baseline' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: 'var(--text)' }}>{value}</span>
+              <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Primary / Convictions inline ───────────────────── */}
       {exploreTab === "primary" && (
@@ -539,14 +653,14 @@ export default function Explore() {
           <div
             className="no-scrollbar"
             style={{
-              width: sidebarOpen ? "280px" : "0px", minWidth: sidebarOpen ? "280px" : "0px",
-              height: "100%", overflowY: sidebarOpen ? "auto" : "hidden", overflowX: "hidden",
-              borderRight: sidebarOpen ? "1px solid var(--border)" : "none",
+              width: showFilters ? "280px" : "0px", minWidth: showFilters ? "280px" : "0px",
+              height: "100%", overflowY: showFilters ? "auto" : "hidden", overflowX: "hidden",
+              borderRight: showFilters ? "1px solid var(--border)" : "none",
               background: "white", flexShrink: 0,
               transition: "width 0.25s ease, min-width 0.25s ease",
             }}
           >
-            {sidebarOpen && (
+            {showFilters && (
               <div style={{ padding: '20px 20px 40px' }}>
                 {/* 1. CONVICTION SCORE */}
                 <div style={{ marginBottom: '24px' }}>
@@ -644,80 +758,21 @@ export default function Explore() {
 
           {/* Main */}
           <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
-            {/* Toolbar */}
-            <div style={{ padding: "10px 20px", borderBottom: "1px solid var(--border)", background: "rgba(250,250,248,0.96)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", gap: "10px", flexShrink: 0, flexWrap: "wrap" }}>
-              {/* Sidebar toggle */}
-              <div style={{ position: "relative", flexShrink: 0 }}>
-                <button onClick={() => setSidebarOpen(o => !o)} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 13px", background: "white", border: "1px solid var(--border)", borderRadius: "6px", cursor: "pointer", fontSize: "12px", color: "var(--text-2)", transition: "all 0.15s var(--ease)" }} onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--navy)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--navy)"; }} onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-2)"; }}>
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="2" width="14" height="1.5" rx="0.5" /><rect x="0" y="6.25" width="9" height="1.5" rx="0.5" /><rect x="0" y="10.5" width="11" height="1.5" rx="0.5" /></svg>
-                  {sidebarOpen ? "Hide" : "Filters"}
-                </button>
-                {!sidebarOpen && activeFilterCount > 0 && <span style={{ position: "absolute", top: "-6px", right: "-6px", minWidth: "17px", height: "17px", borderRadius: "9px", background: "var(--gold)", color: "white", fontSize: "9px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>{activeFilterCount}</span>}
-              </div>
-
-
-              {/* Search */}
-              <input
-                type="text"
-                placeholder="Search artist, title…"
-                value={search}
-                onChange={e => {
-                  const val = e.target.value;
-                  setSearch(val);
-                  setSearchParams(prev => { const p = new URLSearchParams(prev); if (val) p.set('search', val); else p.delete('search'); return p; });
-                }}
-                style={{ padding: '7px 12px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', width: '190px', flexShrink: 0, outline: 'none', color: 'var(--text)', background: 'white' }}
-              />
-
-              {/* Title */}
-              <div style={{ display: "flex", alignItems: "baseline", gap: "10px", flex: 1, minWidth: 0 }}>
-                <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "20px", fontWeight: 600, color: "var(--navy)", whiteSpace: "nowrap", margin: 0 }}>{tab === "live" ? "All Auctions" : "Best Lots"}</h1>
-                <span style={{ fontSize: "12px", color: "var(--text-3)" }}>{loading ? "…" : `${total.toLocaleString()} lots`}</span>
-              </div>
-
-              {/* Date chips */}
-              <div style={{ display: "flex", gap: "5px", flexShrink: 0 }}>
-                {DATE_CHIPS.map(({ v, l }) => (
-                  <button key={v} onClick={() => setDateFilter(v)} style={{ padding: "5px 11px", background: dateFilter === v ? "var(--navy)" : "white", color: dateFilter === v ? "white" : "var(--text-2)", border: `1px solid ${dateFilter === v ? "var(--navy)" : "var(--border)"}`, borderRadius: "20px", fontSize: "11px", fontWeight: dateFilter === v ? 600 : 400, cursor: "pointer", transition: "all 0.15s var(--ease)", whiteSpace: "nowrap" }}>{l}</button>
-                ))}
-              </div>
-
-              {/* View mode */}
-              <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: "6px", overflow: "hidden", flexShrink: 0 }}>
-                {VIEW_MODES.map(({ mode, icon, title }, idx) => (
-                  <button key={mode} onClick={() => setViewMode(mode)} title={title} style={{ padding: "7px 11px", border: "none", borderRight: idx < 2 ? "1px solid var(--border)" : "none", cursor: "pointer", background: viewMode === mode ? "var(--navy)" : "white", color: viewMode === mode ? "white" : "var(--text-3)", transition: "all 0.1s", display: "flex", alignItems: "center" }}>{icon}</button>
-                ))}
-              </div>
-            </div>
-
             {/* Scrollable content */}
             <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "0 24px 60px" }}>
+              {/* Count line */}
+              {total > 0 && !loading && (
+                <div style={{ padding: '8px 0 0', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                  {total.toLocaleString()} lots
+                </div>
+              )}
+
               {/* Alpha stats */}
               {tab === "alpha" && !loading && alphaLots.length > 0 && (
                 <div style={{ display: "flex", gap: "24px", padding: "12px 0 16px", marginBottom: "8px", borderBottom: "1px solid var(--border-light)", flexWrap: "wrap", alignItems: "center" }}>
                   {[{ label: "Exceptional", value: EXCEPTIONAL.length, color: "#C0392B" }, { label: "Strong", value: STRONG.length, color: "var(--navy)" }, { label: "Interesting", value: INTERESTING.length, color: "var(--gold-dim)" }, { label: "Avg score", value: `${avgScore.toFixed(0)}/100`, color: "var(--text-2)" }].map(({ label, value, color }) => (
                     <div key={label}><div style={{ fontFamily: "var(--font-mono)", fontSize: "20px", fontWeight: 700, color }}>{value}</div><div className="label-caps" style={{ marginTop: "2px" }}>{label}</div></div>
                   ))}
-                  <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "6px" }}><div className="pulse-dot" /><span style={{ fontSize: "11px", color: "var(--text-3)" }}>LIVE · 15min</span></div>
-                </div>
-              )}
-
-              {/* Live stats bar */}
-              {tab === "live" && !loading && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-3)' }}>
-                      <span style={{ fontWeight: 700, color: 'var(--text-2)' }}>{total?.toLocaleString()}</span> opportunities
-                    </span>
-                    <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>·</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>
-                      Updated regularly
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--electric)', animation: 'pulse 2s infinite' }} />
-                    <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>LIVE</span>
-                  </div>
                 </div>
               )}
 
