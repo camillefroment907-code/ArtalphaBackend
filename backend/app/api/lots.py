@@ -8,6 +8,33 @@ from datetime import datetime, timedelta
 import math
 import asyncio
 import json
+import re
+
+
+def parse_dimensions(dimensions_str: str) -> dict:
+    """
+    Parse dimensions from strings like:
+    - "81.3 × 116.8 cm"
+    - "32 x 46 in."
+    - "H: 120 cm, W: 80 cm"
+    Returns: { width_cm: float | None, height_cm: float | None }
+    """
+    if not dimensions_str:
+        return {"width_cm": None, "height_cm": None}
+
+    # Try "W × H cm/in" or "W x H cm/in"
+    match = re.search(
+        r'(\d+\.?\d*)\s*[×x]\s*(\d+\.?\d*)\s*(cm|in)',
+        dimensions_str,
+        re.IGNORECASE,
+    )
+    if match:
+        w, h, unit = float(match.group(1)), float(match.group(2)), match.group(3).lower()
+        if unit == 'in':
+            w, h = w * 2.54, h * 2.54
+        return {"width_cm": round(w, 1), "height_cm": round(h, 1)}
+
+    return {"width_cm": None, "height_cm": None}
 
 from app.database import get_db, AsyncSessionLocal
 from app.models.db_models import Lot, Artist, LotStatus, AuctionHouse, MarketType
@@ -959,7 +986,7 @@ async def trigger_weekly_report(
         raise HTTPException(500, str(e))
 
 
-@router.get("/{lot_id}", response_model=LotOut)
+@router.get("/{lot_id}")
 async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Lot)
@@ -969,7 +996,14 @@ async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
     lot = result.scalar_one_or_none()
     if not lot:
         raise HTTPException(status_code=404, detail="Lot not found")
-    return lot
+
+    # Serialize via schema then inject parsed dimension fields
+    lot_dict = LotOut.model_validate(lot).model_dump(mode="json")
+    dims = parse_dimensions(lot.dimensions or "")
+    lot_dict["width_cm"] = dims["width_cm"]
+    lot_dict["height_cm"] = dims["height_cm"]
+    lot_dict["dimensions_parsed"] = dims
+    return lot_dict
 
 
 @router.get("/{lot_id}/comparables", response_model=List[LotOut])
