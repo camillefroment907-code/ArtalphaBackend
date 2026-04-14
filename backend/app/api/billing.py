@@ -737,11 +737,10 @@ async def create_portal_session(
 
 
 @router.post("/portal")
-async def billing_portal(
+async def create_portal_session(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create Stripe customer portal session. Falls back to pricing if no subscription."""
     try:
         import stripe as stripe_lib
         stripe_lib.api_key = settings.stripe_secret_key
@@ -751,17 +750,21 @@ async def billing_portal(
         )
         sub = result.scalar_one_or_none()
 
+        # No subscription or no stripe customer — redirect to pricing
         if not sub or not sub.stripe_customer_id:
             return {"url": f"{settings.frontend_url}/app/pricing"}
 
-        session = stripe_lib.billing_portal.Session.create(
-            customer=sub.stripe_customer_id,
-            return_url=f"{settings.frontend_url}/app/portfolio",
-        )
-        return {"url": session.url}
+        try:
+            session = stripe_lib.billing_portal.Session.create(
+                customer=sub.stripe_customer_id,
+                return_url=f"{settings.frontend_url}/app/portfolio?tab=subscription",
+            )
+            return {"url": session.url}
+        except stripe_lib.error.InvalidRequestError:
+            return {"url": f"{settings.frontend_url}/app/pricing"}
 
     except Exception as e:
-        logger.warning("portal_session_failed", error=str(e))
+        logger.warning("portal_failed", error=str(e))
         return {"url": f"{settings.frontend_url}/app/pricing"}
 
 
