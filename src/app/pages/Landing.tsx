@@ -5,6 +5,157 @@ import { mockArtworks } from '../data/mockData';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
+const MOCK_LOTS = [
+  { artist: 'MARC CHAGALL', title: 'Moses and the Burning Bush', price: '€750', score: 86, upside: '+62%' },
+  { artist: 'JOAN MIRÓ', title: 'Personnage I Estels V', price: '€1,500', score: 82, upside: '+44%' },
+  { artist: 'DAVID DRISKELL', title: 'Echoes', price: '€500', score: 79, upside: '+50%' },
+];
+
+function NautilusMockup() {
+  const [activeCard, setActiveCard] = useState(0);
+  const [showScore, setShowScore] = useState(false);
+  const [showBrief, setShowBrief] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const timers = [
+      setTimeout(() => setShowScore(true), 600),
+      setTimeout(() => setShowBrief(true), 1200),
+      setTimeout(() => setActiveCard(1), 2200),
+      setTimeout(() => setActiveCard(2), 3800),
+      setTimeout(() => {
+        setActiveCard(0);
+        setShowScore(false);
+        setShowBrief(false);
+        setTick(t => t + 1);
+      }, 5400),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, [tick]);
+
+  const lot = MOCK_LOTS[activeCard];
+  const gradients = [
+    'linear-gradient(135deg, #E8E4DC 0%, #D4C9B5 100%)',
+    'linear-gradient(135deg, #E8D8DC 0%, #C9B5BC 100%)',
+    'linear-gradient(135deg, #D8E8DC 0%, #B5C9BC 100%)',
+  ];
+
+  return (
+    <div style={{ background: 'white', borderRadius: '16px', boxShadow: '0 24px 80px rgba(10,22,40,0.15)', border: '1px solid var(--border)', overflow: 'hidden', width: '100%', maxWidth: '480px', margin: '0 auto', userSelect: 'none' }}>
+
+      {/* Browser chrome */}
+      <div style={{ background: '#F1F0ED', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', gap: '5px' }}>
+          {['#FF5F57', '#FFBD2E', '#28C840'].map(c => (
+            <div key={c} style={{ width: '10px', height: '10px', borderRadius: '50%', background: c }} />
+          ))}
+        </div>
+        <div style={{ flex: 1, background: 'white', borderRadius: '4px', padding: '4px 12px', fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>
+          app.nautilus.so/explore
+        </div>
+      </div>
+
+      {/* App header */}
+      <div style={{ background: 'white', borderBottom: '1px solid var(--border)', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <svg width="16" height="16" viewBox="0 0 40 40" fill="none">
+            <path d="M 20 4 A 16 16 0 0 1 36 20" stroke="#0A1628" strokeWidth="2.5" strokeLinecap="round"/>
+            <path d="M 36 20 A 16 16 0 0 1 20 36" stroke="#0A1628" strokeWidth="2.5" strokeLinecap="round" opacity="0.5"/>
+            <path d="M 20 36 A 8 8 0 0 1 12 28" stroke="#C6A85A" strokeWidth="2.5" strokeLinecap="round"/>
+            <circle cx="20" cy="20" r="2" fill="#C6A85A"/>
+          </svg>
+          <span style={{ fontFamily: 'Georgia, serif', fontSize: '12px', fontWeight: 600, color: 'var(--navy)', letterSpacing: '0.06em' }}>Nautilus</span>
+        </div>
+        {['Dashboard', 'Explorer', 'Portfolio'].map((item, i) => (
+          <span key={item} style={{ fontSize: '11px', color: i === 1 ? 'var(--navy)' : 'var(--text-3)', fontWeight: i === 1 ? 700 : 400, borderBottom: i === 1 ? '2px solid var(--navy)' : 'none', paddingBottom: '2px' }}>
+            {item}
+          </span>
+        ))}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#34D399', animation: 'pulseDot 2s infinite' }} />
+          <span style={{ fontSize: '9px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>LIVE</span>
+        </div>
+      </div>
+
+      {/* Tab bar */}
+      <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '4px' }}>
+        {['Best Lots', 'All Auctions', 'Primary', 'Convictions'].map((tab, i) => (
+          <div key={tab} style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '10px', fontWeight: i === 0 ? 700 : 400, background: i === 0 ? 'var(--navy)' : 'transparent', color: i === 0 ? 'white' : 'var(--text-3)' }}>
+            {tab}
+          </div>
+        ))}
+      </div>
+
+      {/* Main content */}
+      <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: '1fr 140px', gap: '12px' }}>
+
+        {/* Active lot card */}
+        <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', transition: 'all 0.4s ease', boxShadow: '0 4px 16px rgba(10,22,40,0.08)' }}>
+          <div style={{ height: '120px', background: gradients[activeCard], position: 'relative', transition: 'background 0.4s ease', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: '32px', opacity: 0.3 }}>◎</span>
+            <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(10,22,40,0.85)', padding: '3px 7px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: 'white', opacity: showScore ? 1 : 0, transition: 'opacity 0.3s ease' }}>
+              {lot.score}/100
+            </div>
+            <div style={{ position: 'absolute', top: '8px', left: '8px', background: '#C6A85A', padding: '2px 6px', borderRadius: '3px', fontSize: '8px', fontWeight: 700, color: 'white', fontFamily: 'var(--font-mono)', opacity: showScore ? 1 : 0, transition: 'opacity 0.3s ease 0.1s' }}>
+              EXCEPTIONAL
+            </div>
+          </div>
+          <div style={{ padding: '10px 12px' }}>
+            <div style={{ fontSize: '8px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>{lot.artist}</div>
+            <div style={{ fontFamily: 'Georgia, serif', fontSize: '12px', color: 'var(--text)', marginBottom: '8px' }}>{lot.title}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{lot.price}</span>
+              <span style={{ fontSize: '9px', fontWeight: 700, color: '#2563EB', background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', padding: '2px 6px', borderRadius: '3px', fontFamily: 'var(--font-mono)', opacity: showScore ? 1 : 0, transition: 'opacity 0.3s ease 0.2s' }}>
+                {lot.upside}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right mini panel */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ background: 'var(--navy)', borderRadius: '8px', padding: '10px', opacity: showScore ? 1 : 0, transition: 'opacity 0.4s ease' }}>
+            <div style={{ fontSize: '8px', fontWeight: 700, color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '6px' }}>CONVICTION</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: 'white', lineHeight: 1 }}>{lot.score}</div>
+            <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>/100</div>
+            <div style={{ height: '3px', background: 'rgba(255,255,255,0.15)', borderRadius: '2px' }}>
+              <div style={{ height: '100%', borderRadius: '2px', background: '#C6A85A', width: `${lot.score}%`, transition: 'width 0.6s ease' }} />
+            </div>
+          </div>
+          {MOCK_LOTS.map((l, i) => (
+            <div key={i} style={{ background: i === activeCard ? 'var(--bg-subtle)' : 'white', border: `1px solid ${i === activeCard ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', padding: '6px 8px', transition: 'all 0.3s ease' }}>
+              <div style={{ fontSize: '8px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginBottom: '2px' }}>{l.artist.split(' ').slice(-1)[0]}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: 'var(--text)' }}>{l.score}/100</span>
+                <span style={{ fontSize: '8px', color: '#2563EB', fontWeight: 700 }}>{l.upside}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* AI Brief */}
+      <div style={{ margin: '0 16px 16px', background: 'var(--navy)', borderRadius: '8px', padding: '12px 14px', opacity: showBrief ? 1 : 0, transform: showBrief ? 'translateY(0)' : 'translateY(8px)', transition: 'all 0.4s ease' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+          <span style={{ fontSize: '10px', fontWeight: 700, color: 'white' }}>◆ AI Analysis</span>
+          <span style={{ fontSize: '8px', color: '#34D399', fontFamily: 'var(--font-mono)', background: 'rgba(52,211,153,0.15)', padding: '1px 5px', borderRadius: '2px' }}>LIVE</span>
+        </div>
+        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.65)', lineHeight: 1.6 }}>
+          {activeCard === 0 && 'Chagall lithograph priced 62% below estimate. High liquidity artist with strong secondary market momentum.'}
+          {activeCard === 1 && 'Miró with exceptional institutional demand. Price 44% below comparable sales. Strong conviction signal.'}
+          {activeCard === 2 && 'Driskell gaining institutional recognition. Priced 50% below recent auction results. Buy window open.'}
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ height: '2px', background: 'var(--bg-subtle)' }}>
+        <div style={{ height: '100%', background: '#C6A85A', animation: 'mockupProgress 5.4s linear infinite', transformOrigin: 'left' }} />
+      </div>
+      <style>{`@keyframes mockupProgress { from { width: 0% } to { width: 100% } }`}</style>
+    </div>
+  );
+}
+
 export default function Landing() {
   const navigate = useNavigate();
   const [topLots, setTopLots]         = useState<any[]>([]);
@@ -83,57 +234,22 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* Right — dark terminal */}
-        <div style={{ background: '#0A1628', borderRadius: '12px', padding: '28px', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', inset: 0, opacity: 0.04, borderRadius: '12px', backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
-          <div style={{ position: 'relative' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.16em', color: '#C6A85A', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>
-                Nautilus Terminal
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#C6A85A', animation: 'pulseDot 2s infinite' }} />
-                <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)' }}>LIVE</span>
-              </div>
-            </div>
+        {/* Right — animated product mockup */}
+        <div style={{ position: 'relative', animation: 'fadeIn 0.6s ease 0.3s both' }}>
+          <NautilusMockup />
 
-            {topLots.slice(0, 3).map((lot: any, i: number) => {
-              const price = lot.current_price || lot.estimate_low || 0;
-              const upside = lot.pct_below_low_estimate || 0;
-              const score = lot.deal_score || 0;
-              return (
-                <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '10px 0', borderBottom: i < 2 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                  {lot.image_url ? (
-                    <img src={lot.image_url} alt="" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
-                  ) : (
-                    <div style={{ width: '36px', height: '36px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', flexShrink: 0 }} />
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {lot.artist_name_raw || 'Unknown Artist'}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {lot.title || 'Untitled'}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'white', fontFamily: 'var(--font-mono)' }}>
-                      {price >= 1000 ? `€${(price / 1000).toFixed(0)}K` : `€${price}`}
-                    </div>
-                    {upside > 0 && (
-                      <div style={{ fontSize: '10px', color: '#2563EB', fontFamily: 'var(--font-mono)' }}>+{upside.toFixed(0)}%</div>
-                    )}
-                  </div>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '4px', background: score >= 80 ? '#C6A85A' : 'rgba(37,99,235,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: '10px', fontWeight: 700, color: 'white', fontFamily: 'var(--font-mono)' }}>{Math.round(score)}</span>
-                  </div>
-                </div>
-              );
-            })}
+          {/* Floating badge — top right */}
+          <div style={{ position: 'absolute', top: '-16px', right: '-20px', background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 14px', boxShadow: '0 8px 32px rgba(10,22,40,0.12)', textAlign: 'center', minWidth: '110px' }}>
+            <div style={{ fontSize: '8px', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '4px' }}>THIS WEEK</div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700, color: 'var(--navy)', lineHeight: 1 }}>1,574</div>
+            <div style={{ fontSize: '9px', color: 'var(--text-3)', marginTop: '2px' }}>lots analyzed</div>
+          </div>
 
-            {topLots.length === 0 && [0, 1, 2].map(i => (
-              <div key={i} className="skeleton" style={{ height: '56px', borderRadius: '6px', marginBottom: '8px', background: 'rgba(255,255,255,0.06)' }} />
-            ))}
+          {/* Floating badge — bottom left */}
+          <div style={{ position: 'absolute', bottom: '40px', left: '-24px', background: 'var(--navy)', borderRadius: '10px', padding: '10px 14px', boxShadow: '0 8px 32px rgba(10,22,40,0.25)', minWidth: '110px' }}>
+            <div style={{ fontSize: '8px', fontWeight: 700, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '4px' }}>AVG UPSIDE</div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>+34%</div>
+            <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.45)', marginTop: '2px' }}>score 75+ lots</div>
           </div>
         </div>
       </section>
