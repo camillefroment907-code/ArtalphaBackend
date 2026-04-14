@@ -255,7 +255,7 @@ PLAN_LIMITS = {
 
 ADMIN_EMAILS = frozenset({
     "camillefroment907@gmail.com",
-    "demo@artalpha.art",
+    "demo@get-nautilus.com",
     "demo@hono.art",
     "demo@balthus.art",
 })
