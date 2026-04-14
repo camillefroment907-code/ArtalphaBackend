@@ -293,6 +293,7 @@ export default function Portfolio() {
     annualBudget: '', expectedReturn: '',
     preferredStyles: '', preferredRegions: '',
     goals: '', currency: 'EUR',
+    language: localStorage.getItem('i18nextLng') || 'en',
   });
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
@@ -347,8 +348,8 @@ export default function Portfolio() {
     { key: 'watchlist', label: watchlist.length > 0 ? `Watchlist (${watchlist.length})` : 'Watchlist' },
     { key: 'artists', label: favoriteArtists.length > 0 ? `Artists (${favoriteArtists.length})` : 'Artists' },
     { key: 'alerts', label: 'Alerts' },
-    { key: 'subscription', label: 'Subscription' },
     { key: 'settings', label: 'Settings' },
+    { key: 'subscription', label: 'Subscription' },
   ];
 
   // ── Auth helper ────────────────────────────────────────────
@@ -423,6 +424,23 @@ export default function Portfolio() {
     loadWatchlist();
     loadFavoriteArtists();
     loadInvoices();
+
+    // Prefill settings form from /auth/me
+    if (token) {
+      fetch(`${BACKEND}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (!data) return;
+          setSettingsForm(f => ({
+            ...f,
+            fullName: data.full_name || f.fullName,
+            phone: data.phone || f.phone,
+            country: data.country || f.country,
+            address: data.address || f.address,
+          }));
+        })
+        .catch(() => {});
+    }
   }, []);
 
   // ── Tab switch effects ─────────────────────────────────────
@@ -608,8 +626,12 @@ export default function Portfolio() {
     try {
       const resp = await fetch(`${BACKEND}/api/billing/portal`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${getToken()}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getToken()}`,
+        },
       });
+      if (!resp.ok) { navigate('/app/pricing'); return; }
       const data = await resp.json();
       if (data.url) window.open(data.url, '_blank');
       else navigate('/app/pricing');
@@ -642,10 +664,13 @@ export default function Portfolio() {
   // ── Settings ───────────────────────────────────────────────
 
   const saveSettings = async () => {
+    const token = getToken();
+    if (!token) return;
+    setSettingsSaving(true);
     try {
-      await fetch(`${BACKEND}/api/auth/profile`, {
+      const resp = await fetch(`${BACKEND}/api/auth/profile`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           full_name: settingsForm.fullName,
           phone: settingsForm.phone,
@@ -659,9 +684,12 @@ export default function Portfolio() {
           preferred_regions: settingsForm.preferredRegions,
         }),
       });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      localStorage.setItem('i18nextLng', settingsForm.language);
       setSettingsSaved(true);
       setTimeout(() => setSettingsSaved(false), 3000);
     } catch { /* silent */ }
+    finally { setSettingsSaving(false); }
   };
 
   function handleSignOut() {
@@ -1479,8 +1507,9 @@ export default function Portfolio() {
             SUBSCRIPTION TAB
         ══════════════════════════════════════════════════════ */}
         {activeTab === 'subscription' && (
-          <div style={{ maxWidth: '640px' }}>
+          <div>
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 24px' }}>Subscription</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}><div>
 
             {/* Current plan hero card */}
             <div style={{
@@ -1587,6 +1616,7 @@ export default function Portfolio() {
                 </div>
               )}
             </div>
+            </div><div>
 
             {/* Stripe billing portal */}
             <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px 24px', marginBottom: '16px' }}>
@@ -1672,13 +1702,13 @@ export default function Portfolio() {
             </div>
 
             {/* Danger zone */}
-            <div style={{ background: 'white', border: '1px solid #FCA5A5', borderRadius: '8px', padding: '20px 24px' }}>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--red)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '16px' }}>
+            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px 24px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '16px' }}>
                 Danger Zone
               </div>
 
               {subscription?.status === 'active' && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', marginBottom: '16px', borderBottom: '1px solid #FEE2E2' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', marginBottom: '16px', borderBottom: '1px solid var(--border-light)' }}>
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>Cancel subscription</div>
                     <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Your access continues until the end of the billing period.</div>
@@ -1694,7 +1724,7 @@ export default function Portfolio() {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--red)', marginBottom: '3px' }}>Delete my account</div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>Delete my account</div>
                   <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Permanently delete all your data. This cannot be undone.</div>
                 </div>
                 <button
@@ -1705,6 +1735,7 @@ export default function Portfolio() {
                 </button>
               </div>
             </div>
+            </div></div>
 
             {/* Cancel modal */}
             {showCancelModal && (
@@ -1762,8 +1793,9 @@ export default function Portfolio() {
             SETTINGS TAB
         ══════════════════════════════════════════════════════ */}
         {activeTab === 'settings' && (
-          <div style={{ maxWidth: '640px' }}>
+          <div>
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 24px' }}>Account Settings</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}><div>
 
             {/* Profile */}
             <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '24px', marginBottom: '16px' }}>
@@ -1806,6 +1838,7 @@ export default function Portfolio() {
                 </div>
               </div>
             </div>
+            </div><div>
 
             {/* Investment profile */}
             <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '24px', marginBottom: '16px' }}>
@@ -1863,8 +1896,8 @@ export default function Portfolio() {
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Language</label>
                   <select style={inputStyle}
-                    value={localStorage.getItem('i18nextLng') || 'en'}
-                    onChange={e => { localStorage.setItem('i18nextLng', e.target.value); window.location.reload(); }}>
+                    value={settingsForm.language}
+                    onChange={e => { localStorage.setItem('i18nextLng', e.target.value); setSettingsForm(f => ({ ...f, language: e.target.value })); }}>
                     <option value="en">English</option>
                     <option value="fr">Français</option>
                   </select>
@@ -1880,6 +1913,7 @@ export default function Portfolio() {
                 </div>
               </div>
             </div>
+            </div></div>
 
             {/* Save */}
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
