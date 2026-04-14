@@ -72,7 +72,7 @@ async function cachedFetch(url: string, options?: RequestInit): Promise<any> {
   return data;
 }
 
-async function loadLots(params: Record<string, any>) {
+async function fetchLotsFromAPI(params: Record<string, any>) {
   const qs = new URLSearchParams();
   qs.set("page", String(params.page || 1));
   qs.set("page_size", String(params.page_size || 24));
@@ -290,7 +290,6 @@ export default function Explore() {
   const [primaryStats, setPrimaryStats] = useState<{ total?: number; avg_score?: number; avg_price?: number; new_this_week?: number } | null>(null);
   const [viewMode, setViewMode]     = useState<ViewMode>("grid4");
   const [dateFilter, setDateFilter] = useState("all");
-  const [innerTab, setInnerTab]     = useState<"alpha" | "live">("alpha");
   const [sourceStats, setSourceStats] = useState<SourceStat[]>([]);
 
   // ── Filter state ─────────────────────────────────────────────
@@ -354,17 +353,8 @@ export default function Explore() {
   const visibleLimit = isAdmin ? 99999 : (PLAN_LIMITS[userPlan] ?? 3);
   const maxVisible = visibleLimit;
 
-  const fetchIdRef    = useRef(0);
-  const debounceRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const prevSearchRef = useRef({ q: "", artist: "", house: "" });
-
-  // Sync exploreTab → innerTab
-  useEffect(() => {
-    if (exploreTab === "best")    setInnerTab("alpha");
-    if (exploreTab === "auctions") setInnerTab("live");
-  }, [exploreTab]);
-
-  const tab = innerTab; // alias for legacy code
+  // tab alias used throughout JSX: "alpha" = best lots, "live" = all auctions
+  const tab = exploreTab === "auctions" ? "live" : "alpha";
 
   const alphaLots   = tab === "alpha" ? lots.filter(l => l.dealScore >= 45) : lots;
   const EXCEPTIONAL = alphaLots.filter(l => l.dealScore >= 80);
@@ -378,97 +368,111 @@ export default function Explore() {
     tab === "alpha" ? alphaLots.length > maxVisible : lots.length > maxVisible
   );
 
-  const buildFetchParams = useCallback((page = 1): Record<string, any> => {
-    const dateDates = getDateParams(dateFilter);
-    if (tab === "live") {
-      return {
-        page, page_size: 60, sort_by: "auction_date", sort_dir: "asc",
-        search: search || undefined,
-        auction_date_from: dateDates.auction_date_from || undefined,
-        auction_date_to:   dateDates.auction_date_to   || undefined,
-        min_price:    minPrice > 0 ? minPrice : undefined,
-        max_price:    maxPrice > 0 ? maxPrice : undefined,
-        category:     category || undefined,
-        auction_house: auctionHouse || undefined,
-      };
-    } else {
-      return {
-        page, page_size: 48, sort_by: "deal_score", sort_dir: "desc",
-        search:       search || undefined,
-        min_score:    minScore > 0 ? minScore : undefined,
-        min_upside:   minUpside || undefined,
-        min_price:    minPrice > 0 ? minPrice : undefined,
-        max_price:    maxPrice > 0 ? maxPrice : undefined,
-        category:     category || undefined,
-        artist_tier:  artistTier || undefined,
-        size_category: sizeFilter || undefined,
-        auction_house: auctionHouse || undefined,
-        ...dateDates,
-      };
-    }
-  }, [tab, dateFilter, search, minScore, minUpside, minPrice, maxPrice, category, artistTier, auctionHouse, sizeFilter]);
+  // ── New loadLots — closes over all filter state ─────────────
+  const loadLots = useCallback(async () => {
+    if (exploreTab !== 'best' && exploreTab !== 'auctions') return;
+    setLoading(true);
+    setHasError(false);
+    try {
+      const params = new URLSearchParams();
+      params.set('page_size', '24');
+      params.set('page', String(currentPage));
 
-  const buildFetchParamsRef = useRef(buildFetchParams);
-  buildFetchParamsRef.current = buildFetchParams;
-
-  useEffect(() => {
-    if (exploreTab !== "best" && exploreTab !== "auctions") return;
-    const id = ++fetchIdRef.current;
-    const run = () => {
-      setLoading(true); setHasError(false); setCurrentPage(1);
-      let fp: Promise<{ items: any[], total: number, pages: number }>;
-      if (tab === "alpha") {
-        const sb = localStorage.getItem("artalpha-budget");
-        const sh = localStorage.getItem("artalpha-horizon");
-        if (sb && sh) {
-          try { const b = JSON.parse(sb); fp = fetchInvestorLots(b.min, b.max, sh); }
-          catch { fp = loadLots(buildFetchParamsRef.current(1)); }
-        } else {
-          fp = loadLots(buildFetchParamsRef.current(1));
-        }
-      } else {
-        fp = loadLots(buildFetchParamsRef.current(1));
+      if (exploreTab === 'best') {
+        params.set('sort_by', 'deal_score');
+        params.set('sort_dir', 'desc');
+        params.set('min_score', String(Math.max(minScore, 60)));
+      } else if (exploreTab === 'auctions') {
+        params.set('sort_by', 'created_at');
+        params.set('sort_dir', 'desc');
+      } else if (exploreTab === 'convictions') {
+        params.set('min_score', '75');
+        params.set('sort_by', 'deal_score');
+        params.set('sort_dir', 'desc');
       }
-      fp.then(data => {
-        if (id !== fetchIdRef.current) return;
-        setLots(data.items.map(mapLot)); setTotal(data.total); setTotalPages(data.pages);
-      }).catch(() => { if (id === fetchIdRef.current) setHasError(true); })
-        .finally(() => { if (id === fetchIdRef.current) setLoading(false); });
-    };
-    const isTextChange = search !== prevSearchRef.current.q;
-    prevSearchRef.current = { q: search, artist: '', house: '' };
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(run, isTextChange ? 300 : 0);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [
-    exploreTab, tab, dateFilter,
-    search, minScore, minUpside, minPrice, maxPrice,
-    category, artistTier, auctionHouse, sizeFilter,
-  ]);
 
-  const doFetch = useCallback(() => {
-    const id = ++fetchIdRef.current;
-    setLoading(true); setHasError(false); setCurrentPage(1);
-    loadLots(buildFetchParamsRef.current(1))
-      .then(data => { if (id !== fetchIdRef.current) return; setLots(data.items.map(mapLot)); setTotal(data.total); setTotalPages(data.pages); })
-      .catch(() => { if (id === fetchIdRef.current) setHasError(true); })
-      .finally(() => { if (id === fetchIdRef.current) setLoading(false); });
-  }, []);
+      if (minScore > 0 && exploreTab !== 'best') params.set('min_score', String(minScore));
+      if (minPrice > 0)  params.set('min_price', String(minPrice));
+      if (maxPrice > 0)  params.set('max_price', String(maxPrice));
+      if (category)      params.set('category', category);
+      if (auctionHouse)  params.set('auction_house', auctionHouse);
+      if (sizeFilter)    params.set('size_category', sizeFilter);
+      if (search)        params.set('search', search);
+      if (minUpside)     params.set('min_upside', minUpside);
+      if (artistTier)    params.set('artist_tier', artistTier);
+
+      const today = new Date().toISOString().split('T')[0];
+      if (dateFilter === 'today') {
+        params.set('auction_date_from', today);
+        params.set('auction_date_to', today);
+      } else if (dateFilter === '3days') {
+        const d = new Date(); d.setDate(d.getDate() + 3);
+        params.set('auction_date_from', today);
+        params.set('auction_date_to', d.toISOString().split('T')[0]);
+      } else if (dateFilter === 'week') {
+        const d = new Date(); d.setDate(d.getDate() + 7);
+        params.set('auction_date_from', today);
+        params.set('auction_date_to', d.toISOString().split('T')[0]);
+      } else if (dateFilter === 'month') {
+        const d = new Date(); d.setMonth(d.getMonth() + 1);
+        params.set('auction_date_from', today);
+        params.set('auction_date_to', d.toISOString().split('T')[0]);
+      }
+
+      const token = getToken();
+      const resp = await fetch(`${BACKEND}/api/lots?${params.toString()}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const data = await resp.json();
+      const items = Array.isArray(data) ? data : (data.items || data.lots || []);
+      setLots(items.map(mapLot));
+      setTotal(data.total || items.length);
+      setTotalPages(data.pages || 1);
+    } catch (e) {
+      console.error('loadLots error', e);
+      setHasError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [exploreTab, dateFilter, search, minScore, minUpside, minPrice, maxPrice, category, artistTier, auctionHouse, sizeFilter, currentPage]);
+
+  // Reset page to 1 on any filter/tab change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [exploreTab, dateFilter, search, minScore, minUpside, minPrice, maxPrice, category, artistTier, auctionHouse, sizeFilter]);
+
+  // Fetch whenever loadLots reference changes (i.e. any dep changes)
+  useEffect(() => {
+    loadLots();
+  }, [loadLots]);
+
+  const doFetch = useCallback(() => { loadLots(); }, [loadLots]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || currentPage >= totalPages) return;
     const nextPage = currentPage + 1;
     setLoadingMore(true);
     try {
-      const data = await loadLots(buildFetchParamsRef.current(nextPage));
-      setLots(prev => [...prev, ...data.items.map(mapLot)]); setCurrentPage(nextPage);
+      const p: Record<string, any> = {
+        page: nextPage, page_size: 24,
+        sort_by: exploreTab === 'best' ? 'deal_score' : 'created_at',
+        sort_dir: 'desc',
+        search: search || undefined,
+        min_price: minPrice > 0 ? minPrice : undefined,
+        max_price: maxPrice > 0 ? maxPrice : undefined,
+        category: category || undefined,
+        auction_house: auctionHouse || undefined,
+        artist_tier: artistTier || undefined,
+        size_category: sizeFilter || undefined,
+        min_upside: minUpside || undefined,
+      };
+      if (exploreTab === 'best') p.min_score = Math.max(minScore, 60);
+      else if (minScore > 0) p.min_score = minScore;
+      const data = await fetchLotsFromAPI(p);
+      setLots(prev => [...prev, ...data.items.map(mapLot)]);
+      setCurrentPage(nextPage);
     } catch { /* silent */ } finally { setLoadingMore(false); }
-  }, [loadingMore, currentPage, totalPages]);
-
-  useEffect(() => {
-    if (tab !== "live") return;
-    loadSourceStats().then(setSourceStats);
-  }, [tab]);
+  }, [loadingMore, currentPage, totalPages, exploreTab, minScore, minUpside, minPrice, maxPrice, category, artistTier, auctionHouse, sizeFilter, search]);
 
   const cols = viewMode === "list" ? 1 : viewMode === "grid6" ? 6 : tab === "live" ? 5 : 4;
   const gap  = cols >= 5 ? "12px" : "16px";
