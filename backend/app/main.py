@@ -36,6 +36,7 @@ from app.api.memo import router as memo_router
 from app.api.larry_proactive import router as larry_proactive_router
 from app.api.portfolio_ai import router as portfolio_ai_router
 from app.api.market_sentiment import router as market_sentiment_router
+from app.api.contact import router as contact_router
 
 settings = get_settings()
 
@@ -158,6 +159,7 @@ app.include_router(memo_router,            prefix="/api")
 app.include_router(larry_proactive_router, prefix="/api")
 app.include_router(portfolio_ai_router,    prefix="/api")
 app.include_router(market_sentiment_router, prefix="/api")
+app.include_router(contact_router,          prefix="/api")
 
 
 @app.get("/")
