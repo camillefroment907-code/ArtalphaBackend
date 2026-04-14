@@ -1,23 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { getToken, getUser, getPlanLimits } from '../../lib/auth';
-import { Logo } from '../components/Logo';
+import { getToken } from '../../lib/auth';
 
-const API = import.meta.env.VITE_API_URL ?? '';
-
-const SOURCE_FLAG: Record<string, string> = {
-  drouot: '🇫🇷', interencheres: '🇫🇷', artcurial: '🇫🇷', artsper: '🇫🇷', singulart: '🇫🇷',
-  invaluable: '🇺🇸', liveauctioneers: '🇺🇸', phillips: '🇺🇸',
-  sothebys: '🇬🇧', christies: '🇬🇧', bonhams: '🇬🇧', saatchi_art: '🇬🇧',
-  artsy: '🌐', catawiki: '🇳🇱', other: '🌐',
-};
-const SOURCE_LABEL: Record<string, string> = {
-  drouot: 'Drouot', interencheres: 'Interenchères', artcurial: 'Artcurial',
-  artsper: 'Artsper', singulart: 'Singulart', invaluable: 'Invaluable',
-  liveauctioneers: 'LiveAuctioneers', phillips: 'Phillips',
-  sothebys: "Sotheby's", christies: "Christie's", bonhams: 'Bonhams',
-  saatchi_art: 'Saatchi Art', artsy: 'Artsy', catawiki: 'Catawiki', other: 'Other',
-};
+const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 function fmtPrice(n: number | null | undefined, currency = '€'): string {
   if (n == null) return '—';
@@ -26,120 +11,12 @@ function fmtPrice(n: number | null | undefined, currency = '€'): string {
   return `${currency}${Math.round(n)}`;
 }
 
-function dotColor(status: string): string {
-  if (status === 'fresh') return 'var(--navy)';
-  if (status === 'stale') return 'var(--gold)';
-  return 'var(--text-3)';
-}
-
-interface CoverageData {
-  coverage_pct: number;
-  fresh_sources: number;
-  total_sources: number;
-  total_lots: number;
-  avg_confidence: number | null;
-  lots_with_rationale: number;
-  status: string;
-}
-
-function generateBrief(topLots: any[], sources: any[], totalLots: number, coverage?: CoverageData | null): string[] {
-  const lines: string[] = [];
-  if (coverage) {
-    lines.push(`${coverage.fresh_sources}/${coverage.total_sources} sources live · ${coverage.coverage_pct.toFixed(0)}% market coverage · ${totalLots > 0 ? totalLots.toLocaleString('fr-FR') : '—'} lots`);
-  } else {
-    lines.push(`${sources.length || '—'} active sources · ${totalLots > 0 ? totalLots.toLocaleString('fr-FR') : '—'} lots in database`);
-  }
-  if (topLots.length > 0) {
-    const best = topLots[0];
-    lines.push(`Top signal: ${best.artist_name ?? 'Unknown'} · Score ${best.deal_score != null ? Math.round(best.deal_score) : '—'}/100`);
-  }
-  if (coverage?.lots_with_rationale) {
-    lines.push(`${coverage.lots_with_rationale} AI-analysed lots · Live market scanning active`);
-  } else {
-    lines.push('AI analysis updated < 15 min ago · Live market scanning active');
-  }
-  return lines;
-}
-
-interface PortfolioStats {
-  total_invested: number;
-  total_items: number;
-  estimated_total_value: number;
-  gain_pct: number;
-}
-
-function SkeletonLine({ width = '100%', height = '12px' }: { width?: string; height?: string }) {
-  return <div className="skeleton" style={{ width, height, borderRadius: '4px', marginBottom: '6px' }} />;
-}
-
-function cleanTitle(lot: any): string {
-  const artist = lot.artist_name_raw || lot.artist?.name;
-  const title = lot.title?.replace(/^\d+h\s*\d+m.*?-\s*/i, '').trim();
-  if (artist && artist !== '—') return `${artist} — ${title?.slice(0, 30) || 'Untitled'}`;
-  return title?.slice(0, 40) || 'Untitled';
-}
-
-function getUpside(lot: any): string | null {
-  if (lot.upside_percentage) return `+${lot.upside_percentage.toFixed(0)}%`;
-  if (lot.estimate_low && lot.current_price && lot.current_price < lot.estimate_low) {
-    return `+${((lot.estimate_low - lot.current_price) / lot.current_price * 100).toFixed(0)}%`;
-  }
-  if ((lot.pct_below_low_estimate ?? 0) > 5) {
-    return `+${Math.round(lot.pct_below_low_estimate)}%`;
-  }
-  return null;
-}
-
-function PickCard({ lot, onClick }: { lot: any; onClick: () => void }) {
-  const score = lot.deal_score ?? 0;
-  return (
-    <div
-      onClick={onClick}
-      style={{ border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', transition: 'border-color 0.15s', background: 'white' }}
-      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--electric-border)'; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'; }}
-    >
-      <div style={{ position: 'relative', paddingTop: '56%', background: 'var(--bg-subtle)', overflow: 'hidden' }}>
-        {lot.image_url
-          ? <img src={lot.image_url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
-          : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'var(--border)', fontSize: '22px' }}>◇</span></div>
-        }
-        <div style={{ position: 'absolute', top: '8px', right: '8px', padding: '3px 7px', background: 'rgba(10,22,40,0.82)', borderRadius: '4px', backdropFilter: 'blur(4px)' }}>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: 'white' }}>{Math.round(score)}</span>
-          <span style={{ fontSize: '8px', color: 'rgba(255,255,255,0.55)' }}>/100</span>
-        </div>
-      </div>
-      <div style={{ padding: '10px 12px' }}>
-        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {lot.artist_name_raw || lot.artist?.name || lot.artist_name || 'Unknown artist'}
-        </div>
-        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '13px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '6px' }}>{lot.title ?? 'Untitled'}</div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: lot.score_rationale ? '6px' : '0' }}>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{fmtPrice(lot.current_price ?? lot.estimate_low)}</span>
-          {getUpside(lot) && (
-            <div style={{ padding: '3px 8px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', borderRadius: '4px', fontSize: '10px', fontWeight: 700, color: 'var(--electric)', fontFamily: 'var(--font-mono)' }}>
-              {getUpside(lot)} upside
-            </div>
-          )}
-        </div>
-        {lot.score_rationale && (
-          <div style={{ fontSize: '10px', color: 'var(--text-3)', fontStyle: 'italic', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>
-            {lot.score_rationale}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 const _cache: Record<string, { data: any; ts: number }> = {};
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 5 * 60 * 1000;
 
 async function cachedFetch(url: string, options?: RequestInit): Promise<any> {
   const now = Date.now();
-  if (_cache[url] && now - _cache[url].ts < CACHE_TTL) {
-    return _cache[url].data;
-  }
+  if (_cache[url] && now - _cache[url].ts < CACHE_TTL) return _cache[url].data;
   const resp = await fetch(url, options);
   const data = await resp.json();
   _cache[url] = { data, ts: now };
@@ -148,90 +25,84 @@ async function cachedFetch(url: string, options?: RequestInit): Promise<any> {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const user = getUser();
-  const limits = getPlanLimits();
-  const canSeeRecs = limits.hasFullArtistProfile;
 
-  const [topLots, setTopLots]         = useState<any[]>([]);
-  const [newLots, setNewLots]         = useState<any[]>([]);
-  const [sources, setSources]         = useState<any[]>([]);
-  const [agentRecs, setAgentRecs]     = useState<any[]>([]);
-  const [totalLots, setTotalLots]     = useState(0);
-  const [portfolioStats, setPortfolioStats] = useState<PortfolioStats | null>(null);
-
-  const [coverage, setCoverage]             = useState<CoverageData | null>(null);
-
-  const [lotsLoading, setLotsLoading]       = useState(true);
-  const [sourcesLoading, setSourcesLoading] = useState(true);
-  const [recsLoading, setRecsLoading]       = useState(true);
-  const [portfolioLoading, setPortfolioLoading] = useState(true);
-  const [aiBrief, setAiBrief]               = useState<string>('');
+  const [topLots, setTopLots]               = useState<any[]>([]);
+  const [recentLots, setRecentLots]         = useState<any[]>([]);
   const [sentiment, setSentiment]           = useState<any>(null);
+  const [marketStats, setMarketStats]       = useState<{ total_lots: number; avg_score: number; exceptional: number }>({ total_lots: 0, avg_score: 0, exceptional: 0 });
+  const [portfolioValue, setPortfolioValue] = useState(0);
+  const [portfolioReturn, setPortfolioReturn] = useState(0);
+  const [portfolioItems, setPortfolioItems] = useState<any[]>([]);
+  const [agentAlerts, setAgentAlerts]       = useState<any[]>([]);
+  const [brief, setBrief]                   = useState<string>('');
 
   useEffect(() => {
     const token = getToken();
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
-    cachedFetch(`${API}/api/lots?sort_by=deal_score&sort_dir=desc&page_size=6&min_score=60`, { headers })
-      .then(data => { setTopLots(data.items ?? []); setTotalLots(data.total ?? 0); setLotsLoading(false); })
-      .catch(() => setLotsLoading(false));
-
-    cachedFetch(`${API}/api/lots?sort_by=created_at&sort_dir=desc&page_size=3`, { headers })
-      .then(data => setNewLots(data.items ?? []))
+    // Top lots
+    cachedFetch(`${BACKEND}/api/lots?sort_by=deal_score&sort_dir=desc&min_score=60&page_size=6`, { headers })
+      .then((d: any) => {
+        const items = d.items || [];
+        setTopLots(items);
+        const total = d.total || 0;
+        const avgScore = items.length > 0
+          ? Math.round(items.reduce((s: number, l: any) => s + (l.deal_score ?? 0), 0) / items.length)
+          : 0;
+        const exceptional = items.filter((l: any) => (l.deal_score ?? 0) >= 80).length;
+        setMarketStats({ total_lots: total, avg_score: avgScore, exceptional });
+      })
       .catch(() => {});
 
-    cachedFetch(`${API}/api/lots/sources`, { headers })
-      .then(data => { setSources(Array.isArray(data) ? data : []); setSourcesLoading(false); })
-      .catch(() => setSourcesLoading(false));
-
-    cachedFetch(`${API}/api/lots/coverage`, { headers })
-      .then(data => { if (data) setCoverage(data); })
+    // Market sentiment
+    cachedFetch(`${BACKEND}/api/market/sentiment`)
+      .then((d: any) => { if (d?.segments) setSentiment(d); })
       .catch(() => {});
 
-    if (canSeeRecs) {
-      cachedFetch(`${API}/api/agent/recommendations?limit=3`, { headers })
-        .then(data => { setAgentRecs(Array.isArray(data) ? data : []); setRecsLoading(false); })
-        .catch(() => setRecsLoading(false));
-    } else {
-      setRecsLoading(false);
+    // Recent lots
+    cachedFetch(`${BACKEND}/api/lots?sort_by=created_at&sort_dir=desc&page_size=5`, { headers })
+      .then((d: any) => setRecentLots(d.items || []))
+      .catch(() => {});
+
+    // Portfolio
+    if (token) {
+      cachedFetch(`${BACKEND}/api/portfolio/items`, { headers })
+        .then((d: any) => {
+          const items: any[] = d.items || d || [];
+          setPortfolioItems(items);
+          const invested = items.reduce((s: number, i: any) => s + (i.purchase_price_eur || 0), 0);
+          const value = items.reduce((s: number, i: any) => s + (i.estimated_current_value_eur || i.purchase_price_eur || 0), 0);
+          setPortfolioValue(value);
+          setPortfolioReturn(invested > 0 ? (value - invested) / invested * 100 : 0);
+        })
+        .catch(() => {});
+
+      // Agent alerts
+      cachedFetch(`${BACKEND}/api/agent/alerts`, { headers })
+        .then((d: any) => setAgentAlerts(d.alerts || (Array.isArray(d) ? d : [])))
+        .catch(() => {});
     }
+  }, []);
 
-    if (user) {
-      cachedFetch(`${API}/api/portfolio/stats`, { headers })
-        .then(data => { setPortfolioStats(data); setPortfolioLoading(false); })
-        .catch(() => setPortfolioLoading(false));
-    } else {
-      setPortfolioLoading(false);
-    }
-
-    cachedFetch(`${API}/api/market/sentiment`)
-      .then(data => { if (data?.segments) setSentiment(data); })
-      .catch(() => {});
-  }, [canSeeRecs, user]);
-
+  // AI Market Brief — streams from chat endpoint
   useEffect(() => {
     if (topLots.length === 0) return;
     const token = getToken();
     const avgScore = Math.round(topLots.reduce((s, l) => s + (l.deal_score ?? 0), 0) / topLots.length);
     const exceptional = topLots.filter(l => (l.deal_score ?? 0) >= 80).length;
-    const freshSources = sources.filter((s: any) => s.status === 'fresh').length;
 
-    fetch('https://artalpha-backend-production.up.railway.app/api/chat/message', {
+    fetch(`${BACKEND}/api/chat/message`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({
         message: `You are Larry, art investment advisor for Nautilus.
 
 Generate an AI Market Brief of 3 ULTRA concise bullet points (max 15 words each) based on this market data:
 - ${topLots.length} opportunities detected, avg score ${avgScore}/100
 - ${exceptional} EXCEPTIONAL lots (score ≥ 80)
-- Active sources: ${freshSources}
 - Top opportunity: ${topLots[0]?.artist_name_raw || 'Unknown'} — ${topLots[0]?.title || ''} at ${topLots[0]?.current_price ? '€' + Math.round(topLots[0].current_price) : 'unknown price'}
 
-STRICT response format — exactly 3 lines, each starting with an emoji:
+STRICT response format — exactly 3 lines, each starting with ◆:
 ◆ [market insight 1]
 ◆ [market insight 2]
 ◆ [market insight 3]
@@ -239,375 +110,399 @@ STRICT response format — exactly 3 lines, each starting with an emoji:
 No introduction, no conclusion, just the 3 lines.`,
       }),
     })
-    .then(async resp => {
-      if (!resp.ok) return;
-      const reader = resp.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullText = '';
-      if (!reader) return;
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const parsed = JSON.parse(line.slice(6));
-            if (parsed.delta) fullText += parsed.delta;
-            if (parsed.done) {
-              const clean = (parsed.full || fullText)
-                .replace(/\s*—\s*Larry[\s\S]*$/im, '')
-                .trim();
-              setAiBrief(clean);
-            }
-          } catch { continue; }
+      .then(async resp => {
+        if (!resp.ok) return;
+        const reader = resp.body?.getReader();
+        const decoder = new TextDecoder();
+        let fullText = '';
+        if (!reader) return;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          for (const line of chunk.split('\n')) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const parsed = JSON.parse(line.slice(6));
+              if (parsed.delta) fullText += parsed.delta;
+              if (parsed.done) {
+                setBrief((parsed.full || fullText).replace(/\s*—\s*Larry[\s\S]*$/im, '').trim());
+              }
+            } catch { continue; }
+          }
         }
-      }
-    })
-    .catch(() => {}); // Silent fail — fallback to static brief
+      })
+      .catch(() => {});
   }, [topLots]);
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 56px)', background: 'var(--bg)' }}>
-      <div className="animate-fade-in-up" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '24px', padding: '32px 40px', alignItems: 'start', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{
+      height: 'calc(100vh - 57px)',
+      background: 'var(--bg)',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
 
-        {/* ── LEFT COLUMN ───────────────────────────────────── */}
-        <div>
-
-          {/* TODAY'S PICKS */}
-          <div style={{ marginBottom: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '16px' }}>
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 600, color: 'var(--navy)', margin: 0 }}>Today's Picks</h2>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)' }}>AI SELECTION</span>
-            </div>
-            {lotsLoading ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="skeleton" style={{ borderRadius: '6px', height: '180px' }} />
-                ))}
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                {topLots.map(lot => (
-                  <PickCard key={lot.id} lot={lot} onClick={() => navigate(`/app/opportunities/${lot.id}`)} />
-                ))}
-              </div>
-            )}
-            <div style={{ marginTop: '12px' }}>
-              <button
-                onClick={() => navigate('/app/explore')}
-                style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, letterSpacing: '0.04em', color: 'var(--electric)', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
-              >
-                View all opportunities →
-              </button>
-            </div>
-          </div>
-
-          {/* AI BRIEF */}
-          <div style={{ background: 'var(--navy)', borderRadius: '8px', padding: '20px 28px', marginBottom: '28px', display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-            <div style={{ flexShrink: 0, marginTop: '2px' }}>
-              <Logo variant="symbol" color="white" size={28} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                <span style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', fontWeight: 600, color: 'white' }}>
-                  AI Market Brief
-                </span>
-                <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.14em', fontFamily: 'var(--font-mono)', background: 'rgba(198,168,90,0.15)', padding: '2px 8px', borderRadius: '3px' }}>
-                  {aiBrief ? 'LIVE' : 'GENERATING...'}
-                </span>
-              </div>
-              {aiBrief ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {aiBrief.split('\n').filter(l => l.trim()).map((line, i) => (
-                    <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                      <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.6 }}>{line}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {generateBrief(topLots, sources, totalLots, coverage).filter(Boolean).map((line, i) => (
-                    <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                      <span style={{ color: 'var(--gold)', fontSize: '10px', marginTop: '3px', flexShrink: 0 }}>◆</span>
-                      <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.6 }}>{line}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* BOTTOM ROW 3-col */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px', alignItems: 'start' }}>
-
-            {/* Agent Signals */}
+      {/* ═══ ZONE A — KPI BAR (full width, 48px) ═══ */}
+      <div style={{
+        background: 'var(--navy)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        padding: '0 32px',
+        display: 'flex',
+        alignItems: 'center',
+        height: '48px',
+        flexShrink: 0,
+      }}>
+        {([
+          { label: 'LOTS TRACKED', value: marketStats.total_lots > 0 ? marketStats.total_lots.toLocaleString() : '—', delta: null, highlight: false },
+          { label: 'EXCEPTIONAL', value: marketStats.exceptional > 0 ? marketStats.exceptional.toString() : '—', delta: null, highlight: true },
+          { label: 'AVG SCORE', value: marketStats.avg_score > 0 ? `${marketStats.avg_score}/100` : '—', delta: null, highlight: false },
+          { label: 'MARKET', value: sentiment?.overall || 'NEUTRAL', delta: null, highlight: false },
+          {
+            label: 'PORTFOLIO',
+            value: fmtPrice(portfolioValue || null),
+            delta: portfolioReturn ? `${portfolioReturn >= 0 ? '+' : ''}${portfolioReturn.toFixed(1)}%` : null,
+            highlight: false,
+          },
+        ] as Array<{ label: string; value: string; delta: string | null; highlight: boolean }>).map(({ label, value, delta, highlight }, i) => (
+          <div key={label} style={{
+            display: 'flex', alignItems: 'center',
+            padding: '0 24px',
+            borderRight: i < 4 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+            height: '100%',
+          }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', fontWeight: 600, color: 'var(--navy)', margin: 0 }}>Agent Signals</h3>
-                {agentRecs.length > 0 && (
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, background: 'var(--electric-subtle)', color: 'var(--electric)', border: '1px solid var(--electric-border)', padding: '2px 6px', borderRadius: '10px', letterSpacing: '0.08em' }}>
-                    {agentRecs.length}
+              <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em' }}>
+                {label}
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: highlight ? '#C6A85A' : 'white', lineHeight: 1.2 }}>
+                {value}
+                {delta && (
+                  <span style={{ marginLeft: '6px', fontSize: '11px', color: portfolioReturn >= 0 ? '#34D399' : '#F87171' }}>
+                    {delta}
                   </span>
                 )}
               </div>
-              {(!canSeeRecs || (!recsLoading && agentRecs.length === 0)) ? (
-                <div style={{ background: 'var(--navy)', borderRadius: '6px', padding: '18px' }}>
-                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '14px', color: 'white', marginBottom: '6px', fontWeight: 600 }}>Configure your agent</div>
-                  <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', margin: '0 0 14px', lineHeight: 1.5 }}>
-                    Get AI signals tailored to your investment preferences.
-                  </p>
-                  <button
-                    onClick={() => navigate(canSeeRecs ? '/app/agent' : '/app/pricing')}
-                    className="btn-electric"
-                    style={{ fontSize: '11px', padding: '7px 14px', textTransform: 'none' as const }}
-                  >
-                    {canSeeRecs ? 'Start →' : 'Unlock →'}
-                  </button>
-                </div>
-              ) : recsLoading ? (
-                <><SkeletonLine height="44px" /><SkeletonLine height="44px" /><SkeletonLine height="44px" /></>
-              ) : (
-                <div style={{ border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
-                  {agentRecs.map((rec: any, i: number) => {
-                    const verdict = rec.verdict ?? rec.recommendation ?? '';
-                    const score = rec.conviction ?? rec.deal_score ?? rec.score ?? 0;
-                    const isStrongBuy = verdict === 'STRONG_BUY';
+            </div>
+          </div>
+        ))}
+
+        {/* Right: date + live indicator */}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.3)' }}>
+            {new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34D399', animation: 'pulse 2s infinite' }} />
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.1em' }}>LIVE</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ ZONES B + C ═══ */}
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 320px', overflow: 'hidden' }}>
+
+        {/* ═══ ZONE B — LEFT MAIN ═══ */}
+        <div style={{ overflowY: 'auto', padding: '24px 28px', borderRight: '1px solid var(--border)' }}>
+
+          {/* Today's Picks */}
+          <div style={{ marginBottom: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 600, color: 'var(--text)', margin: '0 0 2px' }}>
+                  Today's Picks
+                </h2>
+                <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>
+                  AI SELECTION
+                </span>
+              </div>
+              <button
+                onClick={() => navigate('/app/explore?tab=best')}
+                style={{ fontSize: '12px', color: 'var(--electric)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                View all →
+              </button>
+            </div>
+
+            {/* 3 lot cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
+              {topLots.length === 0
+                ? Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="skeleton" style={{ borderRadius: '8px', height: '240px' }} />
+                  ))
+                : topLots.slice(0, 3).map((lot: any, i: number) => {
+                    const upside = lot.upside_percentage
+                      ? `+${lot.upside_percentage.toFixed(0)}%`
+                      : lot.estimate_low && lot.current_price && lot.current_price < lot.estimate_low
+                      ? `+${((lot.estimate_low - lot.current_price) / lot.current_price * 100).toFixed(0)}%`
+                      : (lot.pct_below_low_estimate ?? 0) > 5
+                      ? `+${Math.round(lot.pct_below_low_estimate)}%`
+                      : null;
                     return (
-                      <div
-                        key={rec.id ?? i}
-                        onClick={() => navigate('/app/agent')}
-                        style={{ padding: '10px 12px', borderBottom: i < agentRecs.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'pointer', transition: 'background 0.1s' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-subtle)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      <div key={lot.id}
+                        onClick={() => navigate(`/app/opportunities/${lot.id}`)}
+                        style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', transition: 'all 0.15s' }}
+                        onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = 'var(--shadow-md)'; el.style.transform = 'translateY(-2px)'; }}
+                        onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = 'none'; el.style.transform = 'none'; }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {verdict && (
-                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', background: isStrongBuy ? 'rgba(198,168,90,0.12)' : 'rgba(26,42,68,0.08)', color: isStrongBuy ? 'var(--gold-dim)' : 'var(--navy)', border: `1px solid ${isStrongBuy ? 'rgba(198,168,90,0.3)' : 'rgba(26,42,68,0.15)'}`, padding: '2px 5px', borderRadius: '2px' }}>
-                              {verdict.replace('_', ' ')}
-                            </span>
+                        <div style={{ height: '160px', background: 'var(--bg-subtle)', position: 'relative', overflow: 'hidden' }}>
+                          {lot.image_url ? (
+                            <img src={lot.image_url} alt={lot.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <span style={{ color: 'var(--border)', fontSize: '28px' }}>◎</span>
+                            </div>
                           )}
-                          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--navy)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rec.artist_name ?? '—'}</span>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)' }}>{score}/100</span>
+                          <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(10,22,40,0.85)', backdropFilter: 'blur(4px)', padding: '3px 7px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: 'white' }}>
+                            {lot.deal_score != null ? Math.round(lot.deal_score) : '—'}/100
+                          </div>
+                          {i === 0 && (
+                            <div style={{ position: 'absolute', top: '8px', left: '8px', background: '#C6A85A', padding: '2px 8px', borderRadius: '3px', fontSize: '8px', fontWeight: 700, color: 'white', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+                              #1 TODAY
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ padding: '12px 14px' }}>
+                          <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {lot.artist_name_raw || lot.artist?.name || lot.artist_name || 'Unknown'}
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: '13px', color: 'var(--text)', marginBottom: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {lot.title || 'Untitled'}
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>
+                              {fmtPrice(lot.current_price ?? lot.estimate_low)}
+                            </span>
+                            {upside && (
+                              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--electric)', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', padding: '2px 7px', borderRadius: '3px', fontFamily: 'var(--font-mono)' }}>
+                                {upside}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
                   })}
-                </div>
-              )}
             </div>
 
-            {/* Intelligence Signals */}
-            <div>
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', fontWeight: 600, color: 'var(--navy)', margin: '0 0 14px' }}>Intelligence Signals</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {[
-                  {
-                    icon: '◆',
-                    color: 'var(--gold)',
-                    label: 'Best opportunity',
-                    value: topLots?.[0]?.artist_name_raw || topLots?.[0]?.artist_name || 'Loading...',
-                    sub: topLots?.[0] ? `Score ${topLots[0].deal_score != null ? Math.round(topLots[0].deal_score) : '—'}/100 · ${fmtPrice(topLots[0].current_price ?? topLots[0].estimate_low)}` : '',
-                    action: () => navigate('/app/explore?tab=best'),
-                    cta: 'View lot →',
-                  },
-                  {
-                    icon: '◎',
-                    color: 'var(--electric)',
-                    label: 'Market signal',
-                    value: sentiment?.overall || 'NEUTRAL',
-                    sub: `${sentiment?.overall_score != null ? sentiment.overall_score.toFixed(0) : '--'}/100 overall score`,
-                    action: () => navigate('/app/explore?tab=best'),
-                    cta: 'Explore →',
-                  },
-                  {
-                    icon: '◐',
-                    color: 'var(--navy)',
-                    label: 'Your portfolio',
-                    value: portfolioStats
-                      ? ((portfolioStats.gain_pct ?? 0) >= 0 ? `+${(portfolioStats.gain_pct ?? 0).toFixed(1)}%` : `${(portfolioStats.gain_pct ?? 0).toFixed(1)}%`)
-                      : '—',
-                    sub: `${portfolioStats?.total_items || 0} works · ${fmtPrice(portfolioStats?.estimated_total_value)}`,
-                    action: () => navigate('/app/portfolio'),
-                    cta: 'Manage →',
-                  },
-                ].map(({ icon, color, label, value, sub, action, cta }) => (
-                  <div key={label}
-                    onClick={action}
-                    style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '14px 16px', cursor: 'pointer', transition: 'all 0.15s' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--navy)'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-sm)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '13px', color }}>{icon}</span>
-                      <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</span>
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: 'var(--text)', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '8px', lineHeight: 1.4 }}>{sub}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--electric)', fontWeight: 600 }}>{cta}</div>
+            {/* AI Brief */}
+            {brief && (
+              <div style={{ background: 'var(--navy)', borderRadius: '8px', padding: '18px 22px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                <div style={{ width: '28px', height: '28px', flexShrink: 0, marginTop: '2px' }}>
+                  <svg viewBox="0 0 40 40" fill="none">
+                    <path d="M 20 4 A 16 16 0 0 1 36 20" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
+                    <path d="M 36 20 A 16 16 0 0 1 20 36" stroke="white" strokeWidth="2.2" strokeLinecap="round" opacity="0.5"/>
+                    <path d="M 20 36 A 8 8 0 0 1 12 28" stroke="#C6A85A" strokeWidth="2.2" strokeLinecap="round"/>
+                    <circle cx="20" cy="20" r="1.8" fill="#C6A85A"/>
+                  </svg>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'white', letterSpacing: '0.04em' }}>AI Market Brief</span>
+                    <span style={{ fontSize: '8px', fontWeight: 700, color: '#34D399', fontFamily: 'var(--font-mono)', background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.3)', padding: '1px 6px', borderRadius: '2px', letterSpacing: '0.12em' }}>LIVE</span>
                   </div>
-                ))}
+                  <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.7 }}>
+                    {brief}
+                  </div>
+                </div>
               </div>
-            </div>
-
-            {/* Portfolio Snapshot */}
-            <div>
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', fontWeight: 600, color: 'var(--navy)', margin: '0 0 14px' }}>Portfolio</h3>
-              {portfolioLoading ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="skeleton" style={{ borderRadius: '6px', height: '52px' }} />
-                  ))}
-                </div>
-              ) : !user ? (
-                <div style={{ padding: '16px', border: '1px solid var(--border)', borderRadius: '6px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '10px' }}>Sign in to see your portfolio</div>
-                  <button onClick={() => navigate('/app/login')} className="btn-electric" style={{ fontSize: '11px', padding: '7px 14px', textTransform: 'none' as const }}>
-                    Sign in
-                  </button>
-                </div>
-              ) : !portfolioStats || portfolioStats.total_items === 0 ? (
-                <div style={{ padding: '8px 0', fontSize: '13px', color: 'var(--text-3)' }}>
-                  No artworks yet.{' '}
-                  <button onClick={() => navigate('/app/portfolio')} style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--electric)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
-                    Add one →
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-                    {([
-                      { label: 'Invested',   value: fmtPrice(portfolioStats.total_invested) },
-                      { label: 'Est. Value', value: fmtPrice(portfolioStats.estimated_total_value) },
-                      { label: 'Return',     value: `${portfolioStats.gain_pct >= 0 ? '+' : ''}${portfolioStats.gain_pct}%`, color: portfolioStats.gain_pct >= 0 ? '#1A7A4A' : '#C0392B' },
-                      { label: 'Works',      value: String(portfolioStats.total_items) },
-                    ] as Array<{ label: string; value: string; color?: string }>).map(({ label, value, color }) => (
-                      <div key={label} style={{ padding: '10px 12px', background: 'var(--bg-subtle)', borderRadius: '6px' }}>
-                        <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '4px' }}>{label}</div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: color ?? 'var(--text)' }}>{value}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <button onClick={() => navigate('/app/portfolio')} style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--electric)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
-                    Manage portfolio →
-                  </button>
-                </>
-              )}
-            </div>
-
+            )}
           </div>
-        </div>
 
-        {/* ── RIGHT: MARKET ACTIVITY ────────────────────────── */}
-        <div style={{ position: 'sticky', top: '80px' }}>
-          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, color: 'var(--navy)', margin: '0 0 16px' }}>Market Activity</h2>
-
-          {/* Market metrics */}
-          <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px 20px', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {[
-                { label: 'Auction lots', value: sources.reduce((a: number, s: any) => a + (s.lot_count ?? s.total ?? 0), 0).toLocaleString(), sub: 'Global coverage' },
-                { label: 'Active sources', value: String(sources.filter((s: any) => s.status === 'fresh').length || sources.filter((s: any) => (s.lot_count ?? 0) > 0).length || '—'), sub: 'Global coverage' },
-                { label: 'Avg deal score', value: topLots.length > 0 ? `${Math.round(topLots.reduce((a: number, l: any) => a + (l.deal_score ?? 0), 0) / topLots.length)}/100` : '—', sub: 'Current selection' },
-              ].map(({ label, value, sub }) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: '12px', color: 'var(--text)' }}>{label}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>{sub}</div>
+          {/* Intelligence Signals */}
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', color: 'var(--text)', margin: '0 0 12px' }}>
+              Intelligence Signals
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+              {([
+                {
+                  tag: 'BEST OPPORTUNITY',
+                  icon: '◆',
+                  color: '#C6A85A',
+                  title: topLots[0] ? (topLots[0].artist_name_raw || topLots[0].artist?.name || topLots[0].artist_name || 'Unknown') : '—',
+                  sub: topLots[0] ? `Score ${topLots[0].deal_score != null ? Math.round(topLots[0].deal_score) : '—'}/100 · ${fmtPrice(topLots[0].current_price ?? topLots[0].estimate_low)}` : 'Loading...',
+                  cta: 'View lot →',
+                  action: () => topLots[0] && navigate(`/app/opportunities/${topLots[0].id}`),
+                },
+                {
+                  tag: 'MARKET SIGNAL',
+                  icon: '◎',
+                  color: 'var(--electric)',
+                  title: sentiment?.overall || 'NEUTRAL',
+                  sub: `${sentiment?.overall_score != null ? sentiment.overall_score.toFixed(0) : '—'}/100 · ${sentiment?.segments?.length || 0} segments tracked`,
+                  cta: 'Explore →',
+                  action: () => navigate('/app/explore?tab=best'),
+                },
+                {
+                  tag: 'YOUR PORTFOLIO',
+                  icon: '◐',
+                  color: 'var(--navy)',
+                  title: portfolioItems.length > 0
+                    ? `${portfolioReturn >= 0 ? '+' : ''}${portfolioReturn.toFixed(1)}%`
+                    : '—',
+                  sub: `${portfolioItems.length} works · ${fmtPrice(portfolioValue || null)} est. value`,
+                  cta: 'Manage →',
+                  action: () => navigate('/app/portfolio'),
+                },
+              ] as Array<{ tag: string; icon: string; color: string; title: string; sub: string; cta: string; action: () => void }>).map(({ tag, icon, color, title, sub, cta, action }) => (
+                <div key={tag}
+                  onClick={action}
+                  style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', flexDirection: 'column', gap: '6px' }}
+                  onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = 'var(--navy)'; el.style.boxShadow = 'var(--shadow-sm)'; }}
+                  onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = 'var(--border)'; el.style.boxShadow = 'none'; }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', color }}>{icon}</span>
+                    <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>{tag}</span>
                   </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: 'var(--navy)' }}>{value}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '17px', fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.4 }}>{sub}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--electric)', fontWeight: 700, marginTop: '4px' }}>{cta}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Market Sentiment */}
-          {sentiment && (
-            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
-                    Market Sentiment
-                  </h3>
-                  <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
-                    onMouseEnter={e => { const t = (e.currentTarget.querySelector('.sentiment-tooltip') as HTMLElement); if (t) t.style.opacity = '1'; }}
-                    onMouseLeave={e => { const t = (e.currentTarget.querySelector('.sentiment-tooltip') as HTMLElement); if (t) t.style.opacity = '0'; }}
-                  >
-                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '14px', height: '14px', borderRadius: '50%', background: 'var(--bg-subtle)', border: '1px solid var(--border)', fontSize: '9px', color: 'var(--text-3)', cursor: 'default', fontFamily: 'Arial, sans-serif', fontWeight: 700 }}>?</span>
-                    <div className="sentiment-tooltip" style={{ opacity: 0, transition: 'opacity 0.15s', position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', zIndex: 50, width: '220px', background: 'var(--navy)', color: 'white', padding: '10px 12px', borderRadius: '6px', fontSize: '11px', lineHeight: '1.6', fontFamily: 'var(--font-sans)', pointerEvents: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }}>
-                      <strong style={{ display: 'block', marginBottom: '4px', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>How it works</strong>
-                      Momentum + deal score per category.<br />
-                      <span style={{ color: '#4ade80' }}>BULLISH</span> — score ≥70, volume up &gt;5%<br />
-                      <span style={{ color: '#f87171' }}>BEARISH</span> — score &lt;50 or volume down &gt;10%<br />
-                      <span style={{ color: '#94a3b8' }}>NEUTRAL</span> — everything in between
-                    </div>
-                  </div>
-                </div>
-                <div style={{
-                  fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)',
-                  padding: '3px 10px', borderRadius: '3px', letterSpacing: '0.1em',
-                  background: sentiment.overall === 'BULLISH' ? 'var(--electric-subtle)' : sentiment.overall === 'BEARISH' ? 'var(--red-subtle)' : 'var(--bg-subtle)',
-                  color: sentiment.overall === 'BULLISH' ? 'var(--electric)' : sentiment.overall === 'BEARISH' ? 'var(--red)' : 'var(--text-3)',
-                }}>
-                  {sentiment.overall}
-                </div>
+          {/* Agent Signals */}
+          {agentAlerts.length > 0 && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
+                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', color: 'var(--text)', margin: 0 }}>Agent Signals</h3>
+                <button onClick={() => navigate('/app/agent')} style={{ fontSize: '12px', color: 'var(--electric)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
+                  Manage →
+                </button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {sentiment.segments?.slice(0, 4).map((seg: any) => (
-                  <div key={seg.segment} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--border-light, rgba(0,0,0,0.06))' }}>
-                    <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>{seg.segment}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>
-                        {seg.avg_score}/100
-                      </div>
-                      <div style={{
-                        fontSize: '8px', fontWeight: 700, fontFamily: 'var(--font-mono)',
-                        padding: '1px 6px', borderRadius: '2px',
-                        background: seg.sentiment === 'BULLISH' ? 'var(--electric-subtle)' : seg.sentiment === 'BEARISH' ? 'var(--red-subtle)' : 'var(--bg-subtle)',
-                        color: seg.sentiment === 'BULLISH' ? 'var(--electric)' : seg.sentiment === 'BEARISH' ? 'var(--red)' : 'var(--text-3)',
-                      }}>
-                        {seg.sentiment === 'BULLISH' ? '↑' : seg.sentiment === 'BEARISH' ? '↓' : '→'} {seg.sentiment}
-                      </div>
+                {agentAlerts.slice(0, 3).map((alert: any, i: number) => (
+                  <div key={alert.id || i} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '6px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>{alert.name || alert.strategy_type || 'Signal'}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{alert.description || (alert.max_price ? `Budget ${fmtPrice(alert.max_price)}` : '')}</div>
                     </div>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: alert.is_active ? '#34D399' : 'var(--border)', flexShrink: 0 }} />
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* New This Cycle */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', fontWeight: 600, color: 'var(--navy)', margin: 0 }}>New This Cycle</h3>
-              <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--gold)', animation: 'pulseDot 2s infinite' }} />
-            </div>
-            {newLots.length === 0 ? (
-              <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>Loading…</div>
-            ) : (
-              <div>
-                {newLots.map((lot, i) => (
-                  <div
-                    key={lot.id}
-                    onClick={() => navigate(`/app/opportunities/${lot.id}`)}
-                    style={{ display: 'flex', gap: '10px', padding: '10px 0', borderBottom: i < newLots.length - 1 ? '1px solid var(--border-light, rgba(0,0,0,0.06))' : 'none', cursor: 'pointer', transition: 'opacity 0.15s' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.opacity = '0.65'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.opacity = '1'; }}
-                  >
-                    <div style={{ width: '40px', height: '40px', borderRadius: '4px', background: 'var(--bg-subtle)', flexShrink: 0, overflow: 'hidden' }}>
-                      {lot.image_url && <img src={lot.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cleanTitle(lot)}</div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', marginTop: '2px' }}>{fmtPrice(lot.current_price ?? lot.estimate_low)}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
 
+        {/* ═══ ZONE C — RIGHT SIDEBAR ═══ */}
+        <div style={{ overflowY: 'auto', background: 'white', borderLeft: '1px solid var(--border)' }}>
+
+          {/* Market Activity */}
+          <div style={{ padding: '20px', borderBottom: '1px solid var(--border)' }}>
+            <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', fontWeight: 600, color: 'var(--text)', margin: '0 0 14px' }}>
+              Market Activity
+            </h3>
+            {[
+              { label: 'Auction lots', sub: 'Global coverage', value: marketStats.total_lots > 0 ? marketStats.total_lots.toLocaleString() : '—' },
+              { label: 'Avg deal score', sub: 'Current selection', value: marketStats.avg_score > 0 ? `${marketStats.avg_score}/100` : '—' },
+              { label: 'Exceptional lots', sub: 'Score ≥ 80', value: marketStats.exceptional > 0 ? marketStats.exceptional.toString() : '—' },
+            ].map(({ label, sub, value }, i) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i < 2 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>{label}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{sub}</div>
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '16px', fontWeight: 700, color: 'var(--text)' }}>{value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Market Sentiment */}
+          {sentiment && (
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
+                    Market Sentiment
+                  </h3>
+                  <div style={{ position: 'relative', display: 'inline-block' }}
+                    onMouseEnter={e => { const t = (e.currentTarget as HTMLDivElement).querySelector('.tt') as HTMLDivElement | null; if (t) t.style.display = 'block'; }}
+                    onMouseLeave={e => { const t = (e.currentTarget as HTMLDivElement).querySelector('.tt') as HTMLDivElement | null; if (t) t.style.display = 'none'; }}
+                  >
+                    <div style={{ width: '15px', height: '15px', borderRadius: '50%', background: 'var(--bg-subtle)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'help', fontSize: '9px', color: 'var(--text-3)', fontWeight: 700 }}>?</div>
+                    <div className="tt" style={{ display: 'none', position: 'absolute', bottom: '20px', right: '0', background: 'var(--navy)', color: 'white', fontSize: '11px', padding: '10px 12px', borderRadius: '6px', width: '200px', zIndex: 100, lineHeight: 1.5 }}>
+                      Sentiment is calculated from deal scores and lot volume across segments. ↑ Bullish = strong demand.
+                    </div>
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)', padding: '2px 8px', borderRadius: '3px', letterSpacing: '0.1em',
+                  background: sentiment.overall === 'BULLISH' ? 'var(--electric-subtle)' : 'var(--bg-subtle)',
+                  color: sentiment.overall === 'BULLISH' ? 'var(--electric)' : 'var(--text-3)',
+                  border: `1px solid ${sentiment.overall === 'BULLISH' ? 'var(--electric-border)' : 'var(--border)'}`,
+                }}>
+                  {sentiment.overall}
+                </span>
+              </div>
+              {sentiment.segments?.slice(0, 5).map((seg: any) => (
+                <div key={seg.segment} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-2)', width: '110px', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{seg.segment}</div>
+                  <div style={{ flex: 1, height: '3px', background: 'var(--bg-subtle)', borderRadius: '2px' }}>
+                    <div style={{ height: '100%', borderRadius: '2px', width: `${Math.min(seg.avg_score, 100)}%`, background: seg.sentiment === 'BULLISH' ? 'var(--electric)' : seg.sentiment === 'BEARISH' ? '#EF4444' : 'var(--border)', transition: 'width 0.5s ease' }} />
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', width: '28px', textAlign: 'right', flexShrink: 0 }}>{seg.avg_score}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* New This Cycle */}
+          <div style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
+                New This Cycle
+              </h3>
+              <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#C6A85A', animation: 'pulse 2s infinite' }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              {recentLots.length === 0
+                ? Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="skeleton" style={{ height: '56px', borderRadius: '4px', marginBottom: '8px' }} />
+                  ))
+                : recentLots.slice(0, 5).map((lot: any) => {
+                    const artist = lot.artist_name_raw || lot.artist?.name || lot.artist_name;
+                    const rawTitle = lot.title?.replace(/^\d+h\s*\d+m.*?[-–]\s*/i, '').trim();
+                    const displayTitle = artist && artist !== '—' && artist !== 'Unknown'
+                      ? artist
+                      : rawTitle?.slice(0, 35) || 'Untitled';
+                    const displaySub = artist && artist !== '—' && artist !== 'Unknown'
+                      ? rawTitle?.slice(0, 30) || ''
+                      : lot.auction_house_name || '';
+
+                    return (
+                      <div key={lot.id}
+                        onClick={() => navigate(`/app/opportunities/${lot.id}`)}
+                        style={{ display: 'flex', gap: '10px', alignItems: 'center', cursor: 'pointer', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.05)', transition: 'opacity 0.15s' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.opacity = '0.7'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.opacity = '1'; }}
+                      >
+                        <div style={{ width: '44px', height: '44px', background: 'var(--bg-subtle)', borderRadius: '4px', flexShrink: 0, overflow: 'hidden' }}>
+                          {lot.image_url && <img src={lot.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>
+                            {displayTitle}
+                          </div>
+                          <div style={{ fontSize: '10px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {displaySub}
+                          </div>
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: 'var(--text)', flexShrink: 0 }}>
+                          {fmtPrice(lot.current_price ?? lot.estimate_low)}
+                        </div>
+                      </div>
+                    );
+                  })}
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
   );
