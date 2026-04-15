@@ -8,6 +8,7 @@ import structlog
 
 from app.models.schemas import LotNormalized, AuctionHouseEnum
 from app.connectors import drouot_connector, interencheres_connector, invaluable_connector
+from app.connectors import christies_connector, sothebys_connector
 
 logger = structlog.get_logger()
 
@@ -15,12 +16,16 @@ CONNECTORS = {
     AuctionHouseEnum.DROUOT: drouot_connector,
     AuctionHouseEnum.INTERENCHERES: interencheres_connector,
     AuctionHouseEnum.INVALUABLE: invaluable_connector,
+    AuctionHouseEnum.CHRISTIES: christies_connector,
+    AuctionHouseEnum.SOTHEBYS: sothebys_connector,
 }
 
 CONNECTOR_METAS = {
     AuctionHouseEnum.DROUOT: drouot_connector.CONNECTOR_META,
     AuctionHouseEnum.INTERENCHERES: interencheres_connector.CONNECTOR_META,
     AuctionHouseEnum.INVALUABLE: invaluable_connector.CONNECTOR_META,
+    AuctionHouseEnum.CHRISTIES: christies_connector.CONNECTOR_META,
+    AuctionHouseEnum.SOTHEBYS: sothebys_connector.CONNECTOR_META,
 }
 
 
@@ -227,6 +232,36 @@ async def fetch_all_lots(lots_per_source: int = 500) -> List[LotNormalized]:
             logger.info("Barnebys: fetched", count=added)
     except Exception as e:
         logger.warning("Barnebys connector skipped", error=str(e))
+
+    # --- Christie's — blue chip auction house ---
+    try:
+        from app.connectors.christies_connector import fetch_lots as christies_fetch
+        christies_lots = await christies_fetch(lots_per_source)
+        added = 0
+        for lot in christies_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("Christie's: fetched", count=added)
+    except Exception as e:
+        logger.warning("Christie's connector skipped", error=str(e))
+
+    # --- Sotheby's — blue chip auction house ---
+    try:
+        from app.connectors.sothebys_connector import fetch_lots as sothebys_fetch
+        sothebys_lots = await sothebys_fetch(lots_per_source)
+        added = 0
+        for lot in sothebys_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("Sotheby's: fetched", count=added)
+    except Exception as e:
+        logger.warning("Sotheby's connector skipped", error=str(e))
 
     # --- Artsy primary market — for sale artworks ---
     try:
