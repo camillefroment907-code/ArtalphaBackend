@@ -61,7 +61,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 # ── Rate limiter (in-memory; swap storage= to Redis in prod if desired) ────────
-limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
+limiter = Limiter(key_func=get_remote_address, default_limits=["300/minute"])
 
 structlog.configure(
     wrapper_class=structlog.make_filtering_bound_logger(
@@ -175,3 +175,12 @@ async def health():
         "database": "ok" if db_ok else "error",
         "environment": settings.environment,
     }
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error("Unhandled error", path=str(request.url.path), error=str(exc))
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Service temporarily unavailable. Please try again."},
+    )

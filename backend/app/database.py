@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.pool import NullPool
+from sqlalchemy.pool import NullPool, AsyncAdaptedQueuePool
 from sqlalchemy import text
 from app.config import get_settings
 from app.models.db_models import Base
@@ -28,12 +28,13 @@ _db_url, _connect_args = _make_async_url(settings.database_url)
 
 engine = create_async_engine(
     _db_url,
-    echo=settings.environment == "development",
-    pool_size=5,
-    max_overflow=10,
-    pool_timeout=30,
+    poolclass=AsyncAdaptedQueuePool,
+    pool_size=20,
+    max_overflow=40,
+    pool_timeout=10,
     pool_recycle=1800,
     pool_pre_ping=True,
+    echo=settings.environment == "development",
     connect_args=_connect_args,
 )
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, Request, Header
+from fastapi import APIRouter, Depends, Query, HTTPException, Request, Header, Response
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_, desc
@@ -193,6 +193,7 @@ async def stream_lots(
 
 @router.get("")
 async def list_lots(
+    response: Response,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     min_score: Optional[float] = Query(None, ge=0, le=100),
@@ -230,9 +231,11 @@ async def list_lots(
         page_size = max_per_page
 
     # ── Cache lookup ─────────────────────────────────────────────────────────
-    cache_key = f"lots:{plan}:{sort_by}:{sort_dir}:{min_score}:{page}:{page_size}:{category}:{search}:{source}:{sources}"
-    cached = get_cached(cache_key)
+    cache_key = f"lots:{plan}:{sort_by}:{sort_dir}:{min_score}:{page}:{page_size}:{category or ''}:{search or ''}:{source or ''}:{sources or ''}"
+    cached = get_cached(cache_key, ttl=120)
     if cached:
+        response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=120"
+        response.headers["Vary"] = "Accept-Encoding"
         return cached
 
     # Coalesce date param names — frontend may send either form
@@ -334,15 +337,17 @@ async def list_lots(
     result = await db.execute(stmt)
     lots = result.scalars().all()
 
-    response = {
+    result = {
         "items": [lot_to_list_dict(lot) for lot in lots],
         "total": total,
         "page": page,
         "page_size": page_size,
         "pages": math.ceil(total / page_size) if total > 0 else 0,
     }
-    set_cached(cache_key, response)
-    return response
+    set_cached(cache_key, result)
+    response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=120"
+    response.headers["Vary"] = "Accept-Encoding"
+    return result
 
 
 @router.get("/hot-deals")
