@@ -233,6 +233,36 @@ async def fetch_all_lots(lots_per_source: int = 500) -> List[LotNormalized]:
     except Exception as e:
         logger.warning("Barnebys connector skipped", error=str(e))
 
+    # --- Bonhams — major UK/US auction house ---
+    try:
+        from app.connectors.bonhams_connector import fetch_lots as bonhams_fetch
+        bonhams_lots = await bonhams_fetch(lots_per_source)
+        added = 0
+        for lot in bonhams_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("Bonhams: fetched", count=added)
+    except Exception as e:
+        logger.warning("Bonhams connector skipped", error=str(e))
+
+    # --- eBay Art — auction listings (requires EBAY_CLIENT_ID + EBAY_CLIENT_SECRET) ---
+    try:
+        from app.connectors.ebay_connector import fetch_lots as ebay_fetch
+        ebay_lots = await ebay_fetch(lots_per_source)
+        added = 0
+        for lot in ebay_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("eBay Art: fetched", count=added)
+    except Exception as e:
+        logger.warning("eBay connector skipped", error=str(e))
+
     # --- Christie's — blue chip auction house ---
     try:
         from app.connectors.christies_connector import fetch_lots as christies_fetch
