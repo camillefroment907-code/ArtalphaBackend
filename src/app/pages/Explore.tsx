@@ -426,7 +426,10 @@ export default function Explore() {
           ? `${BACKEND}/api/lots/primary?page_size=24`
           : `${BACKEND}/api/lots?${p.toString()}`;
 
-        const resp = await fetch(url);
+        const token = getToken();
+        const resp = await fetch(url, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         console.log('resp.status:', resp.status);
         const data = await resp.json();
         const items = Array.isArray(data) ? data : (data.items || data.lots || data.results || []);
