@@ -395,6 +395,7 @@ export default function Explore() {
     let cancelled = false;
 
     const load = async () => {
+      console.log('load() called, exploreTab:', exploreTab, 'BACKEND:', BACKEND);
       setLoading(true);
       setHasError(false);
 
@@ -458,8 +459,11 @@ export default function Explore() {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         clearTimeout(timeout);
+        console.log('resp.status:', resp.status);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data = await resp.json();
+        const text = await resp.text();
+        console.log('raw response:', text.slice(0, 200));
+        const data = JSON.parse(text);
         const items = Array.isArray(data) ? data : (data.items || data.lots || data.results || []);
 
         if (!cancelled) {
