@@ -429,9 +429,13 @@ export default function Explore() {
           : `${BACKEND}/api/lots?${p.toString()}`;
 
         const token = getToken();
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
         const resp = await fetch(url, {
+          signal: controller.signal,
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
+        clearTimeout(timeout);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         const items = Array.isArray(data) ? data : (data.items || data.lots || data.results || []);
@@ -443,9 +447,16 @@ export default function Explore() {
           setCurrentPage(1);
           try { sessionStorage.setItem(cacheKey, JSON.stringify({ items, total: data.total })); } catch { /* quota */ }
         }
-      } catch (e) {
+      } catch (e: any) {
         console.error('load error:', e);
-        if (!cancelled) setHasError(true);
+        if (!cancelled) {
+          // If we already showed cached data, don't flash an error
+          if (lots.length === 0) {
+            setHasError(true);
+            // Auto-retry once after 4s (cold start on Railway)
+            setTimeout(() => { if (!cancelled) setRefreshKey(k => k + 1); }, 4000);
+          }
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -807,11 +818,20 @@ export default function Explore() {
               {loading && viewMode !== "list" && <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap }}>{Array.from({ length: cols * 2 }).map((_, i) => tab === "live" ? <LiveSkeleton key={i} /> : <AlphaSkeleton key={i} />)}</div>}
 
               {/* Error */}
-              {!loading && hasError && (
-                <div style={{ textAlign: "center", padding: "80px 20px" }}>
-                  <div style={{ fontFamily: "var(--font-serif)", fontSize: "36px", color: "var(--border)", marginBottom: "16px" }}>◇</div>
-                  <div style={{ fontSize: "15px", color: "var(--text-2)", marginBottom: "20px" }}>Unable to connect to the auction database</div>
-                  <button onClick={doFetch} className="btn btn-navy" style={{ fontSize: "12px", padding: "9px 20px" }}>Try again</button>
+              {!loading && hasError && lots.length === 0 && (
+                <div style={{ textAlign: "center", padding: "60px 40px" }}>
+                  <div style={{ fontFamily: "var(--font-serif)", fontSize: "18px", color: "var(--text)", marginBottom: "8px" }}>
+                    Loading opportunities...
+                  </div>
+                  <p style={{ fontSize: "13px", color: "var(--text-3)", marginBottom: "20px" }}>
+                    Connecting to market data. This takes a few seconds.
+                  </p>
+                  <button
+                    onClick={doFetch}
+                    style={{ padding: "10px 24px", background: "var(--navy)", color: "white", border: "none", borderRadius: "6px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Retry
+                  </button>
                 </div>
               )}
 
