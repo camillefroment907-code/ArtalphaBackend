@@ -191,7 +191,7 @@ async def stream_lots(
 
 # ── REST ──────────────────────────────────────────────────────────────────────
 
-@router.get("", response_model=LotListResponse)
+@router.get("")
 async def list_lots(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
