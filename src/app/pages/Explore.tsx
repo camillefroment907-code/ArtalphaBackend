@@ -367,7 +367,7 @@ export default function Explore() {
   }, []);
 
   const PLAN_LIMITS: Record<string, number> = {
-    free: 3, starter: 10, investor: 99999, pro: 99999, institutional: 99999, elite: 99999,
+    free: 6, starter: 10, investor: 99999, pro: 99999, institutional: 99999, elite: 99999,
   };
   const visibleLimit = isAdmin ? 99999 : (PLAN_LIMITS[userPlan] ?? 3);
   const maxVisible = visibleLimit;
@@ -375,7 +375,7 @@ export default function Explore() {
   // tab alias used throughout JSX: "alpha" = best lots, "live" = all auctions
   const tab = exploreTab === "auctions" ? "live" : "alpha";
 
-  const alphaLots   = tab === "alpha" ? lots.filter(l => l.dealScore >= 45) : lots;
+  const alphaLots   = lots;
   const EXCEPTIONAL = alphaLots.filter(l => l.dealScore >= 80);
   const STRONG      = alphaLots.filter(l => l.dealScore >= 65 && l.dealScore < 80);
   const INTERESTING = alphaLots.filter(l => l.dealScore >= 45 && l.dealScore < 65);
@@ -392,45 +392,26 @@ export default function Explore() {
 
   // ── fetchLots ─────────────────────────────────────────────────
   useEffect(() => {
-    let cancelled = false;
-
     const load = async () => {
       console.log('load() called, exploreTab:', exploreTab, 'BACKEND:', BACKEND);
       setLoading(true);
       setHasError(false);
-
-      // Show cached instantly while we fetch fresh data
-      const cacheKey = `lots_${exploreTab}`;
-      try {
-        const cached = sessionStorage.getItem(cacheKey);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (!cancelled) {
-            setLots((parsed.items || []).map(mapLot));
-            setTotal(parsed.total || 0);
-          }
-        }
-      } catch { /* ignore bad cache */ }
-
       try {
         const p = new URLSearchParams();
         p.set('page_size', '24');
+        p.set('sort_by', 'deal_score');
+        p.set('sort_dir', 'desc');
+        p.set('min_score', minScore > 0 ? String(minScore) : '60');
 
-        if (exploreTab === 'best') {
-          p.set('sort_by', 'deal_score');
-          p.set('sort_dir', 'desc');
-          p.set('min_score', minScore > 0 ? String(minScore) : '60');
-        } else if (exploreTab === 'auctions') {
+        if (exploreTab === 'auctions') {
           p.set('sort_by', sortBy || 'created_at');
           p.set('sort_dir', sortDir || 'desc');
-          if (minScore > 0) p.set('min_score', String(minScore));
-        } else if (exploreTab === 'convictions') {
-          p.set('sort_by', 'deal_score');
-          p.set('sort_dir', 'desc');
+          p.delete('min_score');
+        }
+        if (exploreTab === 'convictions') {
           p.set('min_score', '75');
         }
 
-        // Active filters
         if (minPrice > 0)    p.set('min_price', String(minPrice));
         if (maxPrice > 0)    p.set('max_price', String(maxPrice));
         if (category)        p.set('category', category);
@@ -441,55 +422,28 @@ export default function Explore() {
         if (search.trim())   p.set('search', search.trim());
         Object.entries(getDateParams(dateFilter)).forEach(([k, v]) => p.set(k, v));
 
-        // Override sort for non-best tabs if user set one
-        if (exploreTab === 'auctions' && sortBy) {
-          p.set('sort_by', sortBy);
-          p.set('sort_dir', sortDir || 'desc');
-        }
-
         const url = exploreTab === 'primary'
           ? `${BACKEND}/api/lots/primary?page_size=24`
           : `${BACKEND}/api/lots?${p.toString()}`;
 
-        const token = getToken();
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000);
-        const resp = await fetch(url, {
-          signal: controller.signal,
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        clearTimeout(timeout);
+        const resp = await fetch(url);
         console.log('resp.status:', resp.status);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const text = await resp.text();
-        console.log('raw response:', text.slice(0, 200));
-        const data = JSON.parse(text);
+        const data = await resp.json();
         const items = Array.isArray(data) ? data : (data.items || data.lots || data.results || []);
-
-        if (!cancelled) {
-          setLots(items.map(mapLot));
-          setTotal(data.total || items.length || 0);
-          setTotalPages(data.pages || 1);
-          setCurrentPage(1);
-          try { sessionStorage.setItem(cacheKey, JSON.stringify({ items, total: data.total })); } catch { /* quota */ }
-        }
+        console.log('Setting lots:', items.length);
+        setLots(items.map(mapLot));
+        setTotal(data.total || items.length || 0);
+        setTotalPages(data.pages || 1);
+        setCurrentPage(1);
       } catch (e: any) {
         console.error('load error:', e);
-        if (!cancelled) {
-          // If we already showed cached data, don't flash an error
-          if (lots.length === 0) {
-            setHasError(true);
-            // Auto-retry once after 4s (cold start on Railway)
-            setTimeout(() => { if (!cancelled) setRefreshKey(k => k + 1); }, 4000);
-          }
-        }
+        setHasError(true);
       } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       }
     };
 
     load();
-    return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exploreTab, refreshKey, minScore, minPrice, maxPrice, category, auctionHouse, sizeFilter, minUpside, artistTier, search, sortBy, sortDir, dateFilter]);
 
