@@ -324,7 +324,6 @@ async def list_lots(
 
     stmt = (
         select(Lot)
-        .options(selectinload(Lot.artist))
         .order_by(sort_expr.nullslast() if sort_dir == "desc" else sort_expr)
         .offset((page - 1) * page_size)
         .limit(page_size)
