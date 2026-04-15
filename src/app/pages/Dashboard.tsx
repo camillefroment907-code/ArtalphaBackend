@@ -23,6 +23,25 @@ async function cachedFetch(url: string, options?: RequestInit): Promise<any> {
   return data;
 }
 
+function LotImage({ src, alt }: { src: string; alt: string }) {
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
+  if (!src) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: '22px', opacity: 0.2, fontFamily: 'var(--font-serif)', color: 'var(--border)' }}>◇</span></div>;
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '100%', background: 'var(--bg-subtle)' }}>
+      {!loaded && !error && <div className="skeleton" style={{ position: 'absolute', inset: 0 }} />}
+      {!error ? (
+        <img src={src} alt={alt} loading="lazy" decoding="async"
+          onLoad={() => setLoaded(true)} onError={() => setError(true)}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
+        />
+      ) : (
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: '22px', opacity: 0.2 }}>◎</span></div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
 
@@ -247,13 +266,7 @@ No introduction, no conclusion, just the 3 lines.`,
                         onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = 'none'; el.style.transform = 'none'; }}
                       >
                         <div style={{ height: '160px', background: 'var(--bg-subtle)', position: 'relative', overflow: 'hidden' }}>
-                          {lot.image_url ? (
-                            <img src={lot.image_url} alt={lot.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
-                          ) : (
-                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <span style={{ color: 'var(--border)', fontSize: '28px' }}>◎</span>
-                            </div>
-                          )}
+                          <LotImage src={lot.image_url} alt={lot.title} />
                           <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(10,22,40,0.85)', backdropFilter: 'blur(4px)', padding: '3px 7px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: 'white' }}>
                             {lot.deal_score != null ? Math.round(lot.deal_score) : '—'}/100
                           </div>
@@ -483,7 +496,7 @@ No introduction, no conclusion, just the 3 lines.`,
                         onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.opacity = '1'; }}
                       >
                         <div style={{ width: '44px', height: '44px', background: 'var(--bg-subtle)', borderRadius: '4px', flexShrink: 0, overflow: 'hidden' }}>
-                          {lot.image_url && <img src={lot.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />}
+                          <LotImage src={lot.image_url} alt="" />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>
