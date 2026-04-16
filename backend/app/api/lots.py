@@ -1021,6 +1021,106 @@ async def trigger_weekly_report(
         raise HTTPException(500, str(e))
 
 
+@router.get("/calendar")
+async def get_auction_calendar(
+    days: int = Query(30, ge=1, le=90),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upcoming auctions grouped by house and date."""
+    cache_key = f"calendar:{days}"
+    cached = get_cached(cache_key, ttl=900)
+    if cached:
+        return cached
+
+    cutoff_start = datetime.utcnow()
+    cutoff_end = cutoff_start + timedelta(days=days)
+
+    result = await db.execute(
+        select(Lot)
+        .where(
+            and_(
+                Lot.auction_date >= cutoff_start.date(),
+                Lot.auction_date <= cutoff_end.date(),
+            )
+        )
+        .order_by(Lot.auction_date, Lot.deal_score.desc().nullslast())
+        .limit(500)
+    )
+    lots = result.scalars().all()
+
+    # Group by house
+    from collections import defaultdict
+    by_house: dict = defaultdict(list)
+    by_date: dict = defaultdict(list)
+
+    for lot in lots:
+        house = lot.auction_house_name or "Unknown"
+        date_str = lot.auction_date.isoformat() if lot.auction_date else "TBD"
+        by_house[house].append(lot)
+        by_date[date_str].append(lot)
+
+    def lot_summary(lot) -> dict:
+        return {
+            "id": str(lot.id),
+            "title": lot.title,
+            "artist_name_raw": lot.artist_name_raw,
+            "deal_score": lot.deal_score,
+            "current_price": lot.current_price,
+            "estimate_low": lot.estimate_low,
+            "estimate_high": lot.estimate_high,
+            "image_url": lot.image_url,
+            "auction_date": lot.auction_date.isoformat() if lot.auction_date else None,
+            "category": lot.category,
+            "currency": lot.currency,
+        }
+
+    def house_stats(house_lots: list) -> dict:
+        scores = [l.deal_score for l in house_lots if l.deal_score]
+        dates = sorted({l.auction_date for l in house_lots if l.auction_date})
+        return {
+            "lot_count": len(house_lots),
+            "avg_score": round(sum(scores) / len(scores), 1) if scores else 0,
+            "max_score": round(max(scores), 1) if scores else 0,
+            "dates": [d.isoformat() for d in dates],
+            "top_lots": [lot_summary(l) for l in sorted(house_lots, key=lambda x: x.deal_score or 0, reverse=True)[:4]],
+        }
+
+    now = datetime.utcnow()
+    urgent_threshold = now + timedelta(days=3)
+
+    houses_out = [
+        {"house": house, **house_stats(house_lots)}
+        for house, house_lots in sorted(by_house.items(), key=lambda kv: len(kv[1]), reverse=True)
+    ]
+
+    dates_out = []
+    for date_str, date_lots in sorted(by_date.items()):
+        try:
+            auction_dt = datetime.fromisoformat(date_str)
+            urgent = auction_dt <= urgent_threshold
+        except Exception:
+            urgent = False
+        scores = [l.deal_score for l in date_lots if l.deal_score]
+        houses_on_date = list({l.auction_house_name for l in date_lots if l.auction_house_name})
+        dates_out.append({
+            "date": date_str,
+            "urgent": urgent,
+            "lot_count": len(date_lots),
+            "avg_score": round(sum(scores) / len(scores), 1) if scores else 0,
+            "houses": houses_on_date,
+            "top_lots": [lot_summary(l) for l in sorted(date_lots, key=lambda x: x.deal_score or 0, reverse=True)[:4]],
+        })
+
+    response = {
+        "total_lots": len(lots),
+        "days": days,
+        "by_house": houses_out,
+        "by_date": dates_out,
+    }
+    set_cached(cache_key, response)
+    return response
+
+
 @router.get("/{lot_id}")
 async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
