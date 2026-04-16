@@ -524,6 +524,43 @@ export default function OpportunityDetail() {
               </div>
             )}
 
+            {/* Estimation Bias */}
+            {lot.estimation_bias && (() => {
+              const b = lot.estimation_bias;
+              const signalColor = b.signal === 'bullish' ? '#4ade80' : b.signal === 'bearish' ? '#f87171' : 'var(--text-3)';
+              const barPct = Math.min(Math.abs(b.pct_above_low_estimate) / 60 * 100, 100);
+              const barColor = b.signal === 'bullish' ? '#4ade80' : b.signal === 'bearish' ? '#f87171' : '#94a3b8';
+              return (
+                <div style={{ marginBottom: '28px', padding: '16px 20px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '4px' }}>
+                        Estimation Bias
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: signalColor }}>
+                        {b.label}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: signalColor, lineHeight: 1 }}>
+                        {b.pct_above_low_estimate > 0 ? '+' : ''}{b.pct_above_low_estimate}%
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-3)', marginTop: '2px' }}>
+                        vs low estimate
+                      </div>
+                    </div>
+                  </div>
+                  {/* Bias bar */}
+                  <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', marginBottom: '8px' }}>
+                    <div style={{ height: '100%', width: `${barPct}%`, background: barColor, borderRadius: '2px', transition: 'width 0.6s ease' }} />
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.25)' }}>
+                    Based on {b.sample_size.toLocaleString()} sales · {b.house}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Score bar */}
             {lot.deal_score > 0 && (
               <div style={{ marginBottom: lot.score_rationale ? '16px' : '28px', paddingBottom: lot.score_rationale ? '16px' : '28px', borderBottom: lot.score_rationale ? 'none' : '1px solid var(--border)' }}>
