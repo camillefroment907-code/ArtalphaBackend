@@ -1211,6 +1211,8 @@ async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
     lot_dict["width_cm"] = dims["width_cm"]
     lot_dict["height_cm"] = dims["height_cm"]
     lot_dict["dimensions_parsed"] = dims
+    hammer = lot.current_price or lot.estimate_low
+    lot_dict["real_cost"] = compute_real_cost(float(hammer), lot.auction_house_name) if hammer else None
     return lot_dict
 
 
