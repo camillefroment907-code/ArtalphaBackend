@@ -109,79 +109,43 @@ function MetricTile({ label, value, sub, highlight = false }: { label: string; v
   );
 }
 
-// ── SIGNAL ROW ────────────────────────────────────────────────────────────────
-
-function SignalRow({ label, level }: { label: string; level: 1 | 2 | 3 }) {
-  // 3 = positive (navy dots), 2 = neutral (text-2), 1 = warning (gold-dim)
-  const dotColor = level === 3 ? 'var(--navy)' : level === 2 ? 'var(--text-2)' : 'var(--gold-dim)';
-  const labelText = level === 3
-    ? label === 'Demand' ? 'HIGH' : label === 'Liquidity' ? 'LIQUID' : 'RISING'
-    : level === 2
-    ? label === 'Demand' ? 'MODERATE' : label === 'Liquidity' ? 'AVERAGE' : 'STABLE'
-    : label === 'Demand' ? 'LOW' : label === 'Liquidity' ? 'ILLIQUID' : 'DECLINING';
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border-light)' }}>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase' }}>{label}</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <div style={{ display: 'flex', gap: '3px' }}>
-          {[1, 2, 3].map(i => (
-            <div key={i} style={{ width: '8px', height: '8px', background: i <= level ? dotColor : 'var(--border)' }} />
-          ))}
-        </div>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: dotColor }}>{labelText}</span>
-      </div>
-    </div>
-  );
-}
-
 // ── PROJECTION ROW ────────────────────────────────────────────────────────────
 
 function ProjectionRow({ year, value, base }: { year: string; value: number; base: number }) {
   const pct = base > 0 ? ((value - base) / base) * 100 : 0;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid var(--border-light)' }}>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.08em', color: 'var(--text-3)', width: '36px', flexShrink: 0 }}>{year}</span>
-      <div style={{ flex: 1, height: '2px', background: 'var(--border)', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${Math.min((value / (base * 5)) * 100, 100)}%`, background: 'linear-gradient(to right, var(--navy), var(--gold))' }} />
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid #21262D' }}>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.08em', color: '#8B949E', width: '36px', flexShrink: 0 }}>{year}</span>
+      <div style={{ flex: 1, height: '2px', background: '#30363D', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${Math.min((value / (base * 5)) * 100, 100)}%`, background: 'linear-gradient(to right, #2563EB, #C6A85A)' }} />
       </div>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: 'var(--navy)', width: '80px', textAlign: 'right', flexShrink: 0 }}>{fmt(value)}</span>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: pct > 0 ? 'var(--gold)' : 'var(--text-3)', width: '52px', textAlign: 'right', flexShrink: 0 }}>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: '#E6EDF3', width: '80px', textAlign: 'right', flexShrink: 0 }}>{fmt(value)}</span>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: pct > 0 ? '#C6A85A' : '#8B949E', width: '52px', textAlign: 'right', flexShrink: 0 }}>
         {pct > 0 ? `+${pct.toFixed(0)}%` : '—'}
       </span>
     </div>
   );
 }
 
-// ── SECTION HEADER ────────────────────────────────────────────────────────────
+// ── SCORE COLOR ───────────────────────────────────────────────────────────────
 
-function SectionHeader({ title, badge }: { title: string; badge?: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', paddingBottom: '12px', borderBottom: '2px solid var(--border)' }}>
-      <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 600, color: 'var(--text)', letterSpacing: '0.01em', margin: 0 }}>{title}</h2>
-      {badge && (
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.16em', color: 'var(--navy)', border: '1px solid var(--navy)', padding: '3px 8px', textTransform: 'uppercase' }}>
-          {badge}
-        </span>
-      )}
-    </div>
-  );
-}
+const SCORE_COLOR = (s: number): string =>
+  s >= 80 ? '#C6A85A' : s >= 65 ? '#2563EB' : s >= 50 ? '#F59E0B' : '#EF4444';
 
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 
 export default function OpportunityDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [lot, setLot]             = useState<any>(null);
-  const [loading, setLoading]     = useState(true);
-  const [imgLoaded, setImgLoaded] = useState(false);
+  const [lot, setLot]                 = useState<any>(null);
+  const [loading, setLoading]         = useState(true);
+  const [imgLoaded, setImgLoaded]     = useState(false);
   const [memoLoading, setMemoLoading] = useState(false);
   const [memo, setMemo]               = useState<any>(null);
   const [showMemo, setShowMemo]       = useState(false);
   const [comparables, setComparables] = useState<any>(null);
 
-  const limits      = getPlanLimits();
+  const limits         = getPlanLimits();
   const canSeeAnalysis = limits.hasProjections || limits.hasArtistCotation;
   const canSeeAI       = limits.hasAIVerdict;
   const visibleYears   = limits.projectionYears || [];
@@ -192,15 +156,9 @@ export default function OpportunityDetail() {
     try {
       const resp = await fetch(
         `https://artalpha-backend-production.up.railway.app/api/memo/${lot.id}`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${getToken()}` },
-        }
+        { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } }
       );
-      if (resp.status === 403) {
-        alert('Investment memos are available from the Investor plan (€29/month).');
-        return;
-      }
+      if (resp.status === 403) { alert('Investment memos are available from the Investor plan (€29/month).'); return; }
       if (!resp.ok) throw new Error('Failed');
       const data = await resp.json();
       setMemo(data);
@@ -218,41 +176,29 @@ export default function OpportunityDetail() {
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(data => { setLot(data); setLoading(false); })
       .catch(() => setLoading(false));
-
     fetch(`${BACKEND}/api/lots/${id}/comparables`, {
       headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
-    })
-      .then(r => r.json())
-      .then(setComparables)
-      .catch(() => {});
+    }).then(r => r.json()).then(setComparables).catch(() => {});
   }, [id]);
 
-  // ── LOADING ──────────────────────────────────────────────────────────────────
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+    <div style={{ minHeight: '100vh', background: '#0D1117', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
       <div style={{ display: 'flex', gap: '4px', alignItems: 'flex-end', height: '32px' }}>
         {[0, 1, 2, 3, 4].map(i => (
-          <div key={i} style={{
-            width: '4px', background: 'var(--navy)',
-            animation: `barPulse 1s ease ${i * 0.12}s infinite`,
-          }} />
+          <div key={i} style={{ width: '4px', background: '#2563EB', animation: `barPulse 1s ease ${i * 0.12}s infinite` }} />
         ))}
       </div>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.24em', color: 'var(--text-3)' }}>LOADING</span>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.24em', color: '#8B949E' }}>LOADING</span>
       <style>{`@keyframes barPulse{0%,100%{height:8px;opacity:0.3}50%{height:28px;opacity:1}}`}</style>
     </div>
   );
 
-  // ── NOT FOUND ─────────────────────────────────────────────────────────────────
   if (!lot) return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100vh', background: '#0D1117', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '6px' }}>Artwork not found</div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)', marginBottom: '24px', letterSpacing: '0.08em' }}>The requested lot does not exist or has been removed.</div>
-        <button
-          onClick={() => navigate(-1)}
-          style={{ padding: '11px 24px', background: 'var(--navy)', color: 'white', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase' }}
-        >
+        <div style={{ fontFamily: 'Georgia,serif', fontSize: '22px', color: '#E6EDF3', marginBottom: '6px' }}>Artwork not found</div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#8B949E', marginBottom: '24px', letterSpacing: '0.08em' }}>The requested lot does not exist or has been removed.</div>
+        <button onClick={() => navigate(-1)} style={{ padding: '11px 24px', background: '#2563EB', color: 'white', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
           ← Back
         </button>
       </div>
@@ -282,10 +228,6 @@ export default function OpportunityDetail() {
     sothebys: "Sotheby's", christies: "Christie's", bonhams: 'Bonhams',
     liveauctioneers: 'LiveAuctioneers', ebay: 'eBay', artsy: 'Artsy',
   };
-  const planNames: Record<string, string> = {
-    free: 'FREE', starter: 'COLLECTOR', investor: 'INVESTOR', pro: 'FAMILY OFFICE', elite: 'INSTITUTIONAL',
-  };
-  const tierBadge = planNames[limits.name?.toLowerCase?.() ?? ''] ?? limits.name?.toUpperCase() ?? '';
 
   const artistEnc = encodeURIComponent((lot.artist_name_raw || '').slice(0, 40));
   const sourceSearch: Record<string, string> = {
@@ -306,764 +248,575 @@ export default function OpportunityDetail() {
     ? new Date(lot.auction_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
     : null;
 
-  // Signal levels
-  const demandLevel: 1 | 2 | 3 = (lot.deal_score || 0) >= 75 ? 3 : (lot.deal_score || 0) >= 55 ? 2 : 1;
-  const liquidityLevel: 1 | 2 | 3 = ['christies', 'sothebys', 'bonhams', 'drouot'].includes(source) ? 3 : 2;
-  const trendLevel: 1 | 2 | 3 = upsidePct > 20 ? 3 : upsidePct > 0 ? 2 : 1;
+  // ── DECISION ENGINE ───────────────────────────────────────────────────────────
+  const realCost     = lot.real_cost         || null;
+  const cycleStage   = lot.cycle_stage       || null;
+  const estBias      = lot.estimation_bias   || null;
+  const consignAlert = lot.consignment_alert || null;
+  const provRisk     = lot.provenance_risk   || null;
+
+  const hasProvHighRisk = provRisk?.level === 'HIGH RISK';
+  const hasConsignHigh  = consignAlert?.level === 'HIGH VOLUME';
+  const hasCycleRisk    = cycleStage?.stage === 'PEAK';
+
+  const verdict = (() => {
+    if (hasProvHighRisk)
+      return { label: 'HIGH RISK', color: '#EF4444', bg: 'rgba(239,68,68,0.08)', icon: '⚠', sub: 'Provenance issue detected' };
+    if ((lot.deal_score || 0) >= 80 && upsidePct >= 20 && !hasCycleRisk)
+      return { label: 'BUY', color: '#10B981', bg: 'rgba(16,185,129,0.08)', icon: '↑', sub: 'Strong conviction signal' };
+    if ((lot.deal_score || 0) >= 65 && upsidePct >= 10)
+      return { label: 'WATCH', color: '#F59E0B', bg: 'rgba(245,158,11,0.08)', icon: '◎', sub: 'Monitor closely' };
+    if ((lot.deal_score || 0) < 50 || upsidePct < 0)
+      return { label: 'PASS', color: '#EF4444', bg: 'rgba(239,68,68,0.08)', icon: '↓', sub: 'Below conviction threshold' };
+    return { label: 'WATCH', color: '#F59E0B', bg: 'rgba(245,158,11,0.08)', icon: '◎', sub: 'Insufficient signal' };
+  })();
+
+  const riskFlagCount = ([
+    hasProvHighRisk,
+    hasConsignHigh,
+    !!(estBias && Math.abs(estBias.pct_above_low_estimate || 0) > 50),
+  ] as boolean[]).filter(Boolean).length;
+
+  const riskLevel = riskFlagCount >= 2
+    ? { label: 'HIGH RISK', color: '#EF4444' }
+    : riskFlagCount === 1
+    ? { label: 'MODERATE', color: '#F59E0B' }
+    : { label: 'LOW RISK', color: '#10B981' };
+
+  const scoreColor    = SCORE_COLOR(lot.deal_score || 0);
+  const totalCost     = realCost ? realCost.cost_basis : price;
+  const breakEvenGain = realCost ? realCost.needed_gain_pct : 26;
+  const netGain       = upsidePct - breakEvenGain;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+    <div style={{ minHeight: 'calc(100vh - 57px)', background: '#0D1117', color: 'white' }}>
       <style>{`
         @keyframes barPulse{0%,100%{height:8px;opacity:0.3}50%{height:28px;opacity:1}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
         @keyframes imgShimmer{0%,100%{opacity:0.5}50%{opacity:0.85}}
       `}</style>
 
-      {/* ── 1. STICKY NAV ──────────────────────────────────────────────────────── */}
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 40,
-        background: 'rgba(250,250,248,0.97)', backdropFilter: 'blur(8px)',
-        borderBottom: '2px solid var(--border)',
-        padding: '0 32px',
-        display: 'flex', alignItems: 'center', gap: '0', height: '48px',
-      }}>
-        {/* Back */}
-        <button
-          onClick={() => navigate(-1)}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.08em', padding: '0 16px 0 0', height: '100%', borderRight: '1px solid var(--border)' }}
-          onMouseEnter={e => (e.currentTarget.style.color = 'var(--navy)')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
-        >
-          ←&nbsp;BACK
+      {/* ═══ ZONE A — COMMAND BAR ═══ */}
+      <div style={{ background: '#161B22', borderBottom: '1px solid #30363D', padding: '0 32px', display: 'flex', alignItems: 'center', gap: '16px', position: 'sticky', top: 0, zIndex: 40, height: '48px' }}>
+        <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', color: '#8B949E', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em', padding: '0 16px 0 0', height: '100%', borderRight: '1px solid #30363D' }}>
+          ← BACK
         </button>
-
-        {/* Breadcrumb */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 16px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)', letterSpacing: '0.06em', flex: 1 }}>
-          {flags[source] && <span>{flags[source]}</span>}
-          <span style={{ color: 'var(--text-2)' }}>{sourceNames[source] || source}</span>
-          {auctionDateFmt && <><span>·</span><span>{auctionDateFmt}</span></>}
-          {tierBadge && (
-            <span style={{ marginLeft: '4px', padding: '2px 7px', border: '1px solid var(--navy)', color: 'var(--navy)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.14em' }}>
-              {tierBadge}
-            </span>
-          )}
-        </div>
-
-        {/* CTA */}
-        <a
-          href={externalUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 18px', background: 'var(--navy)', color: 'white', textDecoration: 'none', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'var(--navy-bright)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'var(--navy)')}
-        >
-          View on {sourceNames[source] || 'source'}
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 1h6v6M9 1L1 9"/>
-          </svg>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#8B949E', letterSpacing: '0.06em' }}>
+          {(lot.auction_house_name || 'AUCTION').toUpperCase()}
+        </span>
+        {lot.lot_number && (
+          <>
+            <div style={{ width: '1px', height: '16px', background: '#30363D' }} />
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#8B949E' }}>LOT {lot.lot_number}</span>
+          </>
+        )}
+        {lot.auction_date && (
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {(() => {
+              const diff = new Date(lot.auction_date).getTime() - Date.now();
+              if (diff <= 0) return <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#EF4444' }}>CLOSED</span>;
+              const h = Math.floor(diff / 3600000);
+              const m = Math.floor((diff % 3600000) / 60000);
+              const urgent = diff < 86400000;
+              return (
+                <>
+                  {urgent && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#EF4444', animation: 'pulse 1s infinite' }} />}
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: urgent ? '#EF4444' : '#8B949E', fontWeight: urgent ? 700 : 400 }}>
+                    CLOSES {h > 24 ? `${Math.floor(h / 24)}D ${h % 24}H` : `${h}H ${m}M`}
+                  </span>
+                </>
+              );
+            })()}
+          </div>
+        )}
+        <a href={externalUrl} target="_blank" rel="noopener noreferrer"
+          style={{ marginLeft: lot.auction_date ? '0' : 'auto', padding: '8px 18px', background: '#238636', border: '1px solid #2EA043', color: 'white', textDecoration: 'none', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
+          View on {sourceNames[source] || 'auction'} →
         </a>
       </div>
 
-      {/* ── MAIN CONTENT ───────────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: '1180px', margin: '0 auto', padding: '40px 32px 80px' }}>
+      {/* ═══ ZONE B — ABOVE THE FOLD ═══ */}
+      <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', minHeight: '420px', borderBottom: '1px solid #30363D' }}>
 
-        {/* ── 2. HERO ──────────────────────────────────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr', gap: '56px', marginBottom: '56px', alignItems: 'start' }}>
-
-          {/* Left: sticky image */}
-          <div style={{ position: 'sticky', top: '68px' }}>
-            <div style={{ border: '2px solid var(--border)', aspectRatio: '3/4', position: 'relative', overflow: 'hidden', background: 'var(--bg-subtle)' }}>
-              {!imgLoaded && lot.image_url && (
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, var(--bg-subtle) 25%, var(--bg-hover) 50%, var(--bg-subtle) 75%)', backgroundSize: '200% 100%', animation: 'imgShimmer 1.6s ease-in-out infinite' }} />
-              )}
-              {lot.image_url ? (
-                <img
-                  src={lot.image_url}
-                  alt={lot.title || 'Artwork'}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', opacity: imgLoaded ? 1 : 0, transition: 'opacity 0.4s' }}
-                  onLoad={() => setImgLoaded(true)}
-                />
-              ) : (
-                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontFamily: 'var(--font-serif)', fontSize: '56px', color: 'var(--border)' }}>◇</span>
-                </div>
-              )}
+        {/* B1 — Image */}
+        <div style={{ background: '#0D1117', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', borderRight: '1px solid #30363D', position: 'relative' }}>
+          {lot.image_url ? (
+            <img src={lot.image_url} alt={lot.title}
+              onLoad={() => setImgLoaded(true)}
+              style={{ maxWidth: '100%', maxHeight: '360px', objectFit: 'contain', borderRadius: '4px', opacity: imgLoaded ? 1 : 0, transition: 'opacity 0.4s' }} />
+          ) : (
+            <div style={{ width: '200px', height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #30363D', borderRadius: '8px' }}>
+              <span style={{ fontSize: '48px', opacity: 0.1 }}>◎</span>
             </div>
-            {/* Secondary link below image */}
-            <a
-              href={externalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ display: 'block', marginTop: '12px', fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.12em', color: 'var(--text-3)', textDecoration: 'none', textAlign: 'center', textTransform: 'uppercase' }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'var(--navy)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
-            >
-              View original listing ↗
-            </a>
+          )}
+          {(lot.deal_score || 0) >= 80 && (
+            <div style={{ position: 'absolute', top: '16px', left: '16px', padding: '3px 10px', background: 'rgba(198,168,90,0.15)', border: '1px solid rgba(198,168,90,0.4)', borderRadius: '3px' }}>
+              <span style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>EXCEPTIONAL</span>
+            </div>
+          )}
+          <button
+            onClick={() => {
+              const params = new URLSearchParams({ lot: lot.id, img: lot.image_url || '', title: lot.title || '', artist: lot.artist_name_raw || '', w: String(lot.width_cm || 80), h: String(lot.height_cm || 60) });
+              navigate(`/app/visualizer?${params.toString()}`);
+            }}
+            style={{ position: 'absolute', bottom: '16px', right: '16px', padding: '6px 12px', background: 'rgba(22,27,34,0.9)', border: '1px solid #30363D', borderRadius: '4px', color: '#8B949E', fontSize: '11px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+          >
+            🖼 Visualize
+          </button>
+        </div>
 
-            {/* Visualize in room */}
-            <button
-              onClick={() => {
-                const params = new URLSearchParams({
-                  lot: lot.id,
-                  img: lot.image_url || '',
-                  title: lot.title || '',
-                  artist: lot.artist_name_raw || lot.artist?.name || '',
-                  w: String(lot.width_cm || lot.dimensions_parsed?.width_cm || 80),
-                  h: String(lot.height_cm || lot.dimensions_parsed?.height_cm || 60),
-                });
-                navigate(`/app/visualizer?${params.toString()}`);
-              }}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                width: '100%', marginTop: '10px',
-                padding: '10px 18px', background: 'var(--bg-subtle)',
-                border: '1px solid var(--border)', borderRadius: '0',
-                fontSize: '11px', fontWeight: 700, color: 'var(--text)',
-                fontFamily: 'var(--font-mono)', letterSpacing: '0.08em',
-                cursor: 'pointer', transition: 'all 0.15s', textTransform: 'uppercase',
-              }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'var(--navy)';
-                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy)';
-                (e.currentTarget as HTMLButtonElement).style.color = 'white';
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-subtle)';
-                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
-                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text)';
-              }}
-            >
-              <span style={{ fontSize: '13px' }}>🖼</span>
-              Visualize in room
-            </button>
+        {/* B2 — Decision panel */}
+        <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+          {/* Artist + Title */}
+          <div>
+            <div
+              onClick={() => navigate(`/app/artists/${encodeURIComponent(lot.artist_name_raw || '')}`)}
+              style={{ fontSize: '10px', fontWeight: 700, color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '4px', cursor: 'pointer' }}>
+              {lot.artist_name_raw || 'Unknown artist'}
+            </div>
+            <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(20px,2.5vw,30px)', color: '#E6EDF3', fontWeight: 600, margin: '0 0 6px', lineHeight: 1.3 }}>
+              {lot.title || 'Untitled'}
+            </h1>
+            <div style={{ fontSize: '12px', color: '#8B949E' }}>
+              {[lot.medium, lot.dimensions].filter(Boolean).join(' · ')}
+            </div>
           </div>
 
-          {/* Right: hero info */}
-          <div style={{ paddingTop: '4px' }}>
+          {/* VERDICT ROW */}
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'stretch', flexWrap: 'wrap' }}>
 
-            {/* Artist name */}
-            {lot.artist_name_raw && (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px' }}>
-                <span
-                  onClick={() => navigate(`/app/artists/${encodeURIComponent(lot.artist_name_raw)}`)}
-                  style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'var(--border)', color: 'var(--text-3)' }}
-                >
-                  {lot.artist_name_raw}
+            <div style={{ padding: '14px 18px', background: verdict.bg, border: `1px solid ${verdict.color}33`, borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: '88px' }}>
+              <div style={{ fontSize: '20px', color: verdict.color, lineHeight: 1, marginBottom: '4px' }}>{verdict.icon}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: verdict.color, letterSpacing: '0.1em' }}>{verdict.label}</div>
+              <div style={{ fontSize: '9px', color: verdict.color, opacity: 0.7, fontFamily: 'var(--font-mono)', marginTop: '2px', textAlign: 'center', lineHeight: 1.3 }}>{verdict.sub}</div>
+            </div>
+
+            <div style={{ padding: '14px 18px', background: '#161B22', border: '1px solid #30363D', borderRadius: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: '100px' }}>
+              <div style={{ fontSize: '9px', fontWeight: 700, color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', marginBottom: '4px' }}>SCORE</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: scoreColor, lineHeight: 1 }}>{(lot.deal_score || 0).toFixed(0)}</span>
+                <span style={{ fontSize: '12px', color: '#8B949E', fontFamily: 'var(--font-mono)' }}>/100</span>
+              </div>
+              <div style={{ marginTop: '6px', height: '3px', background: '#30363D', borderRadius: '2px' }}>
+                <div style={{ height: '100%', borderRadius: '2px', width: `${lot.deal_score || 0}%`, background: scoreColor }} />
+              </div>
+            </div>
+
+            <div style={{ padding: '14px 18px', background: '#161B22', border: '1px solid #30363D', borderRadius: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div style={{ fontSize: '9px', fontWeight: 700, color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', marginBottom: '4px' }}>
+                {isUpcoming ? 'STARTING BID' : 'PRICE / ALL-IN'}
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#E6EDF3' }}>{fmt(price)}</div>
+              {totalCost > price && (
+                <div style={{ fontSize: '11px', color: '#F59E0B', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>all-in {fmt(totalCost)}</div>
+              )}
+              {(estLow > 0 || estHigh > 0) && (
+                <div style={{ fontSize: '10px', color: '#8B949E', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>est. {fmt(estLow)}–{fmt(estHigh)}</div>
+              )}
+            </div>
+
+            <div style={{ padding: '14px 18px', background: upsidePct > breakEvenGain ? 'rgba(16,185,129,0.05)' : 'rgba(239,68,68,0.05)', border: `1px solid ${upsidePct > breakEvenGain ? '#10B98133' : '#EF444433'}`, borderRadius: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div style={{ fontSize: '9px', fontWeight: 700, color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', marginBottom: '4px' }}>UPSIDE / BREAK-EVEN</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: upsidePct > 0 ? '#10B981' : '#EF4444' }}>
+                {upsidePct > 0 ? '+' : ''}{upsidePct.toFixed(0)}%
+              </div>
+              <div style={{ fontSize: '10px', color: '#8B949E', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>needs +{breakEvenGain.toFixed(0)}% to break even</div>
+              {netGain > 0 && (
+                <div style={{ fontSize: '10px', color: '#10B981', fontFamily: 'var(--font-mono)', marginTop: '2px', fontWeight: 700 }}>net +{netGain.toFixed(0)}% after costs</div>
+              )}
+            </div>
+
+            <div style={{ padding: '14px 18px', background: '#161B22', border: `1px solid ${riskLevel.color}33`, borderRadius: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div style={{ fontSize: '9px', fontWeight: 700, color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', marginBottom: '4px' }}>RISK</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: riskLevel.color }}>{riskLevel.label}</div>
+            </div>
+          </div>
+
+          {/* SIGNAL STRIP */}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {cycleStage && (
+              <div style={{ padding: '5px 11px', background: '#161B22', border: '1px solid #30363D', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: cycleStage.color }} />
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: '#C6A85A', letterSpacing: '0.08em' }}>CYCLE</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#E6EDF3' }}>{cycleStage.stage}</span>
+              </div>
+            )}
+            {estBias && Math.abs(estBias.pct_above_low_estimate || 0) > 10 && (
+              <div style={{ padding: '5px 11px', background: estBias.signal === 'bullish' ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${estBias.signal === 'bullish' ? '#10B98133' : '#EF444433'}`, borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: estBias.signal === 'bullish' ? '#10B981' : '#EF4444', letterSpacing: '0.08em' }}>BIAS</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#E6EDF3' }}>
+                  {estBias.signal === 'bullish' ? 'Underestimates' : 'Overestimates'} {Math.abs(estBias.pct_above_low_estimate || 0).toFixed(0)}%
                 </span>
               </div>
             )}
-
-            {/* Title */}
-            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(22px, 2.8vw, 34px)', fontWeight: 600, color: 'var(--text)', lineHeight: 1.2, marginBottom: '20px' }}>
-              {lot.title || 'Untitled'}
-            </h1>
-
-            {/* Gold rule */}
-            <div style={{ width: '40px', height: '2px', background: 'var(--gold)', marginBottom: '28px' }} />
-
-            {/* Price block */}
-            <div style={{ marginBottom: '28px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '8px' }}>
-                {isUpcoming ? 'Starting Bid' : 'Current Price'}
+            {hasConsignHigh && (
+              <div style={{ padding: '5px 11px', background: 'rgba(239,68,68,0.08)', border: '1px solid #EF444433', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '10px' }}>⚠</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: '#EF4444', letterSpacing: '0.08em' }}>SUPPLY ALERT</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#E6EDF3' }}>{consignAlert!.count} lots in 90 days</span>
               </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '40px', fontWeight: 700, color: 'var(--text)', lineHeight: 1, marginBottom: '6px' }}>{fmt(price)}</div>
-              {isUpcoming && (
-                <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: '4px' }}>
-                  Starting bid · Auction not yet started
-                </div>
-              )}
-              {(estLow > 0 || estHigh > 0) && (
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-3)', marginTop: '4px' }}>
-                  est. {estLow && estHigh && estLow !== estHigh ? `${fmt(estLow)} – ${fmt(estHigh)}` : fmt(estHigh || estLow)}
-                </div>
-              )}
-              {lot.pct_below_low_estimate && lot.pct_below_low_estimate > 5 && (
-                <div style={{
-                  display: 'inline-block',
-                  padding: '8px 16px',
-                  background: isUpcoming ? 'var(--navy)' : 'var(--electric)',
-                  marginTop: '12px',
-                  fontSize: '13px', fontWeight: 700,
-                  color: 'white', fontFamily: 'var(--font-mono)',
-                }}>
-                  {isUpcoming
-                    ? `Starting bid — est. €${(estLow / 1000).toFixed(0)}K–€${(estHigh / 1000).toFixed(0)}K`
-                    : `-${Math.round(lot.pct_below_low_estimate)}% below estimate`
-                  }
+            )}
+            {hasProvHighRisk && (
+              <div style={{ padding: '5px 11px', background: 'rgba(239,68,68,0.08)', border: '1px solid #EF444433', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '10px' }}>🔴</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: '#EF4444', letterSpacing: '0.08em' }}>PROVENANCE RISK</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#E6EDF3' }}>{provRisk!.flags?.[0]?.label || 'Review required'}</span>
+              </div>
+            )}
+          </div>
+
+          {/* ACTION BUTTONS */}
+          <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
+            <button
+              onClick={memo ? () => setShowMemo(true) : generateMemo}
+              disabled={memoLoading}
+              style={{ flex: 1, padding: '11px', background: memoLoading ? '#21262D' : 'rgba(37,99,235,0.15)', border: `1px solid ${memoLoading ? '#30363D' : '#2563EB44'}`, borderRadius: '6px', color: memoLoading ? '#8B949E' : '#60A5FA', fontSize: '12px', fontWeight: 700, cursor: memoLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}
+            >
+              {memoLoading ? '… GENERATING' : memo ? '◆ VIEW MEMO' : '◆ GENERATE MEMO'}
+            </button>
+            <button
+              onClick={() => {
+                const params = new URLSearchParams({ lot: lot.id, img: lot.image_url || '', title: lot.title || '', artist: lot.artist_name_raw || '', w: String(lot.width_cm || 80), h: String(lot.height_cm || 60) });
+                navigate(`/app/visualizer?${params.toString()}`);
+              }}
+              style={{ padding: '11px 14px', background: '#161B22', border: '1px solid #30363D', borderRadius: '6px', color: '#8B949E', fontSize: '13px', cursor: 'pointer' }}
+            >
+              🖼
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ ZONE C — INTELLIGENCE GRID ═══ */}
+      <div style={{ display: 'grid', gridTemplateColumns: realCost ? '1fr 1fr 1fr' : '1fr 1fr', gap: '1px', background: '#30363D' }}>
+
+        {/* C1 — Real Cost Breakdown */}
+        {realCost && (
+          <div style={{ background: '#0D1117', padding: '24px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '16px' }}>REAL COST BREAKDOWN</div>
+            {([
+              { label: 'Hammer price', value: price },
+              { label: `Buyer's premium (${realCost.buyers_premium_pct}%)`, value: Math.round(realCost.cost_basis - price) },
+              { label: 'Holding cost (3yr)', value: realCost.holding_cost_3y },
+            ] as { label: string; value: number }[]).filter(item => item.value > 0).map(({ label, value }) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid #21262D' }}>
+                <span style={{ fontSize: '12px', color: '#8B949E' }}>{label}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#E6EDF3', fontWeight: 500 }}>{fmt(value)}</span>
+              </div>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 0', marginTop: '4px' }}>
+              <span style={{ fontSize: '13px', color: '#E6EDF3', fontWeight: 700 }}>All-in cost</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '16px', color: '#F59E0B', fontWeight: 700 }}>{fmt(totalCost)}</span>
+            </div>
+            <div style={{ marginTop: '10px', padding: '8px 12px', background: '#161B22', borderRadius: '4px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#8B949E' }}>
+                Needs +{breakEvenGain.toFixed(1)}% to break even
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#F59E0B', marginTop: '3px' }}>
+                Break-even hammer: {fmt(realCost.breakeven_hammer)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* C2 — Market Signals */}
+        <div style={{ background: '#0D1117', padding: '24px' }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '16px' }}>MARKET SIGNALS</div>
+
+          {cycleStage && (
+            <div style={{ marginBottom: '12px', padding: '12px', background: '#161B22', borderRadius: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '10px', color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>MARKET CYCLE</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: cycleStage.color, fontFamily: 'var(--font-mono)' }}>{cycleStage.icon} {cycleStage.stage}</span>
+              </div>
+              <p style={{ fontSize: '12px', color: '#8B949E', margin: '0 0 4px', lineHeight: 1.5 }}>{cycleStage.description}</p>
+              {cycleStage.momentum_pct !== null && (
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: cycleStage.color }}>
+                  12m: {cycleStage.momentum_pct > 0 ? '+' : ''}{cycleStage.momentum_pct}% · {cycleStage.total_sales} sales · {cycleStage.first_year}–{cycleStage.last_year}
                 </div>
               )}
             </div>
+          )}
 
-            {/* Real Cost Calculator */}
-            {lot.real_cost && (
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(10,16,32,0.95) 0%, rgba(14,22,44,0.95) 100%)',
-                border: '1px solid rgba(184,152,90,0.2)',
-                borderRadius: '8px',
-                padding: '16px 20px',
-                marginBottom: '28px',
-              }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '14px', opacity: 0.85 }}>
-                  Real Cost Calculator
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 20px' }}>
-                  {[
-                    { label: 'All-in cost', value: fmt(lot.real_cost.cost_basis), note: `+${lot.real_cost.buyers_premium_pct}% premium` },
-                    { label: 'Holding cost (3yr)', value: fmt(lot.real_cost.holding_cost_3y), note: 'storage + insurance' },
-                    { label: 'Break-even hammer', value: fmt(lot.real_cost.breakeven_hammer), note: 'after seller fee', highlight: true },
-                    { label: 'Gain needed', value: `+${lot.real_cost.needed_gain_pct}%`, note: 'to recoup all costs', highlight: true },
-                  ].map(({ label, value, note, highlight }) => (
-                    <div key={label}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: '3px' }}>{label}</div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: highlight ? 'var(--gold)' : 'var(--text)', lineHeight: 1.1 }}>{value}</div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', marginTop: '2px' }}>{note}</div>
-                    </div>
-                  ))}
-                </div>
+          {estBias && (
+            <div style={{ marginBottom: '12px', padding: '12px', background: '#161B22', borderRadius: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '10px', color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>ESTIMATION BIAS</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: estBias.signal === 'bullish' ? '#10B981' : '#EF4444', fontFamily: 'var(--font-mono)' }}>
+                  {estBias.pct_above_low_estimate > 0 ? '+' : ''}{estBias.pct_above_low_estimate}%
+                </span>
               </div>
-            )}
+              <p style={{ fontSize: '12px', color: '#8B949E', margin: 0, lineHeight: 1.5 }}>{estBias.label} · {(estBias.sample_size || 0).toLocaleString()} sales</p>
+            </div>
+          )}
 
-            {/* Estimation Bias */}
-            {lot.estimation_bias && (() => {
-              const b = lot.estimation_bias;
-              const signalColor = b.signal === 'bullish' ? '#4ade80' : b.signal === 'bearish' ? '#f87171' : 'var(--text-3)';
-              const barPct = Math.min(Math.abs(b.pct_above_low_estimate) / 60 * 100, 100);
-              const barColor = b.signal === 'bullish' ? '#4ade80' : b.signal === 'bearish' ? '#f87171' : '#94a3b8';
-              return (
-                <div style={{ marginBottom: '28px', padding: '16px 20px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                    <div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '4px' }}>
-                        Estimation Bias
-                      </div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: signalColor }}>
-                        {b.label}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: signalColor, lineHeight: 1 }}>
-                        {b.pct_above_low_estimate > 0 ? '+' : ''}{b.pct_above_low_estimate}%
-                      </div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-3)', marginTop: '2px' }}>
-                        vs low estimate
-                      </div>
-                    </div>
-                  </div>
-                  {/* Bias bar */}
-                  <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', marginBottom: '8px' }}>
-                    <div style={{ height: '100%', width: `${barPct}%`, background: barColor, borderRadius: '2px', transition: 'width 0.6s ease' }} />
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.25)' }}>
-                    Based on {b.sample_size.toLocaleString()} sales · {b.house}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Cycle Stage */}
-            {lot.cycle_stage && (() => {
-              const c = lot.cycle_stage;
-              return (
-                <div style={{ marginBottom: '28px', padding: '14px 20px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '8px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '10px' }}>
-                    Market Cycle
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '6px',
-                        padding: '5px 12px',
-                        background: `${c.color}18`,
-                        border: `1px solid ${c.color}40`,
-                        borderRadius: '4px',
-                      }}>
-                        <span style={{ fontSize: '13px', color: c.color }}>{c.icon}</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: c.color, letterSpacing: '0.1em' }}>{c.stage}</span>
-                      </div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-2)' }}>
-                        {c.description}
-                      </div>
-                    </div>
-                    {c.momentum_pct !== null && (
-                      <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: c.color, lineHeight: 1 }}>
-                          {c.momentum_pct > 0 ? '+' : ''}{c.momentum_pct}%
-                        </div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-3)', marginTop: '2px' }}>12m momentum</div>
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.25)', marginTop: '10px' }}>
-                    {c.total_sales} sales recorded · {c.first_year}–{c.last_year}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Consignment Volume Alert */}
-            {lot.consignment_alert && (() => {
-              const a = lot.consignment_alert;
-              const [expanded, setExpanded] = useState(false);
-              return (
-                <div style={{ marginBottom: '28px', border: `1px solid ${a.color}40`, borderRadius: '8px', overflow: 'hidden' }}>
-                  {/* Header row */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: `${a.color}10`, cursor: 'pointer' }} onClick={() => setExpanded(e => !e)}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '14px' }}>⚠</span>
-                      <div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: a.color }}>
-                          {a.level} — {a.headline}
-                        </div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', marginTop: '2px' }}>
-                          {a.interpretation}
-                        </div>
-                      </div>
-                    </div>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', flexShrink: 0, marginLeft: '8px' }}>{expanded ? '▲' : '▼'}</span>
-                  </div>
-                  {/* Expanded lot list */}
-                  {expanded && (
-                    <div style={{ padding: '0 16px 12px' }}>
-                      {a.upcoming.map((u: any) => (
-                        <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
-                          <div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-2)' }}>{u.title}</div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-3)', marginTop: '2px' }}>{u.house} · {u.date}</div>
-                          </div>
-                          {u.estimate_low && (
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', flexShrink: 0, marginLeft: '8px' }}>
-                              est. {u.estimate_low >= 1_000_000 ? `€${(u.estimate_low / 1_000_000).toFixed(1)}M` : `€${(u.estimate_low / 1_000).toFixed(0)}K`}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            {/* Provenance Risk */}
-            {lot.provenance_risk && (() => {
-              const r = lot.provenance_risk;
-              const severityColor: Record<string, string> = { HIGH: '#f87171', MEDIUM: '#f59e0b', LOW: '#94a3b8' };
-              return (
-                <div style={{ marginBottom: '28px', border: `1px solid ${r.color}40`, borderRadius: '8px', overflow: 'hidden' }}>
-                  {/* Header */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: `${r.color}10` }}>
-                    <span style={{ fontSize: '14px' }}>🔍</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: r.color }}>{r.level}</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-3)' }}>Due Diligence</span>
-                      </div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-3)', marginTop: '2px' }}>
-                        {r.flag_count} risk factor{r.flag_count > 1 ? 's' : ''} detected — verify before bidding
-                      </div>
-                    </div>
-                  </div>
-                  {/* Flag list */}
-                  <div style={{ padding: '4px 0' }}>
-                    {r.flags.map((f: any) => (
-                      <div key={f.code} style={{ display: 'flex', gap: '10px', padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
-                        <div style={{
-                          flexShrink: 0, marginTop: '2px',
-                          width: '6px', height: '6px', borderRadius: '50%',
-                          background: severityColor[f.severity] || '#94a3b8',
-                        }} />
-                        <div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: severityColor[f.severity] || 'var(--text-2)' }}>{f.label}</div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', marginTop: '3px', lineHeight: 1.5 }}>{f.detail}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Score bar */}
-            {lot.deal_score > 0 && (
-              <div style={{ marginBottom: lot.score_rationale ? '16px' : '28px', paddingBottom: lot.score_rationale ? '16px' : '28px', borderBottom: lot.score_rationale ? 'none' : '1px solid var(--border)' }}>
-                <ScoreBar score={lot.deal_score} isUpcoming={!!isUpcoming} />
+          {consignAlert && (
+            <div style={{ padding: '12px', background: consignAlert.level === 'HIGH VOLUME' ? 'rgba(239,68,68,0.06)' : '#161B22', borderRadius: '6px', border: consignAlert.level === 'HIGH VOLUME' ? '1px solid #EF444433' : '1px solid #30363D' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '10px', color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>SUPPLY PRESSURE</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: consignAlert.level === 'HIGH VOLUME' ? '#EF4444' : '#10B981', fontFamily: 'var(--font-mono)' }}>
+                  {consignAlert.level}
+                </span>
               </div>
-            )}
+              <p style={{ fontSize: '12px', color: '#8B949E', margin: 0, lineHeight: 1.5 }}>{consignAlert.interpretation}</p>
+            </div>
+          )}
 
-            {/* AI Rationale */}
-            {lot.score_rationale && (
-              <div style={{ background: 'var(--navy)', borderRadius: '6px', padding: '12px 16px', marginBottom: '28px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>AI Analysis</div>
-                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.55, fontStyle: 'italic' }}>{lot.score_rationale}</div>
+          {!cycleStage && !estBias && !consignAlert && (
+            <div style={{ color: '#484F58', fontSize: '12px', fontFamily: 'var(--font-mono)' }}>No market signal data available.</div>
+          )}
+        </div>
+
+        {/* C3 — Lot Details + Due Diligence */}
+        <div style={{ background: '#0D1117', padding: '24px' }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '16px' }}>LOT DETAILS</div>
+          {([
+            { label: 'Artist',     value: lot.artist_name_raw, nav: `/app/artists/${encodeURIComponent(lot.artist_name_raw || '')}` },
+            { label: 'Medium',     value: lot.medium },
+            { label: 'Dimensions', value: lot.dimensions },
+            { label: 'Category',   value: lot.category },
+            { label: 'Estimate',   value: (estLow || estHigh) ? `${fmt(estLow)}–${fmt(estHigh)}` : null },
+            { label: 'House',      value: lot.auction_house_name },
+            { label: 'Sale date',  value: auctionDateFmt },
+            { label: 'Lot #',      value: lot.lot_number },
+            { label: 'Source',     value: `${flags[source] || ''} ${sourceNames[source] || source}`.trim() },
+          ] as { label: string; value: string | null | undefined; nav?: string }[]).filter(({ value }) => value).map(({ label, value, nav }) => (
+            <div key={label} style={{ display: 'flex', gap: '12px', padding: '6px 0', borderBottom: '1px solid #21262D' }}>
+              <div style={{ width: '78px', fontSize: '11px', color: '#8B949E', flexShrink: 0 }}>{label}</div>
+              {nav ? (
+                <div onClick={() => navigate(nav)} style={{ fontSize: '12px', color: '#60A5FA', cursor: 'pointer', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
+              ) : (
+                <div style={{ fontSize: '12px', color: '#E6EDF3', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
+              )}
+            </div>
+          ))}
+
+          {provRisk && (
+            <div style={{ marginTop: '16px', padding: '10px 12px', background: provRisk.level === 'HIGH RISK' ? 'rgba(239,68,68,0.06)' : 'rgba(16,185,129,0.06)', borderRadius: '4px', border: `1px solid ${provRisk.level === 'HIGH RISK' ? '#EF444433' : '#10B98133'}` }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: provRisk.color, fontFamily: 'var(--font-mono)', marginBottom: '8px' }}>
+                DUE DILIGENCE · {provRisk.level}
               </div>
-            )}
+              {(provRisk.flags as { code: string; severity: string; label: string; detail: string }[]).map(f => (
+                <div key={f.code} style={{ display: 'flex', gap: '8px', marginBottom: '6px', alignItems: 'flex-start' }}>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: f.severity === 'HIGH' ? '#f87171' : f.severity === 'MEDIUM' ? '#f59e0b' : '#94a3b8', flexShrink: 0, marginTop: '4px' }} />
+                  <div>
+                    <div style={{ fontSize: '10px', fontWeight: 700, color: f.severity === 'HIGH' ? '#f87171' : f.severity === 'MEDIUM' ? '#f59e0b' : '#94a3b8' }}>{f.label}</div>
+                    <div style={{ fontSize: '10px', color: '#8B949E', marginTop: '2px', lineHeight: 1.5 }}>{f.detail}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
-            {/* Metadata grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 24px' }}>
+      {/* ═══ ZONE D — AI INTELLIGENCE ═══ */}
+      <div style={{ padding: '24px 32px', borderTop: '1px solid #30363D', background: '#0D1117' }}>
+        <div style={{ fontSize: '10px', fontWeight: 700, color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '16px' }}>AI INTELLIGENCE</div>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '16px' }}>
+          <button
+            onClick={memo ? () => setShowMemo(true) : generateMemo}
+            disabled={memoLoading}
+            style={{ padding: '10px 20px', background: memoLoading ? '#21262D' : 'rgba(37,99,235,0.15)', border: `1px solid ${memoLoading ? '#30363D' : '#2563EB44'}`, borderRadius: '6px', color: memoLoading ? '#8B949E' : '#60A5FA', fontSize: '12px', fontWeight: 700, cursor: memoLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}
+          >
+            {memoLoading ? '… Generating' : memo ? '◆ View Memo' : '◆ Generate Investment Memo'}
+          </button>
+          {memo && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ padding: '4px 12px', background: memo.recommendation === 'BUY' ? 'rgba(16,185,129,0.12)' : memo.recommendation === 'WATCH' ? 'rgba(245,158,11,0.12)' : 'rgba(100,116,139,0.12)', border: `1px solid ${memo.recommendation === 'BUY' ? '#10B98133' : memo.recommendation === 'WATCH' ? '#F59E0B33' : '#64748B33'}`, fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: memo.recommendation === 'BUY' ? '#10B981' : memo.recommendation === 'WATCH' ? '#F59E0B' : '#94a3b8', borderRadius: '4px' }}>{memo.recommendation}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#8B949E' }}>Conviction {memo.conviction}/100</span>
+            </div>
+          )}
+        </div>
+        {canSeeAI ? (
+          <AIAnalyst rawLot={lot} />
+        ) : canSeeAnalysis ? (
+          <LockedBlock
+            title="AI has a strong opinion on this deal"
+            teaser="Get STRONG BUY / BUY / WATCH / PASS verdict, confidence score, bull & bear cases, and advanced risk analysis."
+            ctaText="Unlock Investment Dossier"
+            ctaPrice="From €49/month"
+            planId="investor"
+            preview={
+              <div style={{ padding: '20px' }}>
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
+                  <div style={{ flex: 1, height: '44px', background: 'var(--navy-subtle)', border: '1px solid var(--navy-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 800, color: 'var(--navy)', letterSpacing: '0.12em' }}>STRONG BUY</span>
+                  </div>
+                  <div style={{ padding: '8px 16px', background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-2)' }}>Confidence: HIGH</span>
+                  </div>
+                </div>
+                <div style={{ height: '12px', background: 'var(--border)', marginBottom: '8px', width: '80%' }} />
+                <div style={{ height: '12px', background: 'var(--border)', width: '60%' }} />
+              </div>
+            }
+          />
+        ) : (
+          <LockedBlock
+            title="Know exactly what to do before you buy"
+            teaser="Our AI analyzes every signal — artist cotation, comparable sales, market timing — and gives you a clear verdict: STRONG BUY, BUY, WATCH, or PASS."
+            ctaText="Unlock Investment Dossier"
+            ctaPrice="From €49/month"
+            planId="investor"
+            preview={
+              <div style={{ display: 'flex', gap: '2px' }}>
+                {['Verdict', 'Confidence', 'Risk'].map(l => (
+                  <div key={l} style={{ flex: 1, padding: '16px', background: 'var(--bg-subtle)', textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '10px' }}>{l}</div>
+                    <div style={{ height: '18px', background: 'var(--border)' }} />
+                  </div>
+                ))}
+              </div>
+            }
+          />
+        )}
+      </div>
+
+      {/* ═══ ZONE E — AI RATIONALE ═══ */}
+      {lot.score_rationale && (
+        <div style={{ padding: '24px 32px', borderTop: '1px solid #30363D', background: '#0D1117' }}>
+          <div style={{ maxWidth: '800px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', marginBottom: '12px' }}>◆ NAUTILUS ANALYSIS</div>
+            <p style={{ fontSize: '14px', color: '#8B949E', lineHeight: 1.9, margin: 0, fontStyle: 'italic' }}>{lot.score_rationale}</p>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ ZONE F — INVESTMENT ANALYSIS (gated) ═══ */}
+      {canSeeAnalysis && (
+        <div style={{ padding: '24px 32px', borderTop: '1px solid #30363D', background: '#0D1117' }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '16px' }}>INVESTMENT ANALYSIS</div>
+          <div style={{ display: 'flex', gap: '2px', marginBottom: '16px' }}>
+            <MetricTile label="Current Price" value={fmt(price)} sub="What you pay" />
+            <MetricTile label="Fair Value" value={fmt(fairVal)} sub="Market estimate" highlight />
+            <MetricTile label="Upside" value={upsidePct > 0 ? `+${upsidePct.toFixed(0)}%` : 'At market'} sub="vs estimate" />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>
+            <div style={{ padding: '16px', background: '#161B22', borderRadius: '6px' }}>
+              <div style={{ fontSize: '9px', fontWeight: 700, color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', marginBottom: '10px' }}>INVESTMENT CASE</div>
               {[
-                { label: 'Auction House', value: lot.auction_house_name },
-                { label: 'Category', value: lot.category },
-                { label: 'Medium', value: lot.medium },
-                { label: 'Dimensions', value: lot.dimensions },
-                { label: 'Source', value: `${flags[source] || ''} ${sourceNames[source] || source}`.trim() },
-                { label: 'Date', value: auctionDateFmt },
-              ].filter(r => r.value).map(({ label, value }) => (
-                <div key={label}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '4px' }}>{label}</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-2)' }}>{value}</div>
+                upsidePct > 20 ? `${upsidePct.toFixed(0)}% below market estimate` : 'Priced at or near market rate',
+                lot.deal_score >= 70 ? `Strong deal score (${lot.deal_score}/100)` : `Moderate signal (${lot.deal_score || 0}/100)`,
+                lot.auction_house_name ? `Listed at ${lot.auction_house_name.split('—')[0].trim()}` : 'Verified auction platform',
+              ].map((text, i) => (
+                <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                  <span style={{ color: '#2563EB', fontSize: '12px', flexShrink: 0 }}>→</span>
+                  <span style={{ fontSize: '12px', color: '#8B949E', lineHeight: 1.5 }}>{text}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ padding: '16px', background: '#161B22', borderRadius: '6px' }}>
+              <div style={{ fontSize: '9px', fontWeight: 700, color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', marginBottom: '10px' }}>KEY RISKS</div>
+              {[
+                { text: 'Limited resale liquidity for niche artists', sev: 'MED' },
+                { text: 'Auction estimate may be optimistic', sev: 'MED' },
+                { text: 'Market illiquidity in niche categories', sev: 'HIGH' },
+              ].map((risk, i) => (
+                <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: risk.sev === 'HIGH' ? '#EF4444' : '#F59E0B', border: `1px solid ${risk.sev === 'HIGH' ? '#EF444466' : '#F59E0B66'}`, padding: '1px 5px', flexShrink: 0, marginTop: '1px', fontFamily: 'var(--font-mono)', borderRadius: '2px' }}>{risk.sev}</span>
+                  <span style={{ fontSize: '12px', color: '#8B949E', lineHeight: 1.5 }}>{risk.text}</span>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-
-        {/* ── 3. INVESTMENT ANALYSIS ────────────────────────────────────────────── */}
-        <div style={{ marginBottom: '48px' }}>
-          <SectionHeader title="Investment Analysis" badge={!canSeeAnalysis ? 'COLLECTOR+' : undefined} />
-
-          {canSeeAnalysis ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-
-              {/* 3 metric tiles */}
-              <div style={{ display: 'flex', gap: '2px', marginBottom: '24px' }}>
-                <MetricTile label="Current Price" value={fmt(price)} sub="What you pay today" />
-                <MetricTile label="Fair Value" value={fmt(fairVal)} sub="Market estimate" highlight />
-                <MetricTile
-                  label="Upside Potential"
-                  value={upsidePct > 0 ? `+${upsidePct.toFixed(0)}%` : 'At market'}
-                  sub="vs current estimate"
-                />
-              </div>
-
-              {/* Signal rows */}
-              <div style={{ border: '2px solid var(--border)', padding: '20px', marginBottom: '24px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '4px' }}>Market Signals</div>
-                <SignalRow label="Demand"    level={demandLevel} />
-                <SignalRow label="Liquidity" level={liquidityLevel} />
-                <SignalRow label="Trend"     level={trendLevel} />
-              </div>
-
-              {/* Why / Risks */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px', marginBottom: '24px' }}>
-                <div style={{ padding: '20px', border: '2px solid var(--border)', background: 'var(--bg-card)' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--navy)', marginBottom: '14px' }}>Investment Case</div>
-                  {[
-                    upsidePct > 20 ? `${upsidePct.toFixed(0)}% below market estimate — significant undervaluation` : 'Priced at or near market rate',
-                    lot.deal_score >= 70 ? `Strong deal score (${lot.deal_score}/100)` : `Moderate investment signal (${lot.deal_score || 0}/100)`,
-                    lot.auction_house_name ? `Listed at ${lot.auction_house_name.split('—')[0].trim()}` : 'Sourced from verified auction platform',
-                  ].map((text, i) => (
-                    <div key={i} style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'flex-start' }}>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--navy)', fontWeight: 700, flexShrink: 0, marginTop: '1px' }}>→</span>
-                      <span style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.6 }}>{text}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div style={{ padding: '20px', border: '2px solid var(--border)', background: 'var(--bg-card)' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--gold-dim)', marginBottom: '14px' }}>Key Risks</div>
-                  {[
-                    { text: 'Limited resale liquidity for niche or unknown artists', sev: 'MED' },
-                    { text: 'Auction estimate may be optimistic', sev: 'MED' },
-                    { text: 'Market illiquidity in niche categories', sev: 'HIGH' },
-                  ].map((risk, i) => (
-                    <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '10px' }}>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em', color: risk.sev === 'HIGH' ? 'var(--red)' : 'var(--gold-dim)', border: `1px solid ${risk.sev === 'HIGH' ? 'var(--red)' : 'var(--gold-dim)'}`, padding: '1px 5px', flexShrink: 0, marginTop: '1px' }}>
-                        {risk.sev}
-                      </span>
-                      <span style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.6 }}>{risk.text}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Projections */}
-              {visibleYears.length > 0 && (
-                <div style={{ border: '2px solid var(--border)', padding: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '16px' }}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-3)' }}>Future Value Projections · 7% base CAGR</div>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', fontStyle: 'italic' }}>Indicative only</span>
-                  </div>
-                  {visibleYears.map((y: number) => (
-                    <ProjectionRow key={y} year={`${y}Y`} value={proj(y)} base={price} />
-                  ))}
-                  {!limits.hasFullArtistProfile && (
-                    <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--navy-subtle)', border: '1px solid var(--navy-glow)' }}>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-2)' }}>
-                        20yr + 50yr projections &amp; AI-calibrated CAGR on Family Office
-                      </span>
-                      <button
-                        onClick={() => navigate('/app/pricing?plan=pro')}
-                        style={{ padding: '5px 14px', background: 'var(--navy)', color: 'white', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em' }}
-                      >
-                        UPGRADE
-                      </button>
-                    </div>
-                  )}
-                  <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', marginTop: '12px', lineHeight: 1.6 }}>
-                    Projections are purely indicative. Art investment carries significant risk. Past performance does not guarantee future results. Not financial advice.
-                  </p>
-                </div>
-              )}
+          {visibleYears.length > 0 && (
+            <div style={{ padding: '16px', background: '#161B22', borderRadius: '6px' }}>
+              <div style={{ fontSize: '9px', fontWeight: 700, color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', marginBottom: '12px' }}>FUTURE VALUE PROJECTIONS · 7% CAGR</div>
+              {visibleYears.map((y: number) => (
+                <ProjectionRow key={y} year={`${y}Y`} value={proj(y)} base={price} />
+              ))}
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#484F58', marginTop: '12px', lineHeight: 1.6 }}>
+                Projections are indicative only. Art investment carries significant risk. Not financial advice.
+              </p>
             </div>
-          ) : (
-            <LockedBlock
-              title="Is this artwork truly worth buying?"
-              teaser="Unlock fair value analysis, upside potential, market signals, and 5-year price projections before you decide."
-              ctaText="Unlock Investment Analysis"
-              ctaPrice="From €9/month"
-              planId="starter"
-              preview={
-                <div style={{ display: 'flex', gap: '2px' }}>
-                  {['Current Price', 'Fair Value', 'Upside %'].map(l => (
-                    <div key={l} style={{ flex: 1, padding: '20px', background: 'var(--bg-subtle)', textAlign: 'center' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '10px' }}>{l}</div>
-                      <div style={{ height: '22px', background: 'var(--border)' }} />
-                    </div>
-                  ))}
-                </div>
-              }
-            />
           )}
         </div>
+      )}
 
-        {/* ── 4 & 5. AI INTELLIGENCE ───────────────────────────────────────────── */}
-        <div style={{ marginBottom: '32px' }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '12px' }}>
-            AI Intelligence
-          </div>
-
-          {/* Card 1 — Investment Memo */}
-          <div style={{ border: '1px solid var(--border)', background: 'white', borderRadius: '8px', overflow: 'hidden', marginBottom: '8px' }}>
-            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '30px', height: '30px', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '13px' }}>◆</div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>Investment Memo</div>
-                    <span style={{ padding: '2px 6px', background: 'var(--gold-subtle, rgba(198,168,90,0.1))', border: '1px solid var(--gold-border, rgba(198,168,90,0.3))', fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.1em' }}>INVESTOR+</span>
+      {/* Locked investment analysis for lower tiers */}
+      {!canSeeAnalysis && (
+        <div style={{ padding: '24px 32px', borderTop: '1px solid #30363D', background: '#0D1117' }}>
+          <LockedBlock
+            title="Is this artwork truly worth buying?"
+            teaser="Unlock fair value analysis, upside potential, market signals, and 5-year price projections before you decide."
+            ctaText="Unlock Investment Analysis"
+            ctaPrice="From €9/month"
+            planId="starter"
+            preview={
+              <div style={{ display: 'flex', gap: '2px' }}>
+                {['Current Price', 'Fair Value', 'Upside %'].map(l => (
+                  <div key={l} style={{ flex: 1, padding: '20px', background: 'var(--bg-subtle)', textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '10px' }}>{l}</div>
+                    <div style={{ height: '22px', background: 'var(--border)' }} />
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Institutional-grade analysis · Nautilus Intelligence</div>
-                </div>
+                ))}
               </div>
-              <button
-                onClick={memo ? () => setShowMemo(true) : generateMemo}
-                disabled={memoLoading}
-                style={{
-                  padding: '8px 18px',
-                  background: memoLoading ? 'var(--border)' : 'var(--navy)',
-                  color: memoLoading ? 'var(--text-3)' : 'white',
-                  border: 'none', fontSize: '12px', fontWeight: 700,
-                  letterSpacing: '0.06em', cursor: memoLoading ? 'not-allowed' : 'pointer',
-                  fontFamily: 'var(--font-mono)',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                }}
-              >
-                {memoLoading ? (
-                  <><div className="pulse-dot" style={{ width: '5px', height: '5px', background: 'var(--text-3)' }} />Generating...</>
-                ) : memo ? '◆ View Memo' : '◆ Generate'}
-              </button>
-            </div>
-            <div style={{ padding: '16px 20px' }}>
-              {memo ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <span style={{
-                    padding: '4px 12px',
-                    background: memo.recommendation === 'BUY' || memo.recommendation === 'STRONG_BUY' ? 'var(--electric-subtle)' : memo.recommendation === 'WATCH' ? 'var(--gold-subtle, rgba(198,168,90,0.1))' : 'var(--bg-subtle)',
-                    border: `1px solid ${memo.recommendation === 'BUY' || memo.recommendation === 'STRONG_BUY' ? 'var(--electric-border)' : memo.recommendation === 'WATCH' ? 'var(--gold-border, rgba(198,168,90,0.3))' : 'var(--border)'}`,
-                    fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700,
-                    color: memo.recommendation === 'BUY' || memo.recommendation === 'STRONG_BUY' ? 'var(--electric)' : memo.recommendation === 'WATCH' ? 'var(--gold)' : 'var(--text-3)',
-                  }}>{memo.recommendation}</span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>Conviction {memo.conviction}/100</span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>{memo.time_horizon}</span>
-                </div>
-              ) : (
-                <p style={{ color: 'var(--text-3)', fontSize: '11px', margin: 0, lineHeight: 1.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  Note de décision — BUY/WATCH/PASS + prix cible · Résultat en ~5s
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Card 2 — Investment Dossier */}
-          {canSeeAI ? (
-            <AIAnalyst rawLot={lot} />
-          ) : canSeeAnalysis ? (
-            <LockedBlock
-              title="AI has a strong opinion on this deal"
-              teaser="Get STRONG BUY / BUY / WATCH / PASS verdict, confidence score, bull &amp; bear cases, advanced risk analysis, and 50-year projection."
-              ctaText="Unlock Investment Dossier"
-              ctaPrice="From €49/month"
-              planId="investor"
-              preview={
-                <div style={{ padding: '20px' }}>
-                  <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
-                    <div style={{ flex: 1, height: '44px', background: 'var(--navy-subtle)', border: '1px solid var(--navy-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 800, color: 'var(--navy)', letterSpacing: '0.12em' }}>STRONG BUY</span>
-                    </div>
-                    <div style={{ padding: '8px 16px', background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center' }}>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-2)' }}>Confidence: HIGH</span>
-                    </div>
-                  </div>
-                  <div style={{ height: '12px', background: 'var(--border)', marginBottom: '8px', width: '80%' }} />
-                  <div style={{ height: '12px', background: 'var(--border)', width: '60%' }} />
-                </div>
-              }
-            />
-          ) : (
-            <LockedBlock
-              title="Know exactly what to do before you buy"
-              teaser="Our AI analyzes every signal — artist cotation, comparable sales, market timing — and gives you a clear verdict: STRONG BUY, BUY, WATCH, or PASS."
-              ctaText="Unlock Investment Dossier"
-              ctaPrice="From €49/month"
-              planId="investor"
-              preview={
-                <div style={{ display: 'flex', gap: '2px' }}>
-                  {['Verdict', 'Confidence', 'Risk'].map(l => (
-                    <div key={l} style={{ flex: 1, padding: '16px', background: 'var(--bg-subtle)', textAlign: 'center' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '10px' }}>{l}</div>
-                      <div style={{ height: '18px', background: 'var(--border)' }} />
-                    </div>
-                  ))}
-                </div>
-              }
-            />
-          )}
+            }
+          />
         </div>
+      )}
 
-        {/* ── 5. COMPARABLE SALES ──────────────────────────────────────────────── */}
-        {comparables && comparables.comparables?.length > 0 && (
-          <div style={{ marginTop: '40px', paddingTop: '32px', borderTop: '1px solid var(--border)' }}>
-
-            {/* Section header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-              <div>
-                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 4px' }}>
-                  Comparable sales
-                </h2>
-                <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>
-                  Similar works tracked by Nautilus — use these to validate the price gap
-                </p>
-              </div>
-
-              {/* Market verdict */}
-              {comparables.market_analysis && (
-                <div style={{
-                  padding: '12px 20px', borderRadius: '8px',
-                  background: comparables.market_analysis.price_gap_pct > 10
-                    ? 'rgba(37,99,235,0.06)' : 'var(--bg-subtle)',
-                  border: `1px solid ${comparables.market_analysis.price_gap_pct > 10
-                    ? 'var(--electric-border)' : 'var(--border)'}`,
-                  textAlign: 'center', flexShrink: 0,
-                }}>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', marginBottom: '4px' }}>
-                    MARKET VERDICT
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: comparables.market_analysis.verdict_color, marginBottom: '2px' }}>
-                    {comparables.market_analysis.price_gap_pct > 0 ? '+' : ''}{comparables.market_analysis.price_gap_pct}%
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-2)', fontWeight: 600 }}>
-                    {comparables.market_analysis.verdict}
-                  </div>
-                  {comparables.market_analysis.market_avg_price && (
-                    <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
-                      Comps avg: €{comparables.market_analysis.market_avg_price.toLocaleString()}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Comparables grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
-              {comparables.comparables.map((comp: any) => {
-                const compPrice = comp.current_price || comp.estimate_low || 0;
-                const refPrice = comparables.reference?.price || 0;
-                const priceDiff = refPrice > 0 && compPrice > 0
-                  ? ((compPrice - refPrice) / refPrice * 100)
-                  : null;
-
-                return (
-                  <div key={comp.id}
-                    onClick={() => navigate(`/app/opportunities/${comp.id}`)}
-                    style={{
-                      background: 'white', border: '1px solid var(--border)', borderRadius: '8px',
-                      overflow: 'hidden', cursor: 'pointer', transition: 'all 0.15s',
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-md)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'none'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; }}
-                  >
-                    {/* Image */}
-                    <div style={{ height: '140px', background: 'var(--bg-subtle)', position: 'relative', overflow: 'hidden' }}>
-                      {comp.image_url ? (
-                        <img src={comp.image_url} alt="" loading="lazy"
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ fontSize: '28px', opacity: 0.1 }}>◎</span>
-                        </div>
-                      )}
-                      {comp.deal_score && (
-                        <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(10,22,40,0.85)', padding: '3px 7px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: 'white' }}>
-                          {Math.round(comp.deal_score)}/100
-                        </div>
-                      )}
-                      {priceDiff !== null && (
-                        <div style={{
-                          position: 'absolute', bottom: '8px', right: '8px',
-                          padding: '2px 7px', borderRadius: '3px',
-                          background: priceDiff > 0 ? 'rgba(37,99,235,0.9)' : 'rgba(100,116,139,0.9)',
-                          fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: 'white',
-                        }}>
-                          {priceDiff > 0 ? '+' : ''}{priceDiff.toFixed(0)}% vs this lot
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div style={{ padding: '10px 12px' }}>
-                      <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {comp.artist_name_raw || 'Unknown'}
-                      </div>
-                      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '13px', color: 'var(--text)', marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {comp.title || 'Untitled'}
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>
-                          €{compPrice.toLocaleString()}
-                        </span>
-                        {comp.auction_house_name && (
-                          <span style={{ fontSize: '10px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100px' }}>
-                            {comp.auction_house_name}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Zillow-style insight */}
-            {comparables.market_analysis?.market_avg_price && comparables.reference?.price && (
-              <div style={{ marginTop: '16px', padding: '14px 20px', background: 'var(--bg-subtle)', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '16px' }}>◆</span>
-                <p style={{ fontSize: '13px', color: 'var(--text-2)', margin: 0, lineHeight: 1.6 }}>
-                  Based on <strong>{comparables.comparables.length} comparable works</strong>, the market average for similar lots is{' '}
-                  <strong style={{ color: 'var(--text)' }}>€{comparables.market_analysis.market_avg_price.toLocaleString()}</strong>.
-                  {' '}This lot is priced at{' '}
-                  <strong style={{ color: comparables.market_analysis.verdict_color }}>
-                    €{comparables.reference.price.toLocaleString()}
-                  </strong>
-                  {comparables.market_analysis.price_gap_pct > 0
-                    ? ` — ${comparables.market_analysis.price_gap_pct}% below market.`
-                    : ` — ${Math.abs(comparables.market_analysis.price_gap_pct)}% above comparable sales.`
-                  }
-                </p>
+      {/* ═══ ZONE G — COMPARABLE SALES ═══ */}
+      {comparables && comparables.comparables?.length > 0 && (
+        <div style={{ padding: '24px 32px', borderTop: '1px solid #30363D', background: '#0D1117' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em' }}>COMPARABLE SALES</div>
+            {comparables.market_analysis && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#8B949E' }}>
+                  Comps avg: <strong style={{ color: '#E6EDF3' }}>€{comparables.market_analysis.market_avg_price?.toLocaleString()}</strong>
+                </span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: comparables.market_analysis.price_gap_pct > 0 ? '#10B981' : '#EF4444' }}>
+                  {comparables.market_analysis.price_gap_pct > 0 ? '+' : ''}{comparables.market_analysis.price_gap_pct}% vs this lot
+                </span>
               </div>
             )}
           </div>
-        )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+            {comparables.comparables.slice(0, 3).map((comp: any) => {
+              const compPrice = comp.current_price || comp.estimate_low || 0;
+              return (
+                <div key={comp.id}
+                  onClick={() => navigate(`/app/opportunities/${comp.id}`)}
+                  style={{ background: '#161B22', border: '1px solid #30363D', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', transition: 'border-color 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.borderColor = '#8B949E'}
+                  onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.borderColor = '#30363D'}
+                >
+                  {comp.image_url && (
+                    <div style={{ height: '120px', overflow: 'hidden' }}>
+                      <img src={comp.image_url} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                  )}
+                  <div style={{ padding: '10px 12px' }}>
+                    <div style={{ fontSize: '9px', color: '#8B949E', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {comp.artist_name_raw || 'Unknown'}
+                    </div>
+                    <div style={{ fontFamily: 'Georgia, serif', fontSize: '13px', color: '#E6EDF3', marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {comp.title || 'Untitled'}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: '#E6EDF3' }}>€{compPrice.toLocaleString()}</span>
+                      {comp.deal_score && (
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: SCORE_COLOR(comp.deal_score) }}>
+                          {comp.deal_score.toFixed(0)}/100
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
+      {/* ═══ ZONE H — DISCLAIMER ═══ */}
+      <div style={{ padding: '16px 32px', borderTop: '1px solid #30363D', background: '#010409' }}>
+        <p style={{ fontSize: '10px', color: '#484F58', fontFamily: 'var(--font-mono)', textAlign: 'center', margin: 0, letterSpacing: '0.06em' }}>
+          NOT FINANCIAL ADVICE · FOR INFORMATIONAL PURPOSES ONLY · NAUTILUS DATA AGGREGATED FROM PUBLIC AUCTION SOURCES
+        </p>
       </div>
 
       {/* ── INVESTMENT MEMO MODAL ─────────────────────────────────────────────── */}
@@ -1083,27 +836,17 @@ export default function OpportunityDetail() {
             maxHeight: '90vh', overflow: 'auto',
             boxShadow: '0 24px 80px rgba(0,0,0,0.3)',
           }}>
-            {/* Memo header */}
             <div style={{ background: 'var(--navy)', padding: '24px 32px', borderRadius: '8px 8px 0 0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.2em', fontFamily: 'var(--font-mono)', marginBottom: '8px' }}>
                     NAUTILUS · INVESTMENT MEMO
                   </div>
-                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'white', marginBottom: '4px' }}>
-                    {memo.title}
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                    {memo.artist}
-                  </div>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'white', marginBottom: '4px' }}>{memo.title}</div>
+                  <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{memo.artist}</div>
                 </div>
-                <button
-                  onClick={() => setShowMemo(false)}
-                  style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '20px', cursor: 'pointer', padding: '0', lineHeight: 1 }}
-                >×</button>
+                <button onClick={() => setShowMemo(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '20px', cursor: 'pointer', padding: '0', lineHeight: 1 }}>×</button>
               </div>
-
-              {/* Key metrics */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginTop: '20px' }}>
                 {[
                   { label: 'CURRENT PRICE', value: memo.current_price >= 1000 ? `€${(memo.current_price / 1000).toFixed(0)}K` : `€${memo.current_price}` },
@@ -1118,11 +861,7 @@ export default function OpportunityDetail() {
                 ))}
               </div>
             </div>
-
-            {/* Memo body */}
             <div style={{ padding: '28px 32px' }}>
-
-              {/* Recommendation badge */}
               <div style={{
                 display: 'flex', gap: '12px', alignItems: 'center',
                 marginBottom: '24px', padding: '14px 16px',
@@ -1130,37 +869,26 @@ export default function OpportunityDetail() {
                 borderRadius: '6px',
                 border: `1px solid ${memo.recommendation === 'BUY' ? 'var(--electric-border)' : memo.recommendation === 'WATCH' ? 'var(--gold-border)' : 'var(--border)'}`,
               }}>
-                <div style={{
-                  fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700,
-                  color: memo.recommendation === 'BUY' ? 'var(--electric)' : memo.recommendation === 'WATCH' ? 'var(--gold)' : 'var(--text-3)',
-                }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: memo.recommendation === 'BUY' ? 'var(--electric)' : memo.recommendation === 'WATCH' ? 'var(--gold)' : 'var(--text-3)' }}>
                   {memo.recommendation}
                 </div>
                 <div style={{ fontSize: '13px', color: 'var(--text-2)' }}>
                   {memo.time_horizon}{memo.target_price?.rationale ? ` · ${memo.target_price.rationale}` : ''}
                 </div>
               </div>
-
-              {/* Text sections */}
               {[
                 { title: 'Investment Thesis', content: memo.thesis },
                 { title: 'Artist Context',    content: memo.artist_context },
                 { title: 'Pricing Analysis',  content: memo.pricing_analysis },
               ].filter(s => s.content).map(({ title, content }) => (
                 <div key={title} style={{ marginBottom: '20px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', marginBottom: '8px' }}>
-                    {title}
-                  </div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', marginBottom: '8px' }}>{title}</div>
                   <p style={{ fontSize: '14px', color: 'var(--text)', lineHeight: 1.8, margin: 0 }}>{content}</p>
                 </div>
               ))}
-
-              {/* Risks */}
               {memo.risks && memo.risks.length > 0 && (
                 <div style={{ marginBottom: '20px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', marginBottom: '8px' }}>
-                    Key Risks
-                  </div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', marginBottom: '8px' }}>Key Risks</div>
                   {memo.risks.map((risk: string, i: number) => (
                     <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '6px' }}>
                       <span style={{ color: '#C0392B', fontSize: '12px', marginTop: '2px', flexShrink: 0 }}>▲</span>
@@ -1169,8 +897,6 @@ export default function OpportunityDetail() {
                   ))}
                 </div>
               )}
-
-              {/* Footer */}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                 <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
                   Nautilus Intelligence · {new Date(memo.generated_at).toLocaleDateString('fr-FR')}
