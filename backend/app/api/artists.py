@@ -117,6 +117,7 @@ async def get_artist_price_history(
     if cached:
         return cached
 
+    # Recent sales for display (50 shown in UI)
     result = await db.execute(
         text("""
         SELECT
@@ -125,15 +126,41 @@ async def get_artist_price_history(
             estimate_low, estimate_high, premium_ratio,
             auction_house, image_url, lot_number, external_id
         FROM hammer_prices
-        WHERE artist_name ILIKE :name
+        WHERE artist_name ILIKE :name AND hammer_price IS NOT NULL
         ORDER BY sale_date DESC NULLS LAST
-        LIMIT 200
+        LIMIT 50
         """),
         {"name": f"%{artist_name}%"}
     )
     rows = result.mappings().all()
 
-    if not rows:
+    # Year-by-year aggregation — all records, direct SQL (not limited to 50)
+    year_result = await db.execute(
+        text("""
+        SELECT
+            EXTRACT(YEAR FROM sale_date)::int AS year,
+            AVG(hammer_price_eur)::float AS avg_price,
+            MAX(hammer_price_eur)::float AS max_price,
+            COUNT(*)::int AS sale_count
+        FROM hammer_prices
+        WHERE artist_name ILIKE :name
+          AND hammer_price_eur IS NOT NULL
+          AND sale_date IS NOT NULL
+        GROUP BY EXTRACT(YEAR FROM sale_date)
+        ORDER BY year
+        """),
+        {"name": f"%{artist_name}%"}
+    )
+    year_rows = year_result.mappings().all()
+
+    # Total count
+    count_result = await db.execute(
+        text("SELECT COUNT(*) FROM hammer_prices WHERE artist_name ILIKE :name AND hammer_price IS NOT NULL"),
+        {"name": f"%{artist_name}%"}
+    )
+    total_count = count_result.scalar() or 0
+
+    if not year_rows and not rows:
         return {
             "artist_name": artist_name,
             "total_sales": 0,
@@ -143,45 +170,46 @@ async def get_artist_price_history(
         }
 
     sales = [dict(r) for r in rows]
-
-    # Serialize datetimes
     for s in sales:
         if s.get("sale_date"):
             s["sale_date"] = s["sale_date"].isoformat() if hasattr(s["sale_date"], "isoformat") else str(s["sale_date"])
 
-    prices = [s["hammer_price_eur"] for s in sales if s.get("hammer_price_eur")]
-    ratios = [s["premium_ratio"] for s in sales if s.get("premium_ratio")]
-
-    # Year-by-year breakdown
-    from collections import defaultdict
-    by_year: dict = defaultdict(list)
-    for s in sales:
-        if s.get("sale_date") and s.get("hammer_price_eur"):
-            year = s["sale_date"][:4] if isinstance(s["sale_date"], str) else str(s["sale_date"])[:4]
-            by_year[year].append(s["hammer_price_eur"])
-
     price_by_year = [
         {
-            "year": year,
-            "avg_price": round(sum(ps) / len(ps)),
-            "max_price": round(max(ps)),
-            "sale_count": len(ps),
+            "year": str(r["year"]),
+            "avg_price": round(r["avg_price"]),
+            "max_price": round(r["max_price"]),
+            "sale_count": r["sale_count"],
         }
-        for year, ps in sorted(by_year.items())
+        for r in year_rows
     ]
 
-    recent_prices = [s["hammer_price_eur"] for s in sales[:20] if s.get("hammer_price_eur")]
-    older_prices = [s["hammer_price_eur"] for s in sales[20:40] if s.get("hammer_price_eur")]
+    # Stats from all records
+    all_prices_result = await db.execute(
+        text("""
+        SELECT hammer_price_eur, premium_ratio
+        FROM hammer_prices
+        WHERE artist_name ILIKE :name AND hammer_price_eur IS NOT NULL
+        """),
+        {"name": f"%{artist_name}%"}
+    )
+    all_price_rows = all_prices_result.all()
+    prices = [r[0] for r in all_price_rows]
+    ratios = [r[1] for r in all_price_rows if r[1] is not None]
+
+    # Trend: compare last 2 years vs 2 years before
+    recent_years = [r for r in price_by_year if r["year"] >= str(max(int(y["year"]) for y in price_by_year) - 1)] if price_by_year else []
+    older_years  = [r for r in price_by_year if r["year"] < str(max(int(y["year"]) for y in price_by_year) - 1)] if price_by_year else []
     trend_pct = 0.0
-    if recent_prices and older_prices:
-        recent_avg = sum(recent_prices) / len(recent_prices)
-        older_avg = sum(older_prices) / len(older_prices)
-        trend_pct = round((recent_avg - older_avg) / older_avg * 100, 1) if older_avg > 0 else 0.0
+    if recent_years and older_years:
+        recent_avg = sum(r["avg_price"] for r in recent_years) / len(recent_years)
+        older_avg  = sum(r["avg_price"] for r in older_years)  / len(older_years)
+        trend_pct  = round((recent_avg - older_avg) / older_avg * 100, 1) if older_avg > 0 else 0.0
 
     response = {
         "artist_name": artist_name,
-        "total_sales": len(sales),
-        "sales": sales[:50],
+        "total_sales": total_count,
+        "sales": sales,
         "statistics": {
             "avg_hammer_eur": round(sum(prices) / len(prices)) if prices else None,
             "min_hammer_eur": round(min(prices)) if prices else None,
