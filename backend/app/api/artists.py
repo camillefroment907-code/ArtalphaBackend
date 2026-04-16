@@ -1,7 +1,7 @@
-"""Artists API — investment intelligence from Artsy data."""
-from fastapi import APIRouter, Depends, Query
+"""Artists API — investment intelligence from Artsy data + Lot market data."""
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, or_
+from sqlalchemy import select, func, desc, or_
 from typing import Optional
 
 from app.database import get_db
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/artist-profiles", tags=["artist-profiles"])
 
 @router.get("/")
 async def list_artists(
-    tier: Optional[str] = Query(None),  # blue_chip, mid_career, emerging
+    tier: Optional[str] = Query(None),
     min_momentum: Optional[float] = Query(None),
     is_pre_auction: Optional[bool] = Query(None),
     search: Optional[str] = Query(None),
@@ -30,13 +30,12 @@ async def list_artists(
     if search:
         filters.append(ArtistProfile.name.ilike(f"%{search}%"))
 
-    from sqlalchemy import and_, true
+    from sqlalchemy import and_
     stmt = select(ArtistProfile).order_by(desc(ArtistProfile.momentum_score)).limit(limit)
     if filters:
         stmt = stmt.where(and_(*filters))
     result = await db.execute(stmt)
     artists = result.scalars().all()
-
     return [_serialize_artist(a) for a in artists]
 
 
@@ -45,7 +44,7 @@ async def get_momentum_artists(
     limit: int = Query(10, le=50),
     db: AsyncSession = Depends(get_db),
 ):
-    """Top artists by momentum score — for dashboard widget."""
+    """Top artists by momentum score."""
     result = await db.execute(
         select(ArtistProfile)
         .where(ArtistProfile.momentum_score.isnot(None))
@@ -61,7 +60,7 @@ async def get_pre_auction_artists(
     limit: int = Query(10, le=50),
     db: AsyncSession = Depends(get_db),
 ):
-    """Artists in galleries but not yet at auction — best entry point."""
+    """Artists in galleries but not yet at auction."""
     result = await db.execute(
         select(ArtistProfile)
         .where(ArtistProfile.is_pre_auction == True)  # noqa: E712
@@ -72,74 +71,188 @@ async def get_pre_auction_artists(
     return [_serialize_artist(a) for a in artists]
 
 
+@router.get("/search/{query}")
+async def search_artists(
+    query: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Search artists by name — returns list with basic stats from lot data."""
+    result = await db.execute(
+        select(
+            Lot.artist_name_raw,
+            func.count(Lot.id).label("lot_count"),
+            func.avg(Lot.deal_score).label("avg_score"),
+            func.avg(Lot.current_price).label("avg_price"),
+        )
+        .where(Lot.artist_name_raw.ilike(f"%{query}%"))
+        .group_by(Lot.artist_name_raw)
+        .order_by(func.count(Lot.id).desc())
+        .limit(10)
+    )
+    artists = result.all()
+    return {
+        "artists": [
+            {
+                "name": a.artist_name_raw,
+                "lot_count": a.lot_count,
+                "avg_score": round(float(a.avg_score or 0), 1),
+                "avg_price": round(float(a.avg_price or 0)),
+            }
+            for a in artists
+            if a.artist_name_raw
+        ]
+    }
+
+
 @router.get("/{artist_name}")
-async def get_artist(
+async def get_artist_intelligence(
     artist_name: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """Get full artist intelligence profile."""
-    result = await db.execute(
-        select(ArtistProfile)
-        .where(ArtistProfile.name.ilike(f"%{artist_name}%"))
-        .limit(1)
-    )
-    artist = result.scalar_one_or_none()
+    """Full artist intelligence — all market data Nautilus has on this artist."""
+    from app.utils.cache import get_cached, set_cached
+    from collections import Counter
+    from datetime import datetime, timedelta
 
-    # If not in DB, fetch from Artsy on-demand
-    if not artist:
-        from app.engines.artsy_intelligence import fetch_artist_from_artsy
-        from sqlalchemy.dialects.postgresql import insert as pg_insert
-        import uuid
-        from datetime import datetime
+    cache_key = f"artist_intel:{artist_name.lower()}"
+    cached = get_cached(cache_key, ttl=3600)
+    if cached:
+        return cached
 
-        artsy_data = await fetch_artist_from_artsy(artist_name)
-        if artsy_data:
-            stmt = pg_insert(ArtistProfile).values(
-                id=uuid.uuid4(),
-                **{k: v for k, v in artsy_data.items() if k != 'raw_data'},
-                raw_data=artsy_data.get('raw_data'),
-                updated_at=datetime.utcnow(),
-            ).on_conflict_do_update(
-                index_elements=["artsy_id"],
-                set_={"updated_at": datetime.utcnow()}
-            )
-            await db.execute(stmt)
-            await db.commit()
+    name_clean = artist_name.strip()
 
-            result2 = await db.execute(
-                select(ArtistProfile)
-                .where(ArtistProfile.name.ilike(f"%{artist_name}%"))
-                .limit(1)
-            )
-            artist = result2.scalar_one_or_none()
-
-    if not artist:
-        from fastapi import HTTPException
-        raise HTTPException(404, f"Artist '{artist_name}' not found")
-
-    # Get lots for this artist
+    # All lots by this artist
     lots_result = await db.execute(
         select(Lot)
-        .where(Lot.artist_name_raw.ilike(f"%{artist_name}%"))
-        .order_by(desc(Lot.deal_score))
-        .limit(10)
+        .where(Lot.artist_name_raw.ilike(f"%{name_clean}%"))
+        .order_by(Lot.deal_score.desc().nullslast())
+        .limit(50)
     )
     lots = lots_result.scalars().all()
 
-    data = _serialize_artist(artist)
-    data["lots"] = [
-        {
-            "id": str(l.id),
-            "title": l.title,
-            "current_price": l.current_price,
-            "deal_score": l.deal_score,
-            "image_url": l.image_url,
-            "auction_house_name": l.auction_house_name,
-            "url": l.url,
-        }
-        for l in lots
-    ]
-    return data
+    if not lots:
+        # Fall back to ArtistProfile lookup
+        profile_result = await db.execute(
+            select(ArtistProfile)
+            .where(ArtistProfile.name.ilike(f"%{name_clean}%"))
+            .limit(1)
+        )
+        profile = profile_result.scalar_one_or_none()
+        if profile:
+            data = _serialize_artist(profile)
+            data["total_lots"] = 0
+            data["statistics"] = {}
+            data["top_lots"] = []
+            data["all_lots"] = []
+            data["top_auction_houses"] = []
+            data["categories"] = []
+            data["ai_brief"] = ""
+            data["artist_name"] = profile.name
+            return data
+        raise HTTPException(404, f"No data found for artist: {artist_name}")
+
+    # Statistics
+    scores = [l.deal_score for l in lots if l.deal_score]
+    prices = [l.current_price or l.estimate_low for l in lots if (l.current_price or l.estimate_low)]
+    hammer_prices = [l.hammer_price for l in lots if l.hammer_price]
+
+    avg_price = sum(prices) / len(prices) if prices else 0
+    min_price = min(prices) if prices else 0
+    max_price = max(prices) if prices else 0
+    sell_through = len(hammer_prices) / len(lots) * 100 if lots else 0
+
+    house_counts = Counter(l.auction_house_name for l in lots if l.auction_house_name)
+    cat_counts = Counter(l.category for l in lots if l.category)
+
+    recent_cutoff = datetime.utcnow() - timedelta(days=90)
+    recent_lots = [l for l in lots if l.created_at and l.created_at >= recent_cutoff]
+    momentum = "rising" if len(recent_lots) > len(lots) * 0.3 else "stable" if len(recent_lots) > 0 else "low"
+
+    top_lots = sorted([l for l in lots if l.deal_score], key=lambda x: x.deal_score, reverse=True)[:6]
+
+    # AI brief (non-blocking — returns "" on failure)
+    artist_brief = await _generate_artist_brief(name_clean, lots, avg_price)
+
+    # Try to get nationality/movement from linked Artist record
+    nationality = None
+    movement = None
+    for lot in lots:
+        if lot.artist_id:
+            from app.models.db_models import Artist
+            artist_row = await db.get(Artist, lot.artist_id)
+            if artist_row:
+                nationality = artist_row.nationality
+                movement = artist_row.movement
+            break
+
+    from app.api.lots import lot_to_list_dict
+    response = {
+        "artist_name": name_clean,
+        "total_lots": len(lots),
+        "nationality": nationality,
+        "movement": movement,
+        "statistics": {
+            "avg_score": round(sum(scores) / len(scores), 1) if scores else 0,
+            "max_score": round(max(scores), 1) if scores else 0,
+            "avg_price": round(avg_price),
+            "min_price": round(min_price),
+            "max_price": round(max_price),
+            "sell_through_rate": round(sell_through, 1),
+            "momentum": momentum,
+            "recent_lots_90d": len(recent_lots),
+        },
+        "top_auction_houses": [
+            {"name": house, "count": count}
+            for house, count in house_counts.most_common(5)
+        ],
+        "categories": [
+            {"name": cat, "count": count}
+            for cat, count in cat_counts.most_common(5)
+        ],
+        "top_lots": [lot_to_list_dict(l) for l in top_lots],
+        "all_lots": [lot_to_list_dict(l) for l in lots[:20]],
+        "ai_brief": artist_brief,
+    }
+
+    set_cached(cache_key, response)
+    return response
+
+
+async def _generate_artist_brief(artist_name: str, lots: list, avg_price: float) -> str:
+    """Generate AI brief about artist market position."""
+    try:
+        from openai import AsyncOpenAI
+        from app.utils.openai_guard import can_make_request, record_request
+        from app.config import get_settings
+        settings = get_settings()
+
+        if not settings.openai_api_key or not can_make_request():
+            return ""
+
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        scores = [l.deal_score for l in lots if l.deal_score]
+        avg_score = sum(scores) / len(scores) if scores else 0
+        houses = list({l.auction_house_name for l in lots[:5] if l.auction_house_name})
+
+        prompt = f"""You are a senior art market analyst.
+In 3 concise sentences, analyse the market position of {artist_name}:
+- {len(lots)} lots tracked on Nautilus
+- Avg conviction score: {avg_score:.0f}/100
+- Avg price: €{avg_price:,.0f}
+- Houses: {', '.join(houses) if houses else 'various'}
+
+Be precise and factual. Mention investment potential."""
+
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=200,
+            temperature=0.3,
+        )
+        record_request()
+        return response.choices[0].message.content.strip()
+    except Exception:
+        return ""
 
 
 def _serialize_artist(a: ArtistProfile) -> dict:
@@ -167,60 +280,23 @@ def _serialize_artist(a: ArtistProfile) -> dict:
 
 
 def _generate_signals(a: ArtistProfile) -> list:
-    """Generate human-readable investment signals for the UI."""
     signals = []
-
     if a.is_pre_auction:
-        signals.append({
-            "type": "opportunity",
-            "icon": "◆",
-            "label": "Pre-auction opportunity",
-            "detail": "In serious galleries but not yet at auction — optimal entry window",
-            "color": "gold",
-        })
-
+        signals.append({"type": "opportunity", "icon": "◆", "label": "Pre-auction opportunity",
+                        "detail": "In serious galleries but not yet at auction — optimal entry window", "color": "gold"})
     if a.momentum_score and a.momentum_score >= 70:
-        signals.append({
-            "type": "momentum",
-            "icon": "↑",
-            "label": f"Strong momentum ({a.momentum_score:.0f}/100)",
-            "detail": f"{a.shows_last_12m} shows in last 12 months",
-            "color": "electric",
-        })
+        signals.append({"type": "momentum", "icon": "↑", "label": f"Strong momentum ({a.momentum_score:.0f}/100)",
+                        "detail": f"{a.shows_last_12m} shows in last 12 months", "color": "electric"})
     elif a.momentum_score and a.momentum_score >= 50:
-        signals.append({
-            "type": "momentum",
-            "icon": "→",
-            "label": f"Growing momentum ({a.momentum_score:.0f}/100)",
-            "detail": f"{a.shows_last_12m} shows in last 12 months",
-            "color": "text",
-        })
-
+        signals.append({"type": "momentum", "icon": "→", "label": f"Growing momentum ({a.momentum_score:.0f}/100)",
+                        "detail": f"{a.shows_last_12m} shows in last 12 months", "color": "text"})
     if a.institutional_score and a.institutional_score >= 60:
-        signals.append({
-            "type": "institutional",
-            "icon": "◎",
-            "label": "Institutional validation",
-            "detail": f"Present in {a.public_collections_count} public collections",
-            "color": "navy",
-        })
-
+        signals.append({"type": "institutional", "icon": "◎", "label": "Institutional validation",
+                        "detail": f"Present in {a.public_collections_count} public collections", "color": "navy"})
     if a.gallery_tier_avg and a.gallery_tier_avg <= 1.5:
-        signals.append({
-            "type": "gallery",
-            "icon": "★",
-            "label": "Top-tier representation",
-            "detail": f"Represented by {a.top_gallery_name or 'Tier 1 gallery'}",
-            "color": "gold",
-        })
-
+        signals.append({"type": "gallery", "icon": "★", "label": "Top-tier representation",
+                        "detail": f"Represented by {a.top_gallery_name or 'Tier 1 gallery'}", "color": "gold"})
     if a.liquidity_score and a.liquidity_score >= 70:
-        signals.append({
-            "type": "liquidity",
-            "icon": "◇",
-            "label": "High liquidity",
-            "detail": f"Active in {a.gallery_count} galleries across multiple markets",
-            "color": "electric",
-        })
-
+        signals.append({"type": "liquidity", "icon": "◇", "label": "High liquidity",
+                        "detail": f"Active in {a.gallery_count} galleries across multiple markets", "color": "electric"})
     return signals
