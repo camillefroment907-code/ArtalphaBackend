@@ -294,6 +294,28 @@ export default function ArtistIntelligence() {
   const [formatMatrix, setFormatMatrix] = useState<any[]>([]);
   const [geoArbitrage, setGeoArbitrage] = useState<any>(null);
 
+  // Must be before any early return — Rules of Hooks
+  const auctionHouseStats = useMemo(() => {
+    const lots = [...(artist?.all_lots || []), ...(artist?.top_lots || [])];
+    if (lots.length === 0) return [];
+    const grouped = lots.reduce((acc: Record<string, { count: number; prices: number[] }>, lot: any) => {
+      const house = lot.auction_house_name || lot.source || 'Unknown';
+      if (!acc[house]) acc[house] = { count: 0, prices: [] };
+      acc[house].count += 1;
+      if (lot.current_price && lot.current_price > 0) acc[house].prices.push(lot.current_price);
+      return acc;
+    }, {});
+    return Object.entries(grouped)
+      .map(([name, data]) => ({
+        name,
+        count: data.count,
+        avg: data.prices.length > 0 ? Math.round(data.prices.reduce((a: number, b: number) => a + b, 0) / data.prices.length) : null,
+        max: data.prices.length > 0 ? Math.max(...data.prices) : null,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 4);
+  }, [artist?.all_lots, artist?.top_lots]);
+
   useEffect(() => {
     if (!artistName) { setLoading(false); return; }
     setLoading(true);
@@ -460,27 +482,6 @@ export default function ArtistIntelligence() {
   }
 
   const stats = artist.statistics || {};
-
-  const auctionHouseStats = useMemo(() => {
-    const lots = [...(artist.all_lots || []), ...(artist.top_lots || [])];
-    if (lots.length === 0) return [];
-    const grouped = lots.reduce((acc: Record<string, { count: number; prices: number[] }>, lot: any) => {
-      const house = lot.auction_house_name || lot.source || 'Unknown';
-      if (!acc[house]) acc[house] = { count: 0, prices: [] };
-      acc[house].count += 1;
-      if (lot.current_price && lot.current_price > 0) acc[house].prices.push(lot.current_price);
-      return acc;
-    }, {});
-    return Object.entries(grouped)
-      .map(([name, data]) => ({
-        name,
-        count: data.count,
-        avg: data.prices.length > 0 ? Math.round(data.prices.reduce((a: number, b: number) => a + b, 0) / data.prices.length) : null,
-        max: data.prices.length > 0 ? Math.max(...data.prices) : null,
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 4);
-  }, [artist.all_lots, artist.top_lots]);
 
   return (
     <div style={{ minHeight: 'calc(100vh - 57px)', background: 'var(--bg)' }}>
