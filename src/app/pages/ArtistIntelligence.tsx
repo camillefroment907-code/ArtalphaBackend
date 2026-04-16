@@ -293,6 +293,9 @@ export default function ArtistIntelligence() {
   const [wikiBio, setWikiBio] = useState<string | null>(null);
   const [formatMatrix, setFormatMatrix] = useState<any[]>([]);
   const [geoArbitrage, setGeoArbitrage] = useState<any>(null);
+  const [timingOptimizer, setTimingOptimizer] = useState<any>(null);
+  const [liquidityMap, setLiquidityMap] = useState<any>(null);
+  const [calendarOverlay, setCalendarOverlay] = useState<any>(null);
 
   // Must be before any early return — Rules of Hooks
   const auctionHouseStats = useMemo(() => {
@@ -361,6 +364,28 @@ export default function ArtistIntelligence() {
     })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.regions?.length >= 2) setGeoArbitrage(d); })
+      .catch(() => {});
+
+    // Month 3 features — non-blocking
+    fetch(`${BACKEND}/api/artist-profiles/${name}/timing-optimizer`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.monthly_summary?.length > 0) setTimingOptimizer(d); })
+      .catch(() => {});
+
+    fetch(`${BACKEND}/api/artist-profiles/${name}/liquidity-map`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.cells?.some((c: any) => c.count > 0)) setLiquidityMap(d); })
+      .catch(() => {});
+
+    fetch(`${BACKEND}/api/artist-profiles/${name}/calendar-overlay`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.events?.length > 0) setCalendarOverlay(d); })
       .catch(() => {});
   }, [artistName]);
 
@@ -1024,6 +1049,199 @@ export default function ArtistIntelligence() {
               <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: '10px' }}>
                 Market regions inferred from auction currency. All prices normalized to EUR.
                 {geoArbitrage.total_sales && ` · ${geoArbitrage.total_sales.toLocaleString()} historical sales analyzed.`}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── Auction House Timing Optimizer ──────────────────────────── */}
+        {timingOptimizer && (() => {
+          const fmt = (v: number) => v >= 1_000_000 ? `€${(v/1_000_000).toFixed(1)}M` : v >= 1_000 ? `€${Math.round(v/1_000)}K` : `€${Math.round(v)}`;
+          const maxAvg = Math.max(...timingOptimizer.monthly_summary.map((m: any) => m.avg_price));
+          const SEASON_COLOR: Record<string, string> = { Spring: '#34D399', Summer: '#F59E0B', Autumn: '#F87171', Winter: '#60A5FA' };
+          return (
+            <div style={{ marginBottom: '32px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '4px' }}>Phase 2 · Month 3 · Timing Intelligence</div>
+                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>Auction House Timing Optimizer</h2>
+                </div>
+                {timingOptimizer.best_month && (
+                  <div style={{ background: 'var(--navy)', borderRadius: '8px', padding: '10px 16px', textAlign: 'right' }}>
+                    <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>BEST WINDOW</div>
+                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#C6A85A', marginTop: '3px' }}>
+                      📅 {timingOptimizer.best_month} · {timingOptimizer.best_season}
+                    </div>
+                    {timingOptimizer.best_house && <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>{timingOptimizer.best_house}</div>}
+                  </div>
+                )}
+              </div>
+
+              {/* Monthly bar chart */}
+              <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '20px 24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '6px', alignItems: 'end', height: '100px' }}>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
+                    const entry = timingOptimizer.monthly_summary.find((x: any) => x.month === m);
+                    const MONTH_SHORT = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+                    const barH = entry ? Math.max(8, (entry.avg_price / maxAvg) * 80) : 0;
+                    const sc = entry ? SEASON_COLOR[entry.season] : 'var(--border)';
+                    const isBest = entry && entry.avg_price === maxAvg;
+                    return (
+                      <div key={m} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                        {isBest && <div style={{ fontSize: '8px', color: '#C6A85A', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>★</div>}
+                        <div title={entry ? `${entry.month_name}: ${fmt(entry.avg_price)} avg · ${entry.total_sales} sales` : 'No data'}
+                          style={{ width: '100%', height: `${barH}px`, background: entry ? sc : 'var(--bg-subtle)', borderRadius: '3px 3px 0 0', opacity: entry ? (isBest ? 1 : 0.65) : 0.3, transition: 'opacity 0.2s', cursor: entry ? 'default' : 'default' }} />
+                        <div style={{ fontSize: '9px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{MONTH_SHORT[m-1]}</div>
+                        {entry && <div style={{ fontSize: '8px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{fmt(entry.avg_price)}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Season legend */}
+                <div style={{ display: 'flex', gap: '16px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-light)' }}>
+                  {Object.entries(SEASON_COLOR).map(([s, c]) => (
+                    <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: c }} />
+                      <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{s}</span>
+                    </div>
+                  ))}
+                  <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginLeft: 'auto' }}>Bar height = avg hammer price (EUR)</span>
+                </div>
+              </div>
+
+              {/* Top house+month combos */}
+              {timingOptimizer.entries?.length > 0 && (
+                <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
+                  {timingOptimizer.entries.slice(0, 6).map((e: any, i: number) => (
+                    <div key={i} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', borderLeft: `3px solid ${SEASON_COLOR[e.season] || '#6B7280'}` }}>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text)', marginBottom: '4px' }}>{e.house}</div>
+                      <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginBottom: '6px' }}>{e.month_name} · {e.count} sales</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: i === 0 ? '#C6A85A' : 'var(--text)' }}>{fmt(e.avg_price)}</div>
+                      {e.sell_above_pct !== null && <div style={{ fontSize: '10px', color: e.sell_above_pct >= 70 ? '#34D399' : e.sell_above_pct >= 50 ? '#F59E0B' : '#F87171', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>{e.sell_above_pct}% above est.</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── Liquidity Depth Map ──────────────────────────────────────── */}
+        {liquidityMap && (() => {
+          const fmt = (v: number) => v >= 1_000_000 ? `€${(v/1_000_000).toFixed(1)}M` : v >= 1_000 ? `€${Math.round(v/1_000)}K` : `€${v}`;
+          const cells: any[] = liquidityMap.cells || [];
+          const PERIOD_COLORS = ['#3B82F6', '#6366F1', '#8B5CF6'];
+          return (
+            <div style={{ marginBottom: '32px' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '4px' }}>Phase 2 · Month 3 · Liquidity Intelligence</div>
+                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>Liquidity Depth Map</h2>
+                </div>
+                <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{liquidityMap.total_sales?.toLocaleString()} sales mapped</span>
+              </div>
+
+              <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
+                {/* Column headers — price bands */}
+                <div style={{ display: 'grid', gridTemplateColumns: '120px repeat(5, 1fr)', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ padding: '8px 12px', background: 'var(--bg-subtle)' }} />
+                  {liquidityMap.price_bands.map((b: string) => (
+                    <div key={b} style={{ padding: '8px 6px', background: 'var(--bg-subtle)', textAlign: 'center', fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>{b}</div>
+                  ))}
+                </div>
+
+                {/* Rows — time periods */}
+                {liquidityMap.periods.map((period: string, pi: number) => (
+                  <div key={period} style={{ display: 'grid', gridTemplateColumns: '120px repeat(5, 1fr)', borderBottom: pi < 2 ? '1px solid var(--border-light)' : 'none' }}>
+                    <div style={{ padding: '14px 12px', display: 'flex', alignItems: 'center' }}>
+                      <div style={{ width: '3px', height: '28px', borderRadius: '2px', background: PERIOD_COLORS[pi], marginRight: '8px', flexShrink: 0 }} />
+                      <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', lineHeight: 1.3 }}>{period}</span>
+                    </div>
+                    {liquidityMap.price_bands.map((_: string, bi: number) => {
+                      const cell = cells.find((c: any) => c.price_band === bi && c.period === pi);
+                      const intensity = cell?.intensity || 0;
+                      const bg = intensity > 0
+                        ? `rgba(${pi === 0 ? '59,130,246' : pi === 1 ? '99,102,241' : '139,92,246'}, ${Math.max(0.06, intensity * 0.7)})`
+                        : 'transparent';
+                      return (
+                        <div key={bi} title={cell?.count ? `${cell.count} sales · avg ${cell.avg_price ? fmt(cell.avg_price) : '—'}` : 'No data'}
+                          style={{ padding: '14px 8px', background: bg, textAlign: 'center', transition: 'background 0.2s', borderLeft: '1px solid var(--border-light)' }}>
+                          {cell?.count > 0 ? (
+                            <>
+                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>{cell.count}</div>
+                              <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>{cell.avg_price ? fmt(cell.avg_price) : ''}</div>
+                            </>
+                          ) : (
+                            <div style={{ fontSize: '12px', color: 'var(--border)' }}>—</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: '8px' }}>
+                Cell intensity = relative sales density. Darker = more liquid at this price range.
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── Institutional Calendar Overlay ──────────────────────────── */}
+        {calendarOverlay && (() => {
+          const fmt = (v: number) => v >= 1_000_000 ? `€${(v/1_000_000).toFixed(1)}M` : v >= 1_000 ? `€${Math.round(v/1_000)}K` : `€${v}`;
+          const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          return (
+            <div style={{ marginBottom: '32px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '4px' }}>Phase 2 · Month 3 · Calendar Intelligence</div>
+                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>Institutional Calendar Overlay</h2>
+                </div>
+                {calendarOverlay.peak_season && (
+                  <div style={{ background: 'rgba(198,168,90,0.08)', border: '1px solid rgba(198,168,90,0.25)', borderRadius: '8px', padding: '8px 14px', textAlign: 'right' }}>
+                    <div style={{ fontSize: '9px', color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>PEAK SEASON</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)', marginTop: '2px' }}>{calendarOverlay.peak_season} · {calendarOverlay.peak_month}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Monthly activity ring */}
+              <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '20px 24px', marginBottom: '12px' }}>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '14px' }}>Historical sale activity by month</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '4px' }}>
+                  {MONTH_NAMES.map((mn, i) => {
+                    const entry = calendarOverlay.active_months.find((a: any) => a.month_name === mn);
+                    const maxSales = Math.max(...calendarOverlay.active_months.map((a: any) => a.total_sales), 1);
+                    const intensity = entry ? entry.total_sales / maxSales : 0;
+                    const isPeak = calendarOverlay.peak_month === mn;
+                    return (
+                      <div key={mn} style={{ textAlign: 'center' }}>
+                        <div title={entry ? `${mn}: ${entry.total_sales} sales` : `${mn}: no data`}
+                          style={{ height: '32px', borderRadius: '4px', background: intensity > 0 ? `rgba(198,168,90,${Math.max(0.1, intensity * 0.9)})` : 'var(--bg-subtle)', border: isPeak ? '2px solid #C6A85A' : '1px solid transparent', transition: 'background 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {entry && <span style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: intensity > 0.5 ? 'white' : 'var(--text-2)', fontWeight: 700 }}>{entry.total_sales}</span>}
+                        </div>
+                        <div style={{ fontSize: '8px', color: isPeak ? '#C6A85A' : 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: '4px', fontWeight: isPeak ? 700 : 400 }}>{mn}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Recent major events */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
+                {calendarOverlay.events
+                  .filter((e: any) => e.is_tier1 && e.year >= new Date().getFullYear() - 3)
+                  .sort((a: any, b: any) => b.year - a.year || b.month - a.month)
+                  .slice(0, 8)
+                  .map((e: any, i: number) => (
+                    <div key={i} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px' }}>
+                      <div style={{ fontSize: '9px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginBottom: '4px' }}>{e.month_name} {e.year}</div>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.house}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#C6A85A', fontWeight: 700 }}>{fmt(e.max_price)}</div>
+                      <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{e.count} lots</div>
+                    </div>
+                  ))}
               </div>
             </div>
           );
