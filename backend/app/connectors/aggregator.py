@@ -83,18 +83,42 @@ async def fetch_all_lots(lots_per_source: int = 500) -> List[LotNormalized]:
     except Exception as e:
         logger.warning("Invaluable connector skipped", error=str(e))
 
-    # --- Live Auctioneers API (requires key) ---
+    # --- LiveAuctioneers via Apify (preferred when APIFY_API_TOKEN is set) ---
+    _apify_token = None
     try:
-        from app.connectors.liveauctioneers_connector import fetch_lots as la_fetch
-        lots = await la_fetch(lots_per_source)
-        for lot in lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-        if lots:
-            logger.info("Live Auctioneers: fetched", count=len(lots))
-    except Exception as e:
-        logger.error("Live Auctioneers connector failed", error=str(e))
+        from app.config import get_settings as _gs
+        _apify_token = _gs().apify_api_token
+    except Exception:
+        import os as _os
+        _apify_token = _os.environ.get("APIFY_API_TOKEN")
+
+    if _apify_token:
+        try:
+            from app.connectors.apify_liveauctioneers_connector import fetch_liveauctioneers_via_apify
+            apify_lots = await fetch_liveauctioneers_via_apify(lots_per_source)
+            added = 0
+            for lot in apify_lots:
+                if lot.external_id not in seen_ids:
+                    seen_ids.add(lot.external_id)
+                    real_lots.append(lot)
+                    added += 1
+            if added:
+                logger.info("LiveAuctioneers (Apify): fetched", count=added)
+        except Exception as e:
+            logger.warning("LiveAuctioneers Apify connector skipped", error=str(e))
+    else:
+        # --- Live Auctioneers direct API (requires LIVEAUCTIONEERS_API_KEY) ---
+        try:
+            from app.connectors.liveauctioneers_connector import fetch_lots as la_fetch
+            lots = await la_fetch(lots_per_source)
+            for lot in lots:
+                if lot.external_id not in seen_ids:
+                    seen_ids.add(lot.external_id)
+                    real_lots.append(lot)
+            if lots:
+                logger.info("Live Auctioneers: fetched", count=len(lots))
+        except Exception as e:
+            logger.error("Live Auctioneers connector failed", error=str(e))
 
     # --- Artsy — free public API ---
     try:

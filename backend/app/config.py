@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     # External auction APIs
     liveauctioneers_api_key: Optional[str] = None
     artsy_api_key: Optional[str] = None  # optional, public API works without
+    apify_api_token: Optional[str] = None       # APIFY_API_TOKEN — cloud scraping proxy
+    apify_actor_id: str = "jupri/liveauctioneers-scraper"  # APIFY_ACTOR_ID
 
     # AI
     openai_api_key: Optional[str] = None
