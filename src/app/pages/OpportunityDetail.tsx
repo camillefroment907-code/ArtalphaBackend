@@ -324,7 +324,7 @@ export default function OpportunityDetail() {
       <div ref={heroRef} style={{ background: DK, display: 'grid', gridTemplateColumns: '35% 65%' }}>
 
         {/* LEFT — image panel */}
-        <div style={{ background: DK4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '400px', padding: '24px 16px', gap: '16px', borderRight: `0.5px solid ${DKB}`, position: 'relative' }}>
+        <div style={{ background: DK4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '400px', padding: '24px 4px 24px 24px', gap: '16px', borderRight: `0.5px solid ${DKB}`, position: 'relative' }}>
           {/* Back button (top-left) */}
           <button onClick={() => navigate(-1)} style={{ position: 'absolute', top: '16px', left: '16px', background: 'none', border: `0.5px solid ${DKB}`, color: '#6B7280', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.08em', padding: '5px 10px', borderRadius: '4px' }}>
             ← BACK
@@ -342,7 +342,7 @@ export default function OpportunityDetail() {
         </div>
 
         {/* RIGHT — info panel */}
-        <div style={{ padding: '36px 32px 36px 28px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ padding: '36px 32px 36px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
           {/* EXCEPTIONAL badge */}
           {dealScore >= 80 && (
