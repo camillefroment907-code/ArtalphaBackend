@@ -644,6 +644,45 @@ export default function OpportunityDetail() {
               );
             })()}
 
+            {/* Provenance Risk */}
+            {lot.provenance_risk && (() => {
+              const r = lot.provenance_risk;
+              const severityColor: Record<string, string> = { HIGH: '#f87171', MEDIUM: '#f59e0b', LOW: '#94a3b8' };
+              return (
+                <div style={{ marginBottom: '28px', border: `1px solid ${r.color}40`, borderRadius: '8px', overflow: 'hidden' }}>
+                  {/* Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: `${r.color}10` }}>
+                    <span style={{ fontSize: '14px' }}>🔍</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: r.color }}>{r.level}</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-3)' }}>Due Diligence</span>
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-3)', marginTop: '2px' }}>
+                        {r.flag_count} risk factor{r.flag_count > 1 ? 's' : ''} detected — verify before bidding
+                      </div>
+                    </div>
+                  </div>
+                  {/* Flag list */}
+                  <div style={{ padding: '4px 0' }}>
+                    {r.flags.map((f: any) => (
+                      <div key={f.code} style={{ display: 'flex', gap: '10px', padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
+                        <div style={{
+                          flexShrink: 0, marginTop: '2px',
+                          width: '6px', height: '6px', borderRadius: '50%',
+                          background: severityColor[f.severity] || '#94a3b8',
+                        }} />
+                        <div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: severityColor[f.severity] || 'var(--text-2)' }}>{f.label}</div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', marginTop: '3px', lineHeight: 1.5 }}>{f.detail}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Score bar */}
             {lot.deal_score > 0 && (
               <div style={{ marginBottom: lot.score_rationale ? '16px' : '28px', paddingBottom: lot.score_rationale ? '16px' : '28px', borderBottom: lot.score_rationale ? 'none' : '1px solid var(--border)' }}>
