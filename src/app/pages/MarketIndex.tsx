@@ -13,6 +13,14 @@ export default function MarketIndex() {
   const [exceptionalCount, setExceptionalCount] = useState<number | null>(null);
 
   useEffect(() => {
+    const meta = document.createElement('meta');
+    meta.name = 'robots';
+    meta.content = 'noindex, nofollow';
+    document.head.appendChild(meta);
+    return () => document.head.removeChild(meta);
+  }, []);
+
+  useEffect(() => {
     fetch(`${BACKEND}/api/market/index`)
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); })

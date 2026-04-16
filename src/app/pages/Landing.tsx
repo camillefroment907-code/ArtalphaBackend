@@ -714,7 +714,6 @@ export default function Landing() {
                 { label: 'Explorer', href: '/app/explore' },
                 { label: 'Dashboard', href: '/app/dashboard' },
                 { label: 'Portfolio', href: '/app/portfolio' },
-                { label: 'Market Index', href: '/market-index' },
               ].map(({ label, href }) => (
                 <a key={label} href={href} style={{ display: 'block', fontSize: '13px', color: 'rgba(255,255,255,0.5)', textDecoration: 'none', marginBottom: '10px', transition: 'color 0.15s' }}
                   onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = 'white'}
