@@ -561,6 +561,46 @@ export default function OpportunityDetail() {
               );
             })()}
 
+            {/* Cycle Stage */}
+            {lot.cycle_stage && (() => {
+              const c = lot.cycle_stage;
+              return (
+                <div style={{ marginBottom: '28px', padding: '14px 20px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '10px' }}>
+                    Market Cycle
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        padding: '5px 12px',
+                        background: `${c.color}18`,
+                        border: `1px solid ${c.color}40`,
+                        borderRadius: '4px',
+                      }}>
+                        <span style={{ fontSize: '13px', color: c.color }}>{c.icon}</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: c.color, letterSpacing: '0.1em' }}>{c.stage}</span>
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-2)' }}>
+                        {c.description}
+                      </div>
+                    </div>
+                    {c.momentum_pct !== null && (
+                      <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: c.color, lineHeight: 1 }}>
+                          {c.momentum_pct > 0 ? '+' : ''}{c.momentum_pct}%
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-3)', marginTop: '2px' }}>12m momentum</div>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.25)', marginTop: '10px' }}>
+                    {c.total_sales} sales recorded · {c.first_year}–{c.last_year}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Score bar */}
             {lot.deal_score > 0 && (
               <div style={{ marginBottom: lot.score_rationale ? '16px' : '28px', paddingBottom: lot.score_rationale ? '16px' : '28px', borderBottom: lot.score_rationale ? 'none' : '1px solid var(--border)' }}>
