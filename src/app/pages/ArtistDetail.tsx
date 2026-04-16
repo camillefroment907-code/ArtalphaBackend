@@ -29,6 +29,8 @@ interface ArtistProfile {
   birth_year: number | null;
   death_year: number | null;
   biography: string | null;
+  ai_brief?: string | null;
+  movement?: string | null;
   image_url: string | null;
   artsy_url: string | null;
   investment_tier: string | null;
@@ -42,6 +44,7 @@ interface ArtistProfile {
   shows_last_12m: number;
   shows_prev_12m?: number;
   is_pre_auction: boolean;
+  statistics?: { trend_direction?: string };
   signals: Signal[];
   lots: Lot[];
 }
@@ -186,6 +189,7 @@ export default function ArtistDetail() {
   const [data, setData] = useState<ArtistProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [wikiBio, setWikiBio] = useState<string | null>(null);
 
   useEffect(() => {
     if (!name) return;
@@ -200,7 +204,16 @@ export default function ArtistDetail() {
         return r.json();
       })
       .then((d) => {
-        if (d) setData(d);
+        if (d) {
+          setData(d);
+          if (!d.ai_brief) {
+            const wikiName = encodeURIComponent((d.name || '').replace(/\s+/g, '_'));
+            fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${wikiName}`)
+              .then(r => r.ok ? r.json() : null)
+              .then(w => { if (w?.extract) setWikiBio(w.extract); })
+              .catch(() => {});
+          }
+        }
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
@@ -277,18 +290,25 @@ export default function ArtistDetail() {
             <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 36, color: 'var(--text)', margin: '0 0 8px 0' }}>
               {data.name}
             </h1>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
-              {[
-                data.nationality,
-                data.birth_year
-                  ? data.death_year
-                    ? `${data.birth_year}–${data.death_year}`
-                    : `b. ${data.birth_year}`
-                  : null,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </div>
+            {(data.nationality || data.movement || data.birth_year) && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+                {data.nationality && (
+                  <span style={{ padding: '3px 10px', background: 'white', border: '1px solid var(--border)', borderRadius: 20, fontSize: 12, color: 'var(--text-2)' }}>
+                    {data.nationality}
+                  </span>
+                )}
+                {data.movement && (
+                  <span style={{ padding: '3px 10px', background: 'rgba(198,168,90,0.08)', border: '1px solid rgba(198,168,90,0.3)', borderRadius: 20, fontSize: 12, color: 'var(--gold-dim)', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
+                    {data.movement}
+                  </span>
+                )}
+                {data.birth_year && (
+                  <span style={{ padding: '3px 10px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 20, fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                    {data.birth_year}{data.death_year ? `–${data.death_year}` : '–'}
+                  </span>
+                )}
+              </div>
+            )}
             {data.artsy_url && (
               <a
                 href={data.artsy_url}
@@ -315,7 +335,7 @@ export default function ArtistDetail() {
           <ScoreTile label="Momentum" value={data.momentum_score} unit="/100" />
           <ScoreTile label="Liquidity" value={data.liquidity_score} unit="/100" />
           <ScoreTile label="Institutional" value={data.institutional_score} unit="/100" />
-          <div style={{ flex: 1, padding: '16px 20px', textAlign: 'center' }}>
+          <div style={{ flex: 1, padding: '16px 20px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 6 }}>
               Galleries
             </div>
@@ -323,6 +343,16 @@ export default function ArtistDetail() {
               {data.gallery_count > 0 ? `${data.gallery_count}` : '—'}
             </div>
           </div>
+          {data.statistics?.trend_direction && (
+            <div style={{ flex: 1, padding: '16px 20px', textAlign: 'center' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 6 }}>
+                Trend
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 22, fontWeight: 700, color: data.statistics.trend_direction === 'up' ? '#34D399' : data.statistics.trend_direction === 'down' ? '#F87171' : '#94A3B8' }}>
+                {data.statistics.trend_direction === 'up' ? '↑' : data.statistics.trend_direction === 'down' ? '↓' : '→'}
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 40 }}>
@@ -372,14 +402,42 @@ export default function ArtistDetail() {
             </div>
 
             {/* BIOGRAPHY */}
-            {data.biography && (
-              <div style={{ marginBottom: 40 }}>
-                <SectionTitle>About</SectionTitle>
-                <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.8, maxWidth: 680, margin: 0 }}>
-                  {data.biography.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')}
-                </p>
-              </div>
-            )}
+            <div style={{ marginBottom: 40 }}>
+              {data.ai_brief ? (
+                <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>
+                    ◆ NAUTILUS ANALYST BRIEF
+                  </div>
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>
+                    {data.ai_brief}
+                  </p>
+                </div>
+              ) : wikiBio ? (
+                <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>
+                    ◆ NAUTILUS ANALYST BRIEF
+                  </div>
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0, display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {wikiBio}
+                  </p>
+                </div>
+              ) : data.biography ? (
+                <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>
+                    ◆ NAUTILUS ANALYST BRIEF
+                  </div>
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>
+                    {data.biography.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')}
+                  </p>
+                </div>
+              ) : (
+                <div style={{ background: '#F5F3EE', border: '1px solid #E8E4DD', borderRadius: 8, padding: '16px 20px' }}>
+                  <p style={{ fontSize: 12, fontStyle: 'italic', color: '#9CA3AF', margin: 0, lineHeight: 1.6 }}>
+                    Market data available — artist biography coming soon.
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* CURRENT LOTS */}
             <div>

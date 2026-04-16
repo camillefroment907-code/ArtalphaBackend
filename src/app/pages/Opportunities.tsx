@@ -93,6 +93,7 @@ async function loadLots(params: Record<string, any>) {
   if (params.category)           qs.set("category", params.category);
   if (params.medium)             qs.set("medium", params.medium);
   if (params.auction_house)      qs.set("auction_house", params.auction_house);
+  if (params.low_supply)         qs.set("low_supply", "true");
 
   const url = `/api/lots?${qs.toString()}`;
   const token = getToken();
@@ -170,6 +171,8 @@ function mapLot(lot: any) {
     score_rationale: lot.score_rationale || null,
     confidence_score: lot.confidence_score || null,
     real_cost: lot.real_cost || null,
+    supplyCount: lot.supply_count ?? null,
+    isLowSupply: lot.is_low_supply ?? false,
   };
 }
 
@@ -274,6 +277,21 @@ function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => vo
           <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 700, color: "var(--navy)" }}>{Math.round(ds)}</span>
           <span style={{ fontSize: "9px", color: "var(--text-3)" }}>/100</span>
         </div>
+
+        {/* Low supply badge */}
+        {lot.isLowSupply && (
+          <div style={{
+            position: "absolute", bottom: "10px", left: "10px",
+            padding: "3px 8px",
+            background: "rgba(217,119,6,0.12)",
+            border: "1px solid rgba(217,119,6,0.4)",
+            borderRadius: "4px",
+          }}>
+            <span style={{ fontSize: "9px", fontWeight: 800, color: "#D97706", letterSpacing: "0.1em" }}>
+              ◆ LOW SUPPLY
+            </span>
+          </div>
+        )}
 
         {/* Bottom gradient */}
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "60px", background: "linear-gradient(to top, rgba(250,250,248,0.9), transparent)" }} />
@@ -417,6 +435,19 @@ function LiveCard({ lot, onClick }: { lot: MappedLot; onClick: () => void }) {
             padding: "2px 7px", borderRadius: "3px", fontSize: "10px", fontWeight: 700,
           }}>
             {new Date(lot.auctionDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+          </div>
+        )}
+
+        {/* Low supply badge */}
+        {lot.isLowSupply && (
+          <div style={{
+            position: "absolute", bottom: "7px", left: "7px",
+            padding: "2px 7px",
+            background: "rgba(217,119,6,0.12)",
+            border: "1px solid rgba(217,119,6,0.4)",
+            borderRadius: "3px",
+          }}>
+            <span style={{ fontSize: "8px", fontWeight: 800, color: "#D97706", letterSpacing: "0.08em" }}>◆ LOW SUPPLY</span>
           </div>
         )}
 
@@ -607,6 +638,7 @@ export default function Opportunities() {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [tab, setTab] = useState<"alpha" | "live">("alpha");
   const [sourceStats, setSourceStats] = useState<SourceStat[]>([]);
+  const [lowSupply, setLowSupply] = useState(false);
 
   // Plan gating
   const limits     = getPlanLimits();
@@ -669,10 +701,11 @@ export default function Opportunities() {
         max_price:   filters.maxPrice > 0 ? filters.maxPrice : undefined,
         category:    filters.categories?.length === 1 ? filters.categories[0] : undefined,
         artist_tier: filters.artistRating !== "all" ? filters.artistRating : undefined,
+        low_supply: lowSupply || undefined,
         ...timingDates,
       };
     }
-  }, [filters, dateFilter, tab]);
+  }, [filters, dateFilter, tab, lowSupply]);
 
   const buildFetchParamsRef = useRef(buildFetchParams);
   buildFetchParamsRef.current = buildFetchParams;
@@ -746,6 +779,7 @@ export default function Opportunities() {
     JSON.stringify(filters.platforms),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     JSON.stringify(filters.countries),
+    lowSupply,
   ]);
 
   const doFetch = useCallback(() => {
@@ -956,6 +990,24 @@ export default function Opportunities() {
               >{l}</button>
             ))}
           </div>
+
+          {/* Low Supply filter chip */}
+          <button
+            onClick={() => setLowSupply(v => !v)}
+            style={{
+              display: "flex", alignItems: "center", gap: "5px",
+              padding: "5px 12px",
+              background: lowSupply ? "rgba(217,119,6,0.1)" : "white",
+              border: `1px solid ${lowSupply ? "rgba(217,119,6,0.5)" : "var(--border)"}`,
+              borderRadius: "20px", cursor: "pointer",
+              fontSize: "11px", fontWeight: lowSupply ? 700 : 500,
+              color: lowSupply ? "#D97706" : "var(--text-2)",
+              transition: "all 0.15s", flexShrink: 0, whiteSpace: "nowrap",
+            }}
+          >
+            <span style={{ fontSize: "9px" }}>◆</span>
+            Low Supply
+          </button>
 
           {/* View mode switcher */}
           <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: "6px", overflow: "hidden", flexShrink: 0 }}>

@@ -497,7 +497,7 @@ export default function ArtistIntelligence() {
             {artist.ai_brief ? (
               <div style={{ background: 'var(--navy)', borderRadius: '10px', padding: '18px 22px', marginBottom: '20px' }}>
                 <div style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '8px' }}>
-                  ◆ ARTIST BIOGRAPHY
+                  ◆ NAUTILUS ANALYST BRIEF
                 </div>
                 <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>
                   {artist.ai_brief}
@@ -570,6 +570,16 @@ export default function ArtistIntelligence() {
                   </div>
                 </div>
               ))}
+              {stats.trend_direction && (
+                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', gridColumn: 'span 2' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px' }}>
+                    TREND DIRECTION
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: stats.trend_direction === 'up' ? '#34D399' : stats.trend_direction === 'down' ? '#F87171' : '#94A3B8' }}>
+                    {stats.trend_direction === 'up' ? 'UP ↑' : stats.trend_direction === 'down' ? 'DOWN ↓' : 'STABLE →'}
+                  </div>
+                </div>
+              )}
             </div>
 
             <button
