@@ -206,6 +206,174 @@ async def get_format_matrix(
     return response
 
 
+@router.get("/{artist_name}/geo-arbitrage")
+async def get_geo_arbitrage(
+    artist_name: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Geographic Arbitrage Detector — avg prices by market region using currency + house signals."""
+    from app.utils.cache import get_cached, set_cached
+
+    cache_key = f"geo_arbitrage:{artist_name.lower()}"
+    cached = get_cached(cache_key, ttl=3600)
+    if cached:
+        return cached
+
+    result = await db.execute(
+        text("""
+        SELECT currency, auction_house, hammer_price_eur, premium_ratio
+        FROM hammer_prices
+        WHERE artist_name ILIKE :name
+          AND hammer_price_eur IS NOT NULL
+          AND currency IS NOT NULL
+        """),
+        {"name": f"%{artist_name}%"},
+    )
+    rows = result.fetchall()
+
+    if not rows:
+        return {"artist_name": artist_name, "regions": [], "spread_pct": None}
+
+    # ── Region mapping ────────────────────────────────────────────────────────
+    PARIS_HOUSES = {
+        "artcurial", "cornette de saint cyr", "tajan", "eric pillon",
+        "millon", "eric pillon encheres", "millon & associes",
+        "gazette drouot", "drouot", "aguttes", "piasa", "osenat",
+        "rouillac", "leclere", "pestel-debord",
+    }
+    GERMAN_HOUSES = {
+        "ketterer", "grisebach", "van ham", "lempertz", "neumeister",
+        "quittenbaum", "nagel", "bassenge", "stahl",
+    }
+    AUSTRIAN_HOUSES = {"dorotheum", "im kinsky"}
+    ITALIAN_HOUSES = {
+        "meeting art", "finarte", "farsetti", "galleria pananti",
+        "il ponte", "sant'agostino", "poleschi", "cambi", "pandolfini",
+        "farsettiarte", "finarte semenzato", "finarte casa d'aste",
+        "farsetti arte", "cambi casa d'aste", "casa d'aste pandolfini",
+        "poleschi casa d'aste", "sant'agostino casa d'arte",
+        "galleria pananti", "il ponte", "bonino", "sant agostino",
+    }
+    NORDIC_HOUSES = {
+        "bruun rasmussen", "bukowskis", "stockholms auktionsverk",
+        "blomqvist", "lauritz",
+    }
+
+    def region_for(currency: str, house: str | None) -> tuple[str, str]:
+        """Returns (region_name, flag)."""
+        c = (currency or "").upper()
+        h = (house or "").lower()
+
+        if c == "GBP":
+            return "London", "🇬🇧"
+        if c == "HKD":
+            return "Hong Kong", "🇭🇰"
+        if c == "CHF":
+            return "Switzerland", "🇨🇭"
+        if c == "JPY":
+            return "Tokyo", "🇯🇵"
+        if c == "SEK":
+            return "Stockholm", "🇸🇪"
+        if c == "DKK":
+            return "Copenhagen", "🇩🇰"
+        if c == "CNY":
+            return "China", "🇨🇳"
+        if c == "AUD":
+            return "Sydney", "🇦🇺"
+        if c == "CAD":
+            return "Toronto", "🇨🇦"
+        if c == "MXN":
+            return "Mexico City", "🇲🇽"
+        if c == "USD":
+            return "New York", "🇺🇸"
+        if c == "EUR":
+            if any(k in h for k in PARIS_HOUSES):
+                return "Paris", "🇫🇷"
+            if any(k in h for k in AUSTRIAN_HOUSES):
+                return "Vienna", "🇦🇹"
+            if any(k in h for k in GERMAN_HOUSES):
+                return "Germany", "🇩🇪"
+            if any(k in h for k in ITALIAN_HOUSES):
+                return "Italy", "🇮🇹"
+            if any(k in h for k in NORDIC_HOUSES):
+                return "Scandinavia", "🇸🇪"
+            # Fallback: try to infer from house name
+            if any(k in h for k in ("paris", "drouot", "france")):
+                return "Paris", "🇫🇷"
+            if any(k in h for k in ("berlin", "munich", "hamburg", "köln", "cologne")):
+                return "Germany", "🇩🇪"
+            if any(k in h for k in ("vienna", "wien")):
+                return "Vienna", "🇦🇹"
+            if any(k in h for k in ("milan", "rome", "italian", "italia")):
+                return "Italy", "🇮🇹"
+            if any(k in h for k in ("brussels", "belgium", "belgi")):
+                return "Brussels", "🇧🇪"
+            if any(k in h for k in ("amsterdam", "netherlands", "dutch")):
+                return "Amsterdam", "🇳🇱"
+            return "Europe", "🇪🇺"
+
+        return "Other", "🌍"
+
+    # ── Aggregate ─────────────────────────────────────────────────────────────
+    from collections import defaultdict
+    buckets: dict = defaultdict(lambda: {"prices": [], "ratios": [], "flag": ""})
+
+    for currency, house, price_eur, ratio in rows:
+        region, flag = region_for(currency, house)
+        buckets[region]["prices"].append(price_eur)
+        buckets[region]["flag"] = flag
+        if ratio is not None:
+            buckets[region]["ratios"].append(ratio)
+
+    regions = []
+    for region, data in buckets.items():
+        prices = data["prices"]
+        ratios = data["ratios"]
+        count = len(prices)
+        if count < 3:
+            continue
+        avg_price = round(sum(prices) / count)
+        sorted_p = sorted(prices)
+        mid = len(sorted_p) // 2
+        median_price = round((sorted_p[mid - 1] + sorted_p[mid]) / 2 if len(sorted_p) % 2 == 0 else sorted_p[mid])
+        above_est = round(len([r for r in ratios if r > 1]) / len(ratios) * 100, 1) if ratios else None
+
+        regions.append({
+            "region": region,
+            "flag": data["flag"],
+            "count": count,
+            "avg_price_eur": avg_price,
+            "median_price_eur": median_price,
+            "sell_above_estimate_pct": above_est,
+        })
+
+    # Sort by count desc
+    regions = sorted(regions, key=lambda x: x["count"], reverse=True)
+
+    # Arbitrage spread
+    avg_prices = [r["avg_price_eur"] for r in regions if r["count"] >= 5]
+    spread_pct = None
+    best_buy = None
+    best_sell = None
+    if len(avg_prices) >= 2:
+        max_p = max(avg_prices)
+        min_p = min(avg_prices)
+        spread_pct = round((max_p - min_p) / min_p * 100, 1) if min_p > 0 else None
+        best_sell = next(r["region"] for r in regions if r["avg_price_eur"] == max_p)
+        best_buy = next(r["region"] for r in regions if r["avg_price_eur"] == min_p)
+
+    response = {
+        "artist_name": artist_name,
+        "regions": regions,
+        "spread_pct": spread_pct,
+        "best_buy": best_buy,
+        "best_sell": best_sell,
+        "total_sales": len(rows),
+    }
+    set_cached(cache_key, response)
+    return response
+
+
 @router.get("/{artist_name}/price-history")
 async def get_artist_price_history(
     artist_name: str,
