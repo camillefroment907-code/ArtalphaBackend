@@ -67,13 +67,14 @@ async def get_db():
 
 
 async def create_tables():
+    """Fast path: only create missing tables. Call run_migrations() separately for ALTER/INDEX."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database tables created")
 
-    # Auto-migrate: add columns that may be missing from tables created
-    # before these columns were added to the models (create_all won't ALTER).
-    # Each statement runs in its own transaction so one failure doesn't abort others.
+
+async def run_migrations():
+    """Slow path: ALTER TABLE / CREATE INDEX statements run after startup to avoid blocking healthcheck."""
     migrations = [
         # users columns
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)",

@@ -86,7 +86,7 @@ async def lifespan(app: FastAPI):
 
     if db_ok:
         try:
-            await create_tables()
+            await create_tables()   # fast: create_all only
             logger.info("Database ready")
         except Exception as e:
             logger.error("create_tables failed — continuing anyway", error=str(e))
@@ -94,7 +94,6 @@ async def lifespan(app: FastAPI):
         logger.error("Database connection failed after retries — starting in degraded mode")
 
     # Start Celery beat scheduler in background thread
-    # (single-process deployment: beat runs embedded alongside the API)
     try:
         from app.jobs.startup_beat import start_beat_in_background
         start_beat_in_background()
@@ -102,9 +101,24 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("Celery beat failed to start — tasks must be triggered manually", error=str(e))
 
+    # Yield immediately so Railway healthcheck can reach /health
+    # Slow migrations (ALTER TABLE / CREATE INDEX) run in background
+    if db_ok:
+        import asyncio
+        asyncio.create_task(_run_migrations_bg())
+
     yield
 
     logger.info("HONO API shutting down")
+
+
+async def _run_migrations_bg():
+    """Run ALTER TABLE / CREATE INDEX after startup — avoids blocking healthcheck."""
+    from app.database import run_migrations
+    try:
+        await run_migrations()
+    except Exception as e:
+        pass  # already logged inside run_migrations
 
 
 app = FastAPI(
