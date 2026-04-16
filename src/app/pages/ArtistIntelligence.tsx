@@ -292,6 +292,7 @@ export default function ArtistIntelligence() {
   const [priceHistory, setPriceHistory] = useState<any>(null);
   const [wikiBio, setWikiBio] = useState<string | null>(null);
   const [formatMatrix, setFormatMatrix] = useState<any[]>([]);
+  const [geoArbitrage, setGeoArbitrage] = useState<any>(null);
 
   useEffect(() => {
     if (!artistName) { setLoading(false); return; }
@@ -330,6 +331,14 @@ export default function ArtistIntelligence() {
     })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.formats?.length > 0) setFormatMatrix(d.formats); })
+      .catch(() => {});
+
+    // Geo arbitrage — independent, non-blocking
+    fetch(`${BACKEND}/api/artist-profiles/${name}/geo-arbitrage`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.regions?.length >= 2) setGeoArbitrage(d); })
       .catch(() => {});
   }, [artistName]);
 
@@ -827,6 +836,160 @@ export default function ArtistIntelligence() {
             </div>
           </div>
         )}
+
+        {/* Geographic Arbitrage Detector */}
+        {geoArbitrage && geoArbitrage.regions.length >= 2 && (() => {
+          const regions: any[] = geoArbitrage.regions;
+          const maxAvg = Math.max(...regions.map((r: any) => r.avg_price_eur));
+          const maxCount = Math.max(...regions.map((r: any) => r.count));
+          const fmt = (v: number) =>
+            v >= 1_000_000 ? `€${(v / 1_000_000).toFixed(1)}M`
+            : v >= 1_000   ? `€${Math.round(v / 1_000)}K`
+            :                `€${Math.round(v)}`;
+
+          return (
+            <div style={{ marginBottom: '32px' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '4px' }}>
+                    Phase 2 · Geographic Intelligence
+                  </div>
+                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>
+                    Geographic Arbitrage Detector
+                  </h2>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  {geoArbitrage.spread_pct !== null && (
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: geoArbitrage.spread_pct > 30 ? '#34D399' : 'var(--text)' }}>
+                      +{geoArbitrage.spread_pct}%
+                    </div>
+                  )}
+                  <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                    price spread
+                  </div>
+                </div>
+              </div>
+
+              {/* Buy / Sell callout */}
+              {geoArbitrage.best_buy && geoArbitrage.best_sell && geoArbitrage.best_buy !== geoArbitrage.best_sell && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
+                  <div style={{ background: 'rgba(52,211,153,0.05)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '8px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '20px' }}>🛒</span>
+                    <div>
+                      <div style={{ fontSize: '9px', fontWeight: 700, color: '#34D399', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>BEST MARKET TO BUY</div>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)', marginTop: '2px' }}>{geoArbitrage.best_buy}</div>
+                    </div>
+                  </div>
+                  <div style={{ background: 'rgba(198,168,90,0.05)', border: '1px solid rgba(198,168,90,0.2)', borderRadius: '8px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '20px' }}>🏷</span>
+                    <div>
+                      <div style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>BEST MARKET TO SELL</div>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)', marginTop: '2px' }}>{geoArbitrage.best_sell}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Regions table */}
+              <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
+                {/* Column headers */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '180px 1fr 120px 120px 90px',
+                  padding: '8px 20px',
+                  background: 'var(--bg-subtle)',
+                  borderBottom: '1px solid var(--border)',
+                }}>
+                  {['MARKET', 'VOLUME', 'AVG PRICE', 'MEDIAN', 'ABOVE EST.'].map(h => (
+                    <div key={h} style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>
+                      {h}
+                    </div>
+                  ))}
+                </div>
+
+                {regions.map((r: any, i: number) => {
+                  const isBestSell = r.region === geoArbitrage.best_sell;
+                  const isBestBuy  = r.region === geoArbitrage.best_buy;
+                  const avgPct  = (r.avg_price_eur / maxAvg) * 100;
+                  const volPct  = (r.count / maxCount) * 100;
+                  const barColor = isBestSell ? '#C6A85A' : isBestBuy ? '#34D399' : '#2563EB';
+
+                  return (
+                    <div
+                      key={r.region}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '180px 1fr 120px 120px 90px',
+                        padding: '14px 20px',
+                        borderBottom: i < regions.length - 1 ? '1px solid var(--border-light)' : 'none',
+                        alignItems: 'center',
+                        background: isBestSell ? 'rgba(198,168,90,0.02)' : isBestBuy ? 'rgba(52,211,153,0.02)' : 'transparent',
+                      }}
+                    >
+                      {/* Market name */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: '3px', height: '28px', borderRadius: '2px', background: barColor, flexShrink: 0 }} />
+                        <div>
+                          <div style={{ fontSize: '14px', lineHeight: 1.2 }}>
+                            {r.flag} <span style={{ fontWeight: 600, color: 'var(--text)' }}>{r.region}</span>
+                          </div>
+                          <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
+                            {r.count} sales
+                            {isBestSell && <span style={{ color: '#C6A85A', marginLeft: '6px' }}>★ best sell</span>}
+                            {isBestBuy  && <span style={{ color: '#34D399', marginLeft: '6px' }}>↓ best buy</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Volume bar */}
+                      <div style={{ paddingRight: '20px' }}>
+                        <div style={{ height: '6px', background: 'var(--bg-subtle)', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${volPct}%`, background: barColor, borderRadius: '3px', opacity: 0.65 }} />
+                        </div>
+                      </div>
+
+                      {/* Avg price */}
+                      <div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: isBestSell ? '#C6A85A' : 'var(--text)' }}>
+                          {fmt(r.avg_price_eur)}
+                        </div>
+                        <div style={{ height: '2px', background: 'var(--bg-subtle)', borderRadius: '1px', marginTop: '4px', width: '70px' }}>
+                          <div style={{ height: '100%', width: `${avgPct}%`, background: barColor, borderRadius: '1px', opacity: 0.5 }} />
+                        </div>
+                      </div>
+
+                      {/* Median */}
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-2)' }}>
+                        {fmt(r.median_price_eur)}
+                      </div>
+
+                      {/* Sell above estimate */}
+                      <div>
+                        {r.sell_above_estimate_pct !== null ? (
+                          <span style={{
+                            fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700,
+                            color: r.sell_above_estimate_pct >= 70 ? '#34D399' : r.sell_above_estimate_pct >= 50 ? '#F59E0B' : '#F87171',
+                          }}>
+                            {r.sell_above_estimate_pct}%
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>—</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Note */}
+              <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: '10px' }}>
+                Market regions inferred from auction currency. All prices normalized to EUR.
+                {geoArbitrage.total_sales && ` · ${geoArbitrage.total_sales.toLocaleString()} historical sales analyzed.`}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* All lots table */}
         {artist.all_lots?.length > 0 && (
