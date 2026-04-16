@@ -291,6 +291,7 @@ export default function ArtistIntelligence() {
   const [searching, setSearching] = useState(false);
   const [priceHistory, setPriceHistory] = useState<any>(null);
   const [wikiBio, setWikiBio] = useState<string | null>(null);
+  const [formatMatrix, setFormatMatrix] = useState<any[]>([]);
 
   useEffect(() => {
     if (!artistName) { setLoading(false); return; }
@@ -321,6 +322,14 @@ export default function ArtistIntelligence() {
     })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.price_by_year?.length >= 2) setPriceHistory(d); })
+      .catch(() => {});
+
+    // Format matrix — independent, non-blocking
+    fetch(`${BACKEND}/api/artist-profiles/${name}/format-matrix`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.formats?.length > 0) setFormatMatrix(d.formats); })
       .catch(() => {});
   }, [artistName]);
 
@@ -666,6 +675,157 @@ export default function ArtistIntelligence() {
             data={priceHistory.price_by_year}
             stats={{ ...priceHistory.statistics, total_sales: priceHistory.total_sales }}
           />
+        )}
+
+        {/* Format Performance Matrix */}
+        {formatMatrix.length > 0 && (
+          <div style={{ marginBottom: '32px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Phase 2 · Format Intelligence
+                </div>
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>
+                  Format Performance Matrix
+                </h2>
+              </div>
+              <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                {formatMatrix.reduce((s, f) => s + f.count, 0).toLocaleString()} sales analyzed
+              </span>
+            </div>
+
+            {/* Matrix table */}
+            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
+              {/* Column headers */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '160px 1fr 110px 110px 110px 90px',
+                gap: 0,
+                padding: '8px 20px',
+                background: 'var(--bg-subtle)',
+                borderBottom: '1px solid var(--border)',
+              }}>
+                {['FORMAT', 'VOLUME', 'AVG PRICE', 'RECORD', 'ENTRY', 'ABOVE EST.'].map(h => (
+                  <div key={h} style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>
+                    {h}
+                  </div>
+                ))}
+              </div>
+
+              {(() => {
+                const maxCount = Math.max(...formatMatrix.map(f => f.count));
+                const maxAvg   = Math.max(...formatMatrix.map(f => f.avg_price));
+                const fmt = (v: number) =>
+                  v >= 1_000_000 ? `€${(v / 1_000_000).toFixed(1)}M`
+                  : v >= 1_000   ? `€${Math.round(v / 1_000)}K`
+                  :                `€${Math.round(v)}`;
+
+                const FORMAT_ICON: Record<string, string> = {
+                  'Oil': '🖼', 'Acrylic': '🎨', 'Works on Paper': '✏️',
+                  'Prints': '🖨', 'Photography': '📷', 'Sculpture': '🗿',
+                  'Mixed Media': '◈', 'Paintings': '🖼', 'Other': '◇',
+                };
+                const FORMAT_COLOR: Record<string, string> = {
+                  'Oil': '#1D4ED8', 'Acrylic': '#7C3AED', 'Works on Paper': '#065F46',
+                  'Prints': '#92400E', 'Photography': '#1F2937', 'Sculpture': '#B45309',
+                  'Mixed Media': '#6B21A8', 'Paintings': '#1D4ED8', 'Other': '#6B7280',
+                };
+
+                return formatMatrix.map((f, i) => {
+                  const color = FORMAT_COLOR[f.format] || '#6B7280';
+                  const volPct = (f.count / maxCount) * 100;
+                  const avgPct = (f.avg_price / maxAvg) * 100;
+                  const isTop = f.avg_price === maxAvg;
+
+                  return (
+                    <div
+                      key={f.format}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '160px 1fr 110px 110px 110px 90px',
+                        gap: 0,
+                        padding: '14px 20px',
+                        borderBottom: i < formatMatrix.length - 1 ? '1px solid var(--border-light)' : 'none',
+                        alignItems: 'center',
+                        background: isTop ? 'rgba(198,168,90,0.03)' : 'transparent',
+                      }}
+                    >
+                      {/* Format name */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: '3px', height: '28px', borderRadius: '2px', background: color, flexShrink: 0 }} />
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', lineHeight: 1.2 }}>
+                            {f.format}
+                          </div>
+                          <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                            {f.count} sales
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Volume bar */}
+                      <div style={{ paddingRight: '20px' }}>
+                        <div style={{ height: '6px', background: 'var(--bg-subtle)', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${volPct}%`, background: color, borderRadius: '3px', opacity: 0.7, transition: 'width 0.6s ease' }} />
+                        </div>
+                      </div>
+
+                      {/* Avg price + mini bar */}
+                      <div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: isTop ? '#C6A85A' : 'var(--text)' }}>
+                          {fmt(f.avg_price)}
+                        </div>
+                        <div style={{ height: '2px', background: 'var(--bg-subtle)', borderRadius: '1px', marginTop: '4px', width: '70px' }}>
+                          <div style={{ height: '100%', width: `${avgPct}%`, background: isTop ? '#C6A85A' : color, borderRadius: '1px', opacity: 0.6 }} />
+                        </div>
+                      </div>
+
+                      {/* Record */}
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-2)' }}>
+                        {fmt(f.max_price)}
+                      </div>
+
+                      {/* Entry (min) */}
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-3)' }}>
+                        {fmt(f.min_price)}
+                      </div>
+
+                      {/* Sell above estimate */}
+                      <div>
+                        {f.sell_above_estimate_pct !== null ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{
+                              fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700,
+                              color: f.sell_above_estimate_pct >= 70 ? '#34D399' : f.sell_above_estimate_pct >= 50 ? '#F59E0B' : '#F87171',
+                            }}>
+                              {f.sell_above_estimate_pct}%
+                            </span>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>—</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+
+            {/* Legend */}
+            <div style={{ display: 'flex', gap: '20px', marginTop: '10px', flexWrap: 'wrap' }}>
+              {[
+                { label: 'AVG PRICE', desc: 'Mean hammer price (EUR)' },
+                { label: 'RECORD', desc: 'Highest hammer price achieved' },
+                { label: 'ENTRY', desc: 'Lowest hammer price (min. investment)' },
+                { label: 'ABOVE EST.', desc: '% of sales exceeding high estimate' },
+              ].map(({ label, desc }) => (
+                <div key={label} style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                  <span style={{ fontWeight: 700, color: 'var(--text-2)' }}>{label}</span> — {desc}
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* All lots table */}
