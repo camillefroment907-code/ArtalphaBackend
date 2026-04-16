@@ -1141,36 +1141,104 @@ async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
     return lot_dict
 
 
-@router.get("/{lot_id}/comparables", response_model=List[LotOut])
+@router.get("/{lot_id}/comparables")
 async def get_comparables(
     lot_id: str,
-    limit: int = Query(6, ge=1, le=20),
     db: AsyncSession = Depends(get_db),
 ):
-    """Other lots by the same artist, ordered by deal score."""
-    lot = (await db.execute(
-        select(Lot).where(Lot.id == lot_id)
-    )).scalar_one_or_none()
+    """Find comparable lots — same artist or same category + similar price range."""
+    cache_key = f"comparables:{lot_id}"
+    cached = get_cached(cache_key, ttl=3600)
+    if cached:
+        return cached
+
+    lot_result = await db.execute(select(Lot).where(Lot.id == lot_id))
+    lot = lot_result.scalar_one_or_none()
     if not lot:
-        raise HTTPException(status_code=404, detail="Lot not found")
+        raise HTTPException(404, "Lot not found")
 
-    if not lot.artist_id and not lot.artist_name_raw:
-        return []
+    comparables = []
 
-    filters = [Lot.id != lot_id]
-    if lot.artist_id:
-        filters.append(Lot.artist_id == lot.artist_id)
-    elif lot.artist_name_raw:
-        filters.append(Lot.artist_name_raw.ilike(f"%{lot.artist_name_raw}%"))
+    # Strategy 1 — Same artist, different lot
+    if lot.artist_name_raw:
+        same_artist = await db.execute(
+            select(Lot)
+            .where(
+                and_(
+                    Lot.artist_name_raw.ilike(f"%{lot.artist_name_raw}%"),
+                    Lot.id != lot.id,
+                    Lot.estimate_low.isnot(None),
+                )
+            )
+            .order_by(Lot.deal_score.desc().nullslast())
+            .limit(6)
+        )
+        comparables.extend(same_artist.scalars().all())
 
-    stmt = (
-        select(Lot)
-        .options(selectinload(Lot.artist))
-        .where(and_(*filters))
-        .order_by(desc(Lot.deal_score).nullslast(), desc(Lot.created_at))
-        .limit(limit)
-    )
-    return (await db.execute(stmt)).scalars().all()
+    # Strategy 2 — Same category + similar price range
+    if len(comparables) < 3 and lot.category:
+        ref_price = lot.current_price or lot.estimate_low or 0
+        if ref_price > 0:
+            price_min = ref_price * 0.4
+            price_max = ref_price * 2.5
+            similar = await db.execute(
+                select(Lot)
+                .where(
+                    and_(
+                        Lot.category.ilike(f"%{lot.category}%"),
+                        Lot.id != lot.id,
+                        Lot.id.notin_([c.id for c in comparables]),
+                        or_(
+                            and_(Lot.current_price >= price_min, Lot.current_price <= price_max),
+                            and_(Lot.estimate_low >= price_min, Lot.estimate_low <= price_max),
+                        ),
+                        Lot.deal_score.isnot(None),
+                    )
+                )
+                .order_by(Lot.deal_score.desc())
+                .limit(6 - len(comparables))
+            )
+            comparables.extend(similar.scalars().all())
+
+    ref_price = lot.current_price or lot.estimate_low or 0
+    comp_prices = [
+        c.current_price or c.estimate_low
+        for c in comparables
+        if (c.current_price or c.estimate_low)
+    ]
+    market_avg = sum(comp_prices) / len(comp_prices) if comp_prices else 0
+    price_gap_pct = ((market_avg - ref_price) / ref_price * 100) if ref_price and market_avg else 0
+
+    response = {
+        "lot_id": lot_id,
+        "reference": {
+            "title": lot.title,
+            "artist": lot.artist_name_raw,
+            "price": ref_price,
+            "score": lot.deal_score,
+        },
+        "comparables": [lot_to_list_dict(c) for c in comparables[:6]],
+        "market_analysis": {
+            "comparable_count": len(comparables),
+            "market_avg_price": round(market_avg) if market_avg else None,
+            "price_gap_pct": round(price_gap_pct, 1),
+            "verdict": (
+                "Significantly underpriced" if price_gap_pct > 30
+                else "Underpriced" if price_gap_pct > 10
+                else "Fairly priced" if price_gap_pct > -10
+                else "Above market"
+            ),
+            "verdict_color": (
+                "#C6A85A" if price_gap_pct > 30
+                else "#2563EB" if price_gap_pct > 10
+                else "#64748B" if price_gap_pct > -10
+                else "#EF4444"
+            ),
+        }
+    }
+
+    set_cached(cache_key, response)
+    return response
 
 
 @router.get("/{lot_id}/similar", response_model=List[LotOut])
