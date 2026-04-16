@@ -1055,6 +1055,41 @@ async def fetch_historical_for_artist(
         raise HTTPException(500, str(e))
 
 
+@router.post("/admin/ingest-hammer-prices")
+async def ingest_hammer_prices(
+    request: Request,
+    x_api_key: str = Header(None, alias="x-api-key"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Accept a JSON array of pre-scraped hammer price records and save to DB."""
+    from app.config import get_settings as gs
+    s = gs()
+    if x_api_key != s.n8n_api_key:
+        raise HTTPException(403, "Unauthorized")
+
+    try:
+        from app.scrapers.hammer_price_saver import save_hammer_prices
+        body = await request.json()
+        if not isinstance(body, list):
+            raise HTTPException(400, "Expected a JSON array of records")
+
+        # Parse sale_date strings to datetime objects
+        from dateutil import parser as dp
+        for rec in body:
+            if rec.get("sale_date") and isinstance(rec["sale_date"], str):
+                try:
+                    rec["sale_date"] = dp.parse(rec["sale_date"])
+                except Exception:
+                    rec["sale_date"] = None
+
+        saved = await save_hammer_prices(body, db)
+        return {"received": len(body), "saved": saved}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
 @router.get("/calendar")
 async def get_auction_calendar(
     days: int = Query(30, ge=1, le=90),
