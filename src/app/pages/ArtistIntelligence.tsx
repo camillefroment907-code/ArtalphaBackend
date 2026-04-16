@@ -49,7 +49,7 @@ function PriceChart({ data, stats }: { data: YearPoint[]; stats: any }) {
             Historical Hammer Prices
           </div>
           <div style={{ fontSize: '13px', color: 'var(--text-2)' }}>
-            {data.length} years of auction data · {stats?.total_sales || ''} sales tracked
+            {data[0].year}–{data[data.length - 1].year} · {stats?.total_sales || ''} sales via Artsy
           </div>
         </div>
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
