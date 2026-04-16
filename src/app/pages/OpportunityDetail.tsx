@@ -438,132 +438,134 @@ export default function OpportunityDetail() {
       {/* ═══ LIGHT ZONE ═══ */}
       <div style={{ background: LT }}>
 
-        {/* ── DATA GRID ─────────────────────────────────────────────────────────── */}
-        <div style={{ padding: '32px 40px', display: 'grid', gridTemplateColumns: realCost ? '1fr 1fr' : '1fr', gap: '20px', alignItems: 'start' }}>
+        {/* ── DATA GRID + INVESTMENT ANALYSIS ──────────────────────────────────── */}
+        <div style={{ padding: '32px 40px', display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: '20px' }}>
 
-          {/* Card 1 — REAL COST BREAKDOWN */}
-          {realCost && (
-            <div style={{ ...wCard, alignSelf: 'start', height: 'fit-content' }}>
-              <div style={sl}>REAL COST BREAKDOWN</div>
-              {([
-                { k: 'Hammer price',                                         v: price,                            bold: false },
-                { k: `Buyer's premium (${realCost.buyers_premium_pct}%)`,    v: Math.round(realCost.cost_basis - price), bold: false },
-                { k: 'Holding cost (3yr)',                                   v: realCost.holding_cost_3y,         bold: false },
-              ] as { k: string; v: number; bold: boolean }[]).filter(r => r.v > 0).map(r => (
-                <div key={r.k} style={dRow}>
-                  <span style={{ fontSize: '13px', color: LTT2 }}>{r.k}</span>
-                  <span style={{ fontSize: '13px', color: LTT1, fontWeight: 500 }}>{fmt(r.v)}</span>
-                </div>
-              ))}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0' }}>
-                <span style={{ fontSize: '13px', color: LTT1, fontWeight: 700 }}>All-in cost</span>
-                <span style={{ fontSize: '16px', color: GOLD, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{fmt(totalCost)}</span>
-              </div>
-              <div style={{ background: '#FAFAF7', border: `1px solid ${LTB}`, borderRadius: '8px', padding: '10px 14px', marginTop: '14px' }}>
-                <div style={{ fontSize: '12px', color: LTT2 }}>Needs +{breakEvenGain.toFixed(1)}% to break even</div>
-                <div style={{ fontSize: '12px', color: GOLD, fontWeight: 600, marginTop: '3px' }}>Break-even hammer: {fmt(realCost.breakeven_hammer)}</div>
-              </div>
-            </div>
-          )}
+          {/* LEFT COLUMN — Real Cost Breakdown + Investment Analysis */}
+          <div style={{ flex: '0 0 45%' }}>
 
-          {/* Card 2 — LOT DETAILS */}
-          <div style={wCard}>
-            <div style={sl}>LOT DETAILS</div>
-            {([
-              { label: 'Artist',     value: lot.artist_name_raw, nav: `/app/artists/${encodeURIComponent(lot.artist_name_raw || '')}`, link: true },
-              { label: 'Medium',     value: lot.medium },
-              { label: 'Category',   value: lot.category },
-              { label: 'Estimate',   value: (estLow || estHigh) ? `${fmt(estLow)} – ${fmt(estHigh)}` : null },
-              { label: 'House',      value: lot.auction_house_name },
-              { label: 'Closes',     value: auctionDateFmt },
-              { label: 'Lot #',      value: lot.lot_number },
-              { label: 'Source',     value: sourceLabel, href: externalUrl },
-            ] as { label: string; value?: string | null; nav?: string; link?: boolean; href?: string }[]).filter(r => r.value).map(r => (
-              <div key={r.label} style={dRow}>
-                <span style={{ fontSize: '13px', color: LTT2, minWidth: '80px', flexShrink: 0 }}>{r.label}</span>
-                {r.nav ? (
-                  <span onClick={() => navigate(r.nav!)} style={{ fontSize: '13px', color: BL, cursor: 'pointer', textDecoration: 'underline', textAlign: 'right', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.value}</span>
-                ) : r.href ? (
-                  <a href={r.href} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: BL, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                    {r.value} ↗
-                  </a>
-                ) : (
-                  <span style={{ fontSize: '13px', color: LTT1, fontWeight: 500, textAlign: 'right', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.value}</span>
-                )}
-              </div>
-            ))}
-
-            {/* Due diligence / provenance alert */}
-            {provRisk && (
-              <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px', padding: '12px 16px', marginTop: '14px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.13em', color: AMB, textTransform: 'uppercase', marginBottom: '8px' }}>
-                  DUE DILIGENCE · {provRisk.level}
-                </div>
-                {(provRisk.flags as { code: string; severity: string; label: string; detail: string }[]).map((f, i) => (
-                  <div key={f.code}>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: f.severity === 'HIGH' ? AMB : f.severity === 'MEDIUM' ? AMB : LTT2, marginBottom: '3px' }}>
-                      ● {f.label}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#92400E', lineHeight: 1.5, marginBottom: i < provRisk.flags.length - 1 ? '8px' : 0 }}>{f.detail}</div>
+            {/* Real Cost Breakdown */}
+            {realCost && (
+              <div style={{ ...wCard, alignSelf: 'start', height: 'fit-content' }}>
+                <div style={sl}>REAL COST BREAKDOWN</div>
+                {([
+                  { k: 'Hammer price',                                         v: price,                            bold: false },
+                  { k: `Buyer's premium (${realCost.buyers_premium_pct}%)`,    v: Math.round(realCost.cost_basis - price), bold: false },
+                  { k: 'Holding cost (3yr)',                                   v: realCost.holding_cost_3y,         bold: false },
+                ] as { k: string; v: number; bold: boolean }[]).filter(r => r.v > 0).map(r => (
+                  <div key={r.k} style={dRow}>
+                    <span style={{ fontSize: '13px', color: LTT2 }}>{r.k}</span>
+                    <span style={{ fontSize: '13px', color: LTT1, fontWeight: 500 }}>{fmt(r.v)}</span>
                   </div>
                 ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0' }}>
+                  <span style={{ fontSize: '13px', color: LTT1, fontWeight: 700 }}>All-in cost</span>
+                  <span style={{ fontSize: '16px', color: GOLD, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{fmt(totalCost)}</span>
+                </div>
+                <div style={{ background: '#FAFAF7', border: `1px solid ${LTB}`, borderRadius: '8px', padding: '10px 14px', marginTop: '14px' }}>
+                  <div style={{ fontSize: '12px', color: LTT2 }}>Needs +{breakEvenGain.toFixed(1)}% to break even</div>
+                  <div style={{ fontSize: '12px', color: GOLD, fontWeight: 600, marginTop: '3px' }}>Break-even hammer: {fmt(realCost.breakeven_hammer)}</div>
+                </div>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* ── INVESTMENT ANALYSIS ───────────────────────────────────────────────── */}
-        {canSeeAnalysis ? (
-          <div style={{ padding: '0 40px 32px' }}>
-            <div style={sl}>INVESTMENT ANALYSIS</div>
-
-            {/* 3 metric cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginBottom: '14px' }}>
-              {/* Current Price */}
-              <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '28px 20px', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', color: LTT3, marginBottom: '12px' }}>CURRENT PRICE</div>
-                <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '32px', fontWeight: 600, color: LTT1, lineHeight: 1 }}>{fmt(price)}</div>
-                <div style={{ fontSize: '12px', color: LTT3, marginTop: '8px' }}>What you pay</div>
-              </div>
-              {/* Fair Value — dark */}
-              <div style={{ background: DK, border: `1px solid ${DKB}`, borderRadius: '12px', padding: '28px 20px', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6B7280', marginBottom: '12px' }}>FAIR VALUE</div>
-                <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '32px', fontWeight: 600, color: '#F0EDE6', lineHeight: 1 }}>{fmt(fairVal)}</div>
-                <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '8px' }}>Market estimate</div>
-              </div>
-              {/* Upside */}
-              <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '28px 20px', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', color: LTT3, marginBottom: '12px' }}>UPSIDE</div>
-                <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '32px', fontWeight: 600, color: GL, lineHeight: 1 }}>
-                  {upsidePct > 0 ? `+${upsidePct.toFixed(0)}%` : 'At market'}
+            {/* Investment Analysis */}
+            {canSeeAnalysis ? (
+              <div style={{ marginTop: '20px' }}>
+                <div style={sl}>INVESTMENT ANALYSIS</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginBottom: '14px' }}>
+                  <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '28px 20px', textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', color: LTT3, marginBottom: '12px' }}>CURRENT PRICE</div>
+                    <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '32px', fontWeight: 600, color: LTT1, lineHeight: 1 }}>{fmt(price)}</div>
+                    <div style={{ fontSize: '12px', color: LTT3, marginTop: '8px' }}>What you pay</div>
+                  </div>
+                  <div style={{ background: DK, border: `1px solid ${DKB}`, borderRadius: '12px', padding: '28px 20px', textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6B7280', marginBottom: '12px' }}>FAIR VALUE</div>
+                    <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '32px', fontWeight: 600, color: '#F0EDE6', lineHeight: 1 }}>{fmt(fairVal)}</div>
+                    <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '8px' }}>Market estimate</div>
+                  </div>
+                  <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '28px 20px', textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', color: LTT3, marginBottom: '12px' }}>UPSIDE</div>
+                    <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '32px', fontWeight: 600, color: GL, lineHeight: 1 }}>
+                      {upsidePct > 0 ? `+${upsidePct.toFixed(0)}%` : 'At market'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: LTT3, marginTop: '8px' }}>vs estimate</div>
+                  </div>
                 </div>
-                <div style={{ fontSize: '12px', color: LTT3, marginTop: '8px' }}>vs estimate</div>
               </div>
-            </div>
+            ) : (
+              <div style={{ marginTop: '20px' }}>
+                <div style={sl}>INVESTMENT ANALYSIS</div>
+                <LockedBlock
+                  title="Is this artwork truly worth buying?"
+                  teaser="Unlock fair value analysis, upside potential, and 5-year price projections before you decide."
+                  ctaText="Unlock Investment Analysis"
+                  ctaPrice="From €9/month"
+                  planId="starter"
+                  preview={
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
+                      {['Current Price', 'Fair Value', 'Upside %'].map(l => (
+                        <div key={l} style={{ padding: '20px', background: LT, borderRadius: '8px', textAlign: 'center' }}>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: LTT3, marginBottom: '10px' }}>{l}</div>
+                          <div style={{ height: '20px', background: LTB, borderRadius: '3px' }} />
+                        </div>
+                      ))}
+                    </div>
+                  }
+                />
+              </div>
+            )}
 
           </div>
-        ) : (
-          <div style={{ padding: '0 40px 32px' }}>
-            <div style={sl}>INVESTMENT ANALYSIS</div>
-            <LockedBlock
-              title="Is this artwork truly worth buying?"
-              teaser="Unlock fair value analysis, upside potential, and 5-year price projections before you decide."
-              ctaText="Unlock Investment Analysis"
-              ctaPrice="From €9/month"
-              planId="starter"
-              preview={
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
-                  {['Current Price', 'Fair Value', 'Upside %'].map(l => (
-                    <div key={l} style={{ padding: '20px', background: LT, borderRadius: '8px', textAlign: 'center' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: LTT3, marginBottom: '10px' }}>{l}</div>
-                      <div style={{ height: '20px', background: LTB, borderRadius: '3px' }} />
+
+          {/* RIGHT COLUMN — Lot Details */}
+          <div style={{ flex: 1 }}>
+            <div style={wCard}>
+              <div style={sl}>LOT DETAILS</div>
+              {([
+                { label: 'Artist',     value: lot.artist_name_raw, nav: `/app/artists/${encodeURIComponent(lot.artist_name_raw || '')}`, link: true },
+                { label: 'Medium',     value: lot.medium },
+                { label: 'Category',   value: lot.category },
+                { label: 'Estimate',   value: (estLow || estHigh) ? `${fmt(estLow)} – ${fmt(estHigh)}` : null },
+                { label: 'House',      value: lot.auction_house_name },
+                { label: 'Closes',     value: auctionDateFmt },
+                { label: 'Lot #',      value: lot.lot_number },
+                { label: 'Source',     value: sourceLabel, href: externalUrl },
+              ] as { label: string; value?: string | null; nav?: string; link?: boolean; href?: string }[]).filter(r => r.value).map(r => (
+                <div key={r.label} style={dRow}>
+                  <span style={{ fontSize: '13px', color: LTT2, minWidth: '80px', flexShrink: 0 }}>{r.label}</span>
+                  {r.nav ? (
+                    <span onClick={() => navigate(r.nav!)} style={{ fontSize: '13px', color: BL, cursor: 'pointer', textDecoration: 'underline', textAlign: 'right', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.value}</span>
+                  ) : r.href ? (
+                    <a href={r.href} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: BL, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                      {r.value} ↗
+                    </a>
+                  ) : (
+                    <span style={{ fontSize: '13px', color: LTT1, fontWeight: 500, textAlign: 'right', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.value}</span>
+                  )}
+                </div>
+              ))}
+
+              {/* Due diligence / provenance alert */}
+              {provRisk && (
+                <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px', padding: '12px 16px', marginTop: '14px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.13em', color: AMB, textTransform: 'uppercase', marginBottom: '8px' }}>
+                    DUE DILIGENCE · {provRisk.level}
+                  </div>
+                  {(provRisk.flags as { code: string; severity: string; label: string; detail: string }[]).map((f, i) => (
+                    <div key={f.code}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: f.severity === 'HIGH' ? AMB : f.severity === 'MEDIUM' ? AMB : LTT2, marginBottom: '3px' }}>
+                        ● {f.label}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#92400E', lineHeight: 1.5, marginBottom: i < provRisk.flags.length - 1 ? '8px' : 0 }}>{f.detail}</div>
                     </div>
                   ))}
                 </div>
-              }
-            />
+              )}
+            </div>
           </div>
-        )}
+
+        </div>
 
         {/* ── KEY RISKS + FUTURE VALUE PROJECTIONS — side by side ─────────────── */}
         {canSeeAnalysis && (
