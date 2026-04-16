@@ -1034,14 +1034,12 @@ async def fetch_historical_for_artist(
         raise HTTPException(403, "Unauthorized")
 
     try:
-        artsy_token = s.artsy_api_key
-
         from app.scrapers.artsy_historical_scraper import fetch_artist_auction_results
         from app.scrapers.hammer_price_saver import save_hammer_prices
 
         prices = await fetch_artist_auction_results(
             artist_name=artist_name,
-            artsy_token=artsy_token,
+            artsy_token=s.artsy_api_key,  # None is fine — public API
             max_results=200,
         )
 
