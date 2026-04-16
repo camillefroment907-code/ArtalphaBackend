@@ -11,10 +11,13 @@ import json
 import re
 
 from app.utils.cache import get_cached, set_cached
+from app.utils.real_cost import compute_real_cost
 
 
 def lot_to_list_dict(lot) -> dict:
     """Minimal lot payload for list views — skip heavy fields."""
+    hammer = lot.current_price or lot.estimate_low
+    real_cost = compute_real_cost(float(hammer), lot.auction_house_name) if hammer else None
     return {
         "id": str(lot.id),
         "title": lot.title,
@@ -31,6 +34,7 @@ def lot_to_list_dict(lot) -> dict:
         "source": lot.source.value if lot.source else None,
         "currency": lot.currency,
         "medium": lot.medium,
+        "real_cost": real_cost,
     }
 
 
