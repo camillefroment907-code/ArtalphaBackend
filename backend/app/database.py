@@ -96,6 +96,17 @@ async def create_tables():
         # proprietary data tables — create_all handles new tables,
         # but ensure any future column additions are listed here
         "ALTER TABLE hammer_prices ADD COLUMN IF NOT EXISTS premium_paid FLOAT",
+        "ALTER TABLE hammer_prices ADD COLUMN IF NOT EXISTS external_id TEXT",
+        "ALTER TABLE hammer_prices ADD COLUMN IF NOT EXISTS hammer_price_eur FLOAT",
+        "ALTER TABLE hammer_prices ADD COLUMN IF NOT EXISTS premium_ratio FLOAT",
+        "ALTER TABLE hammer_prices ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'unknown'",
+        "ALTER TABLE hammer_prices ADD COLUMN IF NOT EXISTS image_url TEXT",
+        "ALTER TABLE hammer_prices ADD COLUMN IF NOT EXISTS lot_url TEXT",
+        "ALTER TABLE hammer_prices ADD COLUMN IF NOT EXISTS lot_number TEXT",
+        "ALTER TABLE hammer_prices ALTER COLUMN sale_date DROP NOT NULL",
+        "ALTER TABLE hammer_prices ALTER COLUMN hammer_price DROP NOT NULL",
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_hammer_prices_external_id ON hammer_prices(external_id) WHERE external_id IS NOT NULL",
+        "CREATE INDEX IF NOT EXISTS idx_hammer_prices_source ON hammer_prices(source)",
         "ALTER TABLE score_performance ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP",
         "ALTER TABLE user_signals ADD COLUMN IF NOT EXISTS duration_seconds INTEGER",
         # performance indexes

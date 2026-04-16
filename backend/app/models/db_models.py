@@ -521,21 +521,28 @@ class HammerPrice(Base):
     """Historical hammer prices — scarce data, huge moat."""
     __tablename__ = "hammer_prices"
 
-    id            = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    artist_name   = Column(String(500), index=True, nullable=False)
-    artwork_title = Column(String(1000), nullable=True)
-    year_created  = Column(Integer, nullable=True)
-    medium        = Column(String(300), nullable=True)
-    dimensions    = Column(String(200), nullable=True)
-    sale_date     = Column(DateTime, index=True, nullable=False)
-    hammer_price  = Column(Float, nullable=False)
-    currency      = Column(String(10), default="EUR")
-    auction_house = Column(String(300), index=True, nullable=True)
-    estimate_low  = Column(Float, nullable=True)
-    estimate_high = Column(Float, nullable=True)
-    premium_paid  = Column(Float, nullable=True)   # hammer / estimate_low ratio
-    lot_id        = Column(UUID(as_uuid=True), ForeignKey("lots.id"), nullable=True)
-    created_at    = Column(DateTime, default=datetime.utcnow)
+    id               = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    external_id      = Column(String(500), unique=True, nullable=True, index=True)
+    artist_name      = Column(String(500), index=True, nullable=False)
+    artwork_title    = Column(String(1000), nullable=True)
+    year_created     = Column(Integer, nullable=True)
+    medium           = Column(String(300), nullable=True)
+    dimensions       = Column(String(200), nullable=True)
+    sale_date        = Column(DateTime, index=True, nullable=True)
+    hammer_price     = Column(Float, nullable=True)
+    currency         = Column(String(10), default="EUR")
+    hammer_price_eur = Column(Float, nullable=True)   # normalized to EUR
+    auction_house    = Column(String(300), index=True, nullable=True)
+    estimate_low     = Column(Float, nullable=True)
+    estimate_high    = Column(Float, nullable=True)
+    premium_paid     = Column(Float, nullable=True)   # legacy
+    premium_ratio    = Column(Float, nullable=True)   # hammer / estimate_low
+    source           = Column(String(100), default="unknown")
+    image_url        = Column(String(1000), nullable=True)
+    lot_url          = Column(String(1000), nullable=True)
+    lot_number       = Column(String(100), nullable=True)
+    lot_id           = Column(UUID(as_uuid=True), ForeignKey("lots.id"), nullable=True)
+    created_at       = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (
         Index("ix_hammer_prices_artist_date", "artist_name", "sale_date"),

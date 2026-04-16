@@ -126,6 +126,76 @@ def _score_validator_loop():
         time.sleep(seconds_to_next_hour)
 
 
+async def _fetch_historical_for_top_artists():
+    """Fetch Artsy historical data for top artists by lot count."""
+    from app.database import BgSessionLocal
+    from app.scrapers.artsy_historical_scraper import fetch_artist_auction_results
+    from app.scrapers.hammer_price_saver import save_hammer_prices
+    from app.config import get_settings
+    from sqlalchemy import text
+    import asyncio as _aio
+
+    settings = get_settings()
+    artsy_token = settings.artsy_api_key
+    if not artsy_token:
+        logger.warning("[historical] no artsy_api_key set — skipping")
+        return
+
+    async with BgSessionLocal() as db:
+        result = await db.execute(
+            text("""
+            SELECT artist_name_raw, COUNT(*) as cnt
+            FROM lots
+            WHERE artist_name_raw IS NOT NULL
+            GROUP BY artist_name_raw
+            ORDER BY cnt DESC
+            LIMIT 10
+            """)
+        )
+        top_artists = [row[0] for row in result.fetchall()]
+
+    for artist_name in top_artists:
+        try:
+            async with BgSessionLocal() as db:
+                existing = await db.execute(
+                    text("SELECT COUNT(*) FROM hammer_prices WHERE artist_name ILIKE :name"),
+                    {"name": f"%{artist_name}%"}
+                )
+                count = existing.scalar() or 0
+                if count > 10:
+                    continue
+
+            prices = await fetch_artist_auction_results(
+                artist_name=artist_name,
+                artsy_token=artsy_token,
+                max_results=100,
+            )
+            if prices:
+                async with BgSessionLocal() as db:
+                    await save_hammer_prices(prices, db)
+                    logger.info(f"[historical] saved {len(prices)} records for {artist_name}")
+
+            await _aio.sleep(2)
+
+        except Exception as e:
+            logger.warning("[historical] fetch error", artist=artist_name, error=str(e))
+            continue
+
+
+def _historical_loop():
+    """Fetch historical auction data for top artists once per day at 04:00 UTC."""
+    while True:
+        now = datetime.now(timezone.utc)
+        target = now.replace(hour=4, minute=0, second=0, microsecond=0)
+        if now >= target:
+            import datetime as _dt
+            target = target + _dt.timedelta(days=1)
+        wait = (target - now).total_seconds()
+        logger.info(f"[scheduler] historical_fetch sleeping {wait/3600:.1f}h until 04:00 UTC")
+        time.sleep(wait)
+        _run(_fetch_historical_for_top_artists, "fetch_historical_top_artists")
+
+
 def _keep_warm_loop():
     """Ping /health every 5 minutes to prevent Railway cold starts."""
     time.sleep(60)  # Wait 1 min after launch before first ping
@@ -148,7 +218,8 @@ def start_beat_in_background():
         threading.Thread(target=_artist_enrichment_loop, daemon=True, name="sched-artist-enrich"),
         threading.Thread(target=_weekly_report_loop,     daemon=True, name="sched-weekly-report"),
         threading.Thread(target=_score_validator_loop,   daemon=True, name="sched-score-validator"),
-        threading.Thread(target=_keep_warm_loop,         daemon=True, name="sched-keep-warm"),
+        threading.Thread(target=_historical_loop,         daemon=True, name="sched-historical"),
+        threading.Thread(target=_keep_warm_loop,          daemon=True, name="sched-keep-warm"),
     ]
     for t in threads:
         t.start()

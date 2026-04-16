@@ -1,7 +1,7 @@
 """Artists API — investment intelligence from Artsy data + Lot market data."""
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc, or_
+from sqlalchemy import select, func, desc, or_, text
 from typing import Optional
 
 from app.database import get_db
@@ -102,6 +102,100 @@ async def search_artists(
             if a.artist_name_raw
         ]
     }
+
+
+@router.get("/{artist_name}/price-history")
+async def get_artist_price_history(
+    artist_name: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Full price history for an artist — hammer prices over time."""
+    from app.utils.cache import get_cached, set_cached
+
+    cache_key = f"price_history:{artist_name.lower()}"
+    cached = get_cached(cache_key, ttl=3600)
+    if cached:
+        return cached
+
+    result = await db.execute(
+        text("""
+        SELECT
+            artist_name, artwork_title, year_created, medium,
+            sale_date, hammer_price_eur, hammer_price, currency,
+            estimate_low, estimate_high, premium_ratio,
+            auction_house, image_url, lot_number, external_id
+        FROM hammer_prices
+        WHERE artist_name ILIKE :name
+        ORDER BY sale_date DESC NULLS LAST
+        LIMIT 200
+        """),
+        {"name": f"%{artist_name}%"}
+    )
+    rows = result.mappings().all()
+
+    if not rows:
+        return {
+            "artist_name": artist_name,
+            "total_sales": 0,
+            "sales": [],
+            "statistics": None,
+            "message": "No historical data yet. Fetching in background..."
+        }
+
+    sales = [dict(r) for r in rows]
+
+    # Serialize datetimes
+    for s in sales:
+        if s.get("sale_date"):
+            s["sale_date"] = s["sale_date"].isoformat() if hasattr(s["sale_date"], "isoformat") else str(s["sale_date"])
+
+    prices = [s["hammer_price_eur"] for s in sales if s.get("hammer_price_eur")]
+    ratios = [s["premium_ratio"] for s in sales if s.get("premium_ratio")]
+
+    # Year-by-year breakdown
+    from collections import defaultdict
+    by_year: dict = defaultdict(list)
+    for s in sales:
+        if s.get("sale_date") and s.get("hammer_price_eur"):
+            year = s["sale_date"][:4] if isinstance(s["sale_date"], str) else str(s["sale_date"])[:4]
+            by_year[year].append(s["hammer_price_eur"])
+
+    price_by_year = [
+        {
+            "year": year,
+            "avg_price": round(sum(ps) / len(ps)),
+            "max_price": round(max(ps)),
+            "sale_count": len(ps),
+        }
+        for year, ps in sorted(by_year.items())
+    ]
+
+    recent_prices = [s["hammer_price_eur"] for s in sales[:20] if s.get("hammer_price_eur")]
+    older_prices = [s["hammer_price_eur"] for s in sales[20:40] if s.get("hammer_price_eur")]
+    trend_pct = 0.0
+    if recent_prices and older_prices:
+        recent_avg = sum(recent_prices) / len(recent_prices)
+        older_avg = sum(older_prices) / len(older_prices)
+        trend_pct = round((recent_avg - older_avg) / older_avg * 100, 1) if older_avg > 0 else 0.0
+
+    response = {
+        "artist_name": artist_name,
+        "total_sales": len(sales),
+        "sales": sales[:50],
+        "statistics": {
+            "avg_hammer_eur": round(sum(prices) / len(prices)) if prices else None,
+            "min_hammer_eur": round(min(prices)) if prices else None,
+            "max_hammer_eur": round(max(prices)) if prices else None,
+            "avg_premium_ratio": round(sum(ratios) / len(ratios), 2) if ratios else None,
+            "sell_above_estimate_pct": round(len([r for r in ratios if r > 1]) / len(ratios) * 100, 1) if ratios else None,
+            "trend_pct": trend_pct,
+            "trend_direction": "up" if trend_pct > 5 else "down" if trend_pct < -5 else "stable",
+        },
+        "price_by_year": price_by_year,
+    }
+
+    set_cached(cache_key, response)
+    return response
 
 
 @router.get("/{artist_name}")

@@ -1021,6 +1021,42 @@ async def trigger_weekly_report(
         raise HTTPException(500, str(e))
 
 
+@router.post("/admin/fetch-historical/{artist_name}")
+async def fetch_historical_for_artist(
+    artist_name: str,
+    x_api_key: str = Header(None, alias="x-api-key"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Trigger historical auction results fetch for an artist."""
+    from app.config import get_settings as gs
+    s = gs()
+    if x_api_key != s.n8n_api_key:
+        raise HTTPException(403, "Unauthorized")
+
+    try:
+        artsy_token = s.artsy_api_key
+
+        from app.scrapers.artsy_historical_scraper import fetch_artist_auction_results
+        from app.scrapers.hammer_price_saver import save_hammer_prices
+
+        prices = await fetch_artist_auction_results(
+            artist_name=artist_name,
+            artsy_token=artsy_token,
+            max_results=200,
+        )
+
+        saved = await save_hammer_prices(prices, db)
+
+        return {
+            "artist": artist_name,
+            "fetched": len(prices),
+            "saved": saved,
+            "message": f"Successfully fetched {len(prices)} historical results, saved {saved} new records."
+        }
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
 @router.get("/calendar")
 async def get_auction_calendar(
     days: int = Query(30, ge=1, le=90),
