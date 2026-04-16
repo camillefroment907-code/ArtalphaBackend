@@ -684,26 +684,6 @@ export default function OpportunityDetail() {
               <AIAnalyst rawLot={lot} />
             </div>
           )}
-          {!canSeeAI && canSeeAnalysis && (
-            <div style={{ marginTop: '16px', background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 24px' }}>
-              <LockedBlock
-                title="AI has a strong opinion on this deal"
-                teaser="Get STRONG BUY / BUY / WATCH / PASS verdict, confidence score, bull & bear cases, and advanced risk analysis."
-                ctaText="Unlock Investment Dossier"
-                ctaPrice="From €49/month"
-                planId="investor"
-                preview={
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    {['STRONG BUY', 'Confidence: HIGH', ''].map((t, i) => (
-                      <div key={i} style={{ flex: 1, height: '44px', background: LT, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>{t}</span>
-                      </div>
-                    ))}
-                  </div>
-                }
-              />
-            </div>
-          )}
 
         </div>
 
