@@ -83,12 +83,15 @@ async def lifespan(app: FastAPI):
             break
         logger.warning("DB not ready, retrying...", attempt=attempt + 1)
         await asyncio.sleep(2)
-    else:
-        logger.error("Database connection failed after retries — exiting")
-        raise RuntimeError("Cannot connect to database")
 
-    await create_tables()
-    logger.info("Database ready")
+    if db_ok:
+        try:
+            await create_tables()
+            logger.info("Database ready")
+        except Exception as e:
+            logger.error("create_tables failed — continuing anyway", error=str(e))
+    else:
+        logger.error("Database connection failed after retries — starting in degraded mode")
 
     # Start Celery beat scheduler in background thread
     # (single-process deployment: beat runs embedded alongside the API)
