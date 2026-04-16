@@ -104,6 +104,108 @@ async def search_artists(
     }
 
 
+@router.get("/{artist_name}/format-matrix")
+async def get_format_matrix(
+    artist_name: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Format Performance Matrix — normalized medium categories with price metrics."""
+    from app.utils.cache import get_cached, set_cached
+
+    cache_key = f"format_matrix:{artist_name.lower()}"
+    cached = get_cached(cache_key, ttl=3600)
+    if cached:
+        return cached
+
+    result = await db.execute(
+        text("""
+        SELECT medium, hammer_price_eur, premium_ratio
+        FROM hammer_prices
+        WHERE artist_name ILIKE :name
+          AND medium IS NOT NULL AND medium != ''
+          AND hammer_price_eur IS NOT NULL
+        """),
+        {"name": f"%{artist_name}%"},
+    )
+    rows = result.fetchall()
+
+    if not rows:
+        return {"artist_name": artist_name, "formats": []}
+
+    # ── Medium normalizer ─────────────────────────────────────────────────────
+    def normalize(raw: str) -> str:
+        m = raw.lower().strip()
+        if any(k in m for k in ("oil on", "oil paint", "huile sur")):
+            return "Oil"
+        if any(k in m for k in ("acrylic on", "acrylique", "acrylic paint")):
+            return "Acrylic"
+        if any(k in m for k in ("watercolor", "watercolour", "gouache", "aquarelle",
+                                  "pastel", "charcoal", "pencil", "graphite",
+                                  "crayon", "ink on paper", "india ink", "pen and ink",
+                                  "wax crayon", "tempera on paper", "chalk")):
+            return "Works on Paper"
+        if any(k in m for k in ("lithograph", "linocut", "screenprint", "silkscreen",
+                                  "serigraph", "etching", "woodcut", "aquatint",
+                                  "drypoint", "mezzotint", "engraving", "linoprint",
+                                  "offset litho", "color litho", "colour litho")):
+            return "Prints"
+        if any(k in m for k in ("photograph", "gelatin silver", "chromogenic",
+                                  "c-print", "archival pigment", "inkjet",
+                                  "silver print", "digital print")):
+            return "Photography"
+        if any(k in m for k in ("bronze", "sculpture", "marble", "ceramic",
+                                  "terracotta", "cast", "steel", "resin",
+                                  "wood", "stone", "plaster", "iron", "aluminium",
+                                  "aluminum", "fiberglass")):
+            return "Sculpture"
+        if any(k in m for k in ("mixed media", "techniques mixtes", "multimedia")):
+            return "Mixed Media"
+        if any(k in m for k in ("acrylic", "acrylique")):
+            return "Acrylic"
+        if any(k in m for k in ("oil", "huile")):
+            return "Oil"
+        if any(k in m for k in ("ink", "drawing", "dessin", "pen ")):
+            return "Works on Paper"
+        if "paint" in m:
+            return "Paintings"
+        return "Other"
+
+    # ── Aggregate ─────────────────────────────────────────────────────────────
+    from collections import defaultdict
+    buckets: dict = defaultdict(lambda: {"prices": [], "ratios": []})
+    for medium, price, ratio in rows:
+        cat = normalize(medium)
+        buckets[cat]["prices"].append(price)
+        if ratio is not None:
+            buckets[cat]["ratios"].append(ratio)
+
+    formats = []
+    for cat, data in buckets.items():
+        prices = data["prices"]
+        ratios = data["ratios"]
+        formats.append({
+            "format": cat,
+            "count": len(prices),
+            "avg_price": round(sum(prices) / len(prices)),
+            "max_price": round(max(prices)),
+            "min_price": round(min(prices)),
+            "sell_above_estimate_pct": round(
+                len([r for r in ratios if r > 1]) / len(ratios) * 100, 1
+            ) if ratios else None,
+        })
+
+    # Sort by count desc, filter out tiny buckets
+    formats = sorted(
+        [f for f in formats if f["count"] >= 2],
+        key=lambda x: x["count"],
+        reverse=True,
+    )
+
+    response = {"artist_name": artist_name, "formats": formats}
+    set_cached(cache_key, response)
+    return response
+
+
 @router.get("/{artist_name}/price-history")
 async def get_artist_price_history(
     artist_name: str,
