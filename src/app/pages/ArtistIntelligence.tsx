@@ -452,25 +452,49 @@ export default function ArtistIntelligence() {
 
           {/* Left — Identity + AI brief */}
           <div>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '8px' }}>
-              {artist.movement || 'Artist'}
+            {/* Name + dates */}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '8px' }}>
+              <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '42px', fontWeight: 600, color: 'var(--text)', margin: 0, lineHeight: 1.1 }}>
+                {artist.artist_name || artist.name}
+              </h1>
+              {(artist.birth_year || artist.death_year) && (
+                <span style={{ fontSize: '15px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>
+                  {artist.birth_year || '?'}
+                  {artist.death_year ? `–${artist.death_year}` : '–'}
+                </span>
+              )}
             </div>
-            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '42px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px', lineHeight: 1.1 }}>
-              {artist.artist_name || artist.name}
-            </h1>
-            {artist.nationality && (
-              <div style={{ fontSize: '14px', color: 'var(--text-3)', marginBottom: '16px' }}>
-                {artist.nationality}
+
+            {/* Nationality + movement badges */}
+            {(artist.nationality || artist.movement) && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
+                {artist.nationality && (
+                  <span style={{ padding: '3px 10px', background: 'white', border: '1px solid var(--border)', borderRadius: '20px', fontSize: '12px', color: 'var(--text-2)' }}>
+                    {artist.nationality}
+                  </span>
+                )}
+                {artist.movement && (
+                  <span style={{ padding: '3px 10px', background: 'rgba(198,168,90,0.08)', border: '1px solid rgba(198,168,90,0.3)', borderRadius: '20px', fontSize: '12px', color: 'var(--gold-dim)', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
+                    {artist.movement}
+                  </span>
+                )}
               </div>
             )}
 
-            {artist.ai_brief && (
+            {/* AI brief or fallback */}
+            {artist.ai_brief ? (
               <div style={{ background: 'var(--navy)', borderRadius: '10px', padding: '18px 22px', marginBottom: '20px' }}>
                 <div style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '8px' }}>
                   ◆ NAUTILUS ANALYST BRIEF
                 </div>
                 <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>
                   {artist.ai_brief}
+                </p>
+              </div>
+            ) : (
+              <div style={{ background: '#F5F3EE', border: '1px solid #E8E4DD', borderRadius: '8px', padding: '16px 20px', marginBottom: '20px' }}>
+                <p style={{ fontSize: '12px', fontStyle: 'italic', color: '#9CA3AF', margin: 0, lineHeight: 1.6 }}>
+                  Market data available — artist biography coming soon.
                 </p>
               </div>
             )}
