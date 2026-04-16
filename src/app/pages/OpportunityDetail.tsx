@@ -440,7 +440,7 @@ export default function OpportunityDetail() {
       <div style={{ background: LT }}>
 
         {/* ── DATA GRID ─────────────────────────────────────────────────────────── */}
-        <div style={{ padding: '32px 40px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div style={{ padding: '32px 40px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
 
           {/* Card 1 — REAL COST BREAKDOWN */}
           {realCost && (
@@ -479,7 +479,7 @@ export default function OpportunityDetail() {
               { label: 'Category',   value: lot.category },
               { label: 'Estimate',   value: (estLow || estHigh) ? `${fmt(estLow)} – ${fmt(estHigh)}` : null },
               { label: 'House',      value: lot.auction_house_name },
-              { label: 'Sale date',  value: auctionDateFmt },
+              { label: 'Closes',     value: auctionDateFmt },
               { label: 'Lot #',      value: lot.lot_number },
               { label: 'Source',     value: sourceLabel, href: externalUrl },
             ] as { label: string; value?: string | null; nav?: string; link?: boolean; href?: string }[]).filter(r => r.value).map(r => (
@@ -515,78 +515,6 @@ export default function OpportunityDetail() {
             )}
           </div>
         </div>
-
-        {/* ── AI INTELLIGENCE ───────────────────────────────────────────────────── */}
-        <div style={{ padding: '0 40px 32px' }}>
-          <div style={sl}>AI INTELLIGENCE</div>
-
-          {/* Generate Memo button */}
-          <button
-            onClick={memo ? () => setShowMemo(true) : generateMemo}
-            disabled={memoLoading}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '13px 22px', background: DK, border: 'none', borderRadius: '8px', color: '#F0EDE6', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', cursor: memoLoading ? 'not-allowed' : 'pointer', textTransform: 'uppercase', marginBottom: '14px', opacity: memoLoading ? 0.6 : 1 }}
-          >
-            <span>◆</span>
-            {memoLoading ? 'GENERATING…' : memo ? 'VIEW INVESTMENT MEMO' : 'GENERATE INVESTMENT MEMO'}
-          </button>
-
-          {memo && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', marginLeft: '12px' }}>
-              <span style={{ padding: '4px 12px', background: memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.08)' : 'rgba(217,119,6,0.08)', border: `1px solid ${memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.25)' : 'rgba(217,119,6,0.25)'}`, fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: memo.recommendation === 'BUY' ? GL : AMB, borderRadius: '4px' }}>{memo.recommendation}</span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>Conviction {memo.conviction}/100</span>
-            </div>
-          )}
-
-          {/* Investment Dossier card — only when user can't see AI (avoid duplicate with AIAnalyst header) */}
-          {!canSeeAI && (
-            <div style={{ ...wCard, display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: LT, border: `1px solid ${LTB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: '16px', color: LTT3 }}>◎</span>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1 }}>Investment Dossier</span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', background: '#F0F0FF', border: '1px solid #C7C7F0', color: '#5B5BD6', padding: '2px 7px', borderRadius: '4px' }}>FAMILY OFFICE+</span>
-                </div>
-                <div style={{ fontSize: '12px', color: LTT3, lineHeight: 1.5 }}>Full analysis — 5/10/20yr projections · artist valuation · AI verdict</div>
-              </div>
-              <button
-                onClick={() => navigate('/app/pricing?plan=investor')}
-                style={{ padding: '10px 18px', background: DK, border: 'none', color: '#F0EDE6', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', cursor: 'pointer', borderRadius: '6px', whiteSpace: 'nowrap', textTransform: 'uppercase', flexShrink: 0 }}
-              >
-                + ANALYZE
-              </button>
-            </div>
-          )}
-
-          {/* AI content */}
-          {canSeeAI && (
-            <div style={{ marginTop: '16px' }}>
-              <AIAnalyst rawLot={lot} />
-            </div>
-          )}
-          {!canSeeAI && canSeeAnalysis && (
-            <div style={{ marginTop: '16px' }}>
-              <LockedBlock
-                title="AI has a strong opinion on this deal"
-                teaser="Get STRONG BUY / BUY / WATCH / PASS verdict, confidence score, bull & bear cases, and advanced risk analysis."
-                ctaText="Unlock Investment Dossier"
-                ctaPrice="From €49/month"
-                planId="investor"
-                preview={
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    {['STRONG BUY', 'Confidence: HIGH', ''].map((t, i) => (
-                      <div key={i} style={{ flex: 1, height: '44px', background: LT, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>{t}</span>
-                      </div>
-                    ))}
-                  </div>
-                }
-              />
-            </div>
-          )}
-        </div>
-
 
         {/* ── INVESTMENT ANALYSIS ───────────────────────────────────────────────── */}
         {canSeeAnalysis ? (
@@ -693,6 +621,78 @@ export default function OpportunityDetail() {
 
           </div>
         )}
+
+        {/* ── AI INTELLIGENCE — unified card ────────────────────────────────────── */}
+        <div style={{ padding: '0 40px 32px' }}>
+          <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden' }}>
+
+            {/* Top half: Generate Memo button */}
+            <div style={{ padding: '18px 22px' }}>
+              <button
+                onClick={memo ? () => setShowMemo(true) : generateMemo}
+                disabled={memoLoading}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '14px', background: DK, border: 'none', borderRadius: '8px', color: '#F0EDE6', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', cursor: memoLoading ? 'not-allowed' : 'pointer', textTransform: 'uppercase', opacity: memoLoading ? 0.6 : 1 }}
+              >
+                <span>◆</span>
+                {memoLoading ? 'GENERATING…' : memo ? 'VIEW INVESTMENT MEMO' : 'GENERATE INVESTMENT MEMO'}
+              </button>
+              {memo && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
+                  <span style={{ padding: '4px 12px', background: memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.08)' : 'rgba(217,119,6,0.08)', border: `1px solid ${memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.25)' : 'rgba(217,119,6,0.25)'}`, fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: memo.recommendation === 'BUY' ? GL : AMB, borderRadius: '4px' }}>{memo.recommendation}</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>Conviction {memo.conviction}/100</span>
+                </div>
+              )}
+            </div>
+
+            {/* Bottom half: Investment Dossier row (upsell) or AIAnalyst (paid) */}
+            {!canSeeAI && (
+              <div style={{ padding: '18px 22px', borderTop: `1px solid ${LTB}`, display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: LT, border: `1px solid ${LTB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: '16px', color: LTT3 }}>◎</span>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1 }}>Investment Dossier</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', background: '#F0F0FF', border: '1px solid #C7C7F0', color: '#5B5BD6', padding: '2px 7px', borderRadius: '4px' }}>FAMILY OFFICE+</span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: LTT3, lineHeight: 1.5 }}>Full analysis — 5/10/20yr projections · artist valuation · AI verdict</div>
+                </div>
+                <button
+                  onClick={() => navigate('/app/pricing?plan=investor')}
+                  style={{ padding: '10px 18px', background: DK, border: 'none', color: '#F0EDE6', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', cursor: 'pointer', borderRadius: '6px', whiteSpace: 'nowrap', textTransform: 'uppercase', flexShrink: 0 }}
+                >
+                  + ANALYZE
+                </button>
+              </div>
+            )}
+            {canSeeAI && (
+              <div style={{ borderTop: `1px solid ${LTB}` }}>
+                <AIAnalyst rawLot={lot} />
+              </div>
+            )}
+            {!canSeeAI && canSeeAnalysis && (
+              <div style={{ borderTop: `1px solid ${LTB}`, padding: '18px 22px' }}>
+                <LockedBlock
+                  title="AI has a strong opinion on this deal"
+                  teaser="Get STRONG BUY / BUY / WATCH / PASS verdict, confidence score, bull & bear cases, and advanced risk analysis."
+                  ctaText="Unlock Investment Dossier"
+                  ctaPrice="From €49/month"
+                  planId="investor"
+                  preview={
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      {['STRONG BUY', 'Confidence: HIGH', ''].map((t, i) => (
+                        <div key={i} style={{ flex: 1, height: '44px', background: LT, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>{t}</span>
+                        </div>
+                      ))}
+                    </div>
+                  }
+                />
+              </div>
+            )}
+
+          </div>
+        </div>
 
         {/* ── COMPARABLE SALES ──────────────────────────────────────────────────── */}
         {displayComps.length > 0 && (
