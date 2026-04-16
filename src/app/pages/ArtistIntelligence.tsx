@@ -497,7 +497,7 @@ export default function ArtistIntelligence() {
             {artist.ai_brief ? (
               <div style={{ background: 'var(--navy)', borderRadius: '10px', padding: '18px 22px', marginBottom: '20px' }}>
                 <div style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '8px' }}>
-                  ◆ NAUTILUS ANALYST BRIEF
+                  ◆ ARTIST BIOGRAPHY
                 </div>
                 <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>
                   {artist.ai_brief}
