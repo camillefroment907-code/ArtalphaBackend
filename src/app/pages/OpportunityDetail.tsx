@@ -601,6 +601,49 @@ export default function OpportunityDetail() {
               );
             })()}
 
+            {/* Consignment Volume Alert */}
+            {lot.consignment_alert && (() => {
+              const a = lot.consignment_alert;
+              const [expanded, setExpanded] = useState(false);
+              return (
+                <div style={{ marginBottom: '28px', border: `1px solid ${a.color}40`, borderRadius: '8px', overflow: 'hidden' }}>
+                  {/* Header row */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: `${a.color}10`, cursor: 'pointer' }} onClick={() => setExpanded(e => !e)}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '14px' }}>⚠</span>
+                      <div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: a.color }}>
+                          {a.level} — {a.headline}
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', marginTop: '2px' }}>
+                          {a.interpretation}
+                        </div>
+                      </div>
+                    </div>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', flexShrink: 0, marginLeft: '8px' }}>{expanded ? '▲' : '▼'}</span>
+                  </div>
+                  {/* Expanded lot list */}
+                  {expanded && (
+                    <div style={{ padding: '0 16px 12px' }}>
+                      {a.upcoming.map((u: any) => (
+                        <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                          <div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-2)' }}>{u.title}</div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-3)', marginTop: '2px' }}>{u.house} · {u.date}</div>
+                          </div>
+                          {u.estimate_low && (
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', flexShrink: 0, marginLeft: '8px' }}>
+                              est. {u.estimate_low >= 1_000_000 ? `€${(u.estimate_low / 1_000_000).toFixed(1)}M` : `€${(u.estimate_low / 1_000).toFixed(0)}K`}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Score bar */}
             {lot.deal_score > 0 && (
               <div style={{ marginBottom: lot.score_rationale ? '16px' : '28px', paddingBottom: lot.score_rationale ? '16px' : '28px', borderBottom: lot.score_rationale ? 'none' : '1px solid var(--border)' }}>
