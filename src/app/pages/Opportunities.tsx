@@ -169,6 +169,7 @@ function mapLot(lot: any) {
     source: lot.source || "",
     score_rationale: lot.score_rationale || null,
     confidence_score: lot.confidence_score || null,
+    real_cost: lot.real_cost || null,
   };
 }
 
@@ -316,6 +317,13 @@ function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => vo
             </div>
           )}
         </div>
+        {lot.real_cost && (
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "rgba(184,152,90,0.7)", marginTop: "-4px", marginBottom: "6px", letterSpacing: "0.05em" }}>
+            Break-even: {lot.real_cost.breakeven_hammer >= 1_000_000
+              ? `€${(lot.real_cost.breakeven_hammer / 1_000_000).toFixed(1)}M`
+              : `€${(lot.real_cost.breakeven_hammer / 1_000).toFixed(0)}K`} (+{lot.real_cost.needed_gain_pct}%)
+          </div>
+        )}
 
         {/* AI Rationale */}
         {lot.score_rationale && (

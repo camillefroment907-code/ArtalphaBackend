@@ -495,6 +495,35 @@ export default function OpportunityDetail() {
               )}
             </div>
 
+            {/* Real Cost Calculator */}
+            {lot.real_cost && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(10,16,32,0.95) 0%, rgba(14,22,44,0.95) 100%)',
+                border: '1px solid rgba(184,152,90,0.2)',
+                borderRadius: '8px',
+                padding: '16px 20px',
+                marginBottom: '28px',
+              }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '14px', opacity: 0.85 }}>
+                  Real Cost Calculator
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 20px' }}>
+                  {[
+                    { label: 'All-in cost', value: fmt(lot.real_cost.cost_basis), note: `+${lot.real_cost.buyers_premium_pct}% premium` },
+                    { label: 'Holding cost (3yr)', value: fmt(lot.real_cost.holding_cost_3y), note: 'storage + insurance' },
+                    { label: 'Break-even hammer', value: fmt(lot.real_cost.breakeven_hammer), note: 'after seller fee', highlight: true },
+                    { label: 'Gain needed', value: `+${lot.real_cost.needed_gain_pct}%`, note: 'to recoup all costs', highlight: true },
+                  ].map(({ label, value, note, highlight }) => (
+                    <div key={label}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: '3px' }}>{label}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: highlight ? 'var(--gold)' : 'var(--text)', lineHeight: 1.1 }}>{value}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', marginTop: '2px' }}>{note}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Score bar */}
             {lot.deal_score > 0 && (
               <div style={{ marginBottom: lot.score_rationale ? '16px' : '28px', paddingBottom: lot.score_rationale ? '16px' : '28px', borderBottom: lot.score_rationale ? 'none' : '1px solid var(--border)' }}>
