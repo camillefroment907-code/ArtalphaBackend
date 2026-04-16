@@ -439,7 +439,7 @@ export default function OpportunityDetail() {
       <div style={{ background: LT }}>
 
         {/* ── DATA GRID ─────────────────────────────────────────────────────────── */}
-        <div style={{ padding: '32px 40px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
+        <div style={{ padding: '32px 40px', display: 'grid', gridTemplateColumns: realCost ? '1fr 1fr' : '1fr', gap: '20px', alignItems: 'start' }}>
 
           {/* Card 1 — REAL COST BREAKDOWN */}
           {realCost && (
@@ -465,9 +465,6 @@ export default function OpportunityDetail() {
               </div>
             </div>
           )}
-
-          {/* If no realCost, show market signals or leave empty — fill with lot details only */}
-          {!realCost && <div />}
 
           {/* Card 2 — LOT DETAILS */}
           <div style={wCard}>
@@ -621,55 +618,74 @@ export default function OpportunityDetail() {
           </div>
         )}
 
-        {/* ── AI INTELLIGENCE — two separate cards ──────────────────────────────── */}
-        <div style={{ padding: '0 40px 32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {/* ── AI INTELLIGENCE ───────────────────────────────────────────────────── */}
+        <div style={{ padding: '0 40px 32px' }}>
+          <div style={sl}>AI INTELLIGENCE</div>
 
-          {/* Card 1: Generate Memo */}
-          <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '18px 22px' }}>
-            <button
-              onClick={memo ? () => setShowMemo(true) : generateMemo}
-              disabled={memoLoading}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '13px', background: DK, border: 'none', borderRadius: '8px', color: '#F0EDE6', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', cursor: memoLoading ? 'not-allowed' : 'pointer', textTransform: 'uppercase', opacity: memoLoading ? 0.6 : 1 }}
-            >
-              <span>◆</span>
-              {memoLoading ? 'GENERATING…' : memo ? 'VIEW INVESTMENT MEMO' : 'GENERATE INVESTMENT MEMO'}
-            </button>
-            {memo && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
-                <span style={{ padding: '4px 12px', background: memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.08)' : 'rgba(217,119,6,0.08)', border: `1px solid ${memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.25)' : 'rgba(217,119,6,0.25)'}`, fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: memo.recommendation === 'BUY' ? GL : AMB, borderRadius: '4px' }}>{memo.recommendation}</span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>Conviction {memo.conviction}/100</span>
-              </div>
-            )}
-          </div>
+          {/* 2-card grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
 
-          {/* Card 2: Investment Dossier (upsell) or AIAnalyst (paid) */}
-          {!canSeeAI && (
-            <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '18px 22px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: LT, border: `1px solid ${LTB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: '16px', color: LTT3 }}>◎</span>
+            {/* LEFT — Generate Investment Memo */}
+            <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 24px', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span style={{ color: GOLD, fontSize: '13px', lineHeight: 1 }}>◆</span>
+                <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1, fontWeight: 500 }}>Investment Memo</span>
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1 }}>Investment Dossier</span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', background: '#F0F0FF', border: '1px solid #C7C7F0', color: '#5B5BD6', padding: '2px 7px', borderRadius: '4px' }}>FAMILY OFFICE+</span>
+              <div style={{ fontSize: '12px', color: LTT3, marginBottom: '16px', lineHeight: 1.5 }}>AI-generated analysis of this lot's investment potential.</div>
+              <div style={{ marginBottom: '16px' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#EFF6FF', border: '1px solid #BFDBFE', color: BL, padding: '3px 8px', borderRadius: '3px' }}>INVESTOR+</span>
+              </div>
+              <button
+                onClick={memo ? () => setShowMemo(true) : generateMemo}
+                disabled={memoLoading}
+                onMouseEnter={e => { if (!memoLoading) (e.target as HTMLButtonElement).style.background = '#1A2332'; }}
+                onMouseLeave={e => { if (!memoLoading) (e.target as HTMLButtonElement).style.background = DK; }}
+                style={{ marginTop: 'auto', width: '100%', padding: '11px', background: DK, border: 'none', borderRadius: '8px', color: '#F0EDE6', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', cursor: memoLoading ? 'not-allowed' : 'pointer', textTransform: 'uppercase', opacity: memoLoading ? 0.6 : 1 }}
+              >
+                ◆ {memoLoading ? 'GENERATING…' : memo ? 'VIEW MEMO' : 'GENERATE MEMO'}
+              </button>
+              {memo && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
+                  <span style={{ padding: '3px 10px', background: memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.08)' : 'rgba(217,119,6,0.08)', border: `1px solid ${memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.25)' : 'rgba(217,119,6,0.25)'}`, fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: memo.recommendation === 'BUY' ? GL : AMB, borderRadius: '4px' }}>{memo.recommendation}</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>Conviction {memo.conviction}/100</span>
                 </div>
-                <div style={{ fontSize: '12px', color: LTT3, lineHeight: 1.5 }}>Full analysis — 5/10/20yr projections · artist valuation · AI verdict</div>
+              )}
+            </div>
+
+            {/* RIGHT — Investment Dossier */}
+            <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 24px', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                  <circle cx="8" cy="8" r="7" stroke="#9CA3AF" strokeWidth="1.2"/>
+                  <circle cx="8" cy="8" r="4" stroke="#9CA3AF" strokeWidth="1.2"/>
+                  <circle cx="8" cy="8" r="1.5" fill="#9CA3AF"/>
+                </svg>
+                <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1, fontWeight: 500 }}>Investment Dossier</span>
+              </div>
+              <div style={{ fontSize: '12px', color: LTT3, marginBottom: '16px', lineHeight: 1.5 }}>Full analysis — 5/10/20yr projections, artist valuation & AI verdict.</div>
+              <div style={{ marginBottom: '16px' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#F0F0FF', border: '1px solid #C7C7F0', color: '#5B5BD6', padding: '3px 8px', borderRadius: '3px' }}>FAMILY OFFICE+</span>
               </div>
               <button
                 onClick={() => navigate('/app/pricing?plan=investor')}
-                style={{ padding: '10px 18px', background: DK, border: 'none', color: '#F0EDE6', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', cursor: 'pointer', borderRadius: '6px', whiteSpace: 'nowrap', textTransform: 'uppercase', flexShrink: 0 }}
+                onMouseEnter={e => { (e.target as HTMLButtonElement).style.background = '#1A2332'; }}
+                onMouseLeave={e => { (e.target as HTMLButtonElement).style.background = DK; }}
+                style={{ marginTop: 'auto', width: '100%', padding: '11px', background: DK, border: 'none', borderRadius: '8px', color: '#F0EDE6', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', cursor: 'pointer', textTransform: 'uppercase' }}
               >
                 + ANALYZE
               </button>
             </div>
-          )}
+
+          </div>
+
+          {/* AI content for paying users */}
           {canSeeAI && (
-            <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '18px 22px' }}>
+            <div style={{ marginTop: '16px', background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 24px' }}>
               <AIAnalyst rawLot={lot} />
             </div>
           )}
           {!canSeeAI && canSeeAnalysis && (
-            <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '18px 22px' }}>
+            <div style={{ marginTop: '16px', background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 24px' }}>
               <LockedBlock
                 title="AI has a strong opinion on this deal"
                 teaser="Get STRONG BUY / BUY / WATCH / PASS verdict, confidence score, bull & bear cases, and advanced risk analysis."
