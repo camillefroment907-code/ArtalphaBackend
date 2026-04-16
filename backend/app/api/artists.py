@@ -374,6 +374,257 @@ async def get_geo_arbitrage(
     return response
 
 
+@router.get("/{artist_name}/timing-optimizer")
+async def get_timing_optimizer(
+    artist_name: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Auction House Timing Optimizer — best house × month combos from historical data."""
+    from app.utils.cache import get_cached, set_cached
+
+    cache_key = f"timing_optimizer:{artist_name.lower()}"
+    cached = get_cached(cache_key, ttl=3600)
+    if cached:
+        return cached
+
+    result = await db.execute(
+        text("""
+        SELECT
+            auction_house,
+            EXTRACT(MONTH FROM sale_date)::int AS month,
+            COUNT(*)::int AS count,
+            ROUND(AVG(hammer_price_eur)::numeric, 0)::float AS avg_price,
+            ROUND(AVG(premium_ratio)::numeric, 3)::float AS avg_ratio,
+            ROUND(
+                COUNT(CASE WHEN premium_ratio > 1 THEN 1 END)::numeric
+                / NULLIF(COUNT(premium_ratio), 0) * 100, 1
+            )::float AS sell_above_pct
+        FROM hammer_prices
+        WHERE artist_name ILIKE :name
+          AND sale_date IS NOT NULL
+          AND hammer_price_eur IS NOT NULL
+          AND auction_house IS NOT NULL
+        GROUP BY auction_house, EXTRACT(MONTH FROM sale_date)
+        HAVING COUNT(*) >= 2
+        ORDER BY avg_price DESC NULLS LAST
+        """),
+        {"name": f"%{artist_name}%"},
+    )
+    rows = result.mappings().all()
+
+    if not rows:
+        return {"artist_name": artist_name, "entries": [], "best_house": None, "best_month": None}
+
+    MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+    SEASONS = {1:"Winter",2:"Winter",3:"Spring",4:"Spring",5:"Spring",
+               6:"Summer",7:"Summer",8:"Summer",9:"Autumn",10:"Autumn",11:"Autumn",12:"Winter"}
+
+    entries = [
+        {
+            "house": r["auction_house"],
+            "month": r["month"],
+            "month_name": MONTH_NAMES[r["month"] - 1],
+            "season": SEASONS[r["month"]],
+            "count": r["count"],
+            "avg_price": int(r["avg_price"]) if r["avg_price"] else None,
+            "avg_ratio": r["avg_ratio"],
+            "sell_above_pct": r["sell_above_pct"],
+        }
+        for r in rows
+    ]
+
+    # Top combo by avg price (min 3 sales)
+    qualified = [e for e in entries if e["count"] >= 3 and e["avg_price"]]
+    best = qualified[0] if qualified else (entries[0] if entries else None)
+
+    # Monthly aggregation across all houses
+    monthly_summary = []
+    for m in range(1, 13):
+        prices = [e["avg_price"] for e in entries if e["month"] == m and e["avg_price"]]
+        counts = [e["count"] for e in entries if e["month"] == m]
+        if prices:
+            monthly_summary.append({
+                "month": m,
+                "month_name": MONTH_NAMES[m - 1],
+                "season": SEASONS[m],
+                "avg_price": round(sum(prices) / len(prices)),
+                "total_sales": sum(counts),
+            })
+
+    response = {
+        "artist_name": artist_name,
+        "entries": entries[:20],
+        "monthly_summary": monthly_summary,
+        "best_house": best["house"] if best else None,
+        "best_month": best["month_name"] if best else None,
+        "best_season": best["season"] if best else None,
+        "best_avg_price": best["avg_price"] if best else None,
+    }
+    set_cached(cache_key, response)
+    return response
+
+
+@router.get("/{artist_name}/liquidity-map")
+async def get_liquidity_map(
+    artist_name: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Liquidity Depth Map — 5 price bands × 3 time periods heatmap."""
+    from app.utils.cache import get_cached, set_cached
+
+    cache_key = f"liquidity_map:{artist_name.lower()}"
+    cached = get_cached(cache_key, ttl=3600)
+    if cached:
+        return cached
+
+    result = await db.execute(
+        text("""
+        SELECT
+            CASE
+                WHEN hammer_price_eur < 1000    THEN 0
+                WHEN hammer_price_eur < 5000    THEN 1
+                WHEN hammer_price_eur < 20000   THEN 2
+                WHEN hammer_price_eur < 100000  THEN 3
+                ELSE                                 4
+            END AS price_band,
+            CASE
+                WHEN sale_date >= NOW() - INTERVAL '2 years' THEN 0
+                WHEN sale_date >= NOW() - INTERVAL '5 years' THEN 1
+                ELSE                                               2
+            END AS period,
+            COUNT(*)::int    AS count,
+            ROUND(AVG(hammer_price_eur)::numeric, 0)::float AS avg_price,
+            ROUND(MAX(hammer_price_eur)::numeric, 0)::float AS max_price
+        FROM hammer_prices
+        WHERE artist_name ILIKE :name
+          AND hammer_price_eur IS NOT NULL
+          AND sale_date IS NOT NULL
+        GROUP BY price_band, period
+        ORDER BY period, price_band
+        """),
+        {"name": f"%{artist_name}%"},
+    )
+    rows = result.mappings().all()
+
+    if not rows:
+        return {"artist_name": artist_name, "cells": [], "total_sales": 0}
+
+    PRICE_BANDS = ["< €1K", "€1K–5K", "€5K–20K", "€20K–100K", "€100K+"]
+    PERIODS     = ["Last 2 years", "2–5 years ago", "5+ years ago"]
+
+    # Build full 5×3 grid (fill missing with zeros)
+    grid = {(r["price_band"], r["period"]): r for r in rows}
+    cells = []
+    total = sum(r["count"] for r in rows)
+    max_count = max(r["count"] for r in rows) if rows else 1
+
+    for period in range(3):
+        for band in range(5):
+            r = grid.get((band, period))
+            cells.append({
+                "price_band": band,
+                "price_label": PRICE_BANDS[band],
+                "period": period,
+                "period_label": PERIODS[period],
+                "count": r["count"] if r else 0,
+                "avg_price": int(r["avg_price"]) if r and r["avg_price"] else None,
+                "max_price": int(r["max_price"]) if r and r["max_price"] else None,
+                "intensity": round(r["count"] / max_count, 3) if r else 0,
+            })
+
+    response = {
+        "artist_name": artist_name,
+        "cells": cells,
+        "price_bands": PRICE_BANDS,
+        "periods": PERIODS,
+        "total_sales": total,
+        "max_count": max_count,
+    }
+    set_cached(cache_key, response)
+    return response
+
+
+@router.get("/{artist_name}/calendar-overlay")
+async def get_calendar_overlay(
+    artist_name: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Institutional Calendar Overlay — major sale events per year+month for PriceChart markers."""
+    from app.utils.cache import get_cached, set_cached
+
+    cache_key = f"calendar_overlay:{artist_name.lower()}"
+    cached = get_cached(cache_key, ttl=3600)
+    if cached:
+        return cached
+
+    result = await db.execute(
+        text("""
+        SELECT
+            EXTRACT(YEAR FROM sale_date)::int  AS year,
+            EXTRACT(MONTH FROM sale_date)::int AS month,
+            auction_house,
+            COUNT(*)::int   AS count,
+            ROUND(MAX(hammer_price_eur)::numeric, 0)::float AS max_price,
+            ROUND(AVG(hammer_price_eur)::numeric, 0)::float AS avg_price
+        FROM hammer_prices
+        WHERE artist_name ILIKE :name
+          AND sale_date IS NOT NULL
+          AND hammer_price_eur IS NOT NULL
+        GROUP BY year, month, auction_house
+        ORDER BY year, month
+        """),
+        {"name": f"%{artist_name}%"},
+    )
+    rows = result.mappings().all()
+
+    if not rows:
+        return {"artist_name": artist_name, "events": [], "active_months": [], "peak_season": None}
+
+    TIER1 = {"Christie's", "Sotheby's", "Phillips", "Bonhams"}
+    MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+
+    events = [
+        {
+            "year": r["year"],
+            "month": r["month"],
+            "month_name": MONTH_NAMES[r["month"] - 1],
+            "house": r["auction_house"],
+            "is_tier1": r["auction_house"] in TIER1,
+            "count": r["count"],
+            "max_price": int(r["max_price"]) if r["max_price"] else None,
+            "avg_price": int(r["avg_price"]) if r["avg_price"] else None,
+        }
+        for r in rows
+    ]
+
+    # Monthly activity pattern (across all years)
+    from collections import Counter
+    month_counts: Counter = Counter()
+    for e in events:
+        month_counts[e["month"]] += e["count"]
+
+    active_months = [
+        {"month": m, "month_name": MONTH_NAMES[m - 1], "total_sales": month_counts[m]}
+        for m in sorted(month_counts, key=lambda x: -month_counts[x])
+        if month_counts[m] > 0
+    ]
+
+    peak_month = active_months[0]["month"] if active_months else None
+    SEASONS = {1:"Winter",2:"Winter",3:"Spring",4:"Spring",5:"Spring",
+               6:"Summer",7:"Summer",8:"Summer",9:"Autumn",10:"Autumn",11:"Autumn",12:"Winter"}
+    peak_season = SEASONS[peak_month] if peak_month else None
+
+    response = {
+        "artist_name": artist_name,
+        "events": events,
+        "active_months": active_months[:6],
+        "peak_month": MONTH_NAMES[peak_month - 1] if peak_month else None,
+        "peak_season": peak_season,
+    }
+    set_cached(cache_key, response)
+    return response
+
+
 @router.get("/{artist_name}/price-history")
 async def get_artist_price_history(
     artist_name: str,
