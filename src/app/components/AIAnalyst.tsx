@@ -307,15 +307,7 @@ export function AIAnalyst({ rawLot }: Props) {
 
       {/* Header */}
       <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '30px', height: '30px', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '13px' }}>◎</div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>Investment Dossier</div>
-              <span style={{ padding: '2px 6px', background: 'rgba(198,168,90,0.1)', border: '1px solid rgba(198,168,90,0.3)', fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.1em' }}>FAMILY OFFICE+</span>
-            </div>
-          </div>
-        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }} />
 
         {status === 'idle' && (
           <button
