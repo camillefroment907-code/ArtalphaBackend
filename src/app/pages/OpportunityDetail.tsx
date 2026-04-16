@@ -85,6 +85,7 @@ export default function OpportunityDetail() {
   const [lot, setLot]                     = useState<any>(null);
   const [loading, setLoading]             = useState(true);
   const [imgLoaded, setImgLoaded]         = useState(false);
+  const [showLightbox, setShowLightbox]   = useState(false);
   const [memoLoading, setMemoLoading]     = useState(false);
   const [memo, setMemo]                   = useState<any>(null);
   const [showMemo, setShowMemo]           = useState(false);
@@ -136,6 +137,12 @@ export default function OpportunityDetail() {
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowLightbox(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   if (loading) return (
@@ -325,21 +332,13 @@ export default function OpportunityDetail() {
           {lot.image_url ? (
             <img src={lot.image_url} alt={lot.title}
               onLoad={() => setImgLoaded(true)}
-              style={{ width: '100%', maxHeight: '360px', objectFit: 'contain', padding: '8px', opacity: imgLoaded ? 1 : 0, transition: 'opacity 0.4s' }} />
+              onClick={() => setShowLightbox(true)}
+              style={{ width: '100%', maxHeight: '360px', objectFit: 'contain', padding: '8px', opacity: imgLoaded ? 1 : 0, transition: 'opacity 0.4s', cursor: 'pointer' }} />
           ) : (
             <div style={{ width: '200px', height: '260px', background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: '40px', opacity: 0.08 }}>◎</span>
             </div>
           )}
-          <button
-            onClick={() => {
-              const params = new URLSearchParams({ lot: lot.id, img: lot.image_url || '', title: lot.title || '', artist: lot.artist_name_raw || '', w: String(lot.width_cm || 80), h: String(lot.height_cm || 60) });
-              navigate(`/app/visualizer?${params.toString()}`);
-            }}
-            style={{ padding: '7px 14px', background: 'transparent', border: `0.5px solid ${DKB}`, borderRadius: '6px', color: '#6B7280', fontSize: '9px', cursor: 'pointer', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}
-          >
-            🖼 VISUALIZE IN ROOM
-          </button>
         </div>
 
         {/* RIGHT — info panel */}
@@ -754,6 +753,17 @@ export default function OpportunityDetail() {
           NOT FINANCIAL ADVICE · FOR INFORMATIONAL PURPOSES ONLY · NAUTILUS DATA AGGREGATED FROM PUBLIC AUCTION SOURCES
         </p>
       </div>
+
+      {/* ── IMAGE LIGHTBOX ───────────────────────────────────────────────────── */}
+      {showLightbox && lot.image_url && (
+        <div
+          onClick={() => setShowLightbox(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div style={{ position: 'absolute', top: 0, right: 0, padding: '20px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#6B7280', pointerEvents: 'none' }}>✕ ESC</div>
+          <img src={lot.image_url} alt={lot.title} style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain' }} />
+        </div>
+      )}
 
       {/* ── INVESTMENT MEMO MODAL ─────────────────────────────────────────────── */}
       {showMemo && memo && (
