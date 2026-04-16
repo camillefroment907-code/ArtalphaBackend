@@ -8,12 +8,34 @@ export default function MarketIndex() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [beta, setBeta] = useState<any>(null);
+  const [lotsAnalyzed, setLotsAnalyzed] = useState<number | null>(null);
+  const [avgScore, setAvgScore] = useState<number | null>(null);
+  const [exceptionalCount, setExceptionalCount] = useState<number | null>(null);
 
   useEffect(() => {
     fetch(`${BACKEND}/api/market/index`)
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
+
+    // Real lot counts from sentiment endpoint
+    fetch(`${BACKEND}/api/market/sentiment`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d?.segments?.length) return;
+        const total = d.segments.reduce((sum: number, s: any) => sum + (s.total_lots_30d || 0), 0);
+        const weightedScore = d.segments.reduce((sum: number, s: any) => sum + (s.avg_score || 0) * (s.total_lots_30d || 0), 0);
+        setLotsAnalyzed(total);
+        setAvgScore(total > 0 ? Math.round(weightedScore / total * 10) / 10 : d.overall_score);
+      })
+      .catch(() => {});
+
+    // Exceptional count: lots with deal_score >= 80
+    fetch(`${BACKEND}/api/lots?sort_by=deal_score&sort_dir=desc&min_score=80&page_size=1`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.total != null) setExceptionalCount(d.total); })
+      .catch(() => {});
+
     fetch(`${BACKEND}/api/market/beta`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.segments?.length > 0) setBeta(d); })
@@ -102,9 +124,9 @@ export default function MarketIndex() {
           {/* Weekly stats row */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: '0' }}>
             {[
-              { label: 'LOTS ANALYZED', value: week?.lots_analyzed?.toLocaleString() || '—' },
-              { label: 'AVG SCORE', value: week ? `${week.avg_score}/100` : '—' },
-              { label: 'EXCEPTIONAL', value: week?.exceptional_count?.toString() || '—' },
+              { label: 'LOTS ANALYZED', value: lotsAnalyzed != null ? lotsAnalyzed.toLocaleString() : (week?.lots_analyzed?.toLocaleString() || '—') },
+              { label: 'AVG SCORE', value: avgScore != null ? `${avgScore}/100` : (week?.avg_score ? `${week.avg_score}/100` : '—') },
+              { label: 'EXCEPTIONAL', value: exceptionalCount != null ? exceptionalCount.toLocaleString() : (week?.exceptional_count?.toString() || '—') },
             ].map(({ label, value }, i) => (
               <div key={label} style={{ padding: '14px 32px', borderRight: i < 2 ? '1px solid rgba(255,255,255,0.08)' : 'none', textAlign: 'center' }}>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '24px', fontWeight: 700, color: 'white', marginBottom: '4px' }}>{value}</div>
@@ -175,7 +197,7 @@ export default function MarketIndex() {
           {/* Unlock CTA */}
           <div style={{ textAlign: 'center', padding: '32px 40px', background: 'var(--navy)', borderRadius: '12px' }}>
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'white', marginBottom: '8px' }}>
-              See all {week?.lots_analyzed?.toLocaleString()} opportunities
+              See all {(lotsAnalyzed ?? week?.lots_analyzed)?.toLocaleString() || 'live'} opportunities
             </div>
             <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', marginBottom: '20px', maxWidth: '400px', margin: '0 auto 20px', lineHeight: 1.7 }}>
               The Nautilus Index is free. Full market intelligence starts at €9/month.
