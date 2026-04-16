@@ -15,6 +15,7 @@ from app.utils.real_cost import compute_real_cost
 from app.utils.estimation_bias import get_estimation_bias
 from app.utils.cycle_stage import get_cycle_stage
 from app.utils.consignment_alert import get_consignment_alert
+from app.utils.provenance_risk import get_provenance_risk
 
 
 def lot_to_list_dict(lot) -> dict:
@@ -1219,6 +1220,7 @@ async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
     lot_dict["estimation_bias"] = await get_estimation_bias(lot.auction_house_name, db)
     lot_dict["cycle_stage"] = await get_cycle_stage(lot.artist_name_raw, db)
     lot_dict["consignment_alert"] = await get_consignment_alert(lot.artist_name_raw, str(lot.id), db)
+    lot_dict["provenance_risk"] = await get_provenance_risk(lot, db)
     return lot_dict
 
 
