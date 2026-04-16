@@ -301,6 +301,7 @@ export default function ArtistIntelligence() {
   const [timingOptimizer, setTimingOptimizer] = useState<any>(null);
   const [liquidityMap, setLiquidityMap] = useState<any>(null);
   const [calendarOverlay, setCalendarOverlay] = useState<any>(null);
+  const [investmentGrade, setInvestmentGrade] = useState<any>(null);
 
   // Must be before any early return — Rules of Hooks
   const auctionHouseStats = useMemo(() => {
@@ -391,6 +392,13 @@ export default function ArtistIntelligence() {
     })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.events?.length > 0) setCalendarOverlay(d); })
+      .catch(() => {});
+
+    fetch(`${BACKEND}/api/artist-profiles/${name}/investment-grade`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.score != null) setInvestmentGrade(d); })
       .catch(() => {});
   }, [artistName]);
 
@@ -535,7 +543,7 @@ export default function ArtistIntelligence() {
           {/* Left — Identity + AI brief */}
           <div>
             {/* Name + dates */}
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
               <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '42px', fontWeight: 600, color: 'var(--text)', margin: 0, lineHeight: 1.1 }}>
                 {artist.artist_name || artist.name}
               </h1>
@@ -545,6 +553,22 @@ export default function ArtistIntelligence() {
                   {artist.death_year ? `–${artist.death_year}` : '–'}
                 </span>
               )}
+              {investmentGrade && (() => {
+                const g = investmentGrade.grade as string;
+                const col = g === 'A' ? '#10B981' : g === 'B+' ? '#3B82F6' : g === 'B' ? '#60A5FA' : g === 'C' ? '#F59E0B' : '#EF4444';
+                const bg  = g === 'A' ? 'rgba(16,185,129,0.08)' : g === 'B+' ? 'rgba(59,130,246,0.08)' : g === 'B' ? 'rgba(96,165,250,0.08)' : g === 'C' ? 'rgba(245,158,11,0.08)' : 'rgba(239,68,68,0.08)';
+                return (
+                  <div title={`Liquidity ${investmentGrade.sub_scores.liquidity}/20 · Cycle ${investmentGrade.sub_scores.cycle}/20 · Sell-through ${investmentGrade.sub_scores.sell_through}/20 · Trend ${investmentGrade.sub_scores.trend}/20 · Supply ${investmentGrade.sub_scores.supply}/20`} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 12px 4px 8px', background: bg, border: `1px solid ${col}`, borderRadius: '20px', cursor: 'default', flexShrink: 0 }}>
+                    <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: col, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: 'white', lineHeight: 1 }}>{g}</span>
+                    </div>
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: col, lineHeight: 1 }}>{investmentGrade.score}/100</div>
+                      <div style={{ fontSize: '9px', color: col, opacity: 0.8, lineHeight: 1.2, letterSpacing: '0.06em' }}>{investmentGrade.label}</div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Nationality + movement badges */}

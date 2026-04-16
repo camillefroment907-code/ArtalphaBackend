@@ -250,6 +250,10 @@ export default function Portfolio() {
   // ── Subscription ───────────────────────────────────────────
   const [sub, setSub] = useState<SubData | null>(null);
 
+  // ── Correlation matrix (Risk tab) ─────────────────────────
+  const [corrMatrix, setCorrMatrix] = useState<any>(null);
+  const [corrLoading, setCorrLoading] = useState(false);
+
   // ── Market lots ────────────────────────────────────────────
   const [lots, setLots] = useState<MappedLot[]>([]);
   const [lotsLoading, setLotsLoading] = useState(true);
@@ -348,6 +352,7 @@ export default function Portfolio() {
   // ── Tabs ───────────────────────────────────────────────────
   const TABS = [
     { key: 'collection', label: 'Collection' },
+    { key: 'risk', label: 'Risk Analysis' },
     { key: 'watchlist', label: watchlist.length > 0 ? `Watchlist (${watchlist.length})` : 'Watchlist' },
     { key: 'artists', label: favoriteArtists.length > 0 ? `Artists (${favoriteArtists.length})` : 'Artists' },
     { key: 'alerts', label: 'Alerts' },
@@ -451,7 +456,20 @@ export default function Portfolio() {
     if (activeTab === 'watchlist') loadWatchlist();
     if (activeTab === 'artists') loadFavoriteArtists();
     if (activeTab === 'subscription' || activeTab === 'settings') loadInvoices();
-  }, [activeTab]);
+    if (activeTab === 'risk' && !corrMatrix && portfolioItems.length >= 2) {
+      const artistNames = [...new Set(portfolioItems.map(i => i.artist_name).filter(Boolean))] as string[];
+      if (artistNames.length < 2) return;
+      setCorrLoading(true);
+      const token = getToken();
+      fetch(`${BACKEND}/api/artist-profiles/correlation-matrix?artists=${encodeURIComponent(artistNames.join(','))}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d?.matrix?.length) setCorrMatrix(d); })
+        .catch(() => {})
+        .finally(() => setCorrLoading(false));
+    }
+  }, [activeTab, portfolioItems]);
 
   // ── Portfolio actions ──────────────────────────────────────
 
@@ -1271,6 +1289,106 @@ export default function Portfolio() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════
+            RISK ANALYSIS TAB
+        ══════════════════════════════════════════════════════ */}
+        {activeTab === 'risk' && (
+          <div className="animate-fade-in">
+            <div style={{ marginBottom: '32px' }}>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 6px' }}>Portfolio Correlation Matrix</h2>
+              <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>
+                Pearson correlation of annual price returns between your holdings. High correlation (red) = concentrated risk.
+              </p>
+            </div>
+
+            {portfolioItems.filter(i => i.artist_name).length < 2 ? (
+              <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '40px', textAlign: 'center' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-3)' }}>Add at least 2 artworks with artist names to see the correlation matrix.</div>
+              </div>
+            ) : corrLoading ? (
+              <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '40px', textAlign: 'center' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>Computing correlations…</div>
+              </div>
+            ) : corrMatrix ? (() => {
+              const { artists, matrix } = corrMatrix as { artists: string[]; matrix: (number | null)[][] };
+              const cellColor = (v: number | null) => {
+                if (v === null) return '#F1F5F9';
+                if (v >= 0.9) return '#EF4444';
+                if (v >= 0.6) return '#F97316';
+                if (v >= 0.3) return '#FCD34D';
+                if (v >= 0)   return '#6EE7B7';
+                return '#6EE7B7';
+              };
+              const textColor = (v: number | null) => v != null && v >= 0.3 ? 'white' : '#1E293B';
+              const shortName = (n: string) => n.split(' ').map((w: string) => w[0]).join('').slice(0, 3).toUpperCase();
+              const cellSize = Math.max(48, Math.min(72, Math.floor(600 / artists.length)));
+              return (
+                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '24px', overflowX: 'auto' }}>
+                  {/* Diversification score */}
+                  {(() => {
+                    const vals = matrix.flatMap((row, i) => row.filter((_, j) => j > i)) as number[];
+                    const avg = vals.length ? vals.reduce((a, b) => a + (b ?? 0), 0) / vals.length : 0;
+                    const divScore = Math.round((1 - avg) * 100);
+                    const col = divScore >= 70 ? '#10B981' : divScore >= 40 ? '#F59E0B' : '#EF4444';
+                    return (
+                      <div style={{ display: 'flex', gap: '20px', marginBottom: '24px', flexWrap: 'wrap' }}>
+                        <div style={{ padding: '12px 20px', background: `${col}10`, border: `1px solid ${col}40`, borderRadius: '8px' }}>
+                          <div style={{ fontSize: '9px', fontWeight: 700, color: col, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '2px' }}>DIVERSIFICATION SCORE</div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '24px', fontWeight: 700, color: col }}>{divScore}/100</div>
+                        </div>
+                        <div style={{ padding: '12px 20px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                          <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '2px' }}>AVG CORRELATION</div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '24px', fontWeight: 700, color: 'var(--text)' }}>{avg.toFixed(2)}</div>
+                        </div>
+                        <div style={{ padding: '12px 20px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                          <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '2px' }}>ARTISTS ANALYZED</div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '24px', fontWeight: 700, color: 'var(--text)' }}>{artists.length}</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  {/* Matrix grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: `${cellSize}px ${artists.map(() => `${cellSize}px`).join(' ')}`, gap: '2px', width: 'fit-content' }}>
+                    {/* Header row */}
+                    <div />
+                    {artists.map((a: string) => (
+                      <div key={a} style={{ width: `${cellSize}px`, height: `${cellSize}px`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text-3)', textAlign: 'center', padding: '4px' }}>
+                        {shortName(a)}
+                      </div>
+                    ))}
+                    {/* Data rows */}
+                    {matrix.map((row, i) => (
+                      <>
+                        <div key={`label-${i}`} style={{ width: `${cellSize}px`, height: `${cellSize}px`, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: '8px', fontSize: '10px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {shortName(artists[i])}
+                        </div>
+                        {row.map((v, j) => (
+                          <div key={j} title={`${artists[i]} × ${artists[j]}: ${v?.toFixed(3) ?? 'n/a'}`} style={{ width: `${cellSize}px`, height: `${cellSize}px`, background: cellColor(v), borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: textColor(v), cursor: 'default' }}>
+                            {v != null ? v.toFixed(2) : '—'}
+                          </div>
+                        ))}
+                      </>
+                    ))}
+                  </div>
+                  {/* Legend */}
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexWrap: 'wrap' }}>
+                    {[['#EF4444','High (≥0.6)'],['#FCD34D','Moderate (0.3–0.6)'],['#6EE7B7','Low (<0.3)']].map(([c,l]) => (
+                      <div key={l} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: c }} />
+                        <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{l}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })() : (
+              <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '40px', textAlign: 'center' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-3)' }}>Could not compute correlations — insufficient price history data for these artists.</div>
+              </div>
+            )}
           </div>
         )}
 

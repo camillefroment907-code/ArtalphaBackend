@@ -7,12 +7,17 @@ export default function MarketIndex() {
   const navigate = useNavigate();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [beta, setBeta] = useState<any>(null);
 
   useEffect(() => {
     fetch(`${BACKEND}/api/market/index`)
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
+    fetch(`${BACKEND}/api/market/beta`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.segments?.length > 0) setBeta(d); })
+      .catch(() => {});
   }, []);
 
   const index = data?.index;
@@ -178,6 +183,60 @@ export default function MarketIndex() {
             <a href="/app/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'white', color: 'var(--navy)', padding: '13px 32px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: 700, letterSpacing: '0.04em' }}>
               Access full intelligence →
             </a>
+          </div>
+        </div>
+      )}
+
+      {/* Macro Art Market Beta */}
+      {beta?.segments?.length > 0 && (
+        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 40px 56px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', marginBottom: '10px' }}>
+              MACRO ART MARKET BETA
+            </div>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', color: 'var(--text)', margin: '0 0 8px' }}>
+              Segment Beta vs Nautilus Index
+            </h2>
+            <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>
+              Beta {'>'} 1 = amplifies market moves · Beta {'<'} 1 = defensive · Based on {beta.market_months} months
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px' }}>
+            {beta.segments.map((seg: any) => {
+              const b = seg.beta ?? 0;
+              const interp = seg.interpretation;
+              const col = interp === 'Aggressive' ? '#EF4444' : interp === 'Defensive' ? '#10B981' : '#3B82F6';
+              const barPct = Math.min(100, Math.max(0, (b / 2) * 100));
+              return (
+                <div key={seg.segment} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '16px 18px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>{seg.segment}</div>
+                      <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: col, fontWeight: 700, letterSpacing: '0.06em' }}>{interp}</div>
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: col }}>
+                      β {b.toFixed(2)}
+                    </div>
+                  </div>
+                  {/* Beta bar: midpoint = β1.0 */}
+                  <div style={{ height: '4px', background: 'var(--bg-subtle)', borderRadius: '2px', position: 'relative', marginBottom: '8px' }}>
+                    <div style={{ position: 'absolute', left: '50%', top: '-2px', width: '1px', height: '8px', background: 'var(--border)' }} />
+                    <div style={{ position: 'absolute', left: `${Math.min(barPct, 100)}%`, top: 0, width: '8px', height: '4px', borderRadius: '2px', background: col, transform: 'translateX(-50%)' }} />
+                    <div style={{ height: '4px', width: `${barPct}%`, background: col, opacity: 0.2, borderRadius: '2px' }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                    <span>β 0</span>
+                    <span>~{seg.avg_lots_per_month} lots/mo</span>
+                    <span>β 2</span>
+                  </div>
+                  {seg.correlation != null && (
+                    <div style={{ marginTop: '8px', fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                      r = {seg.correlation.toFixed(2)} correlation
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
