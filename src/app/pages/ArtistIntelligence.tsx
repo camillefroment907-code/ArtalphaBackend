@@ -4,6 +4,128 @@ import { getToken } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
+// ── Price chart (pure SVG, no library) ───────────────────────────────────────
+
+interface YearPoint { year: string; avg_price: number; max_price: number; sale_count: number; }
+
+function PriceChart({ data, stats }: { data: YearPoint[]; stats: any }) {
+  if (!data || data.length < 2) return null;
+
+  const W = 800, H = 200, PAD = { top: 16, right: 16, bottom: 32, left: 72 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+
+  const maxVal = Math.max(...data.map(d => d.avg_price)) * 1.15;
+  const minVal = 0;
+
+  const x = (i: number) => PAD.left + (i / (data.length - 1)) * innerW;
+  const y = (v: number) => PAD.top + innerH - ((v - minVal) / (maxVal - minVal)) * innerH;
+
+  const linePath = data
+    .map((d, i) => `${i === 0 ? 'M' : 'L'} ${x(i).toFixed(1)} ${y(d.avg_price).toFixed(1)}`)
+    .join(' ');
+
+  const areaPath = `${linePath} L ${x(data.length - 1).toFixed(1)} ${(PAD.top + innerH).toFixed(1)} L ${PAD.left.toFixed(1)} ${(PAD.top + innerH).toFixed(1)} Z`;
+
+  const fmtEur = (v: number) =>
+    v >= 1_000_000 ? `€${(v / 1_000_000).toFixed(1)}M` :
+    v >= 1_000     ? `€${(v / 1_000).toFixed(0)}K`     :
+                     `€${v.toFixed(0)}`;
+
+  // Y-axis ticks
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map(t => minVal + t * maxVal);
+
+  const trendUp = stats?.trend_direction === 'up';
+  const trendDown = stats?.trend_direction === 'down';
+  const trendColor = trendUp ? '#34D399' : trendDown ? '#EF4444' : 'var(--text-3)';
+  const trendIcon = trendUp ? '↑' : trendDown ? '↓' : '→';
+
+  return (
+    <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '20px 24px', marginBottom: '32px' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+        <div>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '4px' }}>
+            Historical Hammer Prices
+          </div>
+          <div style={{ fontSize: '13px', color: 'var(--text-2)' }}>
+            {data.length} years of auction data · {stats?.total_sales || ''} sales tracked
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          {stats?.avg_hammer_eur && (
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Avg Hammer</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '16px', fontWeight: 700, color: 'var(--navy)' }}>{fmtEur(stats.avg_hammer_eur)}</div>
+            </div>
+          )}
+          {stats?.trend_pct != null && (
+            <div style={{ padding: '6px 14px', borderRadius: '6px', background: trendUp ? 'rgba(52,211,153,0.08)' : trendDown ? 'rgba(239,68,68,0.08)' : 'var(--bg-subtle)', border: `1px solid ${trendUp ? 'rgba(52,211,153,0.3)' : trendDown ? 'rgba(239,68,68,0.3)' : 'var(--border)'}` }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: trendColor }}>
+                {trendIcon} {stats.trend_pct > 0 ? '+' : ''}{stats.trend_pct}%
+              </div>
+              <div style={{ fontSize: '9px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>trend</div>
+            </div>
+          )}
+          {stats?.sell_above_estimate_pct != null && (
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Above Est.</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '16px', fontWeight: 700, color: 'var(--electric)' }}>{stats.sell_above_estimate_pct}%</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* SVG chart */}
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
+        <defs>
+          <linearGradient id="priceAreaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--navy)" stopOpacity="0.12" />
+            <stop offset="100%" stopColor="var(--navy)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        {/* Grid lines */}
+        {ticks.map((v, i) => (
+          <g key={i}>
+            <line
+              x1={PAD.left} y1={y(v).toFixed(1)} x2={W - PAD.right} y2={y(v).toFixed(1)}
+              stroke="var(--border)" strokeWidth="1" strokeDasharray={i === 0 ? 'none' : '3 4'}
+            />
+            <text x={PAD.left - 6} y={y(v)} textAnchor="end" dominantBaseline="middle"
+              style={{ fontSize: '9px', fill: 'var(--text-3)', fontFamily: 'monospace' }}>
+              {fmtEur(v)}
+            </text>
+          </g>
+        ))}
+
+        {/* Area fill */}
+        <path d={areaPath} fill="url(#priceAreaGrad)" />
+
+        {/* Line */}
+        <path d={linePath} fill="none" stroke="var(--navy)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+
+        {/* Dots + year labels */}
+        {data.map((d, i) => (
+          <g key={d.year}>
+            <circle cx={x(i)} cy={y(d.avg_price)} r="4" fill="var(--navy)" stroke="white" strokeWidth="2" />
+            <text x={x(i)} y={PAD.top + innerH + 18} textAnchor="middle"
+              style={{ fontSize: '9px', fill: 'var(--text-3)', fontFamily: 'monospace' }}>
+              {d.year}
+            </text>
+            {/* Tooltip on hover via title */}
+            <title>{d.year}: avg {fmtEur(d.avg_price)} · max {fmtEur(d.max_price)} · {d.sale_count} sale{d.sale_count !== 1 ? 's' : ''}</title>
+            {/* Invisible hit area */}
+            <circle cx={x(i)} cy={y(d.avg_price)} r="12" fill="transparent" />
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function ArtistIntelligence() {
   const navigate = useNavigate();
   const { artistName } = useParams<{ artistName: string }>();
@@ -12,17 +134,27 @@ export default function ArtistIntelligence() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+  const [priceHistory, setPriceHistory] = useState<any>(null);
 
   useEffect(() => {
     if (!artistName) { setLoading(false); return; }
     setLoading(true);
     const token = getToken();
-    fetch(`${BACKEND}/api/artist-profiles/${encodeURIComponent(decodeURIComponent(artistName))}`, {
+    const name = encodeURIComponent(decodeURIComponent(artistName));
+    fetch(`${BACKEND}/api/artist-profiles/${name}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then(r => r.json())
       .then(data => { setArtist(data); setLoading(false); })
       .catch(() => setLoading(false));
+
+    // Price history — independent, non-blocking
+    fetch(`${BACKEND}/api/artist-profiles/${name}/price-history`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.price_by_year?.length >= 2) setPriceHistory(d); })
+      .catch(() => {});
   }, [artistName]);
 
   const handleSearch = async (query: string) => {
@@ -316,6 +448,14 @@ export default function ArtistIntelligence() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* Price history chart */}
+        {priceHistory && (
+          <PriceChart
+            data={priceHistory.price_by_year}
+            stats={{ ...priceHistory.statistics, total_sales: priceHistory.total_sales }}
+          />
         )}
 
         {/* All lots table */}
