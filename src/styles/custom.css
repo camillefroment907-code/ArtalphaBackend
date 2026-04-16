@@ -18,8 +18,17 @@
   --gold: #C6A85A; --gold-bright: #D4B96B; --gold-dim: #9E8440;
   --gold-subtle: rgba(198,168,90,0.08); --gold-border: rgba(198,168,90,0.2);
 
+  /* Dark theme semantic tokens */
+  --bg-deep: #0C1622;
+  --bg-base: #111827;
+  --bg-inset: #0F1923;
+  --border-dim: #1F2D3D;
+  --border-dark: #2D3748;
+  --text-1: #F0EDE6;
+  --blue-link: #60A5FA;
+
   /* Semantic */
-  --green: var(--electric); --red: #DC2626; --red-subtle: rgba(220,38,38,0.08);
+  --green: #52C97F; --red: #DC2626; --red-subtle: rgba(220,38,38,0.08);
 
   /* Typography */
   --font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;

@@ -348,7 +348,7 @@ export default function Convictions() {
               </div>
               {lastUpdated && (
                 <div style={{ fontSize: '9px', color: 'var(--text-3)', marginTop: '1px' }}>
-                  Mis à jour {lastUpdated.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  Updated {lastUpdated.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                 </div>
               )}
             </div>
@@ -431,7 +431,7 @@ export default function Convictions() {
                     cursor: 'pointer',
                   }}
                 >
-                  Voir les plans — à partir de €9/mois
+                  View plans — from €9/month
                 </button>
               </div>
             )}

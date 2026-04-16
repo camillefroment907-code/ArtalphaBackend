@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { getPlanLimits, getToken } from '../../lib/auth';
 import { AIAnalyst } from '../components/AIAnalyst';
+import { StickyLotBar } from '../components/StickyLotBar';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -144,6 +145,8 @@ export default function OpportunityDetail() {
   const [memo, setMemo]               = useState<any>(null);
   const [showMemo, setShowMemo]       = useState(false);
   const [comparables, setComparables] = useState<any>(null);
+  const [stickyVisible, setStickyVisible] = useState(false);
+  const heroRef = useRef<HTMLDivElement>(null);
 
   const limits         = getPlanLimits();
   const canSeeAnalysis = limits.hasProjections || limits.hasArtistCotation;
@@ -180,6 +183,17 @@ export default function OpportunityDetail() {
       headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
     }).then(r => r.json()).then(setComparables).catch(() => {});
   }, [id]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (heroRef.current) {
+        const { bottom } = heroRef.current.getBoundingClientRect();
+        setStickyVisible(bottom < 0);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#0D1117', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
@@ -227,6 +241,11 @@ export default function OpportunityDetail() {
     drouot: 'Drouot', interencheres: 'Interenchères', invaluable: 'Invaluable',
     sothebys: "Sotheby's", christies: "Christie's", bonhams: 'Bonhams',
     liveauctioneers: 'LiveAuctioneers', ebay: 'eBay', artsy: 'Artsy',
+  };
+
+  const formatSource = (src: string, house?: string) => {
+    if (!src || src === 'other' || src === 'unknown') return house || '—';
+    return src;
   };
 
   const artistEnc = encodeURIComponent((lot.artist_name_raw || '').slice(0, 40));
@@ -283,6 +302,12 @@ export default function OpportunityDetail() {
     ? { label: 'MODERATE', color: '#F59E0B' }
     : { label: 'LOW RISK', color: '#10B981' };
 
+  const hasMarketSignals = !!(cycleStage || estBias || consignAlert);
+
+  const stickyTier: 'EXCEPTIONAL' | 'STRONG' | 'INTERESTING' =
+    (lot.deal_score || 0) >= 80 ? 'EXCEPTIONAL' :
+    (lot.deal_score || 0) >= 65 ? 'STRONG' : 'INTERESTING';
+
   const scoreColor    = SCORE_COLOR(lot.deal_score || 0);
   const totalCost     = realCost ? realCost.cost_basis : price;
   const breakEvenGain = realCost ? realCost.needed_gain_pct : 26;
@@ -335,8 +360,17 @@ export default function OpportunityDetail() {
         </a>
       </div>
 
+      <StickyLotBar
+        artist={lot.artist_name_raw || ''}
+        title={lot.title || 'Untitled'}
+        score={lot.deal_score || 0}
+        tier={stickyTier}
+        signal={verdict.label}
+        visible={stickyVisible}
+      />
+
       {/* ═══ ZONE B — ABOVE THE FOLD ═══ */}
-      <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', minHeight: '420px', borderBottom: '1px solid #30363D' }}>
+      <div ref={heroRef} style={{ display: 'grid', gridTemplateColumns: '380px 1fr', minHeight: '420px', borderBottom: '1px solid #30363D' }}>
 
         {/* B1 — Image */}
         <div style={{ background: '#0D1117', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', borderRight: '1px solid #30363D', position: 'relative' }}>
@@ -469,27 +503,20 @@ export default function OpportunityDetail() {
           {/* ACTION BUTTONS */}
           <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
             <button
-              onClick={memo ? () => setShowMemo(true) : generateMemo}
-              disabled={memoLoading}
-              style={{ flex: 1, padding: '11px', background: memoLoading ? '#21262D' : 'rgba(37,99,235,0.15)', border: `1px solid ${memoLoading ? '#30363D' : '#2563EB44'}`, borderRadius: '6px', color: memoLoading ? '#8B949E' : '#60A5FA', fontSize: '12px', fontWeight: 700, cursor: memoLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}
-            >
-              {memoLoading ? '… GENERATING' : memo ? '◆ VIEW MEMO' : '◆ GENERATE MEMO'}
-            </button>
-            <button
               onClick={() => {
                 const params = new URLSearchParams({ lot: lot.id, img: lot.image_url || '', title: lot.title || '', artist: lot.artist_name_raw || '', w: String(lot.width_cm || 80), h: String(lot.height_cm || 60) });
                 navigate(`/app/visualizer?${params.toString()}`);
               }}
-              style={{ padding: '11px 14px', background: '#161B22', border: '1px solid #30363D', borderRadius: '6px', color: '#8B949E', fontSize: '13px', cursor: 'pointer' }}
+              style={{ padding: '11px 16px', background: '#161B22', border: '1px solid #30363D', borderRadius: '6px', color: '#8B949E', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}
             >
-              🖼
+              🖼 Visualize in room
             </button>
           </div>
         </div>
       </div>
 
       {/* ═══ ZONE C — INTELLIGENCE GRID ═══ */}
-      <div style={{ display: 'grid', gridTemplateColumns: realCost ? '1fr 1fr 1fr' : '1fr 1fr', gap: '1px', background: '#30363D' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: (realCost && hasMarketSignals) ? '1fr 1fr 1fr' : (realCost || hasMarketSignals) ? '1fr 1fr' : '1fr', gap: '1px', background: '#30363D' }}>
 
         {/* C1 — Real Cost Breakdown */}
         {realCost && (
@@ -521,6 +548,7 @@ export default function OpportunityDetail() {
         )}
 
         {/* C2 — Market Signals */}
+        {hasMarketSignals && (
         <div style={{ background: '#0D1117', padding: '24px' }}>
           <div style={{ fontSize: '10px', fontWeight: 700, color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '16px' }}>MARKET SIGNALS</div>
 
@@ -563,10 +591,8 @@ export default function OpportunityDetail() {
             </div>
           )}
 
-          {!cycleStage && !estBias && !consignAlert && (
-            <div style={{ color: '#484F58', fontSize: '12px', fontFamily: 'var(--font-mono)' }}>No market signal data available.</div>
-          )}
         </div>
+        )}
 
         {/* C3 — Lot Details + Due Diligence */}
         <div style={{ background: '#0D1117', padding: '24px' }}>
@@ -580,7 +606,7 @@ export default function OpportunityDetail() {
             { label: 'House',      value: lot.auction_house_name },
             { label: 'Sale date',  value: auctionDateFmt },
             { label: 'Lot #',      value: lot.lot_number },
-            { label: 'Source',     value: `${flags[source] || ''} ${sourceNames[source] || source}`.trim() },
+            { label: 'Source',     value: (() => { const s = formatSource(source, lot.auction_house_name); const mapped = sourceNames[s.toLowerCase()] || s; return `${flags[s.toLowerCase()] || ''} ${mapped}`.trim(); })() },
           ] as { label: string; value: string | null | undefined; nav?: string }[]).filter(({ value }) => value).map(({ label, value, nav }) => (
             <div key={label} style={{ display: 'flex', gap: '12px', padding: '6px 0', borderBottom: '1px solid #21262D' }}>
               <div style={{ width: '78px', fontSize: '11px', color: '#8B949E', flexShrink: 0 }}>{label}</div>
@@ -759,10 +785,17 @@ export default function OpportunityDetail() {
       )}
 
       {/* ═══ ZONE G — COMPARABLE SALES ═══ */}
-      {comparables && comparables.comparables?.length > 0 && (
+      {comparables && comparables.comparables?.length > 0 && (() => {
+        const allComps: any[] = comparables.comparables || [];
+        const sameArtistComps = allComps.filter((c: any) =>
+          c.artist_name_raw?.toLowerCase().trim() === (lot.artist_name_raw || '').toLowerCase().trim()
+        );
+        const filteredComps = sameArtistComps.length >= 2 ? sameArtistComps.slice(0, 3) : allComps.slice(0, 3);
+        const compsLabel = sameArtistComps.length >= 2 ? 'COMPARABLE SALES' : 'SIMILAR WORKS';
+        return (
         <div style={{ padding: '24px 32px', borderTop: '1px solid #30363D', background: '#0D1117' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em' }}>COMPARABLE SALES</div>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#8B949E', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em' }}>{compsLabel}</div>
             {comparables.market_analysis && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#8B949E' }}>
@@ -775,7 +808,7 @@ export default function OpportunityDetail() {
             )}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-            {comparables.comparables.slice(0, 3).map((comp: any) => {
+            {filteredComps.map((comp: any) => {
               const compPrice = comp.current_price || comp.estimate_low || 0;
               return (
                 <div key={comp.id}
@@ -810,7 +843,8 @@ export default function OpportunityDetail() {
             })}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ═══ ZONE H — DISCLAIMER ═══ */}
       <div style={{ padding: '16px 32px', borderTop: '1px solid #30363D', background: '#010409' }}>
@@ -899,7 +933,7 @@ export default function OpportunityDetail() {
               )}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                 <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-                  Nautilus Intelligence · {new Date(memo.generated_at).toLocaleDateString('fr-FR')}
+                  Nautilus Intelligence · {new Date(memo.generated_at).toLocaleDateString('en-GB')}
                 </div>
                 <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
                   NOT FINANCIAL ADVICE · FOR INFORMATIONAL PURPOSES ONLY

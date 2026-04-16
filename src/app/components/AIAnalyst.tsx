@@ -376,7 +376,7 @@ export function AIAnalyst({ rawLot }: Props) {
         {/* Idle — has credits */}
         {status === 'idle' && canAnalyze && (
           <p style={{ padding: '0', fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.6, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            Analyse complète — projections 5/10/20/50 ans · cotation artiste · verdict IA
+            Full analysis — 5/10/20yr projections · artist valuation · AI verdict
           </p>
         )}
 
