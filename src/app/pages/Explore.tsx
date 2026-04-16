@@ -127,6 +127,7 @@ function getDateParams(filter: string): Record<string, string> {
   if (filter === "3days") { const d = new Date(now); d.setDate(d.getDate() + 3); return { auction_date_from: today, auction_date_to: d.toISOString().split("T")[0] }; }
   if (filter === "week")  { const d = new Date(now); d.setDate(d.getDate() + 7); return { auction_date_from: today, auction_date_to: d.toISOString().split("T")[0] }; }
   if (filter === "month") { const d = new Date(now); d.setMonth(d.getMonth() + 1); return { auction_date_from: today, auction_date_to: d.toISOString().split("T")[0] }; }
+  if (filter === "3months") { const d = new Date(now); d.setMonth(d.getMonth() + 3); return { auction_date_from: today, auction_date_to: d.toISOString().split("T")[0] }; }
   return {};
 }
 
@@ -320,16 +321,23 @@ export default function Explore() {
   const [sizeFilter, setSizeFilter]   = useState('');
   const [sortBy, setSortBy]           = useState('deal_score');
   const [sortDir, setSortDir]         = useState('desc');
+  const [medium, setMedium]           = useState('');
+  const [period, setPeriod]           = useState('');
+  const [artistNationality, setArtistNationality] = useState('');
+  const [condition, setCondition]     = useState('');
+  const [hasImageFilter, setHasImageFilter] = useState(false);
 
   const resetFilters = () => {
     setMinScore(0); setMinUpside(''); setMinPrice(0); setMaxPrice(0);
     setCategory(''); setArtistTier(''); setAuctionHouse(''); setSizeFilter('');
+    setMedium(''); setPeriod(''); setArtistNationality(''); setCondition('');
+    setHasImageFilter(false);
     setSearch(''); setDateFilter('all');
     setSortBy('deal_score'); setSortDir('desc');
     setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete('search'); return p; });
   };
 
-  const hasActiveFilters = minScore > 0 || minUpside !== '' || minPrice > 0 || maxPrice > 0 || category !== '' || artistTier !== '' || auctionHouse !== '' || sizeFilter !== '' || dateFilter !== 'all';
+  const hasActiveFilters = minScore > 0 || minUpside !== '' || minPrice > 0 || maxPrice > 0 || category !== '' || artistTier !== '' || auctionHouse !== '' || sizeFilter !== '' || dateFilter !== 'all' || medium !== '' || period !== '' || artistNationality !== '' || condition !== '' || hasImageFilter;
 
   // Sync search from URL (e.g. navigating from header search bar)
   useEffect(() => {
@@ -418,8 +426,13 @@ export default function Explore() {
         if (auctionHouse)    p.set('auction_house', auctionHouse);
         if (sizeFilter)      p.set('size_category', sizeFilter);
         if (minUpside)       p.set('min_upside', minUpside);
-        if (artistTier)      p.set('artist_tier', artistTier);
-        if (search.trim())   p.set('search', search.trim());
+        if (artistTier)          p.set('artist_tier', artistTier);
+        if (medium)              p.set('medium', medium);
+        if (period)              p.set('period', period);
+        if (artistNationality)   p.set('nationality', artistNationality);
+        if (condition)           p.set('condition', condition);
+        if (hasImageFilter)      p.set('has_image', 'true');
+        if (search.trim())       p.set('search', search.trim());
         Object.entries(getDateParams(dateFilter)).forEach(([k, v]) => p.set(k, v));
 
         const url = exploreTab === 'primary'
@@ -448,7 +461,7 @@ export default function Explore() {
 
     load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exploreTab, refreshKey, minScore, minPrice, maxPrice, category, auctionHouse, sizeFilter, minUpside, artistTier, search, sortBy, sortDir, dateFilter]);
+  }, [exploreTab, refreshKey, minScore, minPrice, maxPrice, category, auctionHouse, sizeFilter, minUpside, artistTier, search, sortBy, sortDir, dateFilter, medium, period, artistNationality, condition, hasImageFilter]);
 
   const loadMore = async () => {
     if (loadingMore || currentPage >= totalPages) return;
@@ -479,6 +492,21 @@ export default function Explore() {
   const cols = viewMode === "list" ? 1 : viewMode === "grid" ? (tab === "live" ? 5 : 4) : (tab === "live" ? 4 : 3);
   const gap  = cols >= 5 ? "12px" : "16px";
 
+
+  const sectionLabel = {
+    fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em',
+    color: 'var(--text-3)', textTransform: 'uppercase' as const,
+    marginBottom: '8px', fontFamily: 'var(--font-mono)',
+  };
+
+  const filterBtn = (active: boolean) => ({
+    padding: '7px 10px', textAlign: 'left' as const,
+    background: active ? 'var(--navy)' : 'white',
+    color: active ? 'white' : 'var(--text-2)',
+    border: `1px solid ${active ? 'var(--navy)' : 'var(--border)'}`,
+    borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
+    transition: 'all 0.15s', width: '100%',
+  });
 
   return (
     <div
@@ -587,98 +615,52 @@ export default function Explore() {
               animation: 'slideInLeft 0.2s ease',
             }}
           >
-            <div style={{ padding: '16px 16px 40px' }}>
-              {/* Filter header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text)', letterSpacing: '0.04em' }}>Filters</span>
-                {hasActiveFilters && (
-                  <button onClick={resetFilters} style={{ fontSize: '11px', color: 'var(--electric)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0' }}>Reset all</button>
-                )}
-              </div>
+            {/* Filter header — sticky */}
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>Filters</span>
+              {hasActiveFilters && (
+                <button onClick={resetFilters} style={{ fontSize: '11px', color: 'var(--electric)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                  Reset all
+                </button>
+              )}
+            </div>
 
-              {/* 0. DATE */}
-              <div style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Auction Date</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ padding: '16px 16px 40px', display: 'flex', flexDirection: 'column', gap: '22px' }}>
+
+              {/* SORT BY */}
+              <div>
+                <div style={sectionLabel}>Sort by</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {[
-                    { label: 'All upcoming', value: 'all' },
-                    { label: 'Today', value: 'today' },
-                    { label: 'Next 3 days', value: '3days' },
-                    { label: 'This week', value: 'week' },
-                    { label: 'This month', value: 'month' },
-                  ].map(({ label, value }) => (
-                    <button key={value} onClick={() => setDateFilter(value)} style={{ padding: '8px 12px', textAlign: 'left', background: dateFilter === value ? 'var(--navy)' : 'white', color: dateFilter === value ? 'white' : 'var(--text-2)', border: `1px solid ${dateFilter === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                    { label: 'Best score first', sb: 'deal_score', sd: 'desc' },
+                    { label: 'Closing soon', sb: 'auction_date', sd: 'asc' },
+                    { label: 'Recently added', sb: 'created_at', sd: 'desc' },
+                    { label: 'Price: low → high', sb: 'current_price', sd: 'asc' },
+                    { label: 'Price: high → low', sb: 'current_price', sd: 'desc' },
+                    { label: 'Estimate: low → high', sb: 'estimate_low', sd: 'asc' },
+                  ].map(({ label, sb, sd }) => (
+                    <button key={label} onClick={() => { setSortBy(sb); setSortDir(sd); }} style={filterBtn(sortBy === sb && sortDir === sd)}>
                       {label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* 1. SORT BY */}
-              <div style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>
-                  Sort by
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {/* SIGNAL TIER */}
+              <div>
+                <div style={sectionLabel}>Signal tier</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {[
-                    { label: 'Best score first', sortBy: 'deal_score', sortDir: 'desc' },
-                    { label: 'Recently added', sortBy: 'created_at', sortDir: 'desc' },
-                    { label: 'Price: low to high', sortBy: 'current_price', sortDir: 'asc' },
-                    { label: 'Price: high to low', sortBy: 'current_price', sortDir: 'desc' },
-                    { label: 'Closing soon', sortBy: 'auction_date', sortDir: 'asc' },
-                  ].map(({ label, sortBy: sb, sortDir: sd }) => (
-                    <button
-                      key={label}
-                      onClick={() => { setSortBy(sb); setSortDir(sd); }}
-                      style={{
-                        padding: '8px 12px', textAlign: 'left',
-                        background: sortBy === sb && sortDir === sd ? 'var(--navy)' : 'white',
-                        color: sortBy === sb && sortDir === sd ? 'white' : 'var(--text-2)',
-                        border: `1px solid ${sortBy === sb && sortDir === sd ? 'var(--navy)' : 'var(--border)'}`,
-                        borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 2. SIGNAL TIER */}
-              <div style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>
-                  Signal Tier
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {[
-                    { label: 'All signals', value: 0, tag: null, color: '', bg: '', border: '' },
-                    { label: 'Exceptional', value: 80, tag: 'EXCEPTIONAL', color: '#C6A85A', bg: 'rgba(198,168,90,0.1)', border: 'rgba(198,168,90,0.3)' },
-                    { label: 'Strong', value: 65, tag: 'STRONG', color: 'var(--electric)', bg: 'var(--electric-subtle)', border: 'var(--electric-border)' },
-                    { label: 'Interesting', value: 50, tag: 'INTERESTING', color: 'var(--text-2)', bg: 'var(--bg-subtle)', border: 'var(--border)' },
-                  ].map(({ label, value, tag, color, bg, border }) => (
-                    <button
-                      key={value}
-                      onClick={() => setMinScore(value)}
-                      style={{
-                        padding: '9px 12px', textAlign: 'left',
-                        background: minScore === value ? 'var(--navy)' : 'white',
-                        color: minScore === value ? 'white' : 'var(--text-2)',
-                        border: `1px solid ${minScore === value ? 'var(--navy)' : 'var(--border)'}`,
-                        borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        transition: 'all 0.15s',
-                      }}
-                    >
+                    { label: 'All signals', value: 0, tag: null, tagColor: '', tagBg: '' },
+                    { label: 'Exceptional', value: 80, tag: 'EXCEPTIONAL', tagColor: '#C6A85A', tagBg: 'rgba(198,168,90,0.1)' },
+                    { label: 'Strong', value: 65, tag: 'STRONG', tagColor: 'var(--electric)', tagBg: 'var(--electric-subtle)' },
+                    { label: 'Interesting', value: 50, tag: 'INTERESTING', tagColor: 'var(--text-3)', tagBg: 'var(--bg-subtle)' },
+                  ].map(({ label, value, tag, tagColor, tagBg }) => (
+                    <button key={value} onClick={() => setMinScore(value)}
+                      style={{ ...filterBtn(minScore === value), display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span>{label}</span>
                       {tag && (
-                        <span style={{
-                          fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)',
-                          padding: '2px 7px', borderRadius: '3px', letterSpacing: '0.08em',
-                          color: minScore === value ? 'white' : color,
-                          background: minScore === value ? 'rgba(255,255,255,0.15)' : bg,
-                          border: `1px solid ${minScore === value ? 'rgba(255,255,255,0.3)' : border}`,
-                        }}>
+                        <span style={{ fontSize: '8px', fontWeight: 700, fontFamily: 'var(--font-mono)', padding: '1px 5px', borderRadius: '3px', color: minScore === value ? 'white' : tagColor, background: minScore === value ? 'rgba(255,255,255,0.2)' : tagBg }}>
                           {tag}
                         </span>
                       )}
@@ -687,78 +669,269 @@ export default function Explore() {
                 </div>
               </div>
 
-              {/* 2. UPSIDE POTENTIAL */}
-              <div style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Upside Potential</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {[{ label: 'Any upside', value: '' }, { label: '+10% and above', value: '10' }, { label: '+20% and above', value: '20' }, { label: '+33% and above', value: '33' }, { label: '+50% and above', value: '50' }].map(({ label, value }) => (
-                    <button key={value} onClick={() => setMinUpside(value)} style={{ padding: '8px 12px', textAlign: 'left', background: minUpside === value ? 'var(--navy)' : 'white', color: minUpside === value ? 'white' : 'var(--text-2)', border: `1px solid ${minUpside === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', transition: 'all 0.15s' }}>
+              {/* AUCTION DATE */}
+              {(exploreTab === 'best' || exploreTab === 'auctions' || exploreTab === 'convictions') && (
+                <div>
+                  <div style={sectionLabel}>Auction date</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {[
+                      { label: 'All dates', value: 'all' },
+                      { label: 'Today', value: 'today' },
+                      { label: 'Next 3 days', value: '3days' },
+                      { label: 'This week', value: 'week' },
+                      { label: 'This month', value: 'month' },
+                      { label: 'Next 3 months', value: '3months' },
+                    ].map(({ label, value }) => (
+                      <button key={value} onClick={() => setDateFilter(value)} style={filterBtn(dateFilter === value)}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* UPSIDE POTENTIAL */}
+              <div>
+                <div style={sectionLabel}>Upside potential</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {[
+                    { label: 'Any upside', value: '' },
+                    { label: '+10% and above', value: '10' },
+                    { label: '+20% and above', value: '20' },
+                    { label: '+33% and above', value: '33' },
+                    { label: '+50% and above', value: '50' },
+                  ].map(({ label, value }) => (
+                    <button key={value} onClick={() => setMinUpside(value)} style={filterBtn(minUpside === value)}>
                       {label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* 3. BUDGET */}
-              <div style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Budget</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {[{ label: '< €1K', min: 0, max: 1000 }, { label: '€1K–10K', min: 1000, max: 10000 }, { label: '€10K–50K', min: 10000, max: 50000 }, { label: '€50K–200K', min: 50000, max: 200000 }, { label: '> €200K', min: 200000, max: 0 }].map(({ label, min, max }) => (
-                    <button key={label} onClick={() => { setMinPrice(min); setMaxPrice(max); }} style={{ padding: '6px 12px', background: (minPrice === min && maxPrice === max && (min > 0 || max > 0)) ? 'var(--navy)' : 'white', color: (minPrice === min && maxPrice === max && (min > 0 || max > 0)) ? 'white' : 'var(--text-2)', border: `1px solid ${(minPrice === min && maxPrice === max && (min > 0 || max > 0)) ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '20px', fontSize: '11px', cursor: 'pointer', transition: 'all 0.15s' }}>
+              {/* BUDGET */}
+              <div>
+                <div style={sectionLabel}>Budget</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '8px' }}>
+                  {[
+                    { label: '< €1K', min: 0, max: 1000 },
+                    { label: '€1K–5K', min: 1000, max: 5000 },
+                    { label: '€5K–20K', min: 5000, max: 20000 },
+                    { label: '€20K–100K', min: 20000, max: 100000 },
+                    { label: '€100K–500K', min: 100000, max: 500000 },
+                    { label: '> €500K', min: 500000, max: 0 },
+                  ].map(({ label, min, max }) => (
+                    <button key={label} onClick={() => { setMinPrice(min); setMaxPrice(max); }}
+                      style={{
+                        padding: '4px 10px', borderRadius: '20px', fontSize: '11px', cursor: 'pointer',
+                        background: minPrice === min && maxPrice === max && (min > 0 || max > 0) ? 'var(--navy)' : 'transparent',
+                        color: minPrice === min && maxPrice === max && (min > 0 || max > 0) ? 'white' : 'var(--text-2)',
+                        border: `1px solid ${minPrice === min && maxPrice === max && (min > 0 || max > 0) ? 'var(--navy)' : 'var(--border)'}`,
+                        transition: 'all 0.15s',
+                      }}>
                       {label}
                     </button>
                   ))}
                 </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                  <input className="input" type="number" placeholder="Min €" value={minPrice || ''} onChange={e => setMinPrice(Number(e.target.value))} style={{ fontSize: '11px', padding: '6px 8px' }} />
+                  <input className="input" type="number" placeholder="Max €" value={maxPrice || ''} onChange={e => setMaxPrice(Number(e.target.value))} style={{ fontSize: '11px', padding: '6px 8px' }} />
+                </div>
               </div>
 
-              {/* 4. CATEGORY */}
-              <div style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Category</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {['Paintings', 'Drawings', 'Sculpture', 'Prints', 'Photography', 'Street Art', 'Contemporary', 'Modern'].map(cat => (
-                    <button key={cat} onClick={() => setCategory(category === cat ? '' : cat)} style={{ padding: '6px 12px', background: category === cat ? 'var(--navy)' : 'white', color: category === cat ? 'white' : 'var(--text-2)', border: `1px solid ${category === cat ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '20px', fontSize: '11px', cursor: 'pointer', transition: 'all 0.15s' }}>
+              {/* CATEGORY */}
+              <div>
+                <div style={sectionLabel}>Category</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                  {[
+                    'Paintings', 'Prints & Multiples', 'Drawings', 'Sculpture',
+                    'Photography', 'Street Art', 'Contemporary', 'Modern',
+                    'Impressionist', 'Old Masters', 'Design', 'Ceramics',
+                    'Jewelry', 'Watches', 'Books & Manuscripts',
+                  ].map(cat => (
+                    <button key={cat} onClick={() => setCategory(category === cat ? '' : cat)}
+                      style={{
+                        padding: '4px 10px', borderRadius: '20px', fontSize: '11px', cursor: 'pointer',
+                        background: category === cat ? 'var(--navy)' : 'transparent',
+                        color: category === cat ? 'white' : 'var(--text-2)',
+                        border: `1px solid ${category === cat ? 'var(--navy)' : 'var(--border)'}`,
+                        transition: 'all 0.15s',
+                      }}>
                       {cat}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* 5. ARTIST TIER */}
-              <div style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Artist Tier</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {[{ label: 'All artists', value: '', sub: '' }, { label: 'Blue chip', value: 'blue_chip', sub: 'Warhol, Hirst, Basquiat...' }, { label: 'Established', value: 'established', sub: 'Secondary market presence' }, { label: 'Emerging', value: 'emerging', sub: 'High growth potential' }].map(({ label, value, sub }) => (
-                    <button key={value} onClick={() => setArtistTier(value)} style={{ padding: '8px 12px', textAlign: 'left', background: artistTier === value ? 'var(--navy)' : 'white', color: artistTier === value ? 'white' : 'var(--text-2)', border: `1px solid ${artistTier === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', transition: 'all 0.15s' }}>
-                      <span>{label}</span>
-                      {sub && <span style={{ fontSize: '10px', opacity: 0.5 }}>{sub}</span>}
+              {/* MEDIUM */}
+              <div>
+                <div style={sectionLabel}>Medium</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                  {[
+                    'Oil on canvas', 'Acrylic', 'Watercolor', 'Gouache',
+                    'Pastel', 'Ink & Drawing', 'Lithograph', 'Etching',
+                    'Screenprint', 'Bronze', 'Marble', 'Ceramic',
+                    'Photography', 'Mixed media', 'NFT & Digital',
+                  ].map(med => (
+                    <button key={med} onClick={() => setMedium(medium === med ? '' : med)}
+                      style={{
+                        padding: '4px 10px', borderRadius: '20px', fontSize: '11px', cursor: 'pointer',
+                        background: medium === med ? 'var(--navy)' : 'transparent',
+                        color: medium === med ? 'white' : 'var(--text-2)',
+                        border: `1px solid ${medium === med ? 'var(--navy)' : 'var(--border)'}`,
+                        transition: 'all 0.15s',
+                      }}>
+                      {med}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* 6. AUCTION HOUSE */}
-              <div style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Auction House</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {["Christie's", "Sotheby's", 'Phillips', 'Drouot', 'Artcurial', 'Invaluable', 'Artsy'].map(house => (
-                    <button key={house} onClick={() => setAuctionHouse(auctionHouse === house ? '' : house)} style={{ padding: '6px 12px', background: auctionHouse === house ? 'var(--navy)' : 'white', color: auctionHouse === house ? 'white' : 'var(--text-2)', border: `1px solid ${auctionHouse === house ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '20px', fontSize: '11px', cursor: 'pointer', transition: 'all 0.15s' }}>
+              {/* PERIOD */}
+              <div>
+                <div style={sectionLabel}>Period</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {[
+                    { label: 'Any period', value: '' },
+                    { label: 'Contemporary (2000–now)', value: 'contemporary' },
+                    { label: 'Modern (1900–2000)', value: 'modern' },
+                    { label: 'Post-War (1945–1980)', value: 'postwar' },
+                    { label: 'Impressionist (1860–1920)', value: 'impressionist' },
+                    { label: 'Old Masters (pre-1800)', value: 'old_masters' },
+                    { label: 'Ancient & Antiquities', value: 'ancient' },
+                  ].map(({ label, value }) => (
+                    <button key={value} onClick={() => setPeriod(value)} style={filterBtn(period === value)}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ARTIST ORIGIN */}
+              <div>
+                <div style={sectionLabel}>Artist origin</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                  {[
+                    'French', 'American', 'British', 'German', 'Italian',
+                    'Spanish', 'Chinese', 'Japanese', 'Russian', 'Dutch',
+                    'Belgian', 'Swiss', 'Scandinavian', 'Latin American',
+                  ].map(nat => (
+                    <button key={nat} onClick={() => setArtistNationality(artistNationality === nat ? '' : nat)}
+                      style={{
+                        padding: '4px 10px', borderRadius: '20px', fontSize: '11px', cursor: 'pointer',
+                        background: artistNationality === nat ? 'var(--navy)' : 'transparent',
+                        color: artistNationality === nat ? 'white' : 'var(--text-2)',
+                        border: `1px solid ${artistNationality === nat ? 'var(--navy)' : 'var(--border)'}`,
+                        transition: 'all 0.15s',
+                      }}>
+                      {nat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ARTIST TIER */}
+              <div>
+                <div style={sectionLabel}>Artist tier</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {[
+                    { label: 'All artists', value: '', sub: '' },
+                    { label: '🏆 Blue chip', value: 'blue_chip', sub: 'Warhol, Basquiat, Hirst...' },
+                    { label: '⭐ Established', value: 'established', sub: 'Strong secondary market' },
+                    { label: '🌱 Emerging', value: 'emerging', sub: 'High growth potential' },
+                  ].map(({ label, value, sub }) => (
+                    <button key={value} onClick={() => setArtistTier(value)}
+                      style={{ ...filterBtn(artistTier === value), display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>{label}</span>
+                      {sub && <span style={{ fontSize: '9px', opacity: 0.6 }}>{sub}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* AUCTION HOUSE */}
+              <div>
+                <div style={sectionLabel}>Auction house</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                  {[
+                    "Christie's", "Sotheby's", 'Phillips', 'Bonhams',
+                    'Drouot', 'Artcurial', 'Tajan', 'Millon',
+                    'Heritage', 'Invaluable', 'Artsy', 'eBay',
+                  ].map(house => (
+                    <button key={house} onClick={() => setAuctionHouse(auctionHouse === house ? '' : house)}
+                      style={{
+                        padding: '4px 10px', borderRadius: '20px', fontSize: '11px', cursor: 'pointer',
+                        background: auctionHouse === house ? 'var(--navy)' : 'transparent',
+                        color: auctionHouse === house ? 'white' : 'var(--text-2)',
+                        border: `1px solid ${auctionHouse === house ? 'var(--navy)' : 'var(--border)'}`,
+                        transition: 'all 0.15s',
+                      }}>
                       {house}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* 7. SIZE */}
-              <div style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>Artwork Size</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {[{ label: 'Any size', value: '' }, { label: 'Small (< 40cm)', value: 'small' }, { label: 'Medium (40–100cm)', value: 'medium' }, { label: 'Large (> 100cm)', value: 'large' }].map(({ label, value }) => (
-                    <button key={value} onClick={() => setSizeFilter(value)} style={{ padding: '8px 12px', textAlign: 'left', background: sizeFilter === value ? 'var(--navy)' : 'white', color: sizeFilter === value ? 'white' : 'var(--text-2)', border: `1px solid ${sizeFilter === value ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', cursor: 'pointer', transition: 'all 0.15s' }}>
+              {/* ARTWORK SIZE */}
+              <div>
+                <div style={sectionLabel}>Artwork size</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {[
+                    { label: 'Any size', value: '' },
+                    { label: 'Miniature (< 20cm)', value: 'miniature' },
+                    { label: 'Small (20–50cm)', value: 'small' },
+                    { label: 'Medium (50–100cm)', value: 'medium' },
+                    { label: 'Large (100–200cm)', value: 'large' },
+                    { label: 'Monumental (> 200cm)', value: 'monumental' },
+                  ].map(({ label, value }) => (
+                    <button key={value} onClick={() => setSizeFilter(value)} style={filterBtn(sizeFilter === value)}>
                       {label}
                     </button>
                   ))}
                 </div>
               </div>
+
+              {/* CONDITION */}
+              <div>
+                <div style={sectionLabel}>Condition</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                  {['Mint', 'Excellent', 'Good', 'Fair'].map(cond => (
+                    <button key={cond} onClick={() => setCondition(condition === cond ? '' : cond)}
+                      style={{
+                        padding: '4px 10px', borderRadius: '20px', fontSize: '11px', cursor: 'pointer',
+                        background: condition === cond ? 'var(--navy)' : 'transparent',
+                        color: condition === cond ? 'white' : 'var(--text-2)',
+                        border: `1px solid ${condition === cond ? 'var(--navy)' : 'var(--border)'}`,
+                        transition: 'all 0.15s',
+                      }}>
+                      {cond}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* SPECIAL FLAGS */}
+              <div>
+                <div style={sectionLabel}>Special filters</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {[
+                    { label: '🖼 Has image', key: 'hasImage' },
+                    { label: '⚡ Closing in 24h', key: 'closingToday' },
+                  ].map(({ label, key }) => (
+                    <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', color: 'var(--text-2)' }}>
+                      <input type="checkbox"
+                        checked={key === 'hasImage' ? hasImageFilter : dateFilter === 'today'}
+                        style={{ width: '14px', height: '14px', accentColor: 'var(--navy)' }}
+                        onChange={e => {
+                          if (key === 'hasImage') setHasImageFilter(e.target.checked);
+                          if (key === 'closingToday') setDateFilter(e.target.checked ? 'today' : 'all');
+                        }}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
             </div>
           </div>
         )}
