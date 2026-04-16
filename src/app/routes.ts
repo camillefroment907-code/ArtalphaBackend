@@ -19,6 +19,7 @@ const Opportunities = lazy(() => import('./pages/Opportunities'));
 const OpportunityDetail = lazy(() => import('./pages/OpportunityDetail'));
 const Artists       = lazy(() => import('./pages/Artists'));
 const ArtistDetail  = lazy(() => import('./pages/ArtistDetail'));
+const ArtistIntelligence = lazy(() => import('./pages/ArtistIntelligence'));
 const Market        = lazy(() => import('./pages/Market'));
 const Alerts        = lazy(() => import('./pages/Alerts'));
 const Portfolio     = lazy(() => import('./pages/Portfolio'));
@@ -78,8 +79,10 @@ export const router = createBrowserRouter([
       { path: 'primary', Component: Primary },
       { path: 'convictions', Component: Convictions },
       { path: 'opportunities/:id', Component: OpportunityDetail },
-      { path: 'artists', Component: Artists },
-      { path: 'artists/:id', Component: ArtistDetail },
+      { path: 'artists', Component: ArtistIntelligence },
+      { path: 'artists/:artistName', Component: ArtistIntelligence },
+      { path: 'artists-legacy', Component: Artists },
+      { path: 'artists-legacy/:id', Component: ArtistDetail },
       { path: 'market', Component: Market },
       { path: 'alerts', Component: Alerts },
       { path: 'portfolio', Component: Portfolio },

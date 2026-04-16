@@ -7,10 +7,11 @@ import { getUser, logout, getUserPlan, getToken } from '../../lib/auth';
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 const NAV_ITEMS = [
-  { tKey: 'nav.signalFeed',   to: '/app/dashboard', dropdown: null },
-  { tKey: 'nav.explorer',     to: '/app/explore',   dropdown: 'explorer' },
-  { tKey: 'nav.intelligence', to: '/app/agent',      dropdown: null },
-  { tKey: 'nav.portfolio',    to: '/app/portfolio',  dropdown: null },
+  { tKey: 'nav.signalFeed',   label: 'Signal Feed', to: '/app/dashboard', dropdown: null },
+  { tKey: 'nav.explorer',     label: '',            to: '/app/explore',   dropdown: 'explorer' },
+  { tKey: 'nav.artists',      label: 'Artists',     to: '/app/artists',   dropdown: null },
+  { tKey: 'nav.intelligence', label: '',            to: '/app/agent',     dropdown: null },
+  { tKey: 'nav.portfolio',    label: '',            to: '/app/portfolio',  dropdown: null },
 ];
 
 const EXPLORER_ITEMS = [
@@ -158,7 +159,7 @@ export function Header() {
                         lineHeight: '42px',
                       }}
                     >
-                      {t(item.tKey)}
+                      {item.label || t(item.tKey)}
                       <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{
                         transition: 'transform 0.15s',
                         transform: explorerOpen ? 'rotate(180deg)' : 'none',
@@ -242,7 +243,7 @@ export function Header() {
                     }
                   }}
                 >
-                  {t(item.tKey)}
+                  {item.label || t(item.tKey)}
                   {isIntelligence && agentUnread > 0 && (
                     <span style={{
                       width: '6px', height: '6px', borderRadius: '50%',

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { getUser } from "../../lib/auth";
 import { WelcomeTour } from "../components/WelcomeTour";
@@ -207,6 +207,7 @@ function LotImage({ src, alt }: { src: string; alt: string }) {
 
 // ── AlphaCard ────────────────────────────────────────────────
 function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => void; locked: boolean }) {
+  const nav = useNavigate();
   const ds = lot.dealScore;
   const tier      = ds >= 80 ? "EXCEPTIONAL" : ds >= 65 ? "STRONG" : "INTERESTING";
   const tierColor = tier === "EXCEPTIONAL" ? "#C0392B" : tier === "STRONG" ? "var(--navy)" : "var(--gold-dim)";
@@ -225,7 +226,14 @@ function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => vo
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "60px", background: "linear-gradient(to top, rgba(250,250,248,0.9), transparent)" }} />
       </div>
       <div style={{ padding: "14px 16px" }}>
-        {lot.artistName !== "Unknown Artist" && <div style={{ fontSize: "10px", fontWeight: 700, color: "var(--navy)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lot.artistName}</div>}
+        {lot.artistName !== "Unknown Artist" && (
+          <div
+            onClick={e => { e.stopPropagation(); nav(`/app/artists/${encodeURIComponent(lot.artistName)}`); }}
+            style={{ fontSize: "10px", fontWeight: 700, color: "var(--navy)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer", transition: "color 0.15s" }}
+            onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.color = "var(--electric)"}
+            onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.color = "var(--navy)"}
+          >{lot.artistName}</div>
+        )}
         <div style={{ fontFamily: "var(--font-serif)", fontSize: "14px", color: "var(--text)", marginBottom: "10px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lot.title}</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "10px" }}>
           <div>
@@ -245,6 +253,7 @@ function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => vo
 
 // ── LiveCard ─────────────────────────────────────────────────
 function LiveCard({ lot, onClick }: { lot: MappedLot; onClick: () => void }) {
+  const nav  = useNavigate();
   const src  = (lot.source || "").toLowerCase();
   const flag = SOURCE_FLAG[src] || "🌐";
   return (
@@ -256,7 +265,14 @@ function LiveCard({ lot, onClick }: { lot: MappedLot; onClick: () => void }) {
         {lot.category && <div style={{ position: "absolute", bottom: "7px", left: "8px", background: "rgba(250,250,248,0.88)", backdropFilter: "blur(3px)", padding: "2px 6px", borderRadius: "3px", fontSize: "9px", fontWeight: 600, color: "var(--text-2)", border: "1px solid rgba(0,0,0,0.08)" }}>{lot.category}</div>}
       </div>
       <div style={{ padding: "10px 12px" }}>
-        {lot.artistName !== "Unknown Artist" && <div style={{ fontSize: "10px", fontWeight: 700, color: "var(--text-2)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lot.artistName}</div>}
+        {lot.artistName !== "Unknown Artist" && (
+          <div
+            onClick={e => { e.stopPropagation(); nav(`/app/artists/${encodeURIComponent(lot.artistName)}`); }}
+            style={{ fontSize: "10px", fontWeight: 700, color: "var(--text-2)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer", transition: "color 0.15s" }}
+            onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.color = "var(--electric)"}
+            onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.color = "var(--text-2)"}
+          >{lot.artistName}</div>
+        )}
         <div style={{ fontSize: "12px", color: "var(--text)", marginBottom: "6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lot.title}</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>{lot.price}</span>
@@ -269,13 +285,21 @@ function LiveCard({ lot, onClick }: { lot: MappedLot; onClick: () => void }) {
 
 // ── LiveListRow ───────────────────────────────────────────────
 function LiveListRow({ lot, onClick }: { lot: MappedLot; onClick: () => void }) {
+  const nav  = useNavigate();
   const src  = (lot.source || "").toLowerCase();
   const flag = SOURCE_FLAG[src] || "🌐";
   return (
     <div onClick={onClick} style={{ display: "grid", gridTemplateColumns: "48px 1fr 160px 100px 130px 80px", gap: "12px", padding: "10px 16px", borderBottom: "1px solid var(--border-light)", cursor: "pointer", transition: "background 0.1s", alignItems: "center" }} onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "var(--bg-subtle)"; }} onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "white"; }}>
       <div style={{ width: "44px", height: "44px", borderRadius: "4px", overflow: "hidden", background: "var(--bg-subtle)" }}><LotImage src={lot.imageUrl} alt="" /></div>
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: "10px", fontWeight: 700, color: "var(--navy)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lot.artistName !== "Unknown Artist" ? lot.artistName : ""}</div>
+        {lot.artistName !== "Unknown Artist" ? (
+          <div
+            onClick={e => { e.stopPropagation(); nav(`/app/artists/${encodeURIComponent(lot.artistName)}`); }}
+            style={{ fontSize: "10px", fontWeight: 700, color: "var(--navy)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer", transition: "color 0.15s" }}
+            onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.color = "var(--electric)"}
+            onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.color = "var(--navy)"}
+          >{lot.artistName}</div>
+        ) : <div style={{ marginBottom: "2px" }} />}
         <div style={{ fontSize: "12px", color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lot.title}</div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "5px", minWidth: 0 }}><span style={{ fontSize: "13px", flexShrink: 0 }}>{flag}</span><span style={{ fontSize: "11px", color: "var(--text-2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{SOURCE_LABEL[src] || lot.source}</span></div>
