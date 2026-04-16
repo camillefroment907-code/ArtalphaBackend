@@ -443,7 +443,7 @@ export default function OpportunityDetail() {
 
           {/* Card 1 — REAL COST BREAKDOWN */}
           {realCost && (
-            <div style={wCard}>
+            <div style={{ ...wCard, alignSelf: 'start', height: 'fit-content' }}>
               <div style={sl}>REAL COST BREAKDOWN</div>
               {([
                 { k: 'Hammer price',                                         v: price,                            bold: false },
@@ -695,7 +695,7 @@ export default function OpportunityDetail() {
                 </div>
               )}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: displayComps.length === 2 ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: displayComps.length === 1 ? '1fr' : displayComps.length === 2 ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '16px' }}>
               {displayComps.map((comp: any) => {
                 const compPrice = comp.current_price || comp.estimate_low || 0;
                 return (
