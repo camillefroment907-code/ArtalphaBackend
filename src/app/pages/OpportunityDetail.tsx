@@ -439,7 +439,7 @@ export default function OpportunityDetail() {
       <div style={{ background: LT }}>
 
         {/* ── DATA GRID + INVESTMENT ANALYSIS ──────────────────────────────────── */}
-        <div style={{ padding: '32px 40px', display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: '20px' }}>
+        <div style={{ padding: '32px 40px', display: 'flex', flexDirection: 'row', alignItems: 'stretch', gap: '20px' }}>
 
           {/* LEFT COLUMN — Real Cost Breakdown + Investment Analysis */}
           <div style={{ flex: '0 0 45%' }}>
@@ -519,8 +519,8 @@ export default function OpportunityDetail() {
           </div>
 
           {/* RIGHT COLUMN — Lot Details */}
-          <div style={{ flex: 1 }}>
-            <div style={wCard}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignSelf: 'stretch' }}>
+            <div style={{ ...wCard, flex: 1 }}>
               <div style={sl}>LOT DETAILS</div>
               {([
                 { label: 'Artist',     value: lot.artist_name_raw, nav: `/app/artists/${encodeURIComponent(lot.artist_name_raw || '')}`, link: true },
