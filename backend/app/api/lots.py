@@ -13,6 +13,7 @@ import re
 from app.utils.cache import get_cached, set_cached
 from app.utils.real_cost import compute_real_cost
 from app.utils.estimation_bias import get_estimation_bias
+from app.utils.cycle_stage import get_cycle_stage
 
 
 def lot_to_list_dict(lot) -> dict:
@@ -1215,6 +1216,7 @@ async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
     hammer = lot.current_price or lot.estimate_low
     lot_dict["real_cost"] = compute_real_cost(float(hammer), lot.auction_house_name) if hammer else None
     lot_dict["estimation_bias"] = await get_estimation_bias(lot.auction_house_name, db)
+    lot_dict["cycle_stage"] = await get_cycle_stage(lot.artist_name_raw, db)
     return lot_dict
 
 
