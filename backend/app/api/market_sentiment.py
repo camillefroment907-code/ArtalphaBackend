@@ -198,17 +198,35 @@ async def get_market_index(db: AsyncSession = Depends(get_db)):
         sentiment_label = "Cautious market conditions"
         color = "#EF4444"
 
-    # Top 5 lots of the week
+    # Top 5 lots — all lots with high deal_score (no created_at filter: lots ingested in bulk)
     top_lots_result = await db.execute(
         select(Lot)
-        .where(and_(Lot.deal_score >= 75, Lot.created_at >= week_ago))
+        .where(Lot.deal_score >= 75)
         .order_by(Lot.deal_score.desc())
         .limit(5)
     )
     top_lots = top_lots_result.scalars().all()
 
+    # Real total: all lots with a deal_score (used for commentary)
+    real_total_q = await db.execute(
+        select(func.count(Lot.id)).where(Lot.deal_score.isnot(None))
+    )
+    real_total = int(real_total_q.scalar() or 0)
+
+    # Real exceptional: lots scoring >= 80
+    real_exceptional_q = await db.execute(
+        select(func.count(Lot.id)).where(Lot.deal_score >= 80)
+    )
+    real_exceptional = int(real_exceptional_q.scalar() or 0)
+
+    # Real avg score across all scored lots
+    real_avg_q = await db.execute(
+        select(func.avg(Lot.deal_score)).where(Lot.deal_score.isnot(None))
+    )
+    real_avg = round(float(real_avg_q.scalar() or 0), 1)
+
     commentary = await _generate_index_commentary(
-        index_score, sentiment, curr_stats, trend, top_lots
+        index_score, sentiment, real_total, real_exceptional, trend, top_lots
     )
 
     response = {
@@ -221,15 +239,15 @@ async def get_market_index(db: AsyncSession = Depends(get_db)):
             "trend_direction": "up" if trend > 0 else "down" if trend < 0 else "stable",
         },
         "week": {
-            "lots_analyzed": int(week_stats.total or 0),
-            "avg_score": round(float(week_stats.avg_score or 0), 1),
-            "exceptional_count": int(week_stats.exceptional or 0),
+            "lots_analyzed": real_total,
+            "avg_score": real_avg,
+            "exceptional_count": real_exceptional,
             "week_of": now.strftime("%B %d, %Y"),
         },
         "month": {
-            "lots_analyzed": int(curr_stats.total or 0),
-            "avg_score": round(float(curr_stats.avg_score or 0), 1),
-            "exceptional_count": int(curr_stats.exceptional or 0),
+            "lots_analyzed": real_total,
+            "avg_score": real_avg,
+            "exceptional_count": real_exceptional,
         },
         "top_lots": [lot_to_list_dict(l) for l in top_lots],
         "commentary": commentary,
@@ -358,7 +376,8 @@ async def get_market_beta(db: AsyncSession = Depends(get_db)):
 async def _generate_index_commentary(
     index_score: float,
     sentiment: str,
-    stats,
+    total_lots: int,
+    exceptional: int,
     trend: float,
     top_lots: list,
 ) -> str:
@@ -370,7 +389,7 @@ async def _generate_index_commentary(
         settings = get_settings()
 
         if not settings.openai_api_key or not can_make_request():
-            return _fallback_commentary(index_score, sentiment, stats)
+            return _fallback_commentary(index_score, sentiment, total_lots)
 
         top_artists = list(set(
             l.artist_name_raw for l in top_lots if l.artist_name_raw
@@ -384,8 +403,8 @@ Write a 2-sentence weekly market commentary for the Nautilus Art Market Index.
 DATA:
 - Index score: {index_score}/100 ({sentiment})
 - Monthly trend: {'+' if trend >= 0 else ''}{trend:.1f}%
-- Lots analyzed: {int(stats.total or 0)}
-- Exceptional opportunities: {int(stats.exceptional or 0)}
+- Lots analyzed: {total_lots}
+- Exceptional opportunities: {exceptional}
 - Top artists: {', '.join(top_artists) if top_artists else 'Various'}
 
 Style: Bloomberg Terminal meets luxury art. Precise, authoritative, data-driven. No fluff.
@@ -400,9 +419,9 @@ End with one actionable insight for collectors."""
         record_request()
         return response.choices[0].message.content.strip()
     except Exception:
-        return _fallback_commentary(index_score, sentiment, stats)
+        return _fallback_commentary(index_score, sentiment, total_lots)
 
 
-def _fallback_commentary(index_score: float, sentiment: str, stats) -> str:
+def _fallback_commentary(index_score: float, sentiment: str, total_lots: int) -> str:
     trend_word = "rising" if index_score >= 65 else "stable" if index_score >= 50 else "cautious"
-    return f"The Nautilus Art Market Index registers {index_score}/100 this week, reflecting {trend_word} market conditions across {int(stats.total or 0)} analyzed lots. Collectors should focus on high-conviction opportunities scoring above 75."
+    return f"The Nautilus Art Market Index registers {index_score}/100 this week, reflecting {trend_word} market conditions across {total_lots:,} analyzed lots. Collectors should focus on high-conviction opportunities scoring above 75."
