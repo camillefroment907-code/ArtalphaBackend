@@ -747,6 +747,185 @@ async def get_artist_price_history(
     return response
 
 
+@router.get("/{artist_name}/investment-grade")
+async def get_investment_grade(
+    artist_name: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Investment Grade Score 0-100 — aggregates liquidity, cycle, sell-through, trend, supply."""
+    from app.utils.cache import get_cached, set_cached
+
+    cache_key = f"investment_grade:{artist_name.lower()}"
+    cached = get_cached(cache_key, ttl=3600)
+    if cached:
+        return cached
+
+    result = await db.execute(
+        text("""
+        SELECT
+            COUNT(*) AS total_sales,
+            COUNT(*) FILTER (WHERE premium_ratio > 1) AS above_estimate,
+            AVG(hammer_price_eur) AS avg_price,
+            STDDEV(hammer_price_eur) AS price_stddev,
+            COUNT(DISTINCT EXTRACT(YEAR FROM sale_date)::int) AS active_years,
+            COUNT(DISTINCT auction_house) AS house_count,
+            COUNT(*) FILTER (WHERE sale_date >= NOW() - INTERVAL '2 years') AS recent_count,
+            AVG(hammer_price_eur) FILTER (WHERE sale_date >= NOW() - INTERVAL '2 years') AS recent_avg,
+            AVG(hammer_price_eur) FILTER (WHERE sale_date < NOW() - INTERVAL '2 years') AS older_avg,
+            COUNT(*) FILTER (WHERE sale_date < NOW() - INTERVAL '2 years') AS older_count,
+            AVG(hammer_price_eur) FILTER (WHERE sale_date >= NOW() - INTERVAL '1 year') AS last_year_avg,
+            AVG(hammer_price_eur) FILTER (
+                WHERE sale_date >= NOW() - INTERVAL '2 years'
+                  AND sale_date < NOW() - INTERVAL '1 year'
+            ) AS prev_year_avg
+        FROM hammer_prices
+        WHERE artist_name ILIKE :name
+          AND hammer_price_eur IS NOT NULL
+          AND sale_date IS NOT NULL
+        """),
+        {"name": f"%{artist_name}%"},
+    )
+    row = result.mappings().first()
+
+    if not row or not row["total_sales"]:
+        return {"artist_name": artist_name, "score": None, "grade": None, "sub_scores": {}}
+
+    total        = int(row["total_sales"] or 0)
+    above_est    = int(row["above_estimate"] or 0)
+    active_years = int(row["active_years"] or 0)
+    house_count  = int(row["house_count"] or 0)
+    recent_count = int(row["recent_count"] or 0)
+    recent_avg   = float(row["recent_avg"] or 0)
+    older_avg    = float(row["older_avg"] or 0)
+    older_count  = int(row["older_count"] or 0)
+    last_yr      = float(row["last_year_avg"]) if row["last_year_avg"] else None
+    prev_yr      = float(row["prev_year_avg"]) if row["prev_year_avg"] else None
+    stddev       = float(row["price_stddev"] or 0)
+    avg_price    = float(row["avg_price"] or 0)
+
+    # 1. Liquidity (0-20): volume + multi-house + recency
+    liq = 0
+    liq += 8 if total >= 50 else 5 if total >= 20 else 2 if total >= 5 else 0
+    liq += 6 if house_count >= 4 else 3 if house_count >= 2 else 0
+    liq += 6 if recent_count >= 5 else 3 if recent_count >= 2 else 0
+    liq = min(20, liq)
+
+    # 2. Cycle (0-20): price trend older vs recent 2yr
+    cycle = 10
+    if older_count > 0 and older_avg > 0:
+        t = (recent_avg - older_avg) / older_avg
+        cycle = 18 if t > 0.20 else 15 if t > 0.10 else 12 if t > 0 else 8 if t > -0.10 else 4
+
+    # 3. Sell-through (0-20)
+    st_pct = (above_est / total * 100) if total > 0 else 0
+    st = 20 if st_pct >= 60 else 15 if st_pct >= 45 else 10 if st_pct >= 30 else 5 if st_pct >= 15 else 2
+
+    # 4. Trend (0-20): year-over-year price momentum
+    trend = 10
+    if last_yr and prev_yr and prev_yr > 0:
+        yoy = (last_yr - prev_yr) / prev_yr
+        trend = 20 if yoy > 0.15 else 16 if yoy > 0.05 else 12 if yoy > 0 else 8 if yoy > -0.05 else 3
+
+    # 5. Supply (0-20): price stability (low CV = scarce / controlled supply)
+    cv = (stddev / avg_price) if avg_price > 0 else 1
+    supply = 20 if cv < 0.5 else 15 if cv < 1.0 else 10 if cv < 1.5 else 6 if cv < 2.5 else 2
+
+    score = liq + cycle + st + trend + supply
+
+    if score >= 80:   grade, label = "A",  "Investment Grade"
+    elif score >= 65: grade, label = "B+", "Strong"
+    elif score >= 50: grade, label = "B",  "Solid"
+    elif score >= 35: grade, label = "C",  "Speculative"
+    else:             grade, label = "D",  "High Risk"
+
+    response = {
+        "artist_name": artist_name,
+        "score": score,
+        "grade": grade,
+        "label": label,
+        "sub_scores": {
+            "liquidity":    liq,
+            "cycle":        cycle,
+            "sell_through": st,
+            "trend":        trend,
+            "supply":       supply,
+        },
+        "meta": {
+            "total_sales":      total,
+            "sell_through_pct": round(st_pct, 1),
+            "active_years":     active_years,
+            "house_count":      house_count,
+        },
+    }
+    set_cached(cache_key, response)
+    return response
+
+
+@router.get("/correlation-matrix")
+async def get_correlation_matrix(
+    artists: str = Query(..., description="Comma-separated artist names"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Pearson correlation matrix of annual price returns for a list of artists."""
+    artist_list = [a.strip() for a in artists.split(",") if a.strip()][:10]
+    if len(artist_list) < 2:
+        return {"artists": artist_list, "matrix": [], "years": []}
+
+    # Year → avg_price per artist
+    artist_series: dict[str, dict[int, float]] = {}
+    for name in artist_list:
+        r = await db.execute(
+            text("""
+            SELECT EXTRACT(YEAR FROM sale_date)::int AS year,
+                   AVG(hammer_price_eur)::float       AS avg_price
+            FROM hammer_prices
+            WHERE artist_name ILIKE :name
+              AND hammer_price_eur IS NOT NULL
+              AND sale_date IS NOT NULL
+            GROUP BY 1 ORDER BY 1
+            """),
+            {"name": f"%{name}%"},
+        )
+        artist_series[name] = {row["year"]: row["avg_price"] for row in r.mappings()}
+
+    all_years = sorted({y for s in artist_series.values() for y in s})
+    if len(all_years) < 2:
+        return {"artists": artist_list, "matrix": [], "years": all_years}
+
+    # Annual return series (year-over-year %)
+    def returns(prices: dict[int, float]) -> list:
+        out = []
+        for i, yr in enumerate(all_years[1:], 1):
+            p0, p1 = prices.get(all_years[i - 1]), prices.get(yr)
+            out.append((p1 - p0) / p0 if p0 and p1 and p0 > 0 else None)
+        return out
+
+    def pearson(xs: list, ys: list) -> float | None:
+        pairs = [(x, y) for x, y in zip(xs, ys) if x is not None and y is not None]
+        if len(pairs) < 2:
+            return None
+        n = len(pairs)
+        mx = sum(p[0] for p in pairs) / n
+        my = sum(p[1] for p in pairs) / n
+        num = sum((p[0] - mx) * (p[1] - my) for p in pairs)
+        dx  = sum((p[0] - mx) ** 2 for p in pairs) ** 0.5
+        dy  = sum((p[1] - my) ** 2 for p in pairs) ** 0.5
+        return round(num / (dx * dy), 3) if dx > 0 and dy > 0 else None
+
+    ret_map = {name: returns(artist_series[name]) for name in artist_list}
+    matrix = [
+        [1.0 if i == j else pearson(ret_map[a], ret_map[b]) for j, b in enumerate(artist_list)]
+        for i, a in enumerate(artist_list)
+    ]
+
+    return {
+        "artists": artist_list,
+        "matrix": matrix,
+        "years": all_years,
+        "n_periods": len(all_years) - 1,
+    }
+
+
 @router.get("/{artist_name}")
 async def get_artist_intelligence(
     artist_name: str,

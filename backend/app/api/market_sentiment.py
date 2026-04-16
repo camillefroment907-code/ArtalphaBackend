@@ -241,6 +241,120 @@ async def get_market_index(db: AsyncSession = Depends(get_db)):
     return response
 
 
+@router.get("/beta")
+async def get_market_beta(db: AsyncSession = Depends(get_db)):
+    """Macro Art Market Beta — volatility and market correlation by art segment."""
+    from app.utils.cache import get_cached, set_cached
+
+    cache_key = "market_beta"
+    cached = get_cached(cache_key, ttl=3600)
+    if cached:
+        return cached
+
+    now = datetime.utcnow()
+
+    SEGMENTS = [
+        ("Paintings",          ["painting", "oil", "acrylic", "canvas", "huile", "toile"]),
+        ("Prints & Multiples", ["print", "gravure", "lithograph", "etching", "multiple", "edition"]),
+        ("Photography",        ["photo", "photograph", "tirage"]),
+        ("Sculpture",          ["sculpture", "bronze", "ceramic"]),
+        ("Drawings",           ["drawing", "dessin", "ink", "encre", "pastel", "crayon"]),
+        ("Contemporary",       ["contemporary", "contemporain"]),
+    ]
+
+    # Overall market: monthly avg deal_score (last 12 months)
+    mkt_q = await db.execute(
+        select(
+            func.date_trunc("month", Lot.created_at).label("month"),
+            func.avg(Lot.deal_score).label("avg_score"),
+        )
+        .where(and_(
+            Lot.created_at >= now - timedelta(days=365),
+            Lot.deal_score.isnot(None),
+        ))
+        .group_by(func.date_trunc("month", Lot.created_at))
+        .order_by(func.date_trunc("month", Lot.created_at))
+    )
+    mkt_rows = mkt_q.all()
+    if len(mkt_rows) < 3:
+        return {"segments": [], "generated_at": now.isoformat()}
+
+    market_by_month = {str(r.month)[:7]: float(r.avg_score) for r in mkt_rows}
+    months = sorted(market_by_month)
+    mkt_series = [market_by_month[m] for m in months]
+
+    def _beta_corr(seg: list, mkt: list):
+        pairs = [(s, m) for s, m in zip(seg, mkt) if s is not None and m is not None]
+        if len(pairs) < 3:
+            return None, None
+        n  = len(pairs)
+        ms = sum(p[0] for p in pairs) / n
+        mm = sum(p[1] for p in pairs) / n
+        cov   = sum((p[0] - ms) * (p[1] - mm) for p in pairs) / n
+        var_m = sum((p[1] - mm) ** 2 for p in pairs) / n
+        beta  = round(cov / var_m, 2) if var_m > 0 else None
+        std_s = (sum((p[0] - ms) ** 2 for p in pairs)) ** 0.5
+        std_m = (sum((p[1] - mm) ** 2 for p in pairs)) ** 0.5
+        corr  = round(
+            sum((p[0] - ms) * (p[1] - mm) for p in pairs) / (std_s * std_m), 3
+        ) if std_s > 0 and std_m > 0 else None
+        return beta, corr
+
+    segments_out = []
+    for seg_name, keywords in SEGMENTS:
+        kw_filter = or_(
+            *[Lot.category.ilike(f"%{kw}%") for kw in keywords],
+            *[Lot.medium.ilike(f"%{kw}%") for kw in keywords],
+        )
+        seg_q = await db.execute(
+            select(
+                func.date_trunc("month", Lot.created_at).label("month"),
+                func.avg(Lot.deal_score).label("avg_score"),
+                func.count(Lot.id).label("count"),
+                func.stddev(Lot.deal_score).label("stddev"),
+            )
+            .where(and_(
+                kw_filter,
+                Lot.created_at >= now - timedelta(days=365),
+                Lot.deal_score.isnot(None),
+            ))
+            .group_by(func.date_trunc("month", Lot.created_at))
+            .order_by(func.date_trunc("month", Lot.created_at))
+        )
+        seg_rows = seg_q.all()
+        seg_by_month = {str(r.month)[:7]: float(r.avg_score) for r in seg_rows}
+        seg_series = [seg_by_month.get(m) for m in months]
+
+        if sum(1 for s in seg_series if s is not None) < 3:
+            continue
+
+        beta_val, corr_val = _beta_corr(seg_series, mkt_series)
+        avg_count  = round(sum(r.count for r in seg_rows) / len(seg_rows)) if seg_rows else 0
+        avg_stddev = round(sum(float(r.stddev or 0) for r in seg_rows) / len(seg_rows), 1) if seg_rows else 0
+
+        if beta_val is None:   interp = "Insufficient data"
+        elif beta_val > 1.2:   interp = "Aggressive"
+        elif beta_val >= 0.8:  interp = "Market"
+        else:                  interp = "Defensive"
+
+        segments_out.append({
+            "segment":            seg_name,
+            "beta":               beta_val,
+            "correlation":        corr_val,
+            "interpretation":     interp,
+            "avg_lots_per_month": avg_count,
+            "volatility":         avg_stddev,
+        })
+
+    result = {
+        "segments": sorted(segments_out, key=lambda x: (x["beta"] or 0), reverse=True),
+        "market_months": len(months),
+        "generated_at": now.isoformat(),
+    }
+    set_cached(cache_key, result)
+    return result
+
+
 async def _generate_index_commentary(
     index_score: float,
     sentiment: str,
