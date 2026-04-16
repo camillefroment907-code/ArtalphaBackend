@@ -179,6 +179,7 @@ export default function OpportunityDetail() {
   const [memoLoading, setMemoLoading] = useState(false);
   const [memo, setMemo]               = useState<any>(null);
   const [showMemo, setShowMemo]       = useState(false);
+  const [comparables, setComparables] = useState<any>(null);
 
   const limits      = getPlanLimits();
   const canSeeAnalysis = limits.hasProjections || limits.hasArtistCotation;
@@ -217,6 +218,13 @@ export default function OpportunityDetail() {
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(data => { setLot(data); setLoading(false); })
       .catch(() => setLoading(false));
+
+    fetch(`${BACKEND}/api/lots/${id}/comparables`, {
+      headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
+    })
+      .then(r => r.json())
+      .then(setComparables)
+      .catch(() => {});
   }, [id]);
 
   // ── LOADING ──────────────────────────────────────────────────────────────────
@@ -733,6 +741,140 @@ export default function OpportunityDetail() {
             />
           )}
         </div>
+
+        {/* ── 5. COMPARABLE SALES ──────────────────────────────────────────────── */}
+        {comparables && comparables.comparables?.length > 0 && (
+          <div style={{ marginTop: '40px', paddingTop: '32px', borderTop: '1px solid var(--border)' }}>
+
+            {/* Section header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 4px' }}>
+                  Comparable sales
+                </h2>
+                <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>
+                  Similar works tracked by Nautilus — use these to validate the price gap
+                </p>
+              </div>
+
+              {/* Market verdict */}
+              {comparables.market_analysis && (
+                <div style={{
+                  padding: '12px 20px', borderRadius: '8px',
+                  background: comparables.market_analysis.price_gap_pct > 10
+                    ? 'rgba(37,99,235,0.06)' : 'var(--bg-subtle)',
+                  border: `1px solid ${comparables.market_analysis.price_gap_pct > 10
+                    ? 'var(--electric-border)' : 'var(--border)'}`,
+                  textAlign: 'center', flexShrink: 0,
+                }}>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', marginBottom: '4px' }}>
+                    MARKET VERDICT
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: comparables.market_analysis.verdict_color, marginBottom: '2px' }}>
+                    {comparables.market_analysis.price_gap_pct > 0 ? '+' : ''}{comparables.market_analysis.price_gap_pct}%
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-2)', fontWeight: 600 }}>
+                    {comparables.market_analysis.verdict}
+                  </div>
+                  {comparables.market_analysis.market_avg_price && (
+                    <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
+                      Comps avg: €{comparables.market_analysis.market_avg_price.toLocaleString()}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Comparables grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
+              {comparables.comparables.map((comp: any) => {
+                const compPrice = comp.current_price || comp.estimate_low || 0;
+                const refPrice = comparables.reference?.price || 0;
+                const priceDiff = refPrice > 0 && compPrice > 0
+                  ? ((compPrice - refPrice) / refPrice * 100)
+                  : null;
+
+                return (
+                  <div key={comp.id}
+                    onClick={() => navigate(`/app/opportunities/${comp.id}`)}
+                    style={{
+                      background: 'white', border: '1px solid var(--border)', borderRadius: '8px',
+                      overflow: 'hidden', cursor: 'pointer', transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-md)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'none'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; }}
+                  >
+                    {/* Image */}
+                    <div style={{ height: '140px', background: 'var(--bg-subtle)', position: 'relative', overflow: 'hidden' }}>
+                      {comp.image_url ? (
+                        <img src={comp.image_url} alt="" loading="lazy"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: '28px', opacity: 0.1 }}>◎</span>
+                        </div>
+                      )}
+                      {comp.deal_score && (
+                        <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(10,22,40,0.85)', padding: '3px 7px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: 'white' }}>
+                          {Math.round(comp.deal_score)}/100
+                        </div>
+                      )}
+                      {priceDiff !== null && (
+                        <div style={{
+                          position: 'absolute', bottom: '8px', right: '8px',
+                          padding: '2px 7px', borderRadius: '3px',
+                          background: priceDiff > 0 ? 'rgba(37,99,235,0.9)' : 'rgba(100,116,139,0.9)',
+                          fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: 'white',
+                        }}>
+                          {priceDiff > 0 ? '+' : ''}{priceDiff.toFixed(0)}% vs this lot
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Content */}
+                    <div style={{ padding: '10px 12px' }}>
+                      <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {comp.artist_name_raw || 'Unknown'}
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '13px', color: 'var(--text)', marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {comp.title || 'Untitled'}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>
+                          €{compPrice.toLocaleString()}
+                        </span>
+                        {comp.auction_house_name && (
+                          <span style={{ fontSize: '10px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100px' }}>
+                            {comp.auction_house_name}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Zillow-style insight */}
+            {comparables.market_analysis?.market_avg_price && comparables.reference?.price && (
+              <div style={{ marginTop: '16px', padding: '14px 20px', background: 'var(--bg-subtle)', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '16px' }}>◆</span>
+                <p style={{ fontSize: '13px', color: 'var(--text-2)', margin: 0, lineHeight: 1.6 }}>
+                  Based on <strong>{comparables.comparables.length} comparable works</strong>, the market average for similar lots is{' '}
+                  <strong style={{ color: 'var(--text)' }}>€{comparables.market_analysis.market_avg_price.toLocaleString()}</strong>.
+                  {' '}This lot is priced at{' '}
+                  <strong style={{ color: comparables.market_analysis.verdict_color }}>
+                    €{comparables.reference.price.toLocaleString()}
+                  </strong>
+                  {comparables.market_analysis.price_gap_pct > 0
+                    ? ` — ${comparables.market_analysis.price_gap_pct}% below market.`
+                    : ` — ${Math.abs(comparables.market_analysis.price_gap_pct)}% above comparable sales.`
+                  }
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
       </div>
 
