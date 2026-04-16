@@ -18,6 +18,11 @@ function PriceChart({ data, stats }: { data: YearPoint[]; stats: any }) {
   const innerW = W - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
 
+  // ── Year bounds derived from data ─────────────────────────────────────────
+  const years = data.map(d => parseInt(d.year)).sort((a, b) => a - b);
+  const minYear = years[0];
+  const maxYear = years[years.length - 1];
+
   // ── Outlier-resistant Y scale (cap at 95th percentile * 1.3) ──────────────
   const sorted = [...data].map(d => d.avg_price).sort((a, b) => a - b);
   const p95 = sorted[Math.floor(sorted.length * 0.95)] ?? sorted[sorted.length - 1];
@@ -26,11 +31,11 @@ function PriceChart({ data, stats }: { data: YearPoint[]; stats: any }) {
   const yMax = hasMassiveOutlier ? p95 * 1.5 : peakVal * 1.18;
   const peakIdx = data.reduce((mi, d, i) => d.avg_price > data[mi].avg_price ? i : mi, 0);
 
-  const xPos = (i: number) => PAD.left + (data.length === 1 ? innerW / 2 : (i / (data.length - 1)) * innerW);
+  const xPos = (year: number) => PAD.left + ((year - minYear) / Math.max(maxYear - minYear, 1)) * innerW;
   const yPos = (v: number) => PAD.top + innerH - (Math.min(v, yMax) / yMax) * innerH;
 
   // ── Smooth monotone cubic bezier ─────────────────────────────────────────
-  const pts = data.map((d, i) => ({ x: xPos(i), y: yPos(d.avg_price) }));
+  const pts = data.map(d => ({ x: xPos(parseInt(d.year)), y: yPos(d.avg_price) }));
   let linePath = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
   for (let i = 0; i < pts.length - 1; i++) {
     const dx = (pts[i + 1].x - pts[i].x) * 0.38;
@@ -79,8 +84,8 @@ function PriceChart({ data, stats }: { data: YearPoint[]; stats: any }) {
     const rect = e.currentTarget.getBoundingClientRect();
     const mx = ((e.clientX - rect.left) / rect.width) * W;
     let closest = 0, minDist = Infinity;
-    data.forEach((_, i) => {
-      const d = Math.abs(xPos(i) - mx);
+    data.forEach((dp, i) => {
+      const d = Math.abs(xPos(parseInt(dp.year)) - mx);
       if (d < minDist) { minDist = d; closest = i; }
     });
     setHovered(minDist < innerW / data.length * 0.7 ? closest : null);
@@ -105,7 +110,7 @@ function PriceChart({ data, stats }: { data: YearPoint[]; stats: any }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', position: 'relative' }}>
         <div>
           <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '8px' }}>
-            Hammer Price History · Artsy
+            Hammer Price History · Nautilus
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: 'white', letterSpacing: '-0.02em', lineHeight: 1 }}>
@@ -206,12 +211,12 @@ function PriceChart({ data, stats }: { data: YearPoint[]; stats: any }) {
         <g clipPath="url(#pcClip)">
           {/* Volume bars */}
           {data.map((d, i) => {
-            const bh = Math.max(1, (d.sale_count / maxCount) * volH);
+            const bh = d.sale_count > 0 ? Math.max(4, (d.sale_count / maxCount) * volH) : 0;
             return (
               <rect key={i}
-                x={(xPos(i) - barW / 2).toFixed(1)} y={(PAD.top + innerH - bh).toFixed(1)}
+                x={(xPos(parseInt(d.year)) - barW / 2).toFixed(1)} y={(PAD.top + innerH - bh).toFixed(1)}
                 width={barW} height={bh.toFixed(1)}
-                fill="url(#pcVolGrad)" rx="1"
+                fill="rgba(99, 135, 220, 0.4)" rx="1"
               />
             );
           })}
@@ -230,22 +235,22 @@ function PriceChart({ data, stats }: { data: YearPoint[]; stats: any }) {
           {/* Hover vertical rule */}
           {hovered !== null && (
             <line
-              x1={xPos(hovered).toFixed(1)} y1={PAD.top}
-              x2={xPos(hovered).toFixed(1)} y2={PAD.top + innerH}
+              x1={xPos(parseInt(data[hovered].year)).toFixed(1)} y1={PAD.top}
+              x2={xPos(parseInt(data[hovered].year)).toFixed(1)} y2={PAD.top + innerH}
               stroke="rgba(255,255,255,0.18)" strokeWidth="1" strokeDasharray="4 4"
             />
           )}
 
           {/* Hover dot */}
           {hovered !== null && (
-            <circle cx={xPos(hovered).toFixed(1)} cy={yPos(data[hovered].avg_price).toFixed(1)} r="5"
+            <circle cx={xPos(parseInt(data[hovered].year)).toFixed(1)} cy={yPos(data[hovered].avg_price).toFixed(1)} r="5"
               fill="white" stroke="#3B82F6" strokeWidth="2.5" filter="url(#pcGlow)" />
           )}
         </g>
 
         {/* Outlier annotation (record sale above cap) */}
         {hasMassiveOutlier && (() => {
-          const rx = xPos(peakIdx);
+          const rx = xPos(parseInt(data[peakIdx].year));
           const anchorY = PAD.top + 4;
           const labelX = rx + (rx > W * 0.7 ? -8 : 8);
           const anchor = rx > W * 0.7 ? 'end' : 'start';
@@ -265,7 +270,7 @@ function PriceChart({ data, stats }: { data: YearPoint[]; stats: any }) {
 
         {/* X-axis labels */}
         {xLabelIdxs.map(i => (
-          <text key={i} x={xPos(i).toFixed(1)} y={PAD.top + innerH + 22} textAnchor="middle"
+          <text key={i} x={xPos(parseInt(data[i].year)).toFixed(1)} y={PAD.top + innerH + 22} textAnchor="middle"
             style={{
               fontSize: '9px', fontFamily: 'monospace',
               fill: hovered === i ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)',
