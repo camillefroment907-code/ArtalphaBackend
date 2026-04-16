@@ -111,5 +111,11 @@ Style: factual, precise, financial vocabulary. Ex: "28% below market average —
         return rationale
 
     except Exception as e:
-        logger.warning("rationale_generation_failed error=%s", str(e))
+        err = str(e)
+        if "429" in err or "rate_limit" in err.lower():
+            from app.utils.openai_guard import mark_quota_exceeded
+            mark_quota_exceeded()
+            logger.warning("rationale_skipped_rate_limit_exceeded")
+            return None
+        logger.warning("rationale_generation_failed error=%s", err)
         return None

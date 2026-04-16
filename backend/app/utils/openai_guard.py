@@ -24,6 +24,12 @@ def record_request() -> None:
     _daily_count += 1
 
 
+def mark_quota_exceeded() -> None:
+    """Call this when OpenAI returns 429 — pins count at limit so can_make_request() returns False."""
+    global _daily_count
+    _daily_count = DAILY_LIMIT
+
+
 def get_usage() -> dict:
     return {
         "daily_count": _daily_count,
