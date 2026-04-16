@@ -1,6 +1,6 @@
 const en = {
   nav: {
-    dashboard: 'Dashboard', explorer: 'Explorer',
+    dashboard: 'Dashboard', signalFeed: 'Signal Feed', explorer: 'Explorer',
     intelligence: 'Intelligence', portfolio: 'Portfolio',
     signOut: 'Sign out', getAccess: 'Get access', signIn: 'Sign in',
     search: 'Search artworks, artists...',

@@ -7,7 +7,7 @@ import { getUser, logout, getUserPlan, getToken } from '../../lib/auth';
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 const NAV_ITEMS = [
-  { tKey: 'nav.dashboard',    to: '/app/dashboard', dropdown: null },
+  { tKey: 'nav.signalFeed',   to: '/app/dashboard', dropdown: null },
   { tKey: 'nav.explorer',     to: '/app/explore',   dropdown: 'explorer' },
   { tKey: 'nav.intelligence', to: '/app/agent',      dropdown: null },
   { tKey: 'nav.portfolio',    to: '/app/portfolio',  dropdown: null },

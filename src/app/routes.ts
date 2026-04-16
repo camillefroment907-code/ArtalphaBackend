@@ -13,6 +13,7 @@ const Signup        = lazy(() => import('./pages/Signup'));
 const Onboarding    = lazy(() => import('./pages/Onboarding'));
 const Home          = lazy(() => import('./pages/Home'));
 const Dashboard     = lazy(() => import('./pages/Dashboard'));
+const SignalFeed    = lazy(() => import('./pages/SignalFeed'));
 const Explore       = lazy(() => import('./pages/Explore'));
 const Opportunities = lazy(() => import('./pages/Opportunities'));
 const OpportunityDetail = lazy(() => import('./pages/OpportunityDetail'));
@@ -67,7 +68,7 @@ export const router = createBrowserRouter([
     Component: Root,
     children: [
       { index: true, loader: () => redirect('/app/dashboard') },
-      { path: 'dashboard', Component: Dashboard },
+      { path: 'dashboard', Component: SignalFeed },
       { path: 'explore', Component: Explore },
       { path: 'login', Component: Login },
       { path: 'signup', Component: Signup },
