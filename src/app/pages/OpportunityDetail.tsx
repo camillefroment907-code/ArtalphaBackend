@@ -537,25 +537,27 @@ export default function OpportunityDetail() {
             </div>
           )}
 
-          {/* Investment Dossier card */}
-          <div style={{ ...wCard, display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: LT, border: `1px solid ${LTB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <span style={{ fontSize: '16px', color: LTT3 }}>◎</span>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1 }}>Investment Dossier</span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', background: '#F0F0FF', border: '1px solid #C7C7F0', color: '#5B5BD6', padding: '2px 7px', borderRadius: '4px' }}>FAMILY OFFICE+</span>
+          {/* Investment Dossier card — only when user can't see AI (avoid duplicate with AIAnalyst header) */}
+          {!canSeeAI && (
+            <div style={{ ...wCard, display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: LT, border: `1px solid ${LTB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: '16px', color: LTT3 }}>◎</span>
               </div>
-              <div style={{ fontSize: '12px', color: LTT3, lineHeight: 1.5 }}>Full analysis — 5/10/20yr projections · artist valuation · AI verdict</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1 }}>Investment Dossier</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', background: '#F0F0FF', border: '1px solid #C7C7F0', color: '#5B5BD6', padding: '2px 7px', borderRadius: '4px' }}>FAMILY OFFICE+</span>
+                </div>
+                <div style={{ fontSize: '12px', color: LTT3, lineHeight: 1.5 }}>Full analysis — 5/10/20yr projections · artist valuation · AI verdict</div>
+              </div>
+              <button
+                onClick={() => navigate('/app/pricing?plan=investor')}
+                style={{ padding: '10px 18px', background: DK, border: 'none', color: '#F0EDE6', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', cursor: 'pointer', borderRadius: '6px', whiteSpace: 'nowrap', textTransform: 'uppercase', flexShrink: 0 }}
+              >
+                + ANALYZE
+              </button>
             </div>
-            <button
-              onClick={() => navigate('/app/pricing?plan=investor')}
-              style={{ padding: '10px 18px', background: DK, border: 'none', color: '#F0EDE6', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', cursor: 'pointer', borderRadius: '6px', whiteSpace: 'nowrap', textTransform: 'uppercase', flexShrink: 0 }}
-            >
-              + ANALYZE
-            </button>
-          </div>
+          )}
 
           {/* AI content */}
           {canSeeAI && (
@@ -585,13 +587,6 @@ export default function OpportunityDetail() {
           )}
         </div>
 
-        {/* ── NAUTILUS ANALYSIS ─────────────────────────────────────────────────── */}
-        {analysisText && (
-          <div style={{ padding: '0 40px 32px' }}>
-            <div style={{ ...sl, color: GOLD, marginBottom: '10px' }}>◆ NAUTILUS ANALYSIS</div>
-            <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '16px', fontStyle: 'italic', color: LTT1, lineHeight: 1.8, maxWidth: '720px', margin: 0 }}>{analysisText}</p>
-          </div>
-        )}
 
         {/* ── INVESTMENT ANALYSIS ───────────────────────────────────────────────── */}
         {canSeeAnalysis ? (
@@ -622,26 +617,6 @@ export default function OpportunityDetail() {
               </div>
             </div>
 
-            {/* Key Risks */}
-            <div style={wCard}>
-              <div style={{ ...sl, marginBottom: '12px' }}>KEY RISKS</div>
-              {[
-                { text: 'Limited resale liquidity for niche artists', sev: 'MED' },
-                { text: 'Auction estimate may be optimistic', sev: 'MED' },
-                { text: 'Market illiquidity in niche categories', sev: 'HIGH' },
-              ].map((risk, i, arr) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: i < arr.length - 1 ? `1px solid ${LT}` : 'none' }}>
-                  <span style={{
-                    fontSize: '8px', fontWeight: 700, fontFamily: 'var(--font-mono)',
-                    color: risk.sev === 'HIGH' ? RED : AMB,
-                    background: risk.sev === 'HIGH' ? '#FEE2E2' : '#FEF3C7',
-                    border: `1px solid ${risk.sev === 'HIGH' ? '#FECACA' : '#FDE68A'}`,
-                    padding: '2px 6px', borderRadius: '3px', flexShrink: 0,
-                  }}>{risk.sev}</span>
-                  <span style={{ fontSize: '13px', color: LTT1 }}>{risk.text}</span>
-                </div>
-              ))}
-            </div>
           </div>
         ) : (
           <div style={{ padding: '0 40px 32px' }}>
@@ -666,30 +641,56 @@ export default function OpportunityDetail() {
           </div>
         )}
 
-        {/* ── FUTURE VALUE PROJECTIONS ──────────────────────────────────────────── */}
-        {canSeeAnalysis && visibleYears.length > 0 && (
-          <div style={{ padding: '0 40px 32px' }}>
+        {/* ── KEY RISKS + FUTURE VALUE PROJECTIONS — side by side ─────────────── */}
+        {canSeeAnalysis && (
+          <div style={{ padding: '0 40px 32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'stretch' }}>
+
+            {/* KEY RISKS */}
             <div style={wCard}>
-              <div style={{ ...sl, marginBottom: '20px' }}>FUTURE VALUE PROJECTIONS · 7% CAGR</div>
-              {visibleYears.map((y: number) => {
-                const val = proj(y);
-                const pct = price > 0 ? ((val - price) / price) * 100 : 0;
-                const w   = maxProjVal > 0 ? Math.min((val / maxProjVal) * 100, 100) : 0;
-                return (
-                  <div key={y} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, minWidth: '30px', flexShrink: 0 }}>{y}Y</span>
-                    <div style={{ flex: 1, height: '3px', background: LTB, borderRadius: '2px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', borderRadius: '2px', width: `${w}%`, background: GOLD }} />
-                    </div>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT1, fontWeight: 600, minWidth: '44px', textAlign: 'right', flexShrink: 0 }}>{fmt(val)}</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: GL, minWidth: '54px', textAlign: 'right', flexShrink: 0 }}>+{pct.toFixed(0)}%</span>
-                  </div>
-                );
-              })}
-              <p style={{ fontSize: '11px', fontStyle: 'italic', color: LTT3, marginTop: '10px', lineHeight: 1.6 }}>
-                Projections are indicative only. Art investment carries significant risk. Not financial advice.
-              </p>
+              <div style={{ ...sl, marginBottom: '12px' }}>KEY RISKS</div>
+              {[
+                { text: 'Limited resale liquidity for niche artists', sev: 'MED' },
+                { text: 'Auction estimate may be optimistic', sev: 'MED' },
+                { text: 'Market illiquidity in niche categories', sev: 'HIGH' },
+              ].map((risk, i, arr) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: i < arr.length - 1 ? `1px solid ${LT}` : 'none' }}>
+                  <span style={{
+                    fontSize: '8px', fontWeight: 700, fontFamily: 'var(--font-mono)',
+                    color: risk.sev === 'HIGH' ? RED : AMB,
+                    background: risk.sev === 'HIGH' ? '#FEE2E2' : '#FEF3C7',
+                    border: `1px solid ${risk.sev === 'HIGH' ? '#FECACA' : '#FDE68A'}`,
+                    padding: '2px 6px', borderRadius: '3px', flexShrink: 0,
+                  }}>{risk.sev}</span>
+                  <span style={{ fontSize: '13px', color: LTT1 }}>{risk.text}</span>
+                </div>
+              ))}
             </div>
+
+            {/* FUTURE VALUE PROJECTIONS */}
+            {visibleYears.length > 0 ? (
+              <div style={wCard}>
+                <div style={{ ...sl, marginBottom: '20px' }}>FUTURE VALUE PROJECTIONS · 7% CAGR</div>
+                {visibleYears.map((y: number) => {
+                  const val = proj(y);
+                  const pct = price > 0 ? ((val - price) / price) * 100 : 0;
+                  const w   = maxProjVal > 0 ? Math.min((val / maxProjVal) * 100, 100) : 0;
+                  return (
+                    <div key={y} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, minWidth: '30px', flexShrink: 0 }}>{y}Y</span>
+                      <div style={{ flex: 1, height: '3px', background: LTB, borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', borderRadius: '2px', width: `${w}%`, background: GOLD }} />
+                      </div>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT1, fontWeight: 600, minWidth: '44px', textAlign: 'right', flexShrink: 0 }}>{fmt(val)}</span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: GL, minWidth: '54px', textAlign: 'right', flexShrink: 0 }}>+{pct.toFixed(0)}%</span>
+                    </div>
+                  );
+                })}
+                <p style={{ fontSize: '11px', fontStyle: 'italic', color: LTT3, marginTop: '10px', lineHeight: 1.6 }}>
+                  Projections are indicative only. Art investment carries significant risk. Not financial advice.
+                </p>
+              </div>
+            ) : <div />}
+
           </div>
         )}
 
@@ -707,7 +708,7 @@ export default function OpportunityDetail() {
                 </div>
               )}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: displayComps.length === 2 ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
               {displayComps.map((comp: any) => {
                 const compPrice = comp.current_price || comp.estimate_low || 0;
                 return (
