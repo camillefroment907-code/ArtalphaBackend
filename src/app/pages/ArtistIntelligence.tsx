@@ -755,9 +755,6 @@ export default function ArtistIntelligence() {
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '4px' }}>
-                  Phase 2 · Format Intelligence
-                </div>
                 <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>
                   Format Performance Matrix
                 </h2>
@@ -915,9 +912,6 @@ export default function ArtistIntelligence() {
               {/* Header */}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '4px' }}>
-                    Phase 2 · Geographic Intelligence
-                  </div>
                   <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>
                     Geographic Arbitrage Detector
                   </h2>
@@ -1063,7 +1057,6 @@ export default function ArtistIntelligence() {
             <div style={{ marginBottom: '32px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '4px' }}>Phase 2 · Month 3 · Timing Intelligence</div>
                   <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>Auction House Timing Optimizer</h2>
                 </div>
                 {timingOptimizer.best_month && (
@@ -1135,7 +1128,6 @@ export default function ArtistIntelligence() {
             <div style={{ marginBottom: '32px' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '4px' }}>Phase 2 · Month 3 · Liquidity Intelligence</div>
                   <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>Liquidity Depth Map</h2>
                 </div>
                 <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{liquidityMap.total_sales?.toLocaleString()} sales mapped</span>
@@ -1195,7 +1187,6 @@ export default function ArtistIntelligence() {
             <div style={{ marginBottom: '32px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '4px' }}>Phase 2 · Month 3 · Calendar Intelligence</div>
                   <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>Institutional Calendar Overlay</h2>
                 </div>
                 {calendarOverlay.peak_season && (
