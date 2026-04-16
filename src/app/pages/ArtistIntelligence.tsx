@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { getToken } from '../../lib/auth';
 
@@ -461,6 +461,27 @@ export default function ArtistIntelligence() {
 
   const stats = artist.statistics || {};
 
+  const auctionHouseStats = useMemo(() => {
+    const lots = [...(artist.all_lots || []), ...(artist.top_lots || [])];
+    if (lots.length === 0) return [];
+    const grouped = lots.reduce((acc: Record<string, { count: number; prices: number[] }>, lot: any) => {
+      const house = lot.auction_house_name || lot.source || 'Unknown';
+      if (!acc[house]) acc[house] = { count: 0, prices: [] };
+      acc[house].count += 1;
+      if (lot.current_price && lot.current_price > 0) acc[house].prices.push(lot.current_price);
+      return acc;
+    }, {});
+    return Object.entries(grouped)
+      .map(([name, data]) => ({
+        name,
+        count: data.count,
+        avg: data.prices.length > 0 ? Math.round(data.prices.reduce((a: number, b: number) => a + b, 0) / data.prices.length) : null,
+        max: data.prices.length > 0 ? Math.max(...data.prices) : null,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 4);
+  }, [artist.all_lots, artist.top_lots]);
+
   return (
     <div style={{ minHeight: 'calc(100vh - 57px)', background: 'var(--bg)' }}>
 
@@ -538,16 +559,32 @@ export default function ArtistIntelligence() {
               </div>
             )}
 
-            {artist.top_auction_houses?.length > 0 && (
+            {auctionHouseStats.length > 0 && (
               <div>
                 <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '10px' }}>
                   Top auction houses
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {artist.top_auction_houses.map((h: any) => (
-                    <div key={h.name} style={{ padding: '5px 12px', background: 'white', border: '1px solid var(--border)', borderRadius: '20px', fontSize: '12px', color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>{h.name}</span>
-                      <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{h.count}</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12, marginTop: 12 }}>
+                  {auctionHouseStats.map(house => (
+                    <div key={house.name} style={{ background: '#FFFFFF', border: '1px solid #E8E4DD', borderRadius: 10, padding: '14px 16px' }}>
+                      <div style={{ fontFamily: 'monospace', fontSize: 9, letterSpacing: '0.12em', color: '#9CA3AF', textTransform: 'uppercase', marginBottom: 6 }}>
+                        {house.name}
+                      </div>
+                      <div style={{ display: 'flex', gap: 16, alignItems: 'baseline' }}>
+                        <span style={{ fontSize: 13, color: '#111827', fontWeight: 600 }}>
+                          {house.count} lots
+                        </span>
+                        {house.avg && (
+                          <span style={{ fontSize: 12, color: '#4B5563' }}>
+                            avg €{house.avg.toLocaleString()}
+                          </span>
+                        )}
+                        {house.max && (
+                          <span style={{ fontSize: 12, color: '#C6A85A' }}>
+                            max €{house.max.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
