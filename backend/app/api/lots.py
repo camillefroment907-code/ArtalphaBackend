@@ -226,6 +226,7 @@ async def list_lots(
     status: Optional[str] = None,
     market_type: Optional[str] = Query(None, pattern="^(auction|primary|gallery)$"),
     min_confidence: Optional[float] = Query(None, ge=0, le=100),
+    low_supply: bool = Query(False),
     sort_by: str = Query("deal_score", pattern="^(deal_score|auction_date|created_at|current_price)$"),
     sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
     db: AsyncSession = Depends(get_db),
@@ -323,6 +324,20 @@ async def list_lots(
                 Lot.confidence_score.is_(None),  # don't filter out unscored lots
             )
         )
+    if low_supply:
+        # Only keep lots whose artist has ≤ 3 active lots at auction
+        supply_subq = (
+            select(Lot.artist_name_raw)
+            .where(
+                and_(
+                    Lot.artist_name_raw.isnot(None),
+                    or_(Lot.auction_date.is_(None), Lot.auction_date >= datetime.utcnow()),
+                )
+            )
+            .group_by(Lot.artist_name_raw)
+            .having(func.count(Lot.id) <= 3)
+        )
+        filters.append(Lot.artist_name_raw.in_(supply_subq))
 
     count_stmt = select(func.count(Lot.id))
     if filters:
@@ -345,8 +360,32 @@ async def list_lots(
     result = await db.execute(stmt)
     lots = result.scalars().all()
 
+    # Compute supply_count per artist for returned lots
+    artist_names = list({l.artist_name_raw for l in lots if l.artist_name_raw})
+    supply_map: dict = {}
+    if artist_names:
+        from sqlalchemy import text as _text
+        sc_result = await db.execute(
+            _text("""
+                SELECT artist_name_raw, COUNT(*) as cnt
+                FROM lots
+                WHERE artist_name_raw = ANY(:names)
+                  AND (auction_date IS NULL OR auction_date >= NOW())
+                GROUP BY artist_name_raw
+            """),
+            {"names": artist_names},
+        )
+        supply_map = {r[0]: r[1] for r in sc_result.fetchall()}
+
+    def _enrich(lot):
+        d = lot_to_list_dict(lot)
+        cnt = supply_map.get(lot.artist_name_raw, 0)
+        d["supply_count"] = cnt
+        d["is_low_supply"] = cnt <= 3
+        return d
+
     result = {
-        "items": [lot_to_list_dict(lot) for lot in lots],
+        "items": [_enrich(lot) for lot in lots],
         "total": total,
         "page": page,
         "page_size": page_size,
