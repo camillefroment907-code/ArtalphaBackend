@@ -290,6 +290,7 @@ export default function ArtistIntelligence() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
   const [priceHistory, setPriceHistory] = useState<any>(null);
+  const [wikiBio, setWikiBio] = useState<string | null>(null);
 
   useEffect(() => {
     if (!artistName) { setLoading(false); return; }
@@ -300,7 +301,18 @@ export default function ArtistIntelligence() {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then(r => r.json())
-      .then(data => { setArtist(data); setLoading(false); })
+      .then(data => {
+        setArtist(data);
+        setLoading(false);
+        // If no ai_brief, fetch Wikipedia summary as fallback
+        if (!data.ai_brief) {
+          const wikiName = encodeURIComponent(decodeURIComponent(artistName).replace(/\s+/g, '_'));
+          fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${wikiName}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(w => { if (w?.extract) setWikiBio(w.extract); })
+            .catch(() => {});
+        }
+      })
       .catch(() => setLoading(false));
 
     // Price history — independent, non-blocking
@@ -481,7 +493,7 @@ export default function ArtistIntelligence() {
               </div>
             )}
 
-            {/* AI brief or fallback */}
+            {/* AI brief / Wikipedia fallback / placeholder */}
             {artist.ai_brief ? (
               <div style={{ background: 'var(--navy)', borderRadius: '10px', padding: '18px 22px', marginBottom: '20px' }}>
                 <div style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '8px' }}>
@@ -489,6 +501,15 @@ export default function ArtistIntelligence() {
                 </div>
                 <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>
                   {artist.ai_brief}
+                </p>
+              </div>
+            ) : wikiBio ? (
+              <div style={{ background: 'var(--navy)', borderRadius: '10px', padding: '18px 22px', marginBottom: '20px' }}>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '8px' }}>
+                  ◆ ARTIST BIOGRAPHY
+                </div>
+                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0, display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {wikiBio}
                 </p>
               </div>
             ) : (
