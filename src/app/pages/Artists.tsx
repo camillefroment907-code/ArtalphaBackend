@@ -1,14 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { getPlanLimits } from '../../lib/auth';
-import { mockArtists } from '../data/mockData';
 
-type SortKey = 'trending' | 'price' | 'name';
+const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 export default function Artists() {
   const navigate = useNavigate();
   const limits = getPlanLimits();
-  const [sortBy, setSortBy] = useState<SortKey>('trending');
+  const [topArtists, setTopArtists] = useState<any[]>([]);
+  const [loadingArtists, setLoadingArtists] = useState(true);
+
+  useEffect(() => {
+    fetch(`${BACKEND}/api/artist-profiles/search?sort_by=lots_count&sort_dir=desc`)
+      .then(r => r.json())
+      .then(d => { setTopArtists(d.artists || []); setLoadingArtists(false); })
+      .catch(() => setLoadingArtists(false));
+  }, []);
+
+  const scoreColor = (score: number) =>
+    score >= 80 ? '#C6A85A' : score >= 65 ? 'var(--electric)' : 'var(--text-3)';
 
   // ── LOCKED STATE ─────────────────────────────────────────────
   if (!limits.hasFullAnalysis) {
@@ -137,146 +147,55 @@ export default function Artists() {
   }
 
   // ── UNLOCKED STATE ───────────────────────────────────────────
-  const sorted = [...mockArtists].sort((a, b) => {
-    if (sortBy === 'trending') return parseFloat(b.marketTrend) - parseFloat(a.marketTrend);
-    if (sortBy === 'price') return parseFloat(b.averagePrice.replace(/[^0-9.]/g, '')) - parseFloat(a.averagePrice.replace(/[^0-9.]/g, ''));
-    if (sortBy === 'name') return a.name.localeCompare(b.name);
-    return 0;
-  });
-
-  const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-    { value: 'trending', label: 'Trending'    },
-    { value: 'price',    label: 'Avg Price'   },
-    { value: 'name',     label: 'Name'        },
-  ];
-
   return (
     <div className="page" style={{ background: 'var(--bg)', minHeight: '100vh', paddingBottom: '80px' }}>
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 24px' }}>
 
         {/* Header */}
-        <div style={{ padding: '40px 0 28px', borderBottom: '2px solid var(--border)' }}>
+        <div style={{ padding: '40px 0 28px', borderBottom: '1px solid var(--border)' }}>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '36px', fontWeight: 600, color: 'var(--text)', margin: '0 0 6px' }}>
             Artists
           </h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: '0 0 20px' }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>
             Track rising artists and market momentum
           </p>
+        </div>
 
-          {/* Sort */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span className="label-caps">Sort by:</span>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {SORT_OPTIONS.map(opt => {
-                const active = sortBy === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    onClick={() => setSortBy(opt.value)}
-                    style={{
-                      padding: '6px 14px', borderRadius: '6px', cursor: 'pointer',
-                      fontSize: '12px', fontWeight: active ? 700 : 400,
-                      border: active ? 'none' : '1px solid var(--border)',
-                      background: active ? 'var(--navy)' : 'var(--bg-card)',
-                      color: active ? 'white' : 'var(--text-2)',
-                      transition: 'all 0.15s ease',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
+        {/* Recently tracked artists */}
+        <div style={{ marginTop: '32px' }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '16px' }}>
+            RECENTLY TRACKED ARTISTS
           </div>
-        </div>
 
-        {/* Sample data banner */}
-        <div style={{
-          marginTop: '20px', marginBottom: '28px',
-          padding: '12px 20px',
-          background: 'var(--gold-subtle)', border: '1px solid var(--gold-border)',
-          borderRadius: '2px', fontSize: '13px', color: 'var(--gold-dim)',
-        }}>
-          Artist database — connecting to live data soon. Showing sample artists.
-        </div>
-
-        {/* Artist grid */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '32px 24px',
-        }}>
-          {sorted.map(artist => (
-            <div
-              key={artist.id}
-              onClick={() => navigate(`/app/artists/${artist.id}`)}
-              onMouseEnter={e => {
-                const el = e.currentTarget as HTMLDivElement;
-                el.style.transform = 'translateY(-3px)';
-                el.style.boxShadow = 'var(--shadow-md)';
-                el.style.borderColor = 'var(--gold-border)';
-                const img = el.querySelector('img') as HTMLImageElement | null;
-                if (img) img.style.transform = 'scale(1.05)';
-              }}
-              onMouseLeave={e => {
-                const el = e.currentTarget as HTMLDivElement;
-                el.style.transform = 'translateY(0)';
-                el.style.boxShadow = 'none';
-                el.style.borderColor = 'var(--border)';
-                const img = el.querySelector('img') as HTMLImageElement | null;
-                if (img) img.style.transform = 'scale(1)';
-              }}
-              style={{
-                background: 'var(--bg-card)', border: '1px solid var(--border)',
-                borderRadius: '2px', overflow: 'hidden', cursor: 'pointer',
-                transition: 'transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease',
-              }}
-            >
-              {/* Image */}
-              <div style={{ position: 'relative', paddingTop: '133%', overflow: 'hidden', background: 'var(--bg-subtle)' }}>
-                <img
-                  src={artist.imageUrl}
-                  alt={artist.name}
-                  style={{
-                    position: 'absolute', inset: 0, width: '100%', height: '100%',
-                    objectFit: 'cover', transition: 'transform 0.5s ease',
-                  }}
-                  loading="lazy"
-                />
-              </div>
-
-              {/* Info */}
-              <div style={{ padding: '20px' }}>
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '4px' }}>
-                  {artist.name}
-                </div>
-                <div style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '16px' }}>
-                  {artist.nationality}, b. {artist.birthYear} · {artist.movement}
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  {[
-                    { label: 'Market Trend', value: artist.marketTrend + ' YoY', accent: true },
-                    { label: 'Liquidity',    value: artist.liquidity,             accent: false },
-                    { label: 'Average Price', value: artist.averagePrice,         accent: false },
-                    { label: 'Record',        value: artist.recordPrice,          accent: false },
-                  ].map(stat => (
-                    <div key={stat.label}>
-                      <div style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '3px', letterSpacing: '0.05em' }}>
-                        {stat.label}
-                      </div>
-                      <div style={{
-                        fontSize: '14px', fontFamily: 'var(--font-mono)',
-                        color: stat.accent ? 'var(--navy)' : 'var(--text)',
-                        fontWeight: stat.accent ? 700 : 400,
-                      }}>
-                        {stat.value}
-                      </div>
+          {loadingArtists ? (
+            <div style={{ padding: '40px 0', textAlign: 'center', fontSize: '13px', color: 'var(--text-3)' }}>Loading…</div>
+          ) : topArtists.length === 0 ? (
+            <div style={{ padding: '40px 0', textAlign: 'center', fontSize: '13px', color: 'var(--text-3)' }}>No artists found.</div>
+          ) : (
+            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
+              {topArtists.map((a: any, i: number) => (
+                <button key={a.name}
+                  onClick={() => navigate(`/app/artists/${encodeURIComponent(a.name)}`)}
+                  style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', background: 'transparent', border: 'none', borderBottom: i < topArtists.length - 1 ? '1px solid var(--border-light)' : 'none', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-subtle)'}
+                  onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = 'transparent'}
+                >
+                  <div>
+                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>{a.name}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                      {a.lot_count} lots · Avg €{(a.avg_price || 0).toLocaleString()}
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ padding: '3px 10px', borderRadius: '4px', background: a.avg_score >= 80 ? 'rgba(198,168,90,0.1)' : 'var(--electric-subtle)', border: `1px solid ${a.avg_score >= 80 ? 'rgba(198,168,90,0.3)' : 'var(--electric-border)'}` }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: scoreColor(a.avg_score) }}>{a.avg_score}/100</span>
+                    </div>
+                    <span style={{ color: 'var(--text-3)', fontSize: '14px' }}>→</span>
+                  </div>
+                </button>
+              ))}
             </div>
-          ))}
+          )}
         </div>
 
       </div>

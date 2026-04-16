@@ -212,12 +212,26 @@ export async function fetchLot(id: string) {
 }
 
 // Maps an Nautilus API lot to the Artwork shape expected by Figma components
-export function mapLotToArtwork(lot: any) {
+export async function mapLotToArtwork(lot: any) {
   const price = lot.current_price || lot.estimate_low || 0;
   const estimate = lot.estimate_high || lot.estimate_low || price;
   const upside = lot.pct_below_low_estimate || 0;
   const score = lot.deal_score ? Math.min(5, Math.max(1, Math.round((lot.deal_score / 100) * 5))) : 0;
   const currency = lot.currency || "EUR";
+
+  let comparables: Array<{ title: string; price: string; date: string }> = [];
+  try {
+    const compRes = await fetch(`${API}/api/lots/${lot.id}/comparables`);
+    if (compRes.ok) {
+      const compData = await compRes.json();
+      const raw = Array.isArray(compData) ? compData : (compData.items || []);
+      comparables = raw.map((c: any) => ({
+        title: c.title || "",
+        price: c.current_price ? formatPrice(c.current_price, c.currency || "EUR") : "",
+        date: c.auction_date || "",
+      }));
+    }
+  } catch { /* fall back to [] */ }
 
   return {
     id: String(lot.id),
@@ -233,6 +247,6 @@ export function mapLotToArtwork(lot: any) {
     platform: lot.auction_house_name?.split("—")[0].trim() || lot.source || "",
     rationale: lot.description || lot.catalogue_description || "",
     pricePerCm2: "",
-    comparables: [] as Array<{ title: string; price: string; date: string }>,
+    comparables,
   };
 }

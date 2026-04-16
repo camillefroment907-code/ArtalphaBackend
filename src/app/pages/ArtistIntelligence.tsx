@@ -163,6 +163,7 @@ function PriceChart({ data, stats }: { data: YearPoint[]; stats: any }) {
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHovered(null)}
       >
+        <rect x="0" y="0" width={W} height={H} fill="#0F1923" />
         <defs>
           <linearGradient id="pcLineGrad" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor="#3B82F6" />
