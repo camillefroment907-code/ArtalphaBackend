@@ -136,10 +136,7 @@ async def _fetch_historical_for_top_artists():
     import asyncio as _aio
 
     settings = get_settings()
-    artsy_token = settings.artsy_api_key
-    if not artsy_token:
-        logger.warning("[historical] no artsy_api_key set — skipping")
-        return
+    artsy_token = settings.artsy_api_key  # None is fine — public API works without auth
 
     async with BgSessionLocal() as db:
         result = await db.execute(
@@ -149,7 +146,7 @@ async def _fetch_historical_for_top_artists():
             WHERE artist_name_raw IS NOT NULL
             GROUP BY artist_name_raw
             ORDER BY cnt DESC
-            LIMIT 10
+            LIMIT 20
             """)
         )
         top_artists = [row[0] for row in result.fetchall()]
@@ -162,13 +159,13 @@ async def _fetch_historical_for_top_artists():
                     {"name": f"%{artist_name}%"}
                 )
                 count = existing.scalar() or 0
-                if count > 10:
+                if count > 500:  # Already well-populated, skip
                     continue
 
             prices = await fetch_artist_auction_results(
                 artist_name=artist_name,
                 artsy_token=artsy_token,
-                max_results=100,
+                max_results=1000,
             )
             if prices:
                 async with BgSessionLocal() as db:
