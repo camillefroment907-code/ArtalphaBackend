@@ -4,120 +4,274 @@ import { getToken } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
-// ── Price chart (pure SVG, no library) ───────────────────────────────────────
+// ── Price chart ───────────────────────────────────────────────────────────────
 
 interface YearPoint { year: string; avg_price: number; max_price: number; sale_count: number; }
 
 function PriceChart({ data, stats }: { data: YearPoint[]; stats: any }) {
+  const [hovered, setHovered] = useState<number | null>(null);
+
   if (!data || data.length < 2) return null;
 
-  const W = 800, H = 200, PAD = { top: 16, right: 16, bottom: 32, left: 72 };
+  const W = 840, H = 220;
+  const PAD = { top: 28, right: 28, bottom: 44, left: 80 };
   const innerW = W - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
 
-  const maxVal = Math.max(...data.map(d => d.avg_price)) * 1.15;
-  const minVal = 0;
+  // ── Outlier-resistant Y scale (cap at 95th percentile * 1.3) ──────────────
+  const sorted = [...data].map(d => d.avg_price).sort((a, b) => a - b);
+  const p95 = sorted[Math.floor(sorted.length * 0.95)] ?? sorted[sorted.length - 1];
+  const peakVal = Math.max(...data.map(d => d.avg_price));
+  const hasMassiveOutlier = peakVal > p95 * 2.5;
+  const yMax = hasMassiveOutlier ? p95 * 1.5 : peakVal * 1.18;
+  const peakIdx = data.reduce((mi, d, i) => d.avg_price > data[mi].avg_price ? i : mi, 0);
 
-  const x = (i: number) => PAD.left + (i / (data.length - 1)) * innerW;
-  const y = (v: number) => PAD.top + innerH - ((v - minVal) / (maxVal - minVal)) * innerH;
+  const xPos = (i: number) => PAD.left + (data.length === 1 ? innerW / 2 : (i / (data.length - 1)) * innerW);
+  const yPos = (v: number) => PAD.top + innerH - (Math.min(v, yMax) / yMax) * innerH;
 
-  const linePath = data
-    .map((d, i) => `${i === 0 ? 'M' : 'L'} ${x(i).toFixed(1)} ${y(d.avg_price).toFixed(1)}`)
-    .join(' ');
+  // ── Smooth monotone cubic bezier ─────────────────────────────────────────
+  const pts = data.map((d, i) => ({ x: xPos(i), y: yPos(d.avg_price) }));
+  let linePath = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const dx = (pts[i + 1].x - pts[i].x) * 0.38;
+    linePath += ` C ${(pts[i].x + dx).toFixed(1)} ${pts[i].y.toFixed(1)}, ${(pts[i + 1].x - dx).toFixed(1)} ${pts[i + 1].y.toFixed(1)}, ${pts[i + 1].x.toFixed(1)} ${pts[i + 1].y.toFixed(1)}`;
+  }
+  const baseY = (PAD.top + innerH).toFixed(1);
+  const areaPath = `${linePath} L ${pts[pts.length - 1].x.toFixed(1)} ${baseY} L ${pts[0].x.toFixed(1)} ${baseY} Z`;
 
-  const areaPath = `${linePath} L ${x(data.length - 1).toFixed(1)} ${(PAD.top + innerH).toFixed(1)} L ${PAD.left.toFixed(1)} ${(PAD.top + innerH).toFixed(1)} Z`;
+  // ── Smart X labels: max 8, always include endpoints + decade marks ────────
+  const xLabelIdxs: number[] = [];
+  if (data.length <= 8) {
+    data.forEach((_, i) => xLabelIdxs.push(i));
+  } else {
+    xLabelIdxs.push(0);
+    for (let i = 1; i < data.length - 1; i++) {
+      if (parseInt(data[i].year) % 5 === 0) xLabelIdxs.push(i);
+    }
+    xLabelIdxs.push(data.length - 1);
+    // Thin out if still crowded
+    while (xLabelIdxs.length > 8) {
+      const mid = xLabelIdxs.slice(1, -1).filter((_, i) => i % 2 === 0);
+      xLabelIdxs.splice(1, xLabelIdxs.length - 2, ...mid);
+    }
+  }
 
-  const fmtEur = (v: number) =>
+  // ── Y ticks ───────────────────────────────────────────────────────────────
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(t => t * yMax);
+
+  // ── Volume bars ───────────────────────────────────────────────────────────
+  const maxCount = Math.max(...data.map(d => d.sale_count), 1);
+  const volH = 18;
+  const barW = Math.max(2, Math.min(12, innerW / data.length - 3));
+
+  // ── Format ────────────────────────────────────────────────────────────────
+  const fmt = (v: number) =>
     v >= 1_000_000 ? `€${(v / 1_000_000).toFixed(1)}M` :
-    v >= 1_000     ? `€${(v / 1_000).toFixed(0)}K`     :
-                     `€${v.toFixed(0)}`;
+    v >= 1_000     ? `€${Math.round(v / 1_000)}K`       : `€${Math.round(v)}`;
 
-  // Y-axis ticks
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map(t => minVal + t * maxVal);
-
-  const trendUp = stats?.trend_direction === 'up';
+  const trendUp   = stats?.trend_direction === 'up';
   const trendDown = stats?.trend_direction === 'down';
-  const trendColor = trendUp ? '#34D399' : trendDown ? '#EF4444' : 'var(--text-3)';
+  const trendCol  = trendUp ? '#34D399' : trendDown ? '#F87171' : '#94A3B8';
   const trendIcon = trendUp ? '↑' : trendDown ? '↓' : '→';
 
+  // ── Mouse handler ─────────────────────────────────────────────────────────
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mx = ((e.clientX - rect.left) / rect.width) * W;
+    let closest = 0, minDist = Infinity;
+    data.forEach((_, i) => {
+      const d = Math.abs(xPos(i) - mx);
+      if (d < minDist) { minDist = d; closest = i; }
+    });
+    setHovered(minDist < innerW / data.length * 0.7 ? closest : null);
+  };
+
+  const hov = hovered !== null ? data[hovered] : null;
+
   return (
-    <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '20px 24px', marginBottom: '32px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+    <div style={{
+      background: 'linear-gradient(145deg, #0C1829 0%, #0F1F38 100%)',
+      borderRadius: '16px',
+      padding: '28px 32px 20px',
+      marginBottom: '32px',
+      boxShadow: '0 8px 40px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.06)',
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      {/* Subtle grid texture overlay */}
+      <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(59,130,246,0.06) 0%, transparent 60%)', pointerEvents: 'none' }} />
+
+      {/* Header row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', position: 'relative' }}>
         <div>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '4px' }}>
-            Historical Hammer Prices
+          <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '8px' }}>
+            Hammer Price History · Artsy
           </div>
-          <div style={{ fontSize: '13px', color: 'var(--text-2)' }}>
-            {data[0].year}–{data[data.length - 1].year} · {stats?.total_sales || ''} sales via Artsy
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: 'white', letterSpacing: '-0.02em', lineHeight: 1 }}>
+              {fmt(stats?.avg_hammer_eur || 0)}
+            </div>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)' }}>avg hammer</div>
+          </div>
+          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginTop: '5px' }}>
+            {data[0].year}–{data[data.length - 1].year} · {stats?.total_sales?.toLocaleString()} sales
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-          {stats?.avg_hammer_eur && (
+
+        {/* KPI pills */}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flexShrink: 0 }}>
+          {stats?.max_hammer_eur != null && (
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Avg Hammer</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '16px', fontWeight: 700, color: 'var(--navy)' }}>{fmtEur(stats.avg_hammer_eur)}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#F59E0B', lineHeight: 1 }}>{fmt(stats.max_hammer_eur)}</div>
+              <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '3px' }}>record sale</div>
             </div>
           )}
           {stats?.trend_pct != null && (
-            <div style={{ padding: '6px 14px', borderRadius: '6px', background: trendUp ? 'rgba(52,211,153,0.08)' : trendDown ? 'rgba(239,68,68,0.08)' : 'var(--bg-subtle)', border: `1px solid ${trendUp ? 'rgba(52,211,153,0.3)' : trendDown ? 'rgba(239,68,68,0.3)' : 'var(--border)'}` }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: trendColor }}>
-                {trendIcon} {stats.trend_pct > 0 ? '+' : ''}{stats.trend_pct}%
-              </div>
-              <div style={{ fontSize: '9px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>trend</div>
+            <div style={{ textAlign: 'right', paddingLeft: '12px', borderLeft: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: trendCol, lineHeight: 1 }}>{trendIcon} {stats.trend_pct > 0 ? '+' : ''}{stats.trend_pct}%</div>
+              <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '3px' }}>trend</div>
             </div>
           )}
           {stats?.sell_above_estimate_pct != null && (
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Above Est.</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '16px', fontWeight: 700, color: 'var(--electric)' }}>{stats.sell_above_estimate_pct}%</div>
+            <div style={{ textAlign: 'right', paddingLeft: '12px', borderLeft: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#60A5FA', lineHeight: 1 }}>{stats.sell_above_estimate_pct}%</div>
+              <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '3px' }}>above est.</div>
             </div>
           )}
         </div>
       </div>
 
-      {/* SVG chart */}
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
+      {/* Hover info bar */}
+      <div style={{
+        height: '28px', display: 'flex', alignItems: 'center', gap: '20px',
+        marginBottom: '4px', opacity: hov ? 1 : 0, transition: 'opacity 0.15s',
+      }}>
+        {hov && <>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'white' }}>{hov.year}</span>
+          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>avg</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: '#93C5FD' }}>{fmt(hov.avg_price)}</span>
+          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>record</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: '#F59E0B' }}>{fmt(hov.max_price)}</span>
+          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)' }}>{hov.sale_count} sale{hov.sale_count !== 1 ? 's' : ''}</span>
+        </>}
+      </div>
+
+      {/* SVG */}
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        style={{ width: '100%', height: 'auto', overflow: 'visible', cursor: 'crosshair' }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHovered(null)}
+      >
         <defs>
-          <linearGradient id="priceAreaGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--navy)" stopOpacity="0.12" />
-            <stop offset="100%" stopColor="var(--navy)" stopOpacity="0" />
+          <linearGradient id="pcLineGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#3B82F6" />
+            <stop offset="100%" stopColor="#818CF8" />
           </linearGradient>
+          <linearGradient id="pcAreaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.22" />
+            <stop offset="75%" stopColor="#3B82F6" stopOpacity="0.04" />
+            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="pcVolGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#6366F1" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="#6366F1" stopOpacity="0.1" />
+          </linearGradient>
+          <filter id="pcGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+          <clipPath id="pcClip">
+            <rect x={PAD.left} y={PAD.top} width={innerW} height={innerH} />
+          </clipPath>
         </defs>
 
-        {/* Grid lines */}
-        {ticks.map((v, i) => (
+        {/* Y grid + labels */}
+        {yTicks.map((v, i) => (
           <g key={i}>
             <line
-              x1={PAD.left} y1={y(v).toFixed(1)} x2={W - PAD.right} y2={y(v).toFixed(1)}
-              stroke="var(--border)" strokeWidth="1" strokeDasharray={i === 0 ? 'none' : '3 4'}
+              x1={PAD.left} y1={yPos(v).toFixed(1)} x2={W - PAD.right} y2={yPos(v).toFixed(1)}
+              stroke={i === 0 ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.05)'}
+              strokeWidth="1" strokeDasharray={i === 0 ? undefined : '3 5'}
             />
-            <text x={PAD.left - 6} y={y(v)} textAnchor="end" dominantBaseline="middle"
-              style={{ fontSize: '9px', fill: 'var(--text-3)', fontFamily: 'monospace' }}>
-              {fmtEur(v)}
+            <text x={PAD.left - 8} y={yPos(v)} textAnchor="end" dominantBaseline="middle"
+              style={{ fontSize: '9px', fill: 'rgba(255,255,255,0.28)', fontFamily: 'monospace' }}>
+              {fmt(v)}
             </text>
           </g>
         ))}
 
-        {/* Area fill */}
-        <path d={areaPath} fill="url(#priceAreaGrad)" />
+        {/* Clipped chart group */}
+        <g clipPath="url(#pcClip)">
+          {/* Volume bars */}
+          {data.map((d, i) => {
+            const bh = Math.max(1, (d.sale_count / maxCount) * volH);
+            return (
+              <rect key={i}
+                x={(xPos(i) - barW / 2).toFixed(1)} y={(PAD.top + innerH - bh).toFixed(1)}
+                width={barW} height={bh.toFixed(1)}
+                fill="url(#pcVolGrad)" rx="1"
+              />
+            );
+          })}
 
-        {/* Line */}
-        <path d={linePath} fill="none" stroke="var(--navy)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+          {/* Area */}
+          <path d={areaPath} fill="url(#pcAreaGrad)" />
 
-        {/* Dots + year labels */}
-        {data.map((d, i) => (
-          <g key={d.year}>
-            <circle cx={x(i)} cy={y(d.avg_price)} r="4" fill="var(--navy)" stroke="white" strokeWidth="2" />
-            <text x={x(i)} y={PAD.top + innerH + 18} textAnchor="middle"
-              style={{ fontSize: '9px', fill: 'var(--text-3)', fontFamily: 'monospace' }}>
-              {d.year}
-            </text>
-            {/* Tooltip on hover via title */}
-            <title>{d.year}: avg {fmtEur(d.avg_price)} · max {fmtEur(d.max_price)} · {d.sale_count} sale{d.sale_count !== 1 ? 's' : ''}</title>
-            {/* Invisible hit area */}
-            <circle cx={x(i)} cy={y(d.avg_price)} r="12" fill="transparent" />
-          </g>
+          {/* Glow line (wider, blurred) */}
+          <path d={linePath} fill="none" stroke="#3B82F6" strokeWidth="6" strokeOpacity="0.18"
+            strokeLinejoin="round" strokeLinecap="round" />
+
+          {/* Main line */}
+          <path d={linePath} fill="none" stroke="url(#pcLineGrad)" strokeWidth="2.5"
+            strokeLinejoin="round" strokeLinecap="round" />
+
+          {/* Hover vertical rule */}
+          {hovered !== null && (
+            <line
+              x1={xPos(hovered).toFixed(1)} y1={PAD.top}
+              x2={xPos(hovered).toFixed(1)} y2={PAD.top + innerH}
+              stroke="rgba(255,255,255,0.18)" strokeWidth="1" strokeDasharray="4 4"
+            />
+          )}
+
+          {/* Hover dot */}
+          {hovered !== null && (
+            <circle cx={xPos(hovered).toFixed(1)} cy={yPos(data[hovered].avg_price).toFixed(1)} r="5"
+              fill="white" stroke="#3B82F6" strokeWidth="2.5" filter="url(#pcGlow)" />
+          )}
+        </g>
+
+        {/* Outlier annotation (record sale above cap) */}
+        {hasMassiveOutlier && (() => {
+          const rx = xPos(peakIdx);
+          const anchorY = PAD.top + 4;
+          const labelX = rx + (rx > W * 0.7 ? -8 : 8);
+          const anchor = rx > W * 0.7 ? 'end' : 'start';
+          return (
+            <g>
+              <line x1={rx} y1={PAD.top} x2={rx} y2={PAD.top + 20}
+                stroke="rgba(245,158,11,0.5)" strokeWidth="1" strokeDasharray="3 3" />
+              <polygon points={`${rx},${anchorY} ${rx - 4},${anchorY + 7} ${rx + 4},${anchorY + 7}`}
+                fill="#F59E0B" opacity="0.9" />
+              <text x={labelX} y={anchorY + 22} textAnchor={anchor}
+                style={{ fontSize: '9px', fill: '#F59E0B', fontFamily: 'monospace', fontWeight: 700 }}>
+                {data[peakIdx].year} · {fmt(data[peakIdx].avg_price)}
+              </text>
+            </g>
+          );
+        })()}
+
+        {/* X-axis labels */}
+        {xLabelIdxs.map(i => (
+          <text key={i} x={xPos(i).toFixed(1)} y={PAD.top + innerH + 22} textAnchor="middle"
+            style={{
+              fontSize: '9px', fontFamily: 'monospace',
+              fill: hovered === i ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)',
+              fontWeight: hovered === i ? 700 : 400,
+            }}>
+            {data[i].year}
+          </text>
         ))}
       </svg>
     </div>
