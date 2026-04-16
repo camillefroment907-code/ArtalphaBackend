@@ -321,7 +321,7 @@ export default function OpportunityDetail() {
       </div>
 
       {/* ═══ HERO — dark ═══ */}
-      <div ref={heroRef} style={{ background: DK, display: 'grid', gridTemplateColumns: '55% 45%' }}>
+      <div ref={heroRef} style={{ background: DK, display: 'grid', gridTemplateColumns: '40% 60%' }}>
 
         {/* LEFT — image panel */}
         <div style={{ background: DK4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '400px', padding: '24px', gap: '16px', borderRight: `0.5px solid ${DKB}`, position: 'relative' }}>
@@ -678,12 +678,6 @@ export default function OpportunityDetail() {
 
           </div>
 
-          {/* AI content for paying users */}
-          {canSeeAI && (
-            <div style={{ marginTop: '16px', background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 24px' }}>
-              <AIAnalyst rawLot={lot} />
-            </div>
-          )}
 
         </div>
 
