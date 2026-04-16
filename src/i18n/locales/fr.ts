@@ -3,7 +3,7 @@ import type { TranslationKeys } from './en';
 const fr: TranslationKeys = {
   nav: {
     dashboard: 'Tableau de bord', signalFeed: 'Signal Feed', explorer: 'Explorer',
-    intelligence: 'Intelligence', portfolio: 'Portfolio',
+    calendar: 'Calendrier', intelligence: 'Intelligence', portfolio: 'Portfolio',
     signOut: 'Se déconnecter', getAccess: 'Accéder', signIn: 'Se connecter',
     search: 'Rechercher œuvres, artistes...',
     live: 'En direct', myAccount: 'Mon compte',

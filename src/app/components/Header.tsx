@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { tKey: 'nav.signalFeed',   label: 'Signal Feed', to: '/app/dashboard', dropdown: null },
   { tKey: 'nav.explorer',     label: '',            to: '/app/explore',   dropdown: 'explorer' },
   { tKey: 'nav.artists',      label: 'Artists',     to: '/app/artists',   dropdown: null },
+  { tKey: 'nav.calendar',     label: 'Calendar',    to: '/app/calendar',  dropdown: null },
   { tKey: 'nav.intelligence', label: '',            to: '/app/agent',     dropdown: null },
   { tKey: 'nav.portfolio',    label: '',            to: '/app/portfolio',  dropdown: null },
 ];

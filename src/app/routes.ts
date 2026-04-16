@@ -30,6 +30,7 @@ const Primary       = lazy(() => import('./pages/Primary'));
 const Convictions      = lazy(() => import('./pages/Convictions'));
 const MarketIndex      = lazy(() => import('./pages/MarketIndex'));
 const RoomVisualizer   = lazy(() => import('./pages/RoomVisualizer'));
+const AuctionCalendar  = lazy(() => import('./pages/AuctionCalendar'));
 
 export const router = createBrowserRouter([
   {
@@ -89,6 +90,7 @@ export const router = createBrowserRouter([
       { path: 'agent', Component: Agent },
       { path: 'onboarding', Component: Onboarding },
       { path: 'visualizer', Component: RoomVisualizer },
+      { path: 'calendar', Component: AuctionCalendar },
     ],
   },
   {
