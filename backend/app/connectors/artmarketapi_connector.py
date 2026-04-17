@@ -21,6 +21,13 @@ logger = structlog.get_logger().bind(connector="artmarketapi")
 
 BASE_URL = "https://api.artmarketapi.com/api/v1"
 
+_AUCTION_SOURCES = {
+    AuctionHouseEnum.CHRISTIES, AuctionHouseEnum.SOTHEBYS, AuctionHouseEnum.BONHAMS,
+    AuctionHouseEnum.PHILLIPS,  AuctionHouseEnum.ROSEBERYS, AuctionHouseEnum.HERITAGE,
+    AuctionHouseEnum.DROUOT,
+}
+
+
 def _resolve_source(house_name: str) -> AuctionHouseEnum:
     name = (house_name or "").lower()
     if "christie" in name:  return AuctionHouseEnum.CHRISTIES
@@ -57,6 +64,7 @@ def _map_lot(record: dict) -> Optional[LotNormalized]:
         sale_title = (auction_block.get("name") or "").strip() or None
 
         source = _resolve_source(house_name)
+        market_type = "AUCTION" if source in _AUCTION_SOURCES else "PRIMARY"
 
         estimate_low  = record.get("estimate_low")  or None
         estimate_high = record.get("estimate_high") or None
@@ -98,6 +106,7 @@ def _map_lot(record: dict) -> Optional[LotNormalized]:
             auction_date=_parse_date(record.get("sale_date")),
             auction_house_name=house_name or None,
             auction_sale_title=sale_title,
+            market_type=market_type,
             url=url,
             image_url=record.get("image_url") or None,
             raw_data={
