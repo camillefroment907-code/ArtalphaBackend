@@ -685,12 +685,8 @@ export default function Explore() {
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Auction House</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   {([
-                    { value: 'drouot',        label: 'Drouot',        flag: '🇫🇷' },
-                    { value: 'invaluable',    label: 'Invaluable',    flag: '🇺🇸' },
-                    { value: 'phillips',      label: 'Phillips',      flag: '🇺🇸' },
-                    { value: 'bonhams',       label: 'Bonhams',       flag: '🇬🇧' },
-                    { value: 'interencheres', label: 'Interenchères', flag: '🇫🇷' },
-                    { value: 'other',         label: 'Artsy',         flag: '🌐' },
+                    { value: 'drouot', label: 'Drouot', flag: '🇫🇷' },
+                    { value: 'other',  label: 'Artsy',  flag: '🌐' },
                   ] as { value: string; label: string; flag: string }[]).map(({ value, label, flag }) => (
                     <label key={value} style={{ display: 'flex', alignItems: 'center', gap: '7px', cursor: 'pointer', padding: '4px 2px' }}>
                       <input type="checkbox"
