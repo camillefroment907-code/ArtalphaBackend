@@ -207,16 +207,21 @@ async def _scrape_page(page, url: str, seen_ids: set = None) -> List[LotNormaliz
         full_url = full_url.replace("/en/l/", "/fr/l/")
 
         # The link text contains: date, title, description, estimate
-        full_text = a_tag.get_text(separator=" ", strip=True)
+        # Collapse whitespace/newlines before parsing
+        full_text = " ".join(a_tag.get_text(separator=" ", strip=True).split())
 
-        # Strip leading countdown timer "01h 35m 26s" and/or date prefix "MAR 25 - 13:00"
-        title_match = re.sub(
-            r"^(?:\d+h\s*\d+m\s*\d+s\s*)?(?:[A-Z]{3}\s+\d{1,2}|\d{1,2}\s+[A-ZÉ]{3,4})\s*[-–]\s*\d{2}:\d{2}\s*",
+        # Strip leading countdown "01h 43m 26s" (with or without following lot number / date)
+        cleaned = re.sub(r"^\d+h\s*\d+m\s*\d+s\s*", "", full_text).strip()
+        # Strip leading lot number if still present: "54 - ARLES..." → "ARLES..."
+        cleaned = re.sub(r"^\d{1,4}\s*[-–]\s*", "", cleaned).strip()
+        # Strip leading date prefix "MAR 25 - 13:00" or "25 MARS - 13:00"
+        cleaned = re.sub(
+            r"^(?:[A-Z]{3}\s+\d{1,2}|\d{1,2}\s+[A-ZÉ]{3,4})\s*[-–]\s*\d{2}:\d{2}\s*",
             "",
-            full_text,
+            cleaned,
         ).strip()
-        if not title_match:
-            title_match = full_text[:200]
+
+        title_match = cleaned if cleaned else full_text
         title = title_match[:200]
 
         # Parse date
