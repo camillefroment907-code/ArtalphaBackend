@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { getUser } from "../../lib/auth";
 import { WelcomeTour } from "../components/WelcomeTour";
@@ -39,6 +39,16 @@ const PLATFORM_API: Record<string, string> = {
   "Invaluable": "invaluable", "Sothebys": "sothebys",
   "Christies": "christies", "Bonhams": "bonhams",
   "Christie's": "christies", "Sotheby's": "sothebys",
+};
+
+// Maps sidebar pill labels to exact DB category values
+const CATEGORY_API_MAP: Record<string, string> = {
+  'Paintings': 'Paintings',
+  'Prints': 'Prints & Multiples',
+  'Drawings': 'Drawings',
+  'Sculpture': 'Sculpture',
+  'Photography': 'Photography',
+  'Street Art': 'Street Art',
 };
 
 interface SourceStat {
@@ -413,11 +423,16 @@ export default function Explore() {
   const [refreshKey, setRefreshKey] = useState(0);
   const doFetch = () => { sessionStorage.removeItem(`lots_${exploreTab}`); setRefreshKey(k => k + 1); };
 
+  const gridRef = useRef<HTMLDivElement>(null);
+
   // ── fetchLots (300ms debounce) ────────────────────────────────
   useEffect(() => {
     const timer = setTimeout(async () => {
+      setLots([]);
+      setCurrentPage(1);
       setLoading(true);
       setHasError(false);
+      gridRef.current?.scrollIntoView({ behavior: 'smooth' });
       try {
         const p = new URLSearchParams();
         p.set('page_size', '24');
@@ -436,7 +451,7 @@ export default function Explore() {
 
         if (minPrice > 0)    p.set('min_price', String(minPrice));
         if (maxPrice > 0)    p.set('max_price', String(maxPrice));
-        if (category)        p.set('category', category);
+        if (category)        p.set('category', CATEGORY_API_MAP[category] || category);
         if (sources.length)  p.set('sources', sources.join(','));
         if (search.trim())   p.set('search', search.trim());
         Object.entries(getDateParams(dateFilter)).forEach(([k, v]) => p.set(k, v));
@@ -476,7 +491,7 @@ export default function Explore() {
         search: search || undefined,
         min_price: minPrice > 0 ? minPrice : undefined,
         max_price: maxPrice > 0 ? maxPrice : undefined,
-        category: category || undefined,
+        category: category ? (CATEGORY_API_MAP[category] || category) : undefined,
         sources: sources.length ? sources.join(',') : undefined,
       };
       if (exploreTab === 'best') p.min_score = Math.max(minScore, 60);
@@ -675,6 +690,7 @@ export default function Explore() {
                       { value: 'artcurial', label: 'Artcurial', flag: '🇫🇷' },
                       { value: 'phillips', label: 'Phillips', flag: '🇺🇸' },
                       { value: 'liveauctioneers', label: 'LiveAuctioneers', flag: '🇺🇸' },
+                      { value: 'other', label: 'Artsy', flag: '🌐' },
                     ] : []),
                   ] as { value: string; label: string; flag: string }[]).map(({ value, label, flag }) => (
                     <label key={value} style={{ display: 'flex', alignItems: 'center', gap: '7px', cursor: 'pointer', padding: '4px 2px' }}>
@@ -747,6 +763,7 @@ export default function Explore() {
             </div>
           ) : (
             <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "0 24px 60px" }}>
+              <div ref={gridRef} />
               {/* Active filter chips */}
               {hasActiveFilters && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '10px 0 4px', alignItems: 'center' }}>
