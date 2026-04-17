@@ -6,10 +6,15 @@ RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
     curl \
+    wget \
+    gnupg \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Install Playwright Chromium browser
+RUN playwright install chromium --with-deps
 
 COPY backend/ .
 
