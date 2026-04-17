@@ -351,7 +351,6 @@ export default function Explore() {
   const [maxPrice, setMaxPrice]       = useState(0);
   const [category, setCategory]       = useState('');
   const [sources, setSources]         = useState<string[]>([]);
-  const [showMoreHouses, setShowMoreHouses] = useState(false);
   const [sortBy, setSortBy]           = useState('deal_score');
   const [sortDir, setSortDir]         = useState('desc');
 
@@ -686,18 +685,12 @@ export default function Explore() {
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Auction House</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   {([
-                    { value: 'drouot', label: 'Drouot', flag: '🇫🇷' },
-                    { value: 'christies', label: "Christie's", flag: '🇬🇧' },
-                    { value: 'sothebys', label: "Sotheby's", flag: '🇬🇧' },
-                    { value: 'bonhams', label: 'Bonhams', flag: '🇬🇧' },
-                    { value: 'invaluable', label: 'Invaluable', flag: '🇺🇸' },
+                    { value: 'drouot',        label: 'Drouot',        flag: '🇫🇷' },
+                    { value: 'invaluable',    label: 'Invaluable',    flag: '🇺🇸' },
+                    { value: 'phillips',      label: 'Phillips',      flag: '🇺🇸' },
+                    { value: 'bonhams',       label: 'Bonhams',       flag: '🇬🇧' },
                     { value: 'interencheres', label: 'Interenchères', flag: '🇫🇷' },
-                    ...(showMoreHouses ? [
-                      { value: 'artcurial', label: 'Artcurial', flag: '🇫🇷' },
-                      { value: 'phillips', label: 'Phillips', flag: '🇺🇸' },
-                      { value: 'liveauctioneers', label: 'LiveAuctioneers', flag: '🇺🇸' },
-                      { value: 'other', label: 'Artsy', flag: '🌐' },
-                    ] : []),
+                    { value: 'other',         label: 'Artsy',         flag: '🌐' },
                   ] as { value: string; label: string; flag: string }[]).map(({ value, label, flag }) => (
                     <label key={value} style={{ display: 'flex', alignItems: 'center', gap: '7px', cursor: 'pointer', padding: '4px 2px' }}>
                       <input type="checkbox"
@@ -708,10 +701,6 @@ export default function Explore() {
                       <span style={{ fontSize: '12px', color: 'var(--text-2)' }}>{flag} {label}</span>
                     </label>
                   ))}
-                  <button onClick={() => setShowMoreHouses(h => !h)}
-                    style={{ fontSize: '11px', color: 'var(--electric)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: '4px 2px', marginTop: '2px' }}>
-                    {showMoreHouses ? '− Show less' : '+ Show more'}
-                  </button>
                 </div>
               </div>
               <div style={{ borderBottom: '1px solid #E8E4DD', margin: '12px 0' }} />
