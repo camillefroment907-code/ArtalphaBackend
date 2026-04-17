@@ -12,6 +12,7 @@ import structlog
 
 from app.models.schemas import LotNormalized, AuctionHouseEnum
 from app.connectors.real_connector_base import RealConnector
+from playwright_stealth import stealth_async
 
 logger = structlog.get_logger().bind(connector="drouot_real")
 
@@ -104,9 +105,17 @@ async def _fetch_lot_detail(url: str) -> dict:
     """Fetch real estimate and description from an individual Drouot lot page using httpx."""
     try:
         import httpx
-        async with httpx.AsyncClient(headers=_HTTPX_HEADERS, follow_redirects=True, verify=False, timeout=12.0) as client:
-            resp = await client.get(url)
-        if resp.status_code != 200:
+        resp = None
+        async with httpx.AsyncClient(headers=_HTTPX_HEADERS, follow_redirects=True, verify=False, timeout=15.0) as client:
+            for attempt in range(2):
+                try:
+                    resp = await client.get(url, timeout=15.0)
+                    break
+                except Exception:
+                    if attempt == 1:
+                        return {}
+                    await asyncio.sleep(2)
+        if resp is None or resp.status_code != 200:
             return {}
         from bs4 import BeautifulSoup
         soup = BeautifulSoup(resp.text, "lxml")
@@ -168,6 +177,21 @@ async def _scrape_page(page, url: str, seen_ids: set = None) -> List[LotNormaliz
     except Exception as e:
         logger.warning("Failed to load page", url=url, error=str(e))
         return []
+
+    # Dismiss cookie banner
+    try:
+        await page.click(
+            "#axeptio_btn_acceptAll, "
+            "[data-testid='cookie-accept'], "
+            ".cookie-accept, "
+            "#accept-cookies, "
+            "button:has-text('Accepter'), "
+            "button:has-text('Tout accepter')",
+            timeout=3000
+        )
+        await page.wait_for_timeout(500)
+    except Exception:
+        pass  # no banner, continue
 
     html = await page.content()
     soup = BeautifulSoup(html, "lxml")
@@ -252,7 +276,7 @@ async def _scrape_page(page, url: str, seen_ids: set = None) -> List[LotNormaliz
             title=title,
             estimate_low=estimate_low,
             estimate_high=estimate_high,
-            current_price=estimate_low,
+            current_price=None,
             currency="EUR",
             auction_date=auction_date,
             auction_house_name="Hôtel Drouot — Paris",
@@ -271,6 +295,20 @@ async def _discover_sale_urls(page) -> List[str]:
     try:
         await page.goto(_FUTURE_SALES_URL, wait_until="domcontentloaded", timeout=15000)
         await page.wait_for_timeout(2000)
+        # Dismiss cookie banner
+        try:
+            await page.click(
+                "#axeptio_btn_acceptAll, "
+                "[data-testid='cookie-accept'], "
+                ".cookie-accept, "
+                "#accept-cookies, "
+                "button:has-text('Accepter'), "
+                "button:has-text('Tout accepter')",
+                timeout=3000
+            )
+            await page.wait_for_timeout(500)
+        except Exception:
+            pass  # no banner, continue
         html = await page.content()
         soup = BeautifulSoup(html, "lxml")
         sale_pattern = re.compile(r"/(?:fr|en)/v/\d+")
@@ -316,6 +354,7 @@ class DrouotRealConnector(RealConnector):
 
                 # Discover upcoming sale pages dynamically
                 discovery_page = await ctx.new_page()
+                await stealth_async(discovery_page)
                 try:
                     sale_urls = await _discover_sale_urls(discovery_page)
                 finally:
@@ -336,6 +375,7 @@ class DrouotRealConnector(RealConnector):
                     if len(all_lots) >= limit:
                         break
                     page = await ctx.new_page()
+                    await stealth_async(page)
                     try:
                         page_lots = await _scrape_page(page, url, seen_ids=seen_ids)
                         for lot in page_lots:
