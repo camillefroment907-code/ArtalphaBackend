@@ -7,25 +7,28 @@ from typing import List, Dict, Any
 import structlog
 
 from app.models.schemas import LotNormalized, AuctionHouseEnum
-from app.connectors import drouot_connector, interencheres_connector, invaluable_connector
-from app.connectors import christies_connector, sothebys_connector
+from app.connectors import drouot_connector
+# interencheres_connector disabled — Cloudflare blocks all access, returns 0 real lots
+# invaluable_connector disabled — 403 Cloudflare
+# christies_connector disabled — no public API
+# sothebys_connector disabled — no public API
 
 logger = structlog.get_logger()
 
 CONNECTORS = {
     AuctionHouseEnum.DROUOT: drouot_connector,
-    AuctionHouseEnum.INTERENCHERES: interencheres_connector,
-    AuctionHouseEnum.INVALUABLE: invaluable_connector,
-    AuctionHouseEnum.CHRISTIES: christies_connector,
-    AuctionHouseEnum.SOTHEBYS: sothebys_connector,
+    # AuctionHouseEnum.INTERENCHERES: interencheres_connector,  # Cloudflare blocked
+    # AuctionHouseEnum.INVALUABLE: invaluable_connector,        # Cloudflare blocked
+    # AuctionHouseEnum.CHRISTIES: christies_connector,          # no public API
+    # AuctionHouseEnum.SOTHEBYS: sothebys_connector,            # no public API
 }
 
 CONNECTOR_METAS = {
     AuctionHouseEnum.DROUOT: drouot_connector.CONNECTOR_META,
-    AuctionHouseEnum.INTERENCHERES: interencheres_connector.CONNECTOR_META,
-    AuctionHouseEnum.INVALUABLE: invaluable_connector.CONNECTOR_META,
-    AuctionHouseEnum.CHRISTIES: christies_connector.CONNECTOR_META,
-    AuctionHouseEnum.SOTHEBYS: sothebys_connector.CONNECTOR_META,
+    # AuctionHouseEnum.INTERENCHERES: interencheres_connector.CONNECTOR_META,
+    # AuctionHouseEnum.INVALUABLE: invaluable_connector.CONNECTOR_META,
+    # AuctionHouseEnum.CHRISTIES: christies_connector.CONNECTOR_META,
+    # AuctionHouseEnum.SOTHEBYS: sothebys_connector.CONNECTOR_META,
 }
 
 
@@ -53,20 +56,13 @@ async def fetch_all_lots(lots_per_source: int = 500) -> List[LotNormalized]:
     except Exception as e:
         logger.error("Drouot real connector failed", error=str(e))
 
-    # --- Interenchères — Playwright scraping (fails gracefully if Cloudflare blocks) ---
-    try:
-        from app.connectors.interencheres_real_connector import fetch_lots as ie_fetch
-        lots = await ie_fetch(lots_per_source)
-        added = 0
-        for lot in lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("Interenchères real: fetched", count=added)
-    except Exception as e:
-        logger.warning("Interenchères real connector skipped", error=str(e))
+    # --- Interenchères — disabled (Cloudflare blocks all access, 0 real lots) ---
+    # try:
+    #     from app.connectors.interencheres_real_connector import fetch_lots as ie_fetch
+    #     lots = await ie_fetch(lots_per_source)
+    #     ...
+    # except Exception as e:
+    #     logger.warning("Interenchères real connector skipped", error=str(e))
 
     # --- Invaluable — JSON API scraping ---
     try:
