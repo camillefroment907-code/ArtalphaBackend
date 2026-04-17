@@ -131,6 +131,22 @@ async def fetch_all_lots(lots_per_source: int = 500) -> List[LotNormalized]:
     except Exception as e:
         logger.warning("Artsy connector skipped", error=str(e))
 
+    # --- ArtMarket API — Christie's, Sotheby's, Bonhams, Phillips via aggregator ---
+    try:
+        from app.connectors.artmarketapi_connector import ArtMarketAPIConnector
+        amapi = ArtMarketAPIConnector()
+        amapi_lots = await amapi.fetch_lots(lots_per_source)
+        added = 0
+        for lot in amapi_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("ArtMarket API: fetched", count=added)
+    except Exception as e:
+        logger.warning("ArtMarket API connector skipped", error=str(e))
+
     # --- Phillips — public JSON API ---
     try:
         from app.connectors.phillips_connector import fetch_lots as phillips_fetch
