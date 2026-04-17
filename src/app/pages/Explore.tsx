@@ -346,6 +346,7 @@ export default function Explore() {
   // ── Filter state ─────────────────────────────────────────────
   const [search, setSearch]           = useState(searchFromUrl);
   const [minScore, setMinScore]       = useState(0);
+  const [maxScore, setMaxScore]       = useState(0);
   const [minPrice, setMinPrice]       = useState(0);
   const [maxPrice, setMaxPrice]       = useState(0);
   const [category, setCategory]       = useState('');
@@ -355,7 +356,7 @@ export default function Explore() {
   const [sortDir, setSortDir]         = useState('desc');
 
   const resetFilters = () => {
-    setMinScore(0); setMinPrice(0); setMaxPrice(0);
+    setMinScore(0); setMaxScore(0); setMinPrice(0); setMaxPrice(0);
     setCategory(''); setSources([]);
     setSearch(''); setDateFilter('all');
     setSortBy('deal_score'); setSortDir('desc');
@@ -440,12 +441,15 @@ export default function Explore() {
         p.set('sort_by', sortBy || defaultSort);
         p.set('sort_dir', sortDir || 'desc');
         p.set('min_score', minScore > 0 ? String(minScore) : '60');
+        if (maxScore > 0)    p.set('max_score', String(maxScore));
 
         if (exploreTab === 'auctions') {
           p.delete('min_score');
+          p.delete('max_score');
         }
         if (exploreTab === 'convictions') {
           p.set('min_score', '75');
+          p.delete('max_score');
         }
 
         if (minPrice > 0)    p.set('min_price', String(minPrice));
@@ -477,7 +481,7 @@ export default function Explore() {
     }, 300);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exploreTab, refreshKey, minScore, minPrice, maxPrice, category, sources, search, sortBy, sortDir, dateFilter]);
+  }, [exploreTab, refreshKey, minScore, maxScore, minPrice, maxPrice, category, sources, search, sortBy, sortDir, dateFilter]);
 
   const loadMore = async () => {
     if (loadingMore || currentPage >= totalPages) return;
@@ -630,17 +634,20 @@ export default function Explore() {
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Signal Tier</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   {([
-                    { label: 'All', value: 0, badge: null },
-                    { label: 'Exceptional', value: 80, badge: 'EXCEP.', badgeColor: '#C0392B', badgeBg: 'rgba(192,57,43,0.08)' },
-                    { label: 'Strong', value: 65, badge: 'STRONG', badgeColor: 'var(--navy)', badgeBg: 'rgba(26,42,68,0.08)' },
-                    { label: 'Interesting', value: 45, badge: 'INT.', badgeColor: '#64748B', badgeBg: 'rgba(100,116,139,0.08)' },
-                  ] as { label: string; value: number; badge: string | null; badgeColor?: string; badgeBg?: string }[]).map(({ label, value, badge, badgeColor, badgeBg }) => (
-                    <button key={value} onClick={() => setMinScore(value)}
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', borderRadius: '5px', border: `1px solid ${minScore === value ? 'var(--navy)' : 'transparent'}`, background: minScore === value ? 'rgba(26,42,68,0.05)' : 'transparent', cursor: 'pointer', textAlign: 'left', transition: 'all 0.1s' }}>
-                      <span style={{ fontSize: '12px', color: minScore === value ? 'var(--navy)' : 'var(--text-2)', fontWeight: minScore === value ? 600 : 400 }}>{label}</span>
-                      {badge && <span style={{ fontSize: '8px', fontWeight: 700, fontFamily: 'var(--font-mono)', padding: '1px 5px', borderRadius: '3px', color: badgeColor, background: badgeBg }}>{badge}</span>}
-                    </button>
-                  ))}
+                    { label: 'All',         minVal: 0,  maxVal: 0,  badge: null },
+                    { label: 'Exceptional', minVal: 80, maxVal: 0,  badge: 'EXCEP.', badgeColor: '#C0392B', badgeBg: 'rgba(192,57,43,0.08)' },
+                    { label: 'Strong',      minVal: 65, maxVal: 79, badge: 'STRONG', badgeColor: 'var(--navy)', badgeBg: 'rgba(26,42,68,0.08)' },
+                    { label: 'Interesting', minVal: 45, maxVal: 64, badge: 'INT.',   badgeColor: '#64748B', badgeBg: 'rgba(100,116,139,0.08)' },
+                  ] as { label: string; minVal: number; maxVal: number; badge: string | null; badgeColor?: string; badgeBg?: string }[]).map(({ label, minVal, maxVal, badge, badgeColor, badgeBg }) => {
+                    const active = minScore === minVal && maxScore === maxVal;
+                    return (
+                      <button key={label} onClick={() => { setMinScore(minVal); setMaxScore(maxVal); }}
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', borderRadius: '5px', border: `1px solid ${active ? 'var(--navy)' : 'transparent'}`, background: active ? 'rgba(26,42,68,0.05)' : 'transparent', cursor: 'pointer', textAlign: 'left', transition: 'all 0.1s' }}>
+                        <span style={{ fontSize: '12px', color: active ? 'var(--navy)' : 'var(--text-2)', fontWeight: active ? 600 : 400 }}>{label}</span>
+                        {badge && <span style={{ fontSize: '8px', fontWeight: 700, fontFamily: 'var(--font-mono)', padding: '1px 5px', borderRadius: '3px', color: badgeColor, background: badgeBg }}>{badge}</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div style={{ borderBottom: '1px solid #E8E4DD', margin: '12px 0' }} />
