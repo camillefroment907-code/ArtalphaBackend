@@ -78,13 +78,27 @@ async def _poll_and_score_async():
         if expired_count:
             logger.info("Purged expired lots", count=expired_count)
 
+        # Purge Drouot lots with countdown timer titles (legacy bad data)
+        from sqlalchemy import text as _text
+        bad_title = await _cleanup_session.execute(
+            delete(_Lot).where(_Lot.title.op("~")(r"^\d+h\s*\d+m\s*\d+s"))
+        )
+        await _cleanup_session.commit()
+        if bad_title.rowcount:
+            logger.info("Purged countdown-title lots", count=bad_title.rowcount)
+
     # 1. Fetch lots from all sources (parallel)
     raw_lots = await fetch_all_lots(lots_per_source=500)
     logger.info("Lots fetched", count=len(raw_lots))
 
     # Quality filter + cross-source dedup (before DB lookup)
-    from app.jobs.quality_filter import filter_and_deduplicate
+    from app.jobs.quality_filter import filter_and_deduplicate, normalize_category
     raw_lots, filter_stats = filter_and_deduplicate(raw_lots)
+
+    # Normalize category on every lot so filters work correctly
+    for lot in raw_lots:
+        raw = lot.category or lot.medium or lot.title or ""
+        lot.category = normalize_category(raw)
     logger.info("Quality filter applied", **filter_stats)
 
     if not raw_lots:

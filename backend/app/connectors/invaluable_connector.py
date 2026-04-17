@@ -28,10 +28,17 @@ SEARCH_QUERIES = [
 ]
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "application/json",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "application/json, text/plain, */*",
     "Accept-Language": "en-US,en;q=0.9",
-    "Referer": "https://www.invaluable.com/search/",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Referer": "https://www.invaluable.com/catalog/",
+    "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"macOS"',
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-origin",
 }
 
 
@@ -161,10 +168,10 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
     async with httpx.AsyncClient(
         headers=HEADERS, timeout=30.0, follow_redirects=True, verify=False
     ) as client:
-        # Prime session cookies — required before API calls work
+        # Prime session cookies with catalog page (more natural than /search/)
         try:
-            await client.get(f"{BASE_URL}/search/")
-            await asyncio.sleep(1.0)
+            await client.get(f"{BASE_URL}/catalog/", timeout=10)
+            await asyncio.sleep(1.5)
         except Exception:
             pass
 
@@ -177,21 +184,49 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
                 for page in range(1, 3):
                     if len(lots) >= limit:
                         break
-                    resp = await client.get(
-                        API_URL,
-                        params={
+
+                    # Try both API endpoint variants (Invaluable has changed structure)
+                    for api_url, params in [
+                        (API_URL, {
                             "query": query,
                             "size": page_size,
                             "upcoming": "true",
                             "page": page,
-                        },
-                    )
-                    if resp.status_code != 200:
-                        logger.warning("Non-200 response", query=query, status=resp.status_code)
+                            "sort": "upcoming",
+                        }),
+                        (f"{BASE_URL}/search/", {
+                            "query": query,
+                            "supercategoryName": "Fine+Art",
+                            "upcoming": "true",
+                        }),
+                    ]:
+                        resp = await client.get(api_url, params=params)
+                        if resp.status_code == 200:
+                            break
+                    else:
+                        logger.warning("invaluable_all_endpoints_failed", query=query, status=resp.status_code)
                         break
 
-                    data = resp.json()
-                    items = data.get("itemViewList") or []
+                    try:
+                        data = resp.json()
+                    except Exception:
+                        logger.warning("invaluable_non_json", query=query, snippet=resp.text[:100])
+                        break
+
+                    # Support multiple response shapes Invaluable has used
+                    items = (
+                        data.get("itemViewList")
+                        or data.get("results")
+                        or data.get("lots")
+                        or data.get("items")
+                        or []
+                    )
+
+                    # Log first response structure for debugging
+                    if not items and page == 1:
+                        logger.warning("invaluable_empty_response", query=query,
+                                       keys=list(data.keys())[:8], status=resp.status_code)
+
                     batch = 0
                     for entry in items:
                         item_view = entry.get("itemView") or entry

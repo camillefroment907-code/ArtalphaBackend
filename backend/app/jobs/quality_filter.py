@@ -67,6 +67,27 @@ TITLE_BLACKLIST_KEYWORDS = [
 ]
 
 
+def normalize_category(raw: str) -> str:
+    """Map any raw category/medium string to one of our 6 standard categories."""
+    r = (raw or "").lower()
+    if any(x in r for x in ["paint", "peinture", "huile", "oil", "acrylic", "acrylique", "canvas", "toile"]):
+        return "Paintings"
+    if any(x in r for x in ["print", "gravure", "lithograph", "litho", "etching", "screenprint",
+                              "sérigraph", "serigraph", "woodcut", "estampe", "multiple", "edition"]):
+        return "Prints & Multiples"
+    if any(x in r for x in ["draw", "dessin", "watercolor", "aquarelle", "gouache", "pastel",
+                              "ink", "encre", "pencil", "crayon", "paper", "collage", "work on paper"]):
+        return "Drawings"
+    if any(x in r for x in ["sculpt", "bronze", "ceramic", "céramique", "terracotta", "marble",
+                              "resin", "installation", "assemblage", "relief"]):
+        return "Sculpture"
+    if any(x in r for x in ["photo", "photograph", "tirage", "pigment print", "chromogenic"]):
+        return "Photography"
+    if any(x in r for x in ["street art", "urban art", "graffiti", "spray"]):
+        return "Street Art"
+    return "Other"
+
+
 def normalize_artist_name(name: str) -> str:
     """Lowercase, remove accents, strip punctuation, collapse spaces."""
     if not name:
