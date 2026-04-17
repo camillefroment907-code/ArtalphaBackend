@@ -12,7 +12,9 @@ import structlog
 
 from app.models.schemas import LotNormalized, AuctionHouseEnum
 from app.connectors.real_connector_base import RealConnector
-from playwright_stealth import stealth_async
+from playwright_stealth import Stealth
+
+_stealth = Stealth()
 
 logger = structlog.get_logger().bind(connector="drouot_real")
 
@@ -375,7 +377,7 @@ class DrouotRealConnector(RealConnector):
                     if len(all_lots) >= limit:
                         break
                     page = await ctx.new_page()
-                    await stealth_async(page)
+                    await _stealth.apply_stealth_async(page)
                     try:
                         page_lots = await _scrape_page(page, url, seen_ids=seen_ids)
                         for lot in page_lots:
