@@ -147,12 +147,33 @@ async def _fetch_page(
         return [], False
 
 
-# Search terms rotated across requests to satisfy the API's filter requirement
-# while covering the full fine-art spectrum.
-_ART_SEARCH_TERMS = [
-    "painting", "oil on canvas", "watercolor", "acrylic",
-    "sculpture", "drawing", "photograph", "print", "gouache", "pastel",
+# Search by auction house name to get real auction lots only.
+_AUCTION_HOUSE_SEARCHES = [
+    "Christie's",
+    "Sotheby's",
+    "Bonhams",
+    "Phillips",
+    "Heritage Auctions",
+    "Drouot",
+    "Artcurial",
+    "Tajan",
+    "Millon",
+    "Cornette de Saint Cyr",
 ]
+
+# Gallery/primary market keywords — reject if auction house name contains any of these
+_GALLERY_KEYWORDS = [
+    "gallery", "galerie", "studio", "online", "biafarin", "saatchi",
+    "kyoto art", "orsay", "artseeker", "artrewards", "spoon", "voyage",
+    "inliquid", "gormleys", "bomb magazine", "wallector", "hang-up",
+    "shockboxx", "stolenspace", "sioux", "vaughan",
+]
+
+
+def _is_gallery_lot(record: dict) -> bool:
+    """Return True if lot is from a gallery/primary market, not a real auction house."""
+    house = (record.get("auction", {}).get("auction_house", {}).get("name") or "").lower()
+    return any(kw in house for kw in _GALLERY_KEYWORDS)
 
 
 class ArtMarketAPIConnector:
@@ -175,7 +196,7 @@ class ArtMarketAPIConnector:
 
         async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
             for performance in ("upcoming", "sold"):
-                for search_term in _ART_SEARCH_TERMS:
+                for search_term in _AUCTION_HOUSE_SEARCHES:
                     if len(all_lots) >= limit:
                         break
 
@@ -191,20 +212,26 @@ class ArtMarketAPIConnector:
                     records, has_more = await _fetch_page(client, params)
 
                     if not records:
-                        await asyncio.sleep(0.5)
+                        await asyncio.sleep(7.0)
                         continue
 
+                    added = 0
                     for rec in records:
+                        # Skip gallery/primary market lots
+                        if _is_gallery_lot(rec):
+                            continue
                         lot = _map_lot(rec)
                         if lot and lot.external_id not in seen_ids:
                             seen_ids.add(lot.external_id)
                             all_lots.append(lot)
+                            added += 1
 
                     logger.info(
                         "ArtMarket API fetched",
                         performance=performance,
                         search=search_term,
                         records=len(records),
+                        added=added,
                         total=len(all_lots),
                     )
 
@@ -214,12 +241,14 @@ class ArtMarketAPIConnector:
                         params["page"] = page
                         records, has_more = await _fetch_page(client, params)
                         for rec in records:
+                            if _is_gallery_lot(rec):
+                                continue
                             lot = _map_lot(rec)
                             if lot and lot.external_id not in seen_ids:
                                 seen_ids.add(lot.external_id)
                                 all_lots.append(lot)
                         page += 1
-                        await asyncio.sleep(0.5)
+                        await asyncio.sleep(7.0)
 
                     await asyncio.sleep(7.0)  # 10 req/min free plan = 1 req/6s
 
