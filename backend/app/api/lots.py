@@ -240,7 +240,7 @@ async def list_lots(
         page_size = max_per_page
 
     # ── Cache lookup ─────────────────────────────────────────────────────────
-    cache_key = f"lots:{plan}:{sort_by}:{sort_dir}:{min_score}:{page}:{page_size}:{category or ''}:{search or ''}:{source or ''}:{sources or ''}"
+    cache_key = f"lots:{plan}:{sort_by}:{sort_dir}:{min_score}:{page}:{page_size}:{category or ''}:{search or ''}:{source or ''}:{sources or ''}:{min_price or 0}:{max_price or 0}:{auction_date_from or ''}:{auction_date_to or ''}"
     cached = get_cached(cache_key, ttl=120)
     if cached:
         response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=120"
@@ -282,7 +282,20 @@ async def list_lots(
         elif tokens:
             return LotListResponse(items=[], total=0, page=page, page_size=page_size, pages=0)
     if category:
-        filters.append(Lot.category.ilike(f"%{category}%"))
+        # Fallback keywords for lots where category is NULL — match against medium/title
+        _CAT_FALLBACK: dict[str, list[str]] = {
+            "Paintings":          ["oil", "paint", "huile", "acrylic", "canvas", "toile", "watercolor", "aquarelle"],
+            "Prints & Multiples": ["print", "lithograph", "gravure", "etching", "screenprint", "estampe", "woodcut"],
+            "Drawings":           ["drawing", "dessin", "pastel", "pencil", "crayon", "gouache", "charcoal", "ink"],
+            "Sculpture":          ["sculpture", "bronze", "ceramic", "marble", "terracotta", "resin"],
+            "Photography":        ["photo", "photograph", "tirage"],
+            "Street Art":         ["street art", "urban art", "graffiti", "spray"],
+        }
+        category_conds = [Lot.category.ilike(f"%{category}%")]
+        for kw in _CAT_FALLBACK.get(category, []):
+            category_conds.append(Lot.medium.ilike(f"%{kw}%"))
+            category_conds.append(Lot.title.ilike(f"%{kw}%"))
+        filters.append(or_(*category_conds))
     if medium:
         filters.append(Lot.medium.ilike(f"%{medium}%"))
     if auction_house:
