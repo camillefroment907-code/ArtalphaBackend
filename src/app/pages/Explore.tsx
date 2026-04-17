@@ -442,6 +442,9 @@ export default function Explore() {
         p.set('min_score', minScore > 0 ? String(minScore) : '60');
         if (maxScore > 0)    p.set('max_score', String(maxScore));
 
+        if (exploreTab === 'best' || exploreTab === 'auctions') {
+          p.set('market_type', 'auction');
+        }
         if (exploreTab === 'auctions') {
           p.delete('min_score');
           p.delete('max_score');
