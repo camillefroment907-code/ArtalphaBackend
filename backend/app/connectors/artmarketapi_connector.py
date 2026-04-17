@@ -131,8 +131,8 @@ async def _fetch_page(
     try:
         resp = await client.get(f"{BASE_URL}/auction_records", params=params, timeout=15.0)
         if resp.status_code == 429:
-            logger.warning("ArtMarket API rate limited — sleeping 10s")
-            await asyncio.sleep(10)
+            logger.warning("ArtMarket API rate limited — sleeping 30s")
+            await asyncio.sleep(30)
             resp = await client.get(f"{BASE_URL}/auction_records", params=params, timeout=15.0)
         if resp.status_code != 200:
             logger.warning("ArtMarket API bad status", status=resp.status_code)
@@ -250,7 +250,7 @@ class ArtMarketAPIConnector:
                         page += 1
                         await asyncio.sleep(7.0)
 
-                    await asyncio.sleep(7.0)  # 10 req/min free plan = 1 req/6s
+                    await asyncio.sleep(12.0)  # 10 req/min free plan — conservative
 
         logger.info("ArtMarket API: done", total=len(all_lots))
         return all_lots[:limit]

@@ -20,6 +20,10 @@ class AuctionHouse(str, enum.Enum):
     CHRISTIES = "christies"
     SOTHEBYS = "sothebys"
     BONHAMS = "bonhams"
+    PHILLIPS = "phillips"
+    ROSEBERYS = "roseberys"
+    HERITAGE = "heritage"
+    ARTMARKETAPI = "artmarketapi"
     OTHER = "other"
 
 
