@@ -436,13 +436,12 @@ export default function Explore() {
       try {
         const p = new URLSearchParams();
         p.set('page_size', '24');
-        p.set('sort_by', 'deal_score');
-        p.set('sort_dir', 'desc');
+        const defaultSort = exploreTab === 'auctions' ? 'created_at' : 'deal_score';
+        p.set('sort_by', sortBy || defaultSort);
+        p.set('sort_dir', sortDir || 'desc');
         p.set('min_score', minScore > 0 ? String(minScore) : '60');
 
         if (exploreTab === 'auctions') {
-          p.set('sort_by', sortBy || 'created_at');
-          p.set('sort_dir', sortDir || 'desc');
           p.delete('min_score');
         }
         if (exploreTab === 'convictions') {
@@ -739,6 +738,29 @@ export default function Explore() {
                       {label}
                     </button>
                   ))}
+                </div>
+              </div>
+              <div style={{ borderBottom: '1px solid #E8E4DD', margin: '12px 0' }} />
+
+              {/* 6 — SORT BY */}
+              <div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Sort by</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  {([
+                    { label: 'Best signal',     by: 'deal_score',    dir: 'desc' },
+                    { label: 'Newest first',    by: 'created_at',    dir: 'desc' },
+                    { label: 'Oldest first',    by: 'created_at',    dir: 'asc'  },
+                    { label: 'Price: low → high', by: 'current_price', dir: 'asc'  },
+                    { label: 'Price: high → low', by: 'current_price', dir: 'desc' },
+                  ] as { label: string; by: string; dir: string }[]).map(({ label, by, dir }) => {
+                    const active = sortBy === by && sortDir === dir;
+                    return (
+                      <button key={label} onClick={() => { setSortBy(by); setSortDir(dir); }}
+                        style={{ padding: '6px 8px', borderRadius: '5px', border: `1px solid ${active ? 'var(--navy)' : 'transparent'}`, background: active ? 'rgba(26,42,68,0.05)' : 'transparent', cursor: 'pointer', textAlign: 'left', fontSize: '12px', color: active ? 'var(--navy)' : 'var(--text-2)', fontWeight: active ? 600 : 400, transition: 'all 0.1s' }}>
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
