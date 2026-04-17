@@ -18,6 +18,9 @@ import sys
 import time
 from typing import Optional
 
+# Force unbuffered stdout so Railway captures every line immediately
+sys.stdout.reconfigure(line_buffering=True)
+
 import httpx
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
