@@ -279,8 +279,6 @@ async def list_lots(
                 pass
         if valid_enums:
             filters.append(or_(*[Lot.source == e for e in valid_enums]))
-        elif tokens:
-            return LotListResponse(items=[], total=0, page=page, page_size=page_size, pages=0)
     if category:
         # Fallback keywords for lots where category is NULL — match against medium/title
         _CAT_FALLBACK: dict[str, list[str]] = {
