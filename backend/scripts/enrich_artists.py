@@ -109,7 +109,7 @@ async def main():
         artist_rows = result.all()
         print(f"Found {len(artist_rows)} distinct artist names in lots\n")
 
-        enriched = 0
+        enriched_count = 0
         skipped = 0
 
         for row in artist_rows:
@@ -117,20 +117,20 @@ async def main():
             if not name:
                 continue
 
+            # Stop after 500 GPT calls per run
+            if enriched_count >= 500:
+                print("Daily limit reached, stopping")
+                break
+
             # 2. Find existing Artist row (case-insensitive)
             artist_result = await db.execute(
                 select(Artist).where(func.lower(Artist.name) == name.lower()).limit(1)
             )
             artist: Artist | None = artist_result.scalar_one_or_none()
 
-            needs_enrichment = (
-                artist is None
-                or not artist.nationality
-                or not artist.movement
-            )
-
-            if not needs_enrichment:
-                print(f"  ✓  {name} — already complete, skipping")
+            # Only enrich artists where fields are still missing
+            if artist is not None and artist.nationality and artist.movement and artist.biography:
+                print(f"Skipping {artist.name} — already enriched")
                 skipped += 1
                 continue
 
@@ -185,11 +185,11 @@ async def main():
             await db.commit()
 
             print(f"     ✓  nationality={nationality}  movement={movement}  birth={birth_year}")
-            enriched += 1
+            enriched_count += 1
 
             await asyncio.sleep(0.5)  # rate-limit GPT calls
 
-    print(f"\n── Done — enriched {enriched}, skipped {skipped} ──────────────")
+    print(f"\n── Done — enriched {enriched_count}, skipped {skipped} ──────────────")
 
 
 if __name__ == "__main__":
