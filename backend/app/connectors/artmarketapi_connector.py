@@ -21,20 +21,16 @@ logger = structlog.get_logger().bind(connector="artmarketapi")
 
 BASE_URL = "https://api.artmarketapi.com/api/v1"
 
-# Map auction house names from API → our enum
-_HOUSE_MAP = {
-    "christie's": AuctionHouseEnum.CHRISTIES,
-    "christies":  AuctionHouseEnum.CHRISTIES,
-    "sotheby's":  AuctionHouseEnum.SOTHEBYS,
-    "sothebys":   AuctionHouseEnum.SOTHEBYS,
-    "bonhams":    AuctionHouseEnum.BONHAMS,
-    "phillips":   AuctionHouseEnum.OTHER,
-    "drouot":     AuctionHouseEnum.DROUOT,
-}
-
-
 def _resolve_source(house_name: str) -> AuctionHouseEnum:
-    return _HOUSE_MAP.get((house_name or "").lower().strip(), AuctionHouseEnum.OTHER)
+    name = (house_name or "").lower()
+    if "christie" in name:  return AuctionHouseEnum.CHRISTIES
+    if "sotheby"  in name:  return AuctionHouseEnum.SOTHEBYS
+    if "bonhams"  in name:  return AuctionHouseEnum.BONHAMS
+    if "phillips" in name:  return AuctionHouseEnum.PHILLIPS
+    if "rosebery" in name:  return AuctionHouseEnum.ROSEBERYS
+    if "heritage" in name:  return AuctionHouseEnum.HERITAGE
+    if "drouot"   in name:  return AuctionHouseEnum.DROUOT
+    return AuctionHouseEnum.ARTMARKETAPI
 
 
 def _parse_date(val: Optional[str]) -> Optional[datetime]:
