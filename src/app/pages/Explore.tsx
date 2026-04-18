@@ -376,11 +376,11 @@ export default function Explore() {
     const token = getToken();
     if (!token) { setRecoDone(true); return; }
     setRecoLoading(true);
-    fetch(`${BACKEND}/api/agent/recommendations`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${BACKEND}/api/recommendations/for-you?limit=20`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => {
         const items = Array.isArray(data) ? data : (data.recommendations || data.items || []);
-        setRecos(items.slice(0, 10));
+        setRecos(items);
       })
       .catch(() => setRecos([]))
       .finally(() => { setRecoLoading(false); setRecoDone(true); });
@@ -960,7 +960,8 @@ export default function Explore() {
                                     const token = getToken();
                                     if (!token) return;
                                     try {
-                                      await fetch(`${BACKEND}/api/agent/recommendations/${reco.id}/read`, {
+                                      const lotId = reco.lot?.id || reco.id;
+                                      await fetch(`${BACKEND}/api/recommendations/dismiss/${lotId}`, {
                                         method: 'POST', headers: { Authorization: `Bearer ${token}` },
                                       });
                                     } catch { /* silent */ }
