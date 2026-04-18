@@ -31,8 +31,11 @@ const Convictions      = lazy(() => import('./pages/Convictions'));
 const MarketIndex      = lazy(() => import('./pages/MarketIndex'));
 const RoomVisualizer   = lazy(() => import('./pages/RoomVisualizer'));
 const AuctionCalendar  = lazy(() => import('./pages/AuctionCalendar'));
-const Waitlist         = lazy(() => import('./pages/Waitlist'));
-const Legal            = lazy(() => import('./pages/Legal'));
+const Waitlist              = lazy(() => import('./pages/Waitlist'));
+const Legal                 = lazy(() => import('./pages/Legal'));
+const AdminHealth           = lazy(() => import('./pages/AdminHealth'));
+const AdminLaunch           = lazy(() => import('./pages/AdminLaunch'));
+const AdminRecommendations  = lazy(() => import('./pages/AdminRecommendations'));
 
 export const router = createBrowserRouter([
   {
@@ -51,6 +54,10 @@ export const router = createBrowserRouter([
     path: '/legal',
     Component: Legal,
   },
+  // Admin dashboards (JWT-gated on the backend)
+  { path: '/admin/health',          Component: AdminHealth          },
+  { path: '/admin/launch',          Component: AdminLaunch          },
+  { path: '/admin/recommendations', Component: AdminRecommendations },
   // Legacy URL redirects → /legal/*
   { path: '/privacy',  loader: () => redirect('/legal/privacy')    },
   { path: '/terms',    loader: () => redirect('/legal/terms')       },

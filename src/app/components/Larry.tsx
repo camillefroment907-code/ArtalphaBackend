@@ -79,6 +79,35 @@ export function Larry({ lotId }: LarryProps) {
       .catch(() => {});
   }, [open]);
 
+  // Proactive trigger: show unread badge after 30s if user is idle and has proactive messages
+  useEffect(() => {
+    if (open) return; // already open
+    const token = getToken();
+    if (!token) return;
+    const SESSION_KEY = 'nautilus_larry_proactive_shown';
+    if (sessionStorage.getItem(SESSION_KEY)) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API}/api/larry/proactive`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const msgs = data.messages || [];
+        if (msgs.length > 0) {
+          setProactiveMessages(msgs);
+          setUnreadCount(msgs.length);
+          sessionStorage.setItem(SESSION_KEY, '1');
+        }
+      } catch {
+        // silent
+      }
+    }, 30_000); // 30 seconds
+
+    return () => clearTimeout(timer);
+  }, [open]);
+
   const fetchUsage = useCallback(async () => {
     const token = getToken();
     if (!token || isLocked) return;
