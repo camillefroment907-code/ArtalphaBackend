@@ -610,3 +610,103 @@ class UserSignal(Base):
         Index("ix_user_signals_user_type", "user_id", "signal_type"),
         Index("ix_user_signals_lot", "lot_id"),
     )
+
+
+class CollectorDNA(Base):
+    """
+    Per-user behavioral fingerprint powering the 20-type recommendation engine.
+    Updated incrementally on every signal (view, save, dismiss, search, purchase).
+    """
+    __tablename__ = "collector_dna"
+
+    id      = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+
+    # Artist affinity (top artists the user engaged with)
+    top_artists        = Column(ARRAY(String), default=list)    # artist names, ranked by engagement
+    dismissed_artists  = Column(ARRAY(String), default=list)
+
+    # Category / medium preference
+    top_categories     = Column(ARRAY(String), default=list)    # e.g. ["Painting","Sculpture"]
+    top_periods        = Column(ARRAY(String), default=list)    # e.g. ["Contemporary","Modern"]
+    top_regions        = Column(ARRAY(String), default=list)    # e.g. ["France","USA"]
+
+    # Price range inferred from engagement
+    inferred_budget_min = Column(Float, nullable=True)
+    inferred_budget_max = Column(Float, nullable=True)
+
+    # Deal-hunting style
+    avg_deal_score_viewed  = Column(Float, nullable=True)   # mean score of viewed lots
+    pct_below_estimate_pref = Column(Float, nullable=True)  # preferred discount depth
+
+    # Session behavior
+    total_lots_viewed  = Column(Integer, default=0)
+    total_saves        = Column(Integer, default=0)
+    total_dismissals   = Column(Integer, default=0)
+    total_memos        = Column(Integer, default=0)
+
+    # Collector profile type (derived)
+    collector_type     = Column(String(50), nullable=True)   # "trophy", "deal_hunter", "emerging", "blue_chip"
+    investment_horizon = Column(String(20), nullable=True)   # "short", "medium", "long"
+    risk_profile       = Column(String(20), nullable=True)   # "conservative", "moderate", "aggressive"
+
+    # Raw signal store (last 200 lot IDs per action type, as JSON arrays)
+    viewed_lot_ids     = Column(JSON, default=list)    # capped at 200
+    saved_lot_ids      = Column(JSON, default=list)
+    dismissed_lot_ids  = Column(JSON, default=list)
+
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", backref="collector_dna")
+
+    __table_args__ = (
+        Index("ix_collector_dna_user_id", "user_id"),
+    )
+
+
+class RecommendationEvent(Base):
+    """
+    Every recommendation shown to a user — tracks impressions, reads, dismissals, and actions.
+    Powers feedback loop for the recommendation engine.
+    """
+    __tablename__ = "recommendation_events"
+
+    id          = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id     = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    lot_id      = Column(UUID(as_uuid=True), ForeignKey("lots.id", ondelete="SET NULL"), nullable=True)
+
+    rec_type    = Column(String(50), nullable=False)    # one of 20 types e.g. "deal_alert", "artist_momentum"
+    score       = Column(Float, nullable=True)           # recommendation confidence 0-100
+    reason      = Column(Text, nullable=True)            # human-readable "why" string
+
+    # Lifecycle
+    shown_at    = Column(DateTime, default=datetime.utcnow)
+    read_at     = Column(DateTime, nullable=True)
+    dismissed_at = Column(DateTime, nullable=True)
+    acted_at    = Column(DateTime, nullable=True)        # user clicked through / generated memo
+
+    __table_args__ = (
+        Index("ix_rec_events_user_id", "user_id"),
+        Index("ix_rec_events_rec_type", "rec_type"),
+        Index("ix_rec_events_shown_at", "shown_at"),
+    )
+
+
+class WaitlistEntry(Base):
+    """Pre-launch waitlist — converts to User on launch day."""
+    __tablename__ = "waitlist"
+
+    id             = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email          = Column(String(255), unique=True, nullable=False)
+    first_name     = Column(String(255), nullable=True)
+    referral_code  = Column(String(20), unique=True, nullable=False)
+    referred_by    = Column(String(20), nullable=True)   # referral_code of the referrer
+    position       = Column(Integer, nullable=False)
+    converted_to_user = Column(Boolean, default=False)
+    joined_at      = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_waitlist_email", "email"),
+        Index("ix_waitlist_referral_code", "referral_code"),
+    )

@@ -37,6 +37,9 @@ from app.api.larry_proactive import router as larry_proactive_router
 from app.api.portfolio_ai import router as portfolio_ai_router
 from app.api.market_sentiment import router as market_sentiment_router
 from app.api.contact import router as contact_router
+from app.api.waitlist import router as waitlist_router
+from app.api.collector import router as collector_router
+from app.api.recommendations import router as recommendations_router
 
 settings = get_settings()
 
@@ -149,6 +152,8 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "https://artalpha-figma.vercel.app",
         "https://nautilus-app.vercel.app",
+        "https://get-nautilus.com",
+        "https://www.get-nautilus.com",
     ],
     allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
@@ -177,6 +182,9 @@ app.include_router(larry_proactive_router, prefix="/api")
 app.include_router(portfolio_ai_router,    prefix="/api")
 app.include_router(market_sentiment_router, prefix="/api")
 app.include_router(contact_router,          prefix="/api")
+app.include_router(waitlist_router,         prefix="/api")
+app.include_router(collector_router,        prefix="/api")
+app.include_router(recommendations_router,  prefix="/api")
 
 
 @app.get("/")
