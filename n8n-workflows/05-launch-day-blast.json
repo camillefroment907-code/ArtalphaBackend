@@ -1,0 +1,50 @@
+{
+  "name": "Nautilus — 05 Launch Day Blast (May 13)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 8 13 5 *" }]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "May 13 at 8am UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://artalpha-backend-production.up.railway.app/api/waitlist/count",
+        "options": {}
+      },
+      "id": "fetch-count",
+      "name": "Fetch Waitlist Count",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "hello@get-nautilus.com",
+        "toEmail": "camillefroment907@gmail.com",
+        "subject": "🚀 Nautilus is live — {{ $node[\"Fetch Waitlist Count\"].json.count }} people are waiting",
+        "emailFormat": "html",
+        "html": "<!DOCTYPE html><html><body style='background:#0A1628;font-family:Georgia,serif;margin:0;padding:40px 0'><table width='600' style='margin:0 auto;background:#0A1628;border:1px solid rgba(198,168,90,0.2)'><tr><td style='padding:48px 40px;text-align:center'><span style='font-size:24px;font-weight:600;color:#fff'>NAUTI<span style='color:#C6A85A'>LUS</span></span><h1 style='font-family:Georgia,serif;font-size:36px;color:#C6A85A;margin:24px 0 16px'>We are live.</h1><p style='font-size:16px;color:rgba(255,255,255,0.7);line-height:1.7;margin:0 0 32px'>Today is May 13, 2026. The platform is open. {{ $node[\"Fetch Waitlist Count\"].json.count }} people on the waitlist are about to get their access email.</p><a href='https://get-nautilus.com/app/dashboard' style='display:inline-block;background:#C6A85A;color:#0A1628;padding:16px 32px;text-decoration:none;font-size:14px;font-weight:700;border-radius:8px'>Open the platform →</a></td></tr></table></body></html>"
+      },
+      "id": "send-launch-blast",
+      "name": "Send Launch Blast",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [720, 300],
+      "credentials": { "smtp": { "id": "resend-smtp", "name": "Resend SMTP" } }
+    }
+  ],
+  "connections": {
+    "May 13 at 8am UTC": { "main": [[{ "node": "Fetch Waitlist Count", "type": "main", "index": 0 }]] },
+    "Fetch Waitlist Count": { "main": [[{ "node": "Send Launch Blast", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": ["nautilus", "email", "launch"]
+}

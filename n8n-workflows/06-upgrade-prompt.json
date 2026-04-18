@@ -1,0 +1,47 @@
+{
+  "name": "Nautilus — 06 Upgrade Prompt (Free → Investor)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nautilus-upgrade-prompt",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "hello@get-nautilus.com",
+        "toEmail": "={{ $json.body.email }}",
+        "subject": "You've hit your limit — here's what you're missing",
+        "emailFormat": "html",
+        "html": "<!DOCTYPE html><html><body style='background:#FAFAF8;font-family:Georgia,serif;margin:0;padding:40px 0'><table width='600' style='margin:0 auto;background:#fff;border:1px solid #E8E6E1'><tr><td style='padding:32px 40px;border-bottom:1px solid #E8E6E1'><span style='font-size:20px;font-weight:600;color:#0A1628'>NAUTI<span style='color:#C6A85A'>LUS</span></span></td></tr><tr><td style='padding:40px'><h1 style='font-family:Georgia,serif;font-size:24px;color:#0A1628;margin:0 0 16px'>{{ $json.body.name }}, you've used your free analysis quota.</h1><p style='font-size:15px;color:#5A6A7A;line-height:1.7;margin:0 0 24px'>Here is what Investor plan unlocks for you today:</p><div style='background:#F5F4F0;border-radius:8px;padding:20px;margin-bottom:24px'><div style='font-size:13px;color:#0A1628;line-height:2'>✓ Unlimited AI investment memos<br/>✓ Real-time deal alerts via email<br/>✓ 1 AI Agent alert (custom criteria)<br/>✓ Full deal score breakdown<br/>✓ 30-day market history</div></div><div style='background:#0A1628;border-radius:8px;padding:20px;margin-bottom:24px;text-align:center'><div style='font-size:28px;font-weight:700;font-family:monospace;color:#C6A85A'>€29</div><div style='font-size:12px;color:rgba(255,255,255,0.5);font-family:monospace'>/month · cancel anytime</div></div><a href='https://app.get-nautilus.com/app/pricing' style='display:inline-block;background:#C6A85A;color:#0A1628;padding:14px 28px;text-decoration:none;font-size:13px;font-weight:700;border-radius:6px'>Upgrade to Investor →</a></td></tr><tr><td style='padding:20px 40px;background:#F5F4F0;border-top:1px solid #E8E6E1;font-size:11px;color:#8A9AAA;font-family:monospace'>© 2026 Nautilus · <a href='https://app.get-nautilus.com/app/pricing' style='color:#8A9AAA'>View all plans</a></td></tr></table></body></html>"
+      },
+      "id": "send-upgrade",
+      "name": "Send Upgrade Prompt",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [480, 300],
+      "credentials": { "smtp": { "id": "resend-smtp", "name": "Resend SMTP" } }
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "{\"status\": \"sent\"}" },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [720, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Send Upgrade Prompt", "type": "main", "index": 0 }]] },
+    "Send Upgrade Prompt": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": ["nautilus", "email", "conversion"]
+}

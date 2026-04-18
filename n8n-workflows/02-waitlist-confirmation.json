@@ -1,0 +1,47 @@
+{
+  "name": "Nautilus — 02 Waitlist Confirmation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nautilus-waitlist-confirm",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "hello@get-nautilus.com",
+        "toEmail": "={{ $json.body.email }}",
+        "subject": "You're #{{ $json.body.position }} on the Nautilus waitlist",
+        "emailFormat": "html",
+        "html": "<!DOCTYPE html><html><body style='background:#FAFAF8;font-family:Georgia,serif;margin:0;padding:40px 0'><table width='600' style='margin:0 auto;background:#fff;border:1px solid #E8E6E1'><tr><td style='padding:32px 40px;border-bottom:1px solid #E8E6E1'><span style='font-size:20px;font-weight:600;color:#0A1628'>NAUTI<span style='color:#C6A85A'>LUS</span></span></td></tr><tr><td style='padding:40px'><div style='font-size:12px;font-weight:700;color:#C6A85A;font-family:monospace;letter-spacing:0.1em;margin-bottom:12px'>◆ FOUNDING MEMBER</div><h1 style='font-family:Georgia,serif;font-size:28px;color:#0A1628;margin:0 0 16px'>You're in, {{ $json.body.name }}.</h1><p style='font-size:15px;color:#5A6A7A;line-height:1.7;margin:0 0 24px'>You're <strong>#{{ $json.body.position }}</strong> on the waitlist. Founding Member status locked in. We launch May 13.</p><div style='background:#F5F4F0;border-radius:8px;padding:20px;margin-bottom:24px'><div style='font-size:11px;font-weight:700;color:#8A9AAA;font-family:monospace;letter-spacing:0.12em;margin-bottom:10px'>MOVE UP — SHARE YOUR LINK</div><div style='font-family:monospace;font-size:12px;color:#0A1628;background:#fff;border:1px solid #E8E6E1;border-radius:4px;padding:10px 12px;margin-bottom:10px'>https://get-nautilus.com/waitlist?ref={{ $json.body.referral_code }}</div><p style='font-size:12px;color:#8A9AAA;margin:0'>+10 positions per referral. 3 referrals = free upgrade for 1 year.</p></div><a href='https://get-nautilus.com/waitlist?ref={{ $json.body.referral_code }}' style='display:inline-block;background:#0A1628;color:#fff;padding:14px 28px;text-decoration:none;font-size:13px;font-weight:700;border-radius:6px'>Share your link →</a></td></tr><tr><td style='padding:20px 40px;background:#F5F4F0;border-top:1px solid #E8E6E1;font-size:11px;color:#8A9AAA;font-family:monospace'>© 2026 Nautilus · Launching May 13, 2026</td></tr></table></body></html>"
+      },
+      "id": "send-waitlist-confirm",
+      "name": "Send Waitlist Confirmation",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [480, 300],
+      "credentials": { "smtp": { "id": "resend-smtp", "name": "Resend SMTP" } }
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "{\"status\": \"sent\"}" },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [720, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Send Waitlist Confirmation", "type": "main", "index": 0 }]] },
+    "Send Waitlist Confirmation": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": ["nautilus", "email", "waitlist"]
+}

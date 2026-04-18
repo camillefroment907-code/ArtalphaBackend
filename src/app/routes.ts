@@ -36,6 +36,8 @@ const Legal                 = lazy(() => import('./pages/Legal'));
 const AdminHealth           = lazy(() => import('./pages/AdminHealth'));
 const AdminLaunch           = lazy(() => import('./pages/AdminLaunch'));
 const AdminRecommendations  = lazy(() => import('./pages/AdminRecommendations'));
+const Blog                  = lazy(() => import('./pages/Blog'));
+const BlogPost              = lazy(() => import('./pages/BlogPost'));
 
 export const router = createBrowserRouter([
   {
@@ -54,6 +56,9 @@ export const router = createBrowserRouter([
     path: '/legal',
     Component: Legal,
   },
+  // Blog
+  { path: '/blog',       Component: Blog     },
+  { path: '/blog/:slug', Component: BlogPost },
   // Admin dashboards (JWT-gated on the backend)
   { path: '/admin/health',          Component: AdminHealth          },
   { path: '/admin/launch',          Component: AdminLaunch          },

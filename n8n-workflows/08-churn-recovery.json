@@ -1,0 +1,47 @@
+{
+  "name": "Nautilus — 08 Churn Recovery (Cancellation)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nautilus-churn-recovery",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "hello@get-nautilus.com",
+        "toEmail": "={{ $json.body.email }}",
+        "subject": "Before you go — a question from the Nautilus team",
+        "emailFormat": "html",
+        "html": "<!DOCTYPE html><html><body style='background:#FAFAF8;font-family:Georgia,serif;margin:0;padding:40px 0'><table width='600' style='margin:0 auto;background:#fff;border:1px solid #E8E6E1'><tr><td style='padding:32px 40px;border-bottom:1px solid #E8E6E1'><span style='font-size:20px;font-weight:600;color:#0A1628'>NAUTI<span style='color:#C6A85A'>LUS</span></span></td></tr><tr><td style='padding:40px'><h1 style='font-family:Georgia,serif;font-size:24px;color:#0A1628;margin:0 0 16px'>{{ $json.body.name }}, we noticed you cancelled.</h1><p style='font-size:15px;color:#5A6A7A;line-height:1.7;margin:0 0 24px'>Your access is still active until {{ $json.body.period_end }}. Before you leave, can we ask — what was missing?</p><div style='background:#F5F4F0;border-radius:8px;padding:20px;margin-bottom:24px'><div style='font-size:13px;color:#5A6A7A;line-height:1.7'>If the price was the issue: we offer a 30-day money-back guarantee on new subscriptions, and the Collector plan at €9/month includes core deal alerts.<br/><br/>If the data wasn't relevant: tell us which artists and markets you care about and we will configure your profile personally.</div></div><div style='display:flex;gap:12px'><a href='https://app.get-nautilus.com/app/pricing' style='display:inline-block;background:#0A1628;color:#fff;padding:12px 20px;text-decoration:none;font-size:12px;font-weight:700;border-radius:6px;flex:1;text-align:center'>Downgrade instead →</a><a href='mailto:hello@get-nautilus.com?subject=Feedback%20from%20{{ $json.body.name }}' style='display:inline-block;background:#F5F4F0;color:#0A1628;padding:12px 20px;text-decoration:none;font-size:12px;font-weight:700;border-radius:6px;border:1px solid #E8E6E1;flex:1;text-align:center'>Send feedback →</a></div></td></tr><tr><td style='padding:20px 40px;background:#F5F4F0;border-top:1px solid #E8E6E1;font-size:11px;color:#8A9AAA;font-family:monospace'>© 2026 Nautilus · Your plan ends {{ $json.body.period_end }}</td></tr></table></body></html>"
+      },
+      "id": "send-churn-recovery",
+      "name": "Send Churn Recovery",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [480, 300],
+      "credentials": { "smtp": { "id": "resend-smtp", "name": "Resend SMTP" } }
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "{\"status\": \"sent\"}" },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [720, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Send Churn Recovery", "type": "main", "index": 0 }]] },
+    "Send Churn Recovery": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": ["nautilus", "email", "retention"]
+}

@@ -1,0 +1,72 @@
+{
+  "name": "Nautilus — 04 Weekly Market Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "weeks", "weeksInterval": 1, "triggerAtDay": [1], "triggerAtHour": 8 }]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every Monday 8am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://artalpha-backend-production.up.railway.app/api/admin/stats",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "X-Admin-Key", "value": "={{ $env.NAUTILUS_ADMIN_KEY }}" }]
+        },
+        "options": {}
+      },
+      "id": "fetch-stats",
+      "name": "Fetch Weekly Stats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://artalpha-backend-production.up.railway.app/api/admin/health",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "X-Admin-Key", "value": "={{ $env.NAUTILUS_ADMIN_KEY }}" }]
+        }
+      },
+      "id": "fetch-health",
+      "name": "Fetch Health",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 480]
+    },
+    {
+      "parameters": {
+        "fromEmail": "hello@get-nautilus.com",
+        "toEmail": "camillefroment907@gmail.com",
+        "subject": "Nautilus Weekly — {{ $now.format('MMM D') }}",
+        "emailFormat": "html",
+        "html": "<!DOCTYPE html><html><body style='background:#FAFAF8;font-family:Georgia,serif;margin:0;padding:40px 0'><table width='600' style='margin:0 auto;background:#fff;border:1px solid #E8E6E1'><tr><td style='padding:32px 40px;border-bottom:1px solid #E8E6E1'><span style='font-size:18px;font-weight:600;color:#0A1628'>NAUTI<span style='color:#C6A85A'>LUS</span> Weekly</span></td></tr><tr><td style='padding:40px'><h2 style='font-family:Georgia,serif;font-size:22px;color:#0A1628;margin:0 0 24px'>Week of {{ $now.format('MMMM D, YYYY') }}</h2><div style='display:grid;gap:12px;margin-bottom:24px'><div style='background:#F5F4F0;border-radius:8px;padding:16px 20px'><div style='font-size:10px;font-weight:700;color:#8A9AAA;font-family:monospace;letter-spacing:0.1em;margin-bottom:8px'>LOTS PIPELINE</div><div style='font-size:24px;font-weight:700;font-family:monospace;color:#0A1628'>{{ $node[\"Fetch Weekly Stats\"].json.lots.total.toLocaleString() }}</div><div style='font-size:12px;color:#8A9AAA'>total · +{{ $node[\"Fetch Weekly Stats\"].json.lots.this_week }} this week</div></div><div style='background:#F5F4F0;border-radius:8px;padding:16px 20px'><div style='font-size:10px;font-weight:700;color:#8A9AAA;font-family:monospace;letter-spacing:0.1em;margin-bottom:8px'>DEALS DETECTED</div><div style='font-size:24px;font-weight:700;font-family:monospace;color:#C6A85A'>{{ $node[\"Fetch Weekly Stats\"].json.lots.deals_total }}</div><div style='font-size:12px;color:#8A9AAA'>{{ $node[\"Fetch Weekly Stats\"].json.lots.deal_rate_pct }}% deal rate</div></div><div style='background:#F5F4F0;border-radius:8px;padding:16px 20px'><div style='font-size:10px;font-weight:700;color:#8A9AAA;font-family:monospace;letter-spacing:0.1em;margin-bottom:8px'>USERS</div><div style='font-size:24px;font-weight:700;font-family:monospace;color:#0A1628'>{{ $node[\"Fetch Weekly Stats\"].json.users.total }}</div></div></div><a href='https://get-nautilus.com/admin/launch' style='display:inline-block;background:#0A1628;color:#fff;padding:12px 24px;text-decoration:none;font-size:13px;font-weight:700;border-radius:6px'>Open admin dashboard →</a></td></tr><tr><td style='padding:16px 40px;background:#F5F4F0;border-top:1px solid #E8E6E1;font-size:11px;color:#8A9AAA;font-family:monospace'>Nautilus internal digest · {{ $now.format('YYYY-MM-DD') }}</td></tr></table></body></html>"
+      },
+      "id": "send-digest",
+      "name": "Send Weekly Digest",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [720, 380],
+      "credentials": { "smtp": { "id": "resend-smtp", "name": "Resend SMTP" } }
+    }
+  ],
+  "connections": {
+    "Every Monday 8am": { "main": [[{ "node": "Fetch Weekly Stats", "type": "main", "index": 0 }, { "node": "Fetch Health", "type": "main", "index": 0 }]] },
+    "Fetch Weekly Stats": { "main": [[{ "node": "Send Weekly Digest", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": ["nautilus", "email", "digest", "admin"]
+}

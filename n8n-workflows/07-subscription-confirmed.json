@@ -1,0 +1,47 @@
+{
+  "name": "Nautilus — 07 Subscription Confirmed",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nautilus-subscription-confirmed",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "hello@get-nautilus.com",
+        "toEmail": "={{ $json.body.email }}",
+        "subject": "Welcome to Nautilus {{ $json.body.plan }} — you're in",
+        "emailFormat": "html",
+        "html": "<!DOCTYPE html><html><body style='background:#FAFAF8;font-family:Georgia,serif;margin:0;padding:40px 0'><table width='600' style='margin:0 auto;background:#fff;border:1px solid #E8E6E1'><tr><td style='padding:32px 40px;border-bottom:1px solid #E8E6E1'><span style='font-size:20px;font-weight:600;color:#0A1628'>NAUTI<span style='color:#C6A85A'>LUS</span></span></td></tr><tr><td style='padding:40px'><div style='font-size:11px;font-weight:700;color:#C6A85A;font-family:monospace;letter-spacing:0.12em;margin-bottom:12px'>◆ {{ $json.body.plan | upper }}</div><h1 style='font-family:Georgia,serif;font-size:26px;color:#0A1628;margin:0 0 16px'>{{ $json.body.name }}, your subscription is active.</h1><p style='font-size:15px;color:#5A6A7A;line-height:1.7;margin:0 0 24px'>Thank you. Your {{ $json.body.plan }} plan is now live. Here is what to do first:</p><div style='background:#F5F4F0;border-radius:8px;padding:20px;margin-bottom:24px'><div style='font-size:13px;color:#0A1628;line-height:2.2'><strong>1.</strong> Set up your first Agent alert — tell us what you're hunting<br/><strong>2.</strong> Browse today's Best Lots — sorted by deal score<br/><strong>3.</strong> Generate your first Investment Memo on a lot you like</div></div><a href='https://app.get-nautilus.com/app/agent' style='display:inline-block;background:#0A1628;color:#fff;padding:14px 28px;text-decoration:none;font-size:13px;font-weight:700;border-radius:6px'>Set up your Agent →</a><p style='font-size:12px;color:#8A9AAA;margin:24px 0 0'>Need help? Chat with Larry in the app or reply to this email.</p></td></tr><tr><td style='padding:20px 40px;background:#F5F4F0;border-top:1px solid #E8E6E1;font-size:11px;color:#8A9AAA;font-family:monospace'>© 2026 Nautilus · Billed €{{ $json.body.amount }}/month</td></tr></table></body></html>"
+      },
+      "id": "send-sub-confirmed",
+      "name": "Send Subscription Confirmed",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [480, 300],
+      "credentials": { "smtp": { "id": "resend-smtp", "name": "Resend SMTP" } }
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "{\"status\": \"sent\"}" },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [720, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Send Subscription Confirmed", "type": "main", "index": 0 }]] },
+    "Send Subscription Confirmed": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": ["nautilus", "email", "billing"]
+}
