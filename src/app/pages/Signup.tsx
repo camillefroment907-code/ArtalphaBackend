@@ -197,9 +197,9 @@ export default function Signup() {
             {/* Legal */}
             <p style={{ fontSize: '11px', color: 'var(--text-3)', textAlign: 'center', marginTop: '16px', lineHeight: 1.6 }}>
               By creating an account, you agree to our{' '}
-              <a href="/terms" style={{ color: 'var(--text-2)' }}>Terms</a>
+              <a href="/legal/terms" style={{ color: 'var(--text-2)' }}>Terms</a>
               {' '}and{' '}
-              <a href="/privacy" style={{ color: 'var(--text-2)' }}>Privacy Policy</a>.
+              <a href="/legal/privacy" style={{ color: 'var(--text-2)' }}>Privacy Policy</a>.
             </p>
 
             {/* Already have account */}

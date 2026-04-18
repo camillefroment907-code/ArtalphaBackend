@@ -51,8 +51,11 @@ export const router = createBrowserRouter([
     path: '/legal',
     Component: Legal,
   },
-  {
-    path: '/pricing',
+  // Legacy URL redirects → /legal/*
+  { path: '/privacy',  loader: () => redirect('/legal/privacy')    },
+  { path: '/terms',    loader: () => redirect('/legal/terms')       },
+  { path: '/cookies',  loader: () => redirect('/legal/privacy')     },
+  { path: '/pricing',
     Component: Pricing,
   },
   {
@@ -84,6 +87,7 @@ export const router = createBrowserRouter([
     Component: Root,
     children: [
       { index: true, loader: () => redirect('/app/dashboard') },
+      { path: 'waitlist', loader: () => redirect('/waitlist') },
       { path: 'dashboard', Component: SignalFeed },
       { path: 'explore', Component: Explore },
       { path: 'login', Component: Login },

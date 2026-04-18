@@ -98,7 +98,7 @@ const PAGES: Record<LegalPage, { title: string; updated: string; content: React.
           <p>Account data is retained for the duration of your subscription plus 12 months. Upon account deletion, personal data is purged within 30 days. Anonymized aggregate data may be retained indefinitely.</p>
         </Section>
         <Section title="8. Cookies">
-          <p>We use strictly necessary cookies (authentication), analytics cookies (with consent), and no advertising cookies. See our <Link to="/legal/cookies" style={{ color: 'var(--navy)' }}>Cookie Policy</Link>.</p>
+          <p>We use strictly necessary cookies (authentication), analytics cookies (with consent), and no advertising cookies. See our <Link to="/legal/privacy" style={{ color: 'var(--navy)' }}>Privacy Policy</Link> (Section 8).</p>
         </Section>
         <Section title="9. Contact">
           <p>Data protection queries: <a href="mailto:privacy@get-nautilus.com" style={{ color: 'var(--navy)' }}>privacy@get-nautilus.com</a></p>
