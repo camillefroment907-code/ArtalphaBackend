@@ -693,6 +693,34 @@ class RecommendationEvent(Base):
     )
 
 
+class BlogPost(Base):
+    """
+    Nautilus blog / market intelligence articles.
+    Managed via admin API or directly in the DB.
+    """
+    __tablename__ = "blog_posts"
+
+    id          = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    slug        = Column(String(300), unique=True, nullable=False)
+    title       = Column(String(500), nullable=False)
+    excerpt     = Column(Text, nullable=True)
+    content     = Column(Text, nullable=False)            # Markdown / HTML
+    cover_image = Column(Text, nullable=True)
+    author      = Column(String(200), default="Nautilus Editorial")
+    tags        = Column(ARRAY(String), default=list)
+    is_published = Column(Boolean, default=False)
+    published_at = Column(DateTime, nullable=True)
+    read_time_minutes = Column(Integer, default=5)
+    created_at  = Column(DateTime, default=datetime.utcnow)
+    updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_blog_slug",         "slug"),
+        Index("ix_blog_published_at", "published_at"),
+        Index("ix_blog_is_published", "is_published"),
+    )
+
+
 class WaitlistEntry(Base):
     """Pre-launch waitlist — converts to User on launch day."""
     __tablename__ = "waitlist"
