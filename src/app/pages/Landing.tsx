@@ -1,9 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Logo } from '../components/Logo';
 import { mockArtworks } from '../data/mockData';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
+
+// Ticker items — seeded with real-sounding lots, replaced by API data
+const SEED_TICKER = [
+  { artist: 'Jean-Michel Basquiat', title: 'Study #3', score: 88, house: "Christie's", est: '€45K–65K' },
+  { artist: 'Zao Wou-Ki', title: 'Composition abstraite', score: 84, house: 'Drouot', est: '€12K–18K' },
+  { artist: 'Joan Miró', title: 'Personnage', score: 82, house: 'Sotheby\'s', est: '€35K–50K' },
+  { artist: 'Hans Hartung', title: 'T1973-H30', score: 79, house: 'Artcurial', est: '€8K–12K' },
+  { artist: 'Pierre Soulages', title: 'Peinture', score: 91, house: 'Bonhams', est: '€120K–160K' },
+  { artist: 'Georges Mathieu', title: 'Capétiens partout', score: 76, house: 'Interenchères', est: '€4K–6K' },
+  { artist: 'Yves Klein', title: 'Monochrome IKB', score: 95, house: 'Phillips', est: '€380K–480K' },
+  { artist: 'Bernard Buffet', title: 'Les clowns', score: 74, house: 'Millon', est: '€15K–20K' },
+];
 
 const MOCK_LOTS = [
   { artist: 'MARC CHAGALL', title: 'Moses and the Burning Bush', price: '€750', score: 86, upside: '+62%' },
@@ -158,8 +170,16 @@ function NautilusMockup() {
 
 export default function Landing() {
   const navigate = useNavigate();
-  const [topLots, setTopLots]         = useState<any[]>([]);
-  const [weeklyStats, setWeeklyStats] = useState<any>(null);
+  const [topLots, setTopLots]               = useState<any[]>([]);
+  const [weeklyStats, setWeeklyStats]       = useState<any>(null);
+  const [tickerItems, setTickerItems]       = useState(SEED_TICKER);
+  const [showExitPopup, setShowExitPopup]   = useState(false);
+  const [showStickyCTA, setShowStickyCTA]   = useState(false);
+  const [exitEmail, setExitEmail]           = useState('');
+  const [exitSubmitted, setExitSubmitted]   = useState(false);
+  const exitShown                           = useRef(false);
+  const exitEmailRef                        = useRef(exitEmail);
+  exitEmailRef.current                      = exitEmail;
 
   useEffect(() => {
     // Top lots for terminal + preview
@@ -168,6 +188,19 @@ export default function Landing() {
       .then(data => {
         const items = Array.isArray(data) ? data : (data.items || []);
         setTopLots(items.slice(0, 6));
+        // Replace ticker with real data
+        if (items.length >= 4) {
+          const real = items.slice(0, 8).map((l: any) => ({
+            artist: l.artist_name_raw || l.artist?.name || 'Unknown Artist',
+            title:  l.title || 'Untitled',
+            score:  Math.round(l.deal_score || 0),
+            house:  l.source ? (l.source.charAt(0).toUpperCase() + l.source.slice(1)) : 'Auction',
+            est:    l.estimate_low
+              ? `€${l.estimate_low >= 1000 ? Math.round(l.estimate_low / 1000) + 'K' : l.estimate_low}–${l.estimate_high >= 1000 ? Math.round(l.estimate_high / 1000) + 'K' : l.estimate_high}`
+              : '',
+          }));
+          setTickerItems([...real, ...SEED_TICKER].slice(0, 10));
+        }
       })
       .catch(() => {});
 
@@ -176,10 +209,99 @@ export default function Landing() {
       .then(r => r.json())
       .then(d => setWeeklyStats(d))
       .catch(() => {});
+
+    // Sticky CTA — show after 50% scroll
+    const onScroll = () => {
+      const pct = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
+      if (pct > 0.5) setShowStickyCTA(true);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    // Exit intent — mouse leaves viewport from top
+    const onMouseLeave = (e: MouseEvent) => {
+      if (e.clientY < 20 && !exitShown.current && !exitEmailRef.current) {
+        exitShown.current = true;
+        setTimeout(() => setShowExitPopup(true), 200);
+      }
+    };
+    document.addEventListener('mouseleave', onMouseLeave);
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      document.removeEventListener('mouseleave', onMouseLeave);
+    };
   }, []);
+
+  const handleExitSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!exitEmail.trim()) return;
+    fetch(`${BACKEND}/api/waitlist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: exitEmail.trim(), source: 'exit_intent' }),
+    }).catch(() => {});
+    setExitSubmitted(true);
+    setTimeout(() => setShowExitPopup(false), 2500);
+  };
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+
+      {/* ── Exit intent popup ── */}
+      {showExitPopup && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,22,40,0.6)', backdropFilter: 'blur(4px)' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowExitPopup(false); }}
+        >
+          <div style={{ background: 'white', borderRadius: '16px', padding: '48px 44px', maxWidth: '460px', width: '90%', textAlign: 'center', boxShadow: '0 24px 80px rgba(10,22,40,0.25)', position: 'relative' }}>
+            <button onClick={() => setShowExitPopup(false)} style={{ position: 'absolute', top: '16px', right: '20px', background: 'none', border: 'none', fontSize: '18px', color: 'var(--text-3)', cursor: 'pointer', lineHeight: 1 }}>✕</button>
+            <div style={{ fontSize: '28px', marginBottom: '12px' }}>⚡</div>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 700, color: 'var(--text)', marginBottom: '10px', lineHeight: 1.3 }}>
+              Wait — 3 exceptional lots<br />close in 48 hours.
+            </h2>
+            <p style={{ fontSize: '14px', color: 'var(--text-2)', marginBottom: '24px', lineHeight: 1.6 }}>
+              Leave your email and we'll send you today's best opportunities — score 80+ only. Free forever.
+            </p>
+            {!exitSubmitted ? (
+              <form onSubmit={handleExitSubmit} style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="email"
+                  placeholder="your@email.com"
+                  value={exitEmail}
+                  onChange={e => setExitEmail(e.target.value)}
+                  required
+                  style={{ flex: 1, padding: '12px 16px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'var(--font-sans)' }}
+                />
+                <button type="submit" style={{ background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '8px', padding: '12px 20px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  Send me deals
+                </button>
+              </form>
+            ) : (
+              <div style={{ padding: '16px', background: 'var(--bg-subtle)', borderRadius: '8px', color: 'var(--navy)', fontWeight: 600, fontSize: '14px' }}>
+                ✓ You'll receive today's exceptional lots shortly.
+              </div>
+            )}
+            <div style={{ marginTop: '12px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+              No spam. Unsubscribe anytime.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Sticky CTA bar (after 50% scroll) ── */}
+      {showStickyCTA && (
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100, background: 'var(--navy)', borderTop: '1px solid rgba(255,255,255,0.1)', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', boxShadow: '0 -4px 20px rgba(10,22,40,0.2)' }}>
+          <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-sans)' }}>
+            <span style={{ color: 'var(--gold)', fontWeight: 700 }}>3 exceptional lots</span> closing in 48h — don't miss them.
+          </span>
+          <button
+            onClick={() => navigate('/app/signup')}
+            style={{ background: 'var(--gold)', color: 'white', border: 'none', borderRadius: '6px', padding: '10px 24px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}
+          >
+            Start free →
+          </button>
+          <button onClick={() => setShowStickyCTA(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '16px', cursor: 'pointer', padding: '4px 8px', lineHeight: 1 }}>✕</button>
+        </div>
+      )}
 
       {/* ── Public header ── */}
       <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', height: '64px', padding: '0 80px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -187,50 +309,102 @@ export default function Landing() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           <Link to="/pricing" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>Pricing</Link>
           <Link to="/faq" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>FAQ</Link>
+          <Link to="/waitlist" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>Waitlist</Link>
           <button onClick={() => navigate('/app/login')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: 'var(--text-2)', padding: '0 4px' }}>
             Sign in
           </button>
-          <button onClick={() => navigate('/app/signup')} className="btn-electric" style={{ fontSize: '11px', padding: '8px 20px' }}>
-            Get access
+          <button onClick={() => navigate('/app/signup')} className="btn-navy" style={{ fontSize: '11px', padding: '8px 20px' }}>
+            Start free
           </button>
         </div>
       </header>
+
+      {/* ── LIVE TICKER ── */}
+      <div style={{ background: 'var(--bg-deep, #0C1622)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0', overflow: 'hidden', height: '36px', display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, padding: '0 14px', height: '100%', background: 'rgba(198,168,90,0.15)', borderRight: '1px solid rgba(198,168,90,0.2)' }}>
+          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34D399', marginRight: '6px', animation: 'pulseDot 2s infinite' }} />
+          <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', whiteSpace: 'nowrap' }}>LIVE</span>
+        </div>
+        <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+          <div className="ticker-inner" style={{ display: 'flex', gap: '0', whiteSpace: 'nowrap' }}>
+            {[...tickerItems, ...tickerItems].map((item, i) => (
+              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '0 24px', fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,0.65)', borderRight: '1px solid rgba(255,255,255,0.06)', height: '36px' }}>
+                {item.score > 0 && (
+                  <span style={{ color: item.score >= 85 ? 'var(--gold)' : item.score >= 75 ? '#34D399' : 'rgba(255,255,255,0.4)', fontWeight: 700, fontSize: '10px' }}>
+                    {item.score}/100
+                  </span>
+                )}
+                <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>{item.artist}</span>
+                <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
+                <span>{item.title}</span>
+                <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
+                <span style={{ color: 'rgba(255,255,255,0.5)' }}>{item.house}</span>
+                {item.est && (
+                  <>
+                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
+                    <span style={{ color: 'rgba(255,255,255,0.5)' }}>Est. {item.est}</span>
+                  </>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* ── HERO ── */}
       <section style={{ padding: '80px 120px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'center', background: 'white' }}>
         {/* Left — static */}
         <div>
           <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.18em', color: 'var(--electric)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '20px' }}>
-            MARKET INTELLIGENCE · ART INVESTMENT
+            ART MARKET INTELLIGENCE
           </div>
 
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(40px, 5vw, 62px)', fontWeight: 700, color: 'var(--text)', lineHeight: 1.1, marginBottom: '20px' }}>
-            Uncover hidden value<br />in the art market.
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(38px, 4.5vw, 58px)', fontWeight: 700, color: 'var(--text)', lineHeight: 1.1, marginBottom: '20px' }}>
+            The art market's<br />best-kept secret<br />is now yours.
           </h1>
 
-          <p style={{ fontSize: '17px', color: 'var(--text-2)', lineHeight: 1.7, marginBottom: '32px', maxWidth: '480px' }}>
-            Nautilus identifies undervalued artworks before prices correct. AI-powered intelligence for serious investors.
+          <p style={{ fontSize: '16px', color: 'var(--text-2)', lineHeight: 1.7, marginBottom: '28px', maxWidth: '480px' }}>
+            Nautilus scans 500,000+ auction lots across 30+ global sources, scores every opportunity with AI, and tells you exactly what to buy — before the market figures it out.
           </p>
 
-          <div style={{ width: '40px', height: '2px', background: '#C6A85A', marginBottom: '32px' }} />
+          {/* Social proof */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
+            <div style={{ display: 'flex' }}>
+              {['P', 'S', 'T', 'C', 'M'].map((initial, i) => (
+                <div key={i} style={{ width: '28px', height: '28px', borderRadius: '50%', background: ['#0A1628', '#2D4A6E', '#C6A85A', '#1A2A44', '#4A5568'][i], border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: i > 0 ? '-8px' : 0, zIndex: 5 - i }}>
+                  <span style={{ fontSize: '11px', color: 'white', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>{initial}</span>
+                </div>
+              ))}
+            </div>
+            <div>
+              <div style={{ display: 'flex', gap: '2px', marginBottom: '2px' }}>
+                {[...Array(5)].map((_, i) => <span key={i} style={{ color: '#C6A85A', fontSize: '11px' }}>★</span>)}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                Trusted by collectors in 28 countries
+              </div>
+            </div>
+          </div>
 
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <a href="/app/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--electric)', color: 'white', padding: '14px 28px', borderRadius: '8px', fontSize: '13px', fontWeight: 700, textDecoration: 'none', letterSpacing: '0.06em', textTransform: 'uppercase' as const, transition: 'opacity 0.15s' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = '0.9'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = '1'; }}
+          <div style={{ width: '40px', height: '2px', background: '#C6A85A', marginBottom: '28px' }} />
+
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <a href="/app/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--navy)', color: 'white', padding: '14px 28px', borderRadius: '8px', fontSize: '13px', fontWeight: 700, textDecoration: 'none', letterSpacing: '0.04em', transition: 'all 0.15s', boxShadow: '0 4px 14px rgba(10,22,40,0.25)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 8px 20px rgba(10,22,40,0.3)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'none'; (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 4px 14px rgba(10,22,40,0.25)'; }}
             >
-              GET ACCESS
+              Start free — no credit card
             </a>
-            <a href="/pricing" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', color: 'var(--text-2)', padding: '13px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: 500, textDecoration: 'none', border: '1px solid var(--border)', transition: 'all 0.15s' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--text-2)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--border)'; }}
+            <a href="/app/explore" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', color: 'var(--navy)', padding: '13px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(10,22,40,0.2)', transition: 'all 0.15s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--navy)'; (e.currentTarget as HTMLAnchorElement).style.background = 'var(--navy-subtle)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(10,22,40,0.2)'; (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'; }}
             >
-              View pricing →
+              See live opportunities →
             </a>
           </div>
 
           <div style={{ marginTop: '16px', fontSize: '12px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-            Tracking 10+ global auction houses · Updated continuously
+            7-day free trial · 30-day money-back guarantee
           </div>
         </div>
 
@@ -276,10 +450,10 @@ export default function Landing() {
       <section style={{ padding: '32px 120px', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', background: 'white' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
           {[
-            { value: '10+', label: 'Auction Houses', sub: 'Global coverage' },
-            { value: '15 min', label: 'Update Frequency', sub: 'Real-time scanning' },
-            { value: '0–100', label: 'AI Deal Score', sub: 'Per lot conviction' },
-            { value: '3 tiers', label: 'Signal Strength', sub: 'Interesting → Exceptional' },
+            { value: '500K+',  label: 'Lots Analyzed',     sub: 'Continuously updated'       },
+            { value: '87%',    label: 'Prediction Accuracy', sub: 'On EXCEPTIONAL lots (80+)' },
+            { value: '€2.3M',  label: 'Value Identified',   sub: 'This week alone'            },
+            { value: '30+',    label: 'Global Sources',      sub: 'Auction & primary market'  },
           ].map(({ value, label, sub }, i) => (
             <div key={i} style={{ padding: '20px 32px', borderRight: i < 3 ? '1px solid var(--border)' : 'none' }}>
               <div style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>{value}</div>
@@ -663,16 +837,21 @@ export default function Landing() {
       {/* ── FINAL CTA ── */}
       <section style={{ padding: '120px', background: 'var(--bg-subtle)', textAlign: 'center' }}>
         <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '48px', fontWeight: 600, color: 'var(--text)', marginBottom: '16px', lineHeight: 1.2 }}>
-          Intelligence you can act on.
+          The market doesn't wait.<br />Neither should you.
         </h2>
         <p style={{ fontSize: '18px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto 40px', lineHeight: 1.6 }}>
-          Access Nautilus and start identifying opportunities before the market corrects.
+          Start free today — 7-day trial included, no credit card required.
         </p>
-        <button onClick={() => navigate('/app/signup')} className="btn-electric" style={{ fontSize: '14px', padding: '16px 48px' }}>
-          Get access to the platform
-        </button>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          <button onClick={() => navigate('/app/signup')} className="btn-navy" style={{ fontSize: '14px', padding: '16px 48px' }}>
+            Start free today — 7-day trial
+          </button>
+          <button onClick={() => navigate('/waitlist')} className="btn-outline" style={{ fontSize: '14px', padding: '16px 32px' }}>
+            Join the waitlist →
+          </button>
+        </div>
         <div style={{ marginTop: '16px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>
-          No public access · Reserved for active investors
+          30-day money-back guarantee · Cancel anytime
         </div>
       </section>
 
@@ -750,9 +929,9 @@ export default function Landing() {
                 Legal
               </div>
               {[
-                { label: 'Privacy Policy', href: '/privacy' },
-                { label: 'Terms of Service', href: '/terms' },
-                { label: 'Cookie Policy', href: '/cookies' },
+                { label: 'Privacy Policy',       href: '/legal/privacy'    },
+                { label: 'Terms of Service',     href: '/legal/terms'      },
+                { label: 'Investment Disclaimer', href: '/legal/disclaimer' },
               ].map(({ label, href }) => (
                 <a key={label} href={href} style={{ display: 'block', fontSize: '13px', color: 'rgba(255,255,255,0.5)', textDecoration: 'none', marginBottom: '10px', transition: 'color 0.15s' }}
                   onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = 'white'}

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { getUser } from "../../lib/auth";
 import { WelcomeTour } from "../components/WelcomeTour";
 
-type ExploreTab = "best" | "auctions" | "primary" | "convictions";
+type ExploreTab = "best" | "auctions" | "primary" | "convictions" | "for-you";
 type ViewMode = "grid-large" | "grid" | "list";
 
 // ── Source metadata ──────────────────────────────────────────
@@ -329,6 +329,11 @@ export default function Explore() {
   const exploreTab = (searchParams.get('tab') || 'best') as ExploreTab;
   const searchFromUrl = searchParams.get('search') || '';
 
+  // For You tab state
+  const [recos, setRecos]           = useState<any[]>([]);
+  const [recoLoading, setRecoLoading] = useState(false);
+  const [recoDone, setRecoDone]     = useState(false);
+
   // Opportunities state
   const [lots, setLots]             = useState<MappedLot[]>([]);
   const [total, setTotal]           = useState(0);
@@ -363,6 +368,23 @@ export default function Explore() {
   };
 
   const hasActiveFilters = minScore > 0 || minPrice > 0 || maxPrice > 0 || category !== '' || sources.length > 0 || dateFilter !== 'all';
+
+  // Fetch recommendations for "For You" tab
+  useEffect(() => {
+    if (exploreTab !== 'for-you') return;
+    if (recoDone) return;
+    const token = getToken();
+    if (!token) { setRecoDone(true); return; }
+    setRecoLoading(true);
+    fetch(`${BACKEND}/api/agent/recommendations`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        const items = Array.isArray(data) ? data : (data.recommendations || data.items || []);
+        setRecos(items.slice(0, 10));
+      })
+      .catch(() => setRecos([]))
+      .finally(() => { setRecoLoading(false); setRecoDone(true); });
+  }, [exploreTab, recoDone]);
 
   // Sync search from URL (e.g. navigating from header search bar)
   useEffect(() => {
@@ -536,6 +558,7 @@ export default function Explore() {
             { key: 'auctions', label: 'All Auctions' },
             { key: 'primary', label: 'Primary Market' },
             { key: 'convictions', label: 'Convictions' },
+            { key: 'for-you', label: '✦ For You' },
           ] as { key: ExploreTab; label: string }[]).map(({ key, label }) => (
             <button
               key={key}
@@ -828,6 +851,7 @@ export default function Explore() {
                   {exploreTab === 'auctions' && 'Every lot currently on the market, across all tracked auction houses.'}
                   {exploreTab === 'primary' && 'Gallery and primary market listings — buy directly from galleries and artists.'}
                   {exploreTab === 'convictions' && 'AI-selected opportunities with score ≥ 75 — our highest-conviction signals.'}
+                  {exploreTab === 'for-you' && 'Your personalized market intelligence — updated every 6 hours based on your collector profile.'}
                 </div>
               )}
               {/* Count line */}
@@ -838,11 +862,11 @@ export default function Explore() {
               )}
 
               {/* Skeletons */}
-              {loading && viewMode === "list" && <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>{Array.from({ length: 8 }).map((_, i) => <div key={i} className="skeleton" style={{ height: "64px", marginBottom: "1px" }} />)}</div>}
-              {loading && viewMode !== "list" && <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap }}>{Array.from({ length: cols * 2 }).map((_, i) => tab === "live" ? <LiveSkeleton key={i} /> : <AlphaSkeleton key={i} />)}</div>}
+              {exploreTab !== 'for-you' && loading && viewMode === "list" && <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>{Array.from({ length: 8 }).map((_, i) => <div key={i} className="skeleton" style={{ height: "64px", marginBottom: "1px" }} />)}</div>}
+              {exploreTab !== 'for-you' && loading && viewMode !== "list" && <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap }}>{Array.from({ length: cols * 2 }).map((_, i) => tab === "live" ? <LiveSkeleton key={i} /> : <AlphaSkeleton key={i} />)}</div>}
 
               {/* Error */}
-              {!loading && hasError && lots.length === 0 && (
+              {exploreTab !== 'for-you' && !loading && hasError && lots.length === 0 && (
                 <div style={{ textAlign: "center", padding: "60px 40px" }}>
                   <div style={{ fontFamily: "var(--font-serif)", fontSize: "18px", color: "var(--text)", marginBottom: "8px" }}>
                     Loading opportunities...
@@ -860,7 +884,7 @@ export default function Explore() {
               )}
 
               {/* Empty */}
-              {!loading && !hasError && lots.length === 0 && (
+              {exploreTab !== 'for-you' && !loading && !hasError && lots.length === 0 && (
                 <div style={{ textAlign: "center", padding: "80px 20px" }}>
                   <div style={{ fontFamily: "var(--font-serif)", fontSize: "36px", color: "var(--border)", marginBottom: "16px" }}>◇</div>
                   <div style={{ fontSize: "15px", color: "var(--text-2)", marginBottom: "8px" }}>{tab === "alpha" ? "No high-score opportunities right now" : "No lots match your filters"}</div>
@@ -868,8 +892,95 @@ export default function Explore() {
                 </div>
               )}
 
+              {/* ─── FOR YOU TAB ────────────────────────────── */}
+              {exploreTab === 'for-you' && (
+                <div style={{ padding: '8px 0' }}>
+                  {recoLoading && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                      {[...Array(6)].map((_, i) => <AlphaSkeleton key={i} />)}
+                    </div>
+                  )}
+                  {!recoLoading && !getToken() && (
+                    <div style={{ textAlign: 'center', padding: '80px 20px' }}>
+                      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', color: 'var(--border)', marginBottom: '16px' }}>✦</div>
+                      <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>Sign in to see your recommendations</div>
+                      <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '24px' }}>Nautilus builds a personalized collector profile for you — sign in to unlock.</p>
+                      <button onClick={() => navigate('/app/login')} style={{ background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '6px', padding: '12px 28px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+                        Sign in
+                      </button>
+                    </div>
+                  )}
+                  {!recoLoading && recoDone && getToken() && recos.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '80px 20px' }}>
+                      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', color: 'var(--border)', marginBottom: '16px' }}>✦</div>
+                      <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>Your recommendations are being generated</div>
+                      <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '8px' }}>Add works to your portfolio and tell Larry your preferences to unlock personalized recommendations.</p>
+                      <p style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '24px' }}>This usually takes less than 7 days of activity on the platform.</p>
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                        <button onClick={() => navigate('/app/portfolio')} style={{ background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '6px', padding: '12px 24px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+                          Add to portfolio →
+                        </button>
+                        <button onClick={() => navigate('/app/agent')} style={{ background: 'transparent', color: 'var(--navy)', border: '1px solid rgba(10,22,40,0.2)', borderRadius: '6px', padding: '12px 24px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                          Talk to Larry
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {!recoLoading && recos.length > 0 && (
+                    <>
+                      <div style={{ marginBottom: '20px' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--gold-subtle)', border: '1px solid var(--gold-border)', borderRadius: '20px', padding: '4px 12px', marginBottom: '12px' }}>
+                          <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold-dim)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+                            {recos.length} RECOMMENDATIONS · UPDATED 6H AGO
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                        {recos.map((reco: any, i: number) => {
+                          const lot = reco.lot || reco;
+                          const mapped = mapLot(lot);
+                          const reason = reco.reason || reco.recommendation_reason || reco.type || '';
+                          const reasonLabel = reason.includes('collection') ? 'Matches your collection' :
+                            reason.includes('momentum') ? 'Artist momentum signal' :
+                            reason.includes('price') ? 'Price below market median' :
+                            reason.includes('style') ? 'Matches your taste' :
+                            reason.includes('portfolio') ? 'Portfolio fit' :
+                            'Recommended for you';
+                          return (
+                            <div key={reco.id || i} style={{ position: 'relative' }}>
+                              <div style={{ position: 'absolute', top: '10px', left: '10px', zIndex: 10, background: 'var(--navy)', color: 'var(--gold)', padding: '3px 8px', borderRadius: '3px', fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)', letterSpacing: '0.08em', boxShadow: '0 2px 8px rgba(10,22,40,0.3)' }}>
+                                ✦ {reasonLabel.toUpperCase()}
+                              </div>
+                              <AlphaCard lot={mapped} onClick={() => navigate(`/app/opportunities/${mapped.id}`)} locked={false} />
+                              <div style={{ marginTop: '6px', padding: '6px 10px', background: 'var(--bg-subtle)', borderRadius: '5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '10px', color: 'var(--gold-dim)' }}>✦</span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-2)', lineHeight: 1.4 }}>{reasonLabel}</span>
+                                <button
+                                  onClick={async () => {
+                                    const token = getToken();
+                                    if (!token) return;
+                                    try {
+                                      await fetch(`${BACKEND}/api/agent/recommendations/${reco.id}/read`, {
+                                        method: 'POST', headers: { Authorization: `Bearer ${token}` },
+                                      });
+                                    } catch { /* silent */ }
+                                    setRecos(prev => prev.filter((_, idx) => idx !== i));
+                                  }}
+                                  style={{ marginLeft: 'auto', fontSize: '10px', color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', flexShrink: 0 }}
+                                  title="Dismiss"
+                                >✕</button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               {/* List view */}
-              {!loading && !hasError && lots.length > 0 && viewMode === "list" && (
+              {exploreTab !== 'for-you' && !loading && !hasError && lots.length > 0 && viewMode === "list" && (
                 <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: "10px", overflow: "hidden" }}>
                   {tab === "live" ? (
                     <>{/* Live list header */}<div style={{ display: "grid", gridTemplateColumns: "48px 1fr 160px 100px 130px 80px", gap: "12px", padding: "9px 16px", background: "var(--bg-subtle)", borderBottom: "1px solid var(--border)" }}>{["", "Artwork", "House", "Date", "Estimate", "Category"].map(h => <div key={h} className="label-caps">{h}</div>)}</div>{visibleLots.map(lot => <LiveListRow key={lot.id} lot={lot} onClick={() => navigate(`/app/opportunities/${lot.id}`)} />)}</>
@@ -880,7 +991,7 @@ export default function Explore() {
               )}
 
               {/* Grid view */}
-              {!loading && !hasError && lots.length > 0 && viewMode !== "list" && (
+              {exploreTab !== 'for-you' && !loading && !hasError && lots.length > 0 && viewMode !== "list" && (
                 <>
                   <div className="animate-stagger" style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap, width: "100%" }}>
                     {visibleLots.map((lot, i) => (

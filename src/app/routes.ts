@@ -31,11 +31,25 @@ const Convictions      = lazy(() => import('./pages/Convictions'));
 const MarketIndex      = lazy(() => import('./pages/MarketIndex'));
 const RoomVisualizer   = lazy(() => import('./pages/RoomVisualizer'));
 const AuctionCalendar  = lazy(() => import('./pages/AuctionCalendar'));
+const Waitlist         = lazy(() => import('./pages/Waitlist'));
+const Legal            = lazy(() => import('./pages/Legal'));
 
 export const router = createBrowserRouter([
   {
     path: '/',
     Component: Landing,
+  },
+  {
+    path: '/waitlist',
+    Component: Waitlist,
+  },
+  {
+    path: '/legal/:page',
+    Component: Legal,
+  },
+  {
+    path: '/legal',
+    Component: Legal,
   },
   {
     path: '/pricing',
