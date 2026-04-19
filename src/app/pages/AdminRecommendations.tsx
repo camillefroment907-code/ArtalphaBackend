@@ -13,8 +13,9 @@ export default function AdminRecommendations() {
 
   useEffect(() => {
     const token = getToken();
-    if (!token) { setError('Not authenticated'); setLoading(false); return; }
-    fetch(`${BACKEND}/api/admin/recommendations`, { headers: { Authorization: `Bearer ${token}` } })
+    const headers: Record<string, string> = { 'X-Admin-Key': 'hono-admin-2024' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    fetch(`${BACKEND}/api/admin/recommendations`, { headers })
       .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); })
       .then(d => { setData(d); setLoading(false); })
       .catch(e => { setError(e.message); setLoading(false); });
