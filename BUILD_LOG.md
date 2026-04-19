@@ -375,3 +375,49 @@ X-Admin-Key: hono-admin-2024
 {"limit_per_source": 5000, "skip_purge": true}
 ```
 Watch logs: `"New lots to insert", new=X, by_source={...}`
+
+---
+
+## Session 2026-04-19 — Larry Polish + Onboarding Fixes
+
+### FIX 1 — Larry Avatar
+- Added `LarryAvatarImg` (Onboarding) and `LarryAvatarBtn` (Larry.tsx) components
+- Both load `/larry-avatar.png` with automatic fallback to `◆` circle on `onError`
+- Sizes: onboarding step 8 = 120px, chat bubble = 32px, floating button = 36px, locked state = 48px
+- **Upload `/public/larry-avatar.png` to activate**
+
+### FIX 2 — Continue Buttons → Primary Blue
+- All `Continue →` buttons across the entire onboarding flow: `#0A1628` → `#2563EB` (var(--electric))
+- `StepFooter` + steps 7 and 8 manual buttons all updated
+- Back buttons were already text-only — no change
+
+### FIX 3 — French Navigation Text
+- `fr.ts`: `nav.live` "En direct" → "Live"
+- `fr.ts`: `nav.search` "Rechercher œuvres, artistes..." → "Search artworks, artists..."
+
+### FIX 4 — Hide Larry on Onboarding
+- `Root.tsx`: `<Larry />` and `<RecommendationPopup />` conditionally not rendered on `/app/onboarding`
+
+### FIX 5 — Larry Intro Copy (Meet Larry step)
+- Description: "Larry is your private art market analyst. He knows every lot, every artist trajectory, every market signal — and he works exclusively for you."
+- Quote: "I've spent years analyzing auction results across Christie's, Sotheby's, Drouot, and 27 other markets. Tell me what you collect — I'll find what others miss."
+
+### FIX 6 — Larry System Prompt
+- Replaced French-first prompt with English expert-level prompt
+- Persona: 25-year senior art market analyst, works exclusively for Nautilus members
+- Anti-hallucination rules preserved
+- All ArtAlpha URLs updated to get-nautilus.com
+- All context strings (user prefs, lot context) translated to English
+- Language rule: responds in user's language
+
+### FIX 7 — Larry Suggestion Chips
+- 3 new targeted questions in `en.ts`:
+  1. "What are the 3 best opportunities right now?"
+  2. "Which artists have the strongest momentum this month?"
+  3. "I have €20,000 to invest — where do you start?"
+- Chip style: pill shape (borderRadius 20px), navy border + navy text, hover → fills navy/white
+- Still hides after first message sent (existing behavior)
+
+### Build
+- `npm run build` → ✓ 0 TypeScript errors
+- Commit: `482bf16`
