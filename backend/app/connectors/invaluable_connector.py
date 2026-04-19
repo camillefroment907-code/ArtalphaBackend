@@ -218,8 +218,14 @@ async def fetch_lots(limit: int = 5000) -> List[LotNormalized]:
         except Exception:
             pass
 
+        _consecutive_failures = 0  # abort early if API is globally blocked
+
         for query in SEARCH_QUERIES:
             if len(lots) >= limit:
+                break
+            if _consecutive_failures >= 3:
+                # API is returning non-200 for multiple queries in a row — give up
+                logger.warning("invaluable_blocked_globally", failures=_consecutive_failures)
                 break
             try:
                 page_size = min(48, limit - len(lots))
@@ -229,6 +235,7 @@ async def fetch_lots(limit: int = 5000) -> List[LotNormalized]:
                         break
 
                     # Try both API endpoint variants (Invaluable has changed structure)
+                    resp = None
                     for api_url, params in [
                         (API_URL, {
                             "query": query,
@@ -245,10 +252,13 @@ async def fetch_lots(limit: int = 5000) -> List[LotNormalized]:
                     ]:
                         resp = await client.get(api_url, params=params)
                         if resp.status_code == 200:
+                            _consecutive_failures = 0
                             break
-                    else:
-                        logger.warning("invaluable_all_endpoints_failed", query=query, status=resp.status_code)
-                        break
+                    if resp is None or resp.status_code != 200:
+                        logger.warning("invaluable_all_endpoints_failed", query=query,
+                                       status=resp.status_code if resp else 0)
+                        _consecutive_failures += 1
+                        break  # move to next query, don't paginate further
 
                     try:
                         data = resp.json()
@@ -282,7 +292,11 @@ async def fetch_lots(limit: int = 5000) -> List[LotNormalized]:
                                 break
 
                     logger.info("Invaluable query done", query=query, page=page, batch=batch, total=len(lots))
-                    await asyncio.sleep(1.5)
+                    # Only sleep if we got results (avoid wasting time on empty pages)
+                    if batch > 0:
+                        await asyncio.sleep(1.5)
+                    else:
+                        await asyncio.sleep(0.2)
 
                     # Stop paginating if we got fewer results than requested
                     if len(items) < page_size:
