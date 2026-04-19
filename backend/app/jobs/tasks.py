@@ -54,7 +54,7 @@ async def _poll_and_score_async(lots_per_source: int = 500, skip_purge: bool = F
     from app.engines.scoring import compute_deal_score, ScoringInput
     from app.models.db_models import Lot, Artist, LotStatus
     from app.engines.artist_enrichment import _find_in_db, _detect_artist_from_title, _generate_heuristic_enrichment
-    from sqlalchemy import select, tuple_
+    from sqlalchemy import select
 
     from app.database import BgSessionLocal as AsyncSessionLocal
 
@@ -111,20 +111,20 @@ async def _poll_and_score_async(lots_per_source: int = 500, skip_purge: bool = F
     new_deals = 0
 
     async with AsyncSessionLocal() as session:
-        # 2. Bulk dedup — ONE query to find all external_ids already in DB
-        candidate_ids = [
-            (lot.source.value, lot.external_id)
-            for lot in raw_lots
-            if lot.external_id
-        ]
-        if candidate_ids:
+        # 2. Bulk dedup — find all external_ids already in DB
+        # Use external_id IN (...) instead of tuple comparison to avoid PostgreSQL enum casting issues
+        candidate_eids = [lot.external_id for lot in raw_lots if lot.external_id]
+        if candidate_eids:
             existing_result = await session.execute(
                 select(Lot.source, Lot.external_id).where(
-                    tuple_(Lot.source, Lot.external_id).in_(candidate_ids)
+                    Lot.external_id.in_(candidate_eids)
                 )
             )
             existing_pairs = {
-                (str(row.source), row.external_id)
+                (
+                    row.source.value if hasattr(row.source, "value") else str(row.source),
+                    row.external_id,
+                )
                 for row in existing_result.fetchall()
             }
         else:
@@ -321,10 +321,7 @@ async def _poll_and_score_async(lots_per_source: int = 500, skip_purge: bool = F
                     lot_fingerprint=lot_fingerprint,
                     created_at=datetime.utcnow(),
                     updated_at=datetime.utcnow(),
-                ).on_conflict_do_nothing(
-                    index_elements=["lot_fingerprint"],
-                    index_where=Lot.lot_fingerprint.isnot(None),
-                )
+                ).on_conflict_do_nothing()  # catches ALL unique violations (source+ext_id AND fingerprint)
                 await session.execute(stmt)
 
                 if score_result.is_deal:
