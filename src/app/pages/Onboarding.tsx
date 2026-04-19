@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Logo } from '../components/Logo';
+import Larry from '../components/Larry';
 import { useNavigate } from 'react-router';
 import { getToken } from '../../lib/auth';
 
@@ -57,24 +58,6 @@ const CHALLENGES = [
 const TOTAL_STEPS = 6;
 
 // ── Component ─────────────────────────────────────────────────────────────────
-
-// Larry avatar component with fallback — TODO: replace with larry-avatar.png when uploaded
-function LarryAvatarImg({ size, fallbackFontSize = 14 }: { size: number; fallbackFontSize?: number }) {
-  const [error, setError] = useState(false);
-  if (error) {
-    return (
-      <div style={{ width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg, #0A1628 0%, #1e3a5f 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: fallbackFontSize, fontWeight: 700 }}>◆</div>
-    );
-  }
-  return (
-    <img
-      src="/larry-avatar.png"
-      alt="Larry — Nautilus AI Advisor"
-      style={{ width: size, height: size, objectFit: 'cover', borderRadius: '50%', display: 'block' }}
-      onError={() => setError(true)}
-    />
-  );
-}
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -403,8 +386,8 @@ export default function Onboarding() {
         {/* ── Step 8: Meet Larry ──────────────────────────────────────────── */}
         {step === 8 && (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ width: '120px', height: '120px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto 24px', boxShadow: '0 8px 32px rgba(10,22,40,0.22)' }}>
-              <LarryAvatarImg size={120} fallbackFontSize={48} />
+            <div style={{ display: 'flex', justifyContent: 'center', margin: '0 auto 24px', filter: 'drop-shadow(0 8px 32px rgba(10,22,40,0.3))' }}>
+              <Larry variant="analyse" size={100} />
             </div>
             <h2 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '28px', fontWeight: 600, color: '#0A1628', margin: '0 0 8px', lineHeight: 1.2 }}>Meet Larry.</h2>
             <div style={{ width: '40px', height: '2px', background: '#C6A85A', margin: '0 auto 20px' }} />
@@ -413,8 +396,8 @@ export default function Onboarding() {
             </p>
             <div style={{ background: '#F5F4F0', border: '1px solid #E4E2DC', borderRadius: '12px', padding: '20px 24px', marginBottom: '36px', textAlign: 'left', maxWidth: '380px', marginLeft: 'auto', marginRight: 'auto' }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
-                  <LarryAvatarImg size={32} fallbackFontSize={10} />
+                <div style={{ flexShrink: 0 }}>
+                  <Larry variant="analyse" size={24} />
                 </div>
                 <div>
                   <div style={{ fontSize: '13px', color: '#333', lineHeight: 1.6, fontStyle: 'italic', marginBottom: '8px' }}>

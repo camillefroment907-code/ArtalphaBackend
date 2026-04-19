@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { getUser } from "../../lib/auth";
 import { WelcomeTour } from "../components/WelcomeTour";
+import Larry from "../components/Larry";
 
 type ExploreTab = "best" | "auctions" | "primary" | "convictions" | "for-you";
 type ViewMode = "grid-large" | "grid" | "list";
@@ -862,21 +863,28 @@ export default function Explore() {
               )}
 
               {/* Skeletons */}
+              {exploreTab !== 'for-you' && loading && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '16px 0 8px' }}>
+                  <Larry variant="analyse" size={52} />
+                  <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>SCANNING MARKET…</span>
+                </div>
+              )}
               {exploreTab !== 'for-you' && loading && viewMode === "list" && <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>{Array.from({ length: 8 }).map((_, i) => <div key={i} className="skeleton" style={{ height: "64px", marginBottom: "1px" }} />)}</div>}
               {exploreTab !== 'for-you' && loading && viewMode !== "list" && <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap }}>{Array.from({ length: cols * 2 }).map((_, i) => tab === "live" ? <LiveSkeleton key={i} /> : <AlphaSkeleton key={i} />)}</div>}
 
               {/* Error */}
               {exploreTab !== 'for-you' && !loading && hasError && lots.length === 0 && (
-                <div style={{ textAlign: "center", padding: "60px 40px" }}>
-                  <div style={{ fontFamily: "var(--font-serif)", fontSize: "18px", color: "var(--text)", marginBottom: "8px" }}>
-                    Loading opportunities...
+                <div style={{ textAlign: "center", padding: "60px 40px", display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                  <Larry variant="alert" size={80} />
+                  <div style={{ fontFamily: "var(--font-serif)", fontSize: "18px", color: "var(--text)" }}>
+                    Unable to connect
                   </div>
-                  <p style={{ fontSize: "13px", color: "var(--text-3)", marginBottom: "20px" }}>
-                    Connecting to market data. This takes a few seconds.
+                  <p style={{ fontSize: "13px", color: "var(--text-3)", margin: 0, maxWidth: '280px' }}>
+                    Larry can't reach the market data right now. Check your connection and try again.
                   </p>
                   <button
                     onClick={doFetch}
-                    style={{ padding: "10px 24px", background: "var(--navy)", color: "white", border: "none", borderRadius: "6px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}
+                    style={{ padding: "10px 24px", background: "var(--navy)", color: "white", border: "none", borderRadius: "6px", fontSize: "13px", fontWeight: 700, cursor: "pointer", marginTop: '4px' }}
                   >
                     Retry
                   </button>
@@ -885,10 +893,10 @@ export default function Explore() {
 
               {/* Empty */}
               {exploreTab !== 'for-you' && !loading && !hasError && lots.length === 0 && (
-                <div style={{ textAlign: "center", padding: "80px 20px" }}>
-                  <div style={{ fontFamily: "var(--font-serif)", fontSize: "36px", color: "var(--border)", marginBottom: "16px" }}>◇</div>
-                  <div style={{ fontSize: "15px", color: "var(--text-2)", marginBottom: "8px" }}>{tab === "alpha" ? "No high-score opportunities right now" : "No lots match your filters"}</div>
-                  <div style={{ fontSize: "13px", color: "var(--text-3)" }}>{tab === "alpha" ? "We scan every 15 minutes — check back soon." : "Try broadening your search or removing filters."}</div>
+                <div style={{ textAlign: "center", padding: "60px 20px", display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                  <Larry variant="sleep" size={80} />
+                  <div style={{ fontSize: "15px", color: "var(--text-2)", fontWeight: 600 }}>{tab === "alpha" ? "No high-score opportunities right now" : "No lots match your filters"}</div>
+                  <div style={{ fontSize: "13px", color: "var(--text-3)" }}>{tab === "alpha" ? "Larry scans every 15 minutes — check back soon." : "Try broadening your search or removing filters."}</div>
                 </div>
               )}
 
@@ -896,27 +904,33 @@ export default function Explore() {
               {exploreTab === 'for-you' && (
                 <div style={{ padding: '8px 0' }}>
                   {recoLoading && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                      {[...Array(6)].map((_, i) => <AlphaSkeleton key={i} />)}
-                    </div>
+                    <>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '16px 0 12px' }}>
+                        <Larry variant="analyse" size={52} />
+                        <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>BUILDING YOUR SELECTION…</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                        {[...Array(6)].map((_, i) => <AlphaSkeleton key={i} />)}
+                      </div>
+                    </>
                   )}
                   {!recoLoading && !getToken() && (
-                    <div style={{ textAlign: 'center', padding: '80px 20px' }}>
-                      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', color: 'var(--border)', marginBottom: '16px' }}>✦</div>
-                      <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>Sign in to see your recommendations</div>
-                      <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '24px' }}>Nautilus builds a personalized collector profile for you — sign in to unlock.</p>
-                      <button onClick={() => navigate('/app/login')} style={{ background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '6px', padding: '12px 28px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+                    <div style={{ textAlign: 'center', padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                      <Larry variant="sleep" size={80} />
+                      <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)' }}>Sign in to see your recommendations</div>
+                      <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0, maxWidth: '300px' }}>Nautilus builds a personalized collector profile for you — sign in to unlock.</p>
+                      <button onClick={() => navigate('/app/login')} style={{ background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '6px', padding: '12px 28px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '4px' }}>
                         Sign in
                       </button>
                     </div>
                   )}
                   {!recoLoading && recoDone && getToken() && recos.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '80px 20px' }}>
-                      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', color: 'var(--border)', marginBottom: '16px' }}>✦</div>
-                      <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>Your recommendations are being generated</div>
-                      <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '8px' }}>Add works to your portfolio and tell Larry your preferences to unlock personalized recommendations.</p>
-                      <p style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '24px' }}>This usually takes less than 7 days of activity on the platform.</p>
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                    <div style={{ textAlign: 'center', padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                      <Larry variant="analyse" size={80} />
+                      <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)' }}>Your recommendations are being generated</div>
+                      <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0, maxWidth: '320px' }}>Add works to your portfolio and tell Larry your preferences to unlock personalized recommendations.</p>
+                      <p style={{ fontSize: '12px', color: 'var(--text-3)', margin: 0 }}>This usually takes less than 7 days of activity on the platform.</p>
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '4px' }}>
                         <button onClick={() => navigate('/app/portfolio')} style={{ background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '6px', padding: '12px 24px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
                           Add to portfolio →
                         </button>
