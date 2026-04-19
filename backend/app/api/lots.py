@@ -1248,6 +1248,51 @@ async def get_auction_calendar(
     return response
 
 
+# ── Public endpoint (no auth) — MUST be before /{lot_id} to avoid route shadowing ──────────────
+
+@router.get("/public")
+async def get_public_lots(
+    limit: int = Query(default=3, le=6),
+    sort: str = Query(default="deal_score"),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Public (unauthenticated) endpoint returning top N lots by deal_score.
+    Used by landing page Today's Signals section.
+    Returns minimal fields only — no sensitive pricing context.
+    """
+    order_col = desc(Lot.deal_score) if sort == "deal_score" else desc(Lot.created_at)
+    result = await db.execute(
+        select(Lot)
+        .where(and_(
+            Lot.status.in_([LotStatus.UPCOMING, LotStatus.LIVE]),
+            Lot.market_type == MarketType.AUCTION,
+            Lot.deal_score.isnot(None),
+            Lot.title.isnot(None),
+        ))
+        .order_by(order_col)
+        .limit(limit * 2)
+    )
+    lots = result.scalars().all()[:limit]
+    return {
+        "lots": [
+            {
+                "id": str(l.id),
+                "title": l.title,
+                "artist_name_raw": l.artist_name_raw,
+                "deal_score": l.deal_score,
+                "estimate_low": l.estimate_low,
+                "estimate_high": l.estimate_high,
+                "auction_house_name": l.auction_house_name,
+                "auction_date": l.auction_date.isoformat() if l.auction_date else None,
+                "image_url": l.image_url,
+                "category": l.category,
+            }
+            for l in lots
+        ]
+    }
+
+
 @router.get("/{lot_id}")
 async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
@@ -1446,48 +1491,3 @@ async def get_lot_projection(
         popularity_score=lot.artist.popularity_score if lot.artist else 50.0,
         trend=lot.artist.trend.value if lot.artist and lot.artist.trend else "stable",
     )
-
-
-# ── Public endpoint (no auth) — for landing page Today's Signals ─────────────
-
-@router.get("/public")
-async def get_public_lots(
-    limit: int = Query(default=3, le=6),
-    sort: str = Query(default="deal_score"),
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Public (unauthenticated) endpoint returning top N lots by deal_score.
-    Used by landing page Today's Signals section.
-    Returns minimal fields only — no sensitive pricing context.
-    """
-    order_col = desc(Lot.deal_score) if sort == "deal_score" else desc(Lot.created_at)
-    result = await db.execute(
-        select(Lot)
-        .where(and_(
-            Lot.status.in_([LotStatus.UPCOMING, LotStatus.LIVE]),
-            Lot.market_type == MarketType.AUCTION,
-            Lot.deal_score.isnot(None),
-            Lot.title.isnot(None),
-        ))
-        .order_by(order_col)
-        .limit(limit * 2)  # fetch extra, filter below
-    )
-    lots = result.scalars().all()[:limit]
-    return {
-        "lots": [
-            {
-                "id": str(l.id),
-                "title": l.title,
-                "artist_name_raw": l.artist_name_raw,
-                "deal_score": l.deal_score,
-                "estimate_low": l.estimate_low,
-                "estimate_high": l.estimate_high,
-                "auction_house_name": l.auction_house_name,
-                "auction_date": l.auction_date.isoformat() if l.auction_date else None,
-                "image_url": l.image_url,
-                "category": l.category,
-            }
-            for l in lots
-        ]
-    }
