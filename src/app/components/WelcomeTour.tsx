@@ -24,7 +24,7 @@ const TOUR_STEPS = [
     tag: 'YOUR AI ANALYST',
     title: 'You set the strategy. Larry does the work.',
     body: 'Define your budget and preferences once. Larry — your private AI analyst — monitors every auction house 24/7 and alerts you the moment a matching opportunity appears.',
-    metric: 'Scanning every 15 minutes',
+    metric: null,
     cta: undefined,
   },
   {
