@@ -178,54 +178,66 @@ async def dedup_lots(
     _: bool = Depends(verify_admin),
 ) -> Dict[str, Any]:
     """
-    Remove duplicate lots. Two passes:
-    1. Content-hash dedup: keep earliest lot per (title+artist+est_low+est_high), delete the rest.
-    2. Exact-field dedup: keep earliest lot per exact (title, artist_name_raw, estimate_low, estimate_high), delete the rest.
-    Also backfills lot_fingerprint on all lots that are missing it.
+    Remove duplicate lots using Python-side fingerprint computation.
+    Keeps the oldest lot per unique (title, artist, estimate_low, estimate_high).
+    Also backfills lot_fingerprint column for future prevention.
     """
     import hashlib
     from sqlalchemy import text as sa_text
 
-    # Pass 1: Backfill fingerprints on existing lots
-    fp_sql = sa_text("""
-        UPDATE lots
-        SET lot_fingerprint = md5(
-            lower(coalesce(title,'')) || '|' ||
-            lower(coalesce(artist_name_raw,'')) || '|' ||
-            round(coalesce(estimate_low,0))::text || '|' ||
-            round(coalesce(estimate_high,0))::text
-        )
-        WHERE title IS NOT NULL AND lot_fingerprint IS NULL
-    """)
-    await db.execute(fp_sql)
-    await db.commit()
+    # Step 1: Fetch all lots (id, title, artist, estimates, created_at, fingerprint)
+    rows = (await db.execute(
+        sa_text("SELECT id, title, artist_name_raw, estimate_low, estimate_high, created_at, lot_fingerprint FROM lots ORDER BY created_at ASC")
+    )).fetchall()
 
-    # Pass 2: Delete duplicate lots — keep the oldest (MIN id) per fingerprint
-    del_sql = sa_text("""
-        DELETE FROM lots
-        WHERE id IN (
-            SELECT id FROM (
-                SELECT id,
-                       ROW_NUMBER() OVER (
-                           PARTITION BY lot_fingerprint
-                           ORDER BY created_at ASC
-                       ) AS rn
-                FROM lots
-                WHERE lot_fingerprint IS NOT NULL
-            ) ranked
-            WHERE rn > 1
-        )
-    """)
-    result = await db.execute(del_sql)
-    deleted = result.rowcount
-    await db.commit()
+    # Step 2: Compute fingerprints and find duplicates
+    seen: dict = {}   # fingerprint -> first (oldest) id
+    to_delete = []
+    to_update = []    # (id, fingerprint) pairs needing backfill
 
-    # Count remaining
+    for row in rows:
+        raw = (
+            f"{(row.title or '').lower().strip()}|"
+            f"{(row.artist_name_raw or '').lower().strip()}|"
+            f"{int(round(row.estimate_low or 0))}|"
+            f"{int(round(row.estimate_high or 0))}"
+        )
+        fp = hashlib.md5(raw.encode()).hexdigest() if row.title else None
+
+        if fp:
+            if row.lot_fingerprint is None:
+                to_update.append((str(row.id), fp))
+            if fp in seen:
+                to_delete.append(str(row.id))
+            else:
+                seen[fp] = str(row.id)
+
+    # Step 3: Backfill fingerprints in batches
+    if to_update:
+        for lot_id, fp in to_update:
+            await db.execute(
+                sa_text("UPDATE lots SET lot_fingerprint = :fp WHERE id = :id::uuid"),
+                {"fp": fp, "id": lot_id}
+            )
+        await db.commit()
+
+    # Step 4: Delete duplicates in a single IN query
+    deleted = 0
+    if to_delete:
+        # Batch into chunks of 500 to avoid very long IN clauses
+        for i in range(0, len(to_delete), 500):
+            chunk = to_delete[i:i + 500]
+            placeholders = ", ".join(f"'{lid}'::uuid" for lid in chunk)
+            result = await db.execute(sa_text(f"DELETE FROM lots WHERE id IN ({placeholders})"))
+            deleted += result.rowcount
+        await db.commit()
+
     total_remaining = (await db.execute(select(func.count(Lot.id)))).scalar() or 0
 
     return {
         "deleted": deleted,
         "remaining": total_remaining,
+        "fingerprints_backfilled": len(to_update),
         "message": f"Removed {deleted} duplicate lots. {total_remaining} unique lots remain.",
         "timestamp": datetime.utcnow().isoformat(),
     }
