@@ -460,14 +460,14 @@ async def set_user_plan(body: dict, db: AsyncSession = Depends(get_db)):
 
     if existing:
         await db.execute(
-            text("UPDATE subscriptions SET plan = :plan, status = 'ACTIVE', updated_at = NOW() WHERE user_id = :uid"),
+            text("UPDATE subscriptions SET plan = :plan::subscriptionplan, status = 'ACTIVE', updated_at = NOW() WHERE user_id = :uid"),
             {"plan": plan.upper(), "uid": str(user_id)}
         )
     else:
         await db.execute(
             text("""
-                INSERT INTO subscriptions (user_id, plan, status, created_at, updated_at)
-                VALUES (:uid, :plan, 'ACTIVE', NOW(), NOW())
+                INSERT INTO subscriptions (id, user_id, plan, status, created_at, updated_at)
+                VALUES (gen_random_uuid(), :uid, :plan::subscriptionplan, 'ACTIVE', NOW(), NOW())
             """),
             {"uid": str(user_id), "plan": plan.upper()}
         )
