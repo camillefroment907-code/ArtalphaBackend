@@ -310,3 +310,68 @@ X-Admin-Key: hono-admin-2024
 {"limit_per_source": 5000, "skip_purge": true}
 ```
 Then poll `GET /api/admin/lot-count` every 10 minutes.
+
+---
+
+## Session 2026-04-19 — Historical Sources Fix (Root Cause: 0 New Lots)
+
+### Root Cause Identified
+
+All connectors were re-fetching the **same stable external_ids** already in DB:
+- ArtMarketAPI `sold` → same recent records (top page 1 per search term)  
+- Invaluable `upcoming=true` → same upcoming lots (same refs each run)
+- Artsy auction → same active sale lots (same slugs)
+- Artsy primary → gallery artworks listed for months (same slugs)
+
+The `_poll_and_score_async` dedup check:
+```python
+new_lots = [lot for lot in raw_lots if (lot.source.value, lot.external_id) not in existing_pairs]
+```
+→ returned 0 every time because all fetched lots were already in DB.
+
+### Fix Applied
+
+**`invaluable_connector.py` — `fetch_past_lots()`**
+- New function: queries with `upcoming=false` and `sort=date_sold:desc`
+- Past sold lots have **different refs** from upcoming lots → genuinely new IDs
+- Stored with `auction_date=None` → won't be purged by the hourly cleanup
+
+**`artmarketapi_connector.py` — `fetch_historical_lots(months_back=24)`**
+- New method: iterates month-by-month going back 24 months
+- Uses `sale_date_from` / `sale_date_to` params per monthly window
+- Targets top 15 search terms (major houses) for speed
+- Returns records from 2024–2023 that current scraping window misses
+
+**`aggregator.py`**
+- Wired `fetch_past_lots` (600s timeout)
+- Wired `fetch_historical_lots` (3600s timeout)
+- Both run after current sources so existing dedup works
+
+**`tasks.py`**
+- Added per-source breakdown log: `by_source={"invaluable": N, "christies": M, ...}`
+- Makes future diagnostics trivial
+
+**`backend/app/scripts/bulk_ingest.py`** — standalone script
+```bash
+cd backend && python -m app.scripts.bulk_ingest --limit 5000
+```
+- Prints before/after lot counts by source
+- `--count-only` flag for quick DB state check
+
+### Expected Volume from Historical Sources
+
+| Source | Mechanism | Expected New Lots |
+|--------|-----------|-------------------|
+| Invaluable past | `upcoming=false` × 46 queries × 20 pages | 5,000–20,000 |
+| ArtMarket API historical | 24 months × top 15 houses × page 1+ | 3,000–10,000 |
+| **TOTAL new** | | **8,000–30,000** |
+
+Combined with existing 1,941 → target **10K–32K lots** after this deploy.
+
+### Trigger bulk ingest after Railway deploy
+```
+POST /api/admin/bulk-ingest
+X-Admin-Key: hono-admin-2024
+{"limit_per_source": 5000, "skip_purge": true}
+```
+Watch logs: `"New lots to insert", new=X, by_source={...}`
