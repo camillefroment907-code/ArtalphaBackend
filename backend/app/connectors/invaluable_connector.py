@@ -202,6 +202,107 @@ def _parse_item(item: dict) -> Optional[LotNormalized]:
         return None
 
 
+async def fetch_past_lots(limit: int = 5000) -> List[LotNormalized]:
+    """
+    Fetch PAST sold lots from Invaluable — different external_ids from upcoming lots.
+    Uses upcoming=false to get historical auction results going back 2 years.
+    These lots are stored permanently (auction_date=None, won't be purged).
+    """
+    lots: List[LotNormalized] = []
+    seen: set = set()
+
+    async with httpx.AsyncClient(
+        headers=HEADERS, timeout=30.0, follow_redirects=True, verify=False
+    ) as client:
+        try:
+            await client.get(f"{BASE_URL}/catalog/", timeout=10)
+            await asyncio.sleep(1.0)
+        except Exception:
+            pass
+
+        _consecutive_failures = 0
+
+        for query in SEARCH_QUERIES:
+            if len(lots) >= limit:
+                break
+            if _consecutive_failures >= 3:
+                logger.warning("invaluable_past_blocked_globally", failures=_consecutive_failures)
+                break
+            try:
+                page_size = min(48, limit - len(lots))
+                for page in range(1, 21):
+                    if len(lots) >= limit:
+                        break
+
+                    resp = None
+                    for api_url, params in [
+                        (API_URL, {
+                            "query": query,
+                            "size": page_size,
+                            "upcoming": "false",
+                            "page": page,
+                            "sort": "date_sold:desc",
+                        }),
+                        (API_URL, {
+                            "query": query,
+                            "size": page_size,
+                            "upcoming": "false",
+                            "page": page,
+                        }),
+                    ]:
+                        resp = await client.get(api_url, params=params)
+                        if resp.status_code == 200:
+                            _consecutive_failures = 0
+                            break
+
+                    if resp is None or resp.status_code != 200:
+                        _consecutive_failures += 1
+                        break
+
+                    try:
+                        data = resp.json()
+                    except Exception:
+                        break
+
+                    items = (
+                        data.get("itemViewList")
+                        or data.get("results")
+                        or data.get("lots")
+                        or data.get("items")
+                        or []
+                    )
+
+                    if not items and page == 1:
+                        logger.warning("invaluable_past_empty", query=query,
+                                       keys=list(data.keys())[:8])
+
+                    batch = 0
+                    for entry in items:
+                        item_view = entry.get("itemView") or entry
+                        lot = _parse_item(item_view)
+                        if lot and lot.external_id not in seen:
+                            seen.add(lot.external_id)
+                            lots.append(lot)
+                            batch += 1
+                            if len(lots) >= limit:
+                                break
+
+                    logger.info("Invaluable past query done", query=query, page=page, batch=batch, total=len(lots))
+                    if batch > 0:
+                        await asyncio.sleep(1.5)
+                    else:
+                        await asyncio.sleep(0.2)
+
+                    if len(items) < page_size:
+                        break
+
+            except Exception as e:
+                logger.warning("Invaluable past query failed", query=query, error=str(e))
+
+    logger.info("Invaluable past: fetched lots", count=len(lots))
+    return lots[:limit]
+
+
 async def fetch_lots(limit: int = 5000) -> List[LotNormalized]:
     """Fetch real lots from Invaluable JSON API."""
 

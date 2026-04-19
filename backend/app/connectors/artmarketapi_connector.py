@@ -301,6 +301,102 @@ class ArtMarketAPIConnector:
         logger.info("ArtMarket API: done", total=len(all_lots))
         return all_lots[:limit]
 
+    async def fetch_historical_lots(self, limit: int = 5000, months_back: int = 24) -> List[LotNormalized]:
+        """
+        Fetch historically sold lots by iterating backwards through monthly periods.
+        Uses sale_date_from / sale_date_to params to target specific time windows.
+        Each time window returns different records (not in the main fetch_lots window).
+        """
+        from datetime import timedelta
+
+        api_key = os.getenv("ART_MARKET_API_KEY")
+        if not api_key:
+            return []
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Accept": "application/json",
+        }
+
+        all_lots: List[LotNormalized] = []
+        seen_ids: set = set()
+        per_page = 100
+
+        # Generate monthly date ranges going back from 2 months ago (skip recent — already in main fetch)
+        from datetime import timezone
+        now = datetime.now(timezone.utc)
+
+        async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
+            # Start from 2 months ago and go back month by month
+            for month_offset in range(2, months_back + 1):
+                if len(all_lots) >= limit:
+                    break
+
+                end_dt = now.replace(day=1) - timedelta(days=(month_offset - 1) * 30)
+                start_dt = end_dt - timedelta(days=30)
+                date_from = start_dt.strftime("%Y-%m-%d")
+                date_to = end_dt.strftime("%Y-%m-%d")
+
+                # Rotate through top search terms (major houses only for speed)
+                top_terms = _AUCTION_HOUSE_SEARCHES[:15]  # first 15 = major houses
+                for search_term in top_terms:
+                    if len(all_lots) >= limit:
+                        break
+
+                    params: dict = {
+                        "lot_performance": "sold",
+                        "search": search_term,
+                        "sale_date_from": date_from,
+                        "sale_date_to": date_to,
+                        "limit": per_page,
+                        "page": 1,
+                        "sort": "sale_date:desc",
+                    }
+
+                    records, has_more = await _fetch_page(client, params)
+
+                    if not records:
+                        await asyncio.sleep(7.0)
+                        continue
+
+                    added = 0
+                    for rec in records:
+                        if _is_gallery_lot(rec):
+                            continue
+                        lot = _map_lot(rec)
+                        if lot and lot.external_id not in seen_ids:
+                            seen_ids.add(lot.external_id)
+                            all_lots.append(lot)
+                            added += 1
+
+                    logger.info(
+                        "ArtMarket API historical",
+                        period=f"{date_from}:{date_to}",
+                        search=search_term,
+                        added=added,
+                        total=len(all_lots),
+                    )
+
+                    # Paginate if full page
+                    page = 2
+                    while has_more and len(all_lots) < limit:
+                        params["page"] = page
+                        records, has_more = await _fetch_page(client, params)
+                        for rec in records:
+                            if _is_gallery_lot(rec):
+                                continue
+                            lot = _map_lot(rec)
+                            if lot and lot.external_id not in seen_ids:
+                                seen_ids.add(lot.external_id)
+                                all_lots.append(lot)
+                        page += 1
+                        await asyncio.sleep(7.0)
+
+                    await asyncio.sleep(7.0)
+
+        logger.info("ArtMarket API historical: done", total=len(all_lots), months_back=months_back)
+        return all_lots[:limit]
+
 
 CONNECTOR_META = {
     "name": "ArtMarket API",

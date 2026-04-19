@@ -135,7 +135,10 @@ async def _poll_and_score_async(lots_per_source: int = 500, skip_purge: bool = F
             lot for lot in raw_lots
             if lot.external_id and (lot.source.value, lot.external_id) not in existing_pairs
         ]
-        logger.info("New lots to insert", new=len(new_lots), duplicates=len(raw_lots) - len(new_lots))
+        # Log per-source new lot breakdown for diagnostics
+        from collections import Counter
+        new_by_source = Counter(str(lot.source.value) for lot in new_lots)
+        logger.info("New lots to insert", new=len(new_lots), duplicates=len(raw_lots) - len(new_lots), by_source=dict(new_by_source))
 
         # 4. Process new lots — score + bulk insert (no per-lot OpenAI, use heuristics)
         artist_cache: dict = {}  # name_normalized → db_artist | None (in-memory per run)
