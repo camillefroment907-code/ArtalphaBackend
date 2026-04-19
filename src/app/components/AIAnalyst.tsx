@@ -248,7 +248,7 @@ export function AIAnalyst({ rawLot }: Props) {
   const hasAnalysisAccess = isAdmin || usage.limit > 0;
   const canAnalyze = isAdmin || usage.canAnalyze;
 
-  console.log('[AIAnalyst] plan:', planId, 'canAnalyze:', canAnalyze, 'remaining:', isAdmin ? '∞' : usage.remaining);
+
 
   const runAnalysis = useCallback(async () => {
     if (!canAnalyze) { navigate('/app/pricing'); return; }

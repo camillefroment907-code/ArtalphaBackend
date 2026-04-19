@@ -1,14 +1,46 @@
 # LAUNCH REPORT — Nautilus
 **Target launch date: May 13, 2026**
-**Report updated: 2026-04-19 (Phase 4 complete)**
+**Report updated: 2026-04-19 (Phase 5 — Production deploy complete)**
 
 ---
 
 ## Executive Summary
 
-Nautilus is a production-ready art market intelligence platform targeting art collectors and investors. The full stack (frontend + backend) was built across 4 phases. As of this report, the platform is **feature-complete and deployable** pending 7 Camille-action items (Stripe price IDs, DNS, og-image, analytics, n8n, ART_MARKET_API_KEY).
+Nautilus is a **live, production-deployed** art market intelligence platform. The full stack (frontend + backend) is deployed across 5 phases and running in production. Production URLs:
+- **Frontend:** https://artalpha-figma.vercel.app → target: https://get-nautilus.com
+- **Backend:** https://artalpha-backend-production.up.railway.app
+- **Admin:** https://artalpha-figma.vercel.app/admin/launch
 
-**TypeScript build: PASS — 0 errors. 1699 modules. Ready to deploy.**
+**Build: PASS — 0 TypeScript errors. 1699 modules. 3.41s.**  
+**Production DB (2026-04-19): 2,036 lots · 18 users · 4 blog posts · avg deal score 60.5**
+
+---
+
+## Phase 5 Completed Items (2026-04-19)
+
+### Production Deploy
+- **Critical fix:** All Phase 3/4 backend code was uncommitted — committed and pushed to Railway
+- **Critical fix:** `/api/lots/public` shadowed by `/{lot_id}` route — moved before path param handler
+- Backend fully deployed: `/api/lots/public`, `/api/feedback/*`, `/api/blog/seed`, `/api/admin/stats`, `/api/portfolio-ai`
+- **Production smoke tests:** `/health` ✓, `/api/lots/public` ✓, `/api/admin/stats` ✓, `/api/blog` ✓
+
+### Database Baseline (Production 2026-04-19)
+| Metric | Value |
+|--------|-------|
+| Total lots | 2,036 |
+| Deal lots (score ≥ threshold) | 1,062 (52.2%) |
+| Average deal score | 60.5 |
+| Top deal score | 86.8 |
+| Total users | 18 |
+| Blog posts | 4 (seeded: weekly opps, Anna Weyant, methodology, 2026 market guide) |
+| Alerts | 6,862 |
+| Sources | artmarketapi (1,546), phillips (136), heritage (110), roseberys (95), other (149) |
+
+### Code Quality
+- `Pricing.tsx`: removed 5 debug `console.log` statements (token, price key, response body)
+- `AIAnalyst.tsx`: removed operational `console.log`
+
+---
 
 ---
 

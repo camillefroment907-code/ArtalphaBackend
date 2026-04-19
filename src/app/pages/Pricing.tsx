@@ -157,7 +157,6 @@ export default function Pricing() {
     }
 
     const token = getToken();
-    console.log('TOKEN:', token ? token.substring(0, 20) + '...' : 'MISSING');
 
     if (!token) {
       navigate('/app/signup');
@@ -168,7 +167,6 @@ export default function Pricing() {
     setError(null);
 
     const priceKey = isAnnual ? plan.annualPriceKey : plan.monthlyPriceKey;
-    console.log('PRICE KEY:', priceKey);
 
     try {
       const resp = await fetch(
@@ -183,10 +181,7 @@ export default function Pricing() {
         }
       );
 
-      console.log('RESPONSE STATUS:', resp.status);
       const text = await resp.text();
-      console.log('RESPONSE BODY:', text);
-
       let data: any;
       try { data = JSON.parse(text); } catch { throw new Error('Invalid server response: ' + text); }
 
@@ -198,7 +193,6 @@ export default function Pricing() {
       }
 
       const url = data?.checkout_url || data?.url;
-      console.log('CHECKOUT URL:', url);
 
       if (!url) throw new Error('No checkout URL in response: ' + JSON.stringify(data));
 
