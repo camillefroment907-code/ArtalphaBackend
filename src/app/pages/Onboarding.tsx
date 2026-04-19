@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Logo } from '../components/Logo';
 import { useNavigate } from 'react-router';
 import { getToken } from '../../lib/auth';
@@ -31,7 +31,7 @@ const CATEGORIES = [
   'Works on Paper', 'Street Art', 'NFT & Digital', 'Design & Furniture',
 ];
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 6;
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -41,8 +41,21 @@ export default function Onboarding() {
   const [horizon, setHorizon]             = useState<string | null>(null);
   const [categories, setCategories]       = useState<string[]>([]);
   const [saving, setSaving]               = useState(false);
+  const [previewLots, setPreviewLots]     = useState<any[]>([]);
 
   const progressPct = step === 0 ? 0 : step > TOTAL_STEPS ? 100 : Math.round((step / TOTAL_STEPS) * 100);
+
+  // When reaching step 5, fetch personalized lots preview
+  useEffect(() => {
+    if (step !== 5 || previewLots.length > 0) return;
+    const token = getToken();
+    const params = new URLSearchParams({ sort_by: 'deal_score', sort_dir: 'desc', page_size: '3' });
+    if (categories.length > 0) params.set('categories', categories.join(','));
+    fetch(`${BACKEND}/api/lots?${params.toString()}`, token ? { headers: { Authorization: `Bearer ${token}` } } : {})
+      .then(r => r.ok ? r.json() : { items: [] })
+      .then(d => setPreviewLots(Array.isArray(d) ? d.slice(0, 3) : (d.items || d.lots || []).slice(0, 3)))
+      .catch(() => {});
+  }, [step]);
 
   const goNext = () => setStep(s => s + 1);
   const goBack = () => setStep(s => Math.max(s - 1, 1));
@@ -300,8 +313,102 @@ export default function Onboarding() {
           </div>
         )}
 
-        {/* ── Step 5: Confirmation ─────────────────────────────────── */}
+        {/* ── Step 5: Personalized lots preview ───────────────────── */}
         {step === 5 && (
+          <div>
+            <StepHeader step={5} total={TOTAL_STEPS} question="Here's a taste of your deal flow." />
+            <p style={{ fontSize: '13px', color: '#888', margin: '-16px 0 24px', lineHeight: 1.5 }}>
+              Live lots scored by the Nautilus engine, filtered to your profile.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '36px' }}>
+              {previewLots.length > 0 ? previewLots.map((lot: any, i: number) => (
+                <div key={lot.id || i} style={{
+                  border: '1px solid var(--border, #E8E6E0)',
+                  borderRadius: '8px', padding: '16px 20px',
+                  display: 'flex', alignItems: 'center', gap: '16px',
+                  background: '#FFFFFF',
+                }}>
+                  {lot.image_url && (
+                    <img src={lot.image_url} alt="" style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#1A2A44', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {lot.artist_name_raw || lot.title || 'Untitled'}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#888' }}>{lot.title || lot.category || ''}</div>
+                  </div>
+                  {lot.deal_score !== undefined && (
+                    <div style={{
+                      flexShrink: 0, fontFamily: 'var(--font-mono, monospace)',
+                      fontSize: '18px', fontWeight: 700,
+                      color: lot.deal_score >= 70 ? '#0A1628' : '#C6A85A',
+                    }}>
+                      {lot.deal_score}
+                    </div>
+                  )}
+                </div>
+              )) : (
+                <div style={{ textAlign: 'center', padding: '32px 0', color: '#aaa', fontSize: '13px' }}>
+                  Loading your personalized lots…
+                </div>
+              )}
+            </div>
+            <StepFooter step={5} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onSkip={goNext} canNext={true} />
+          </div>
+        )}
+
+        {/* ── Step 6: Meet Larry ───────────────────────────────────── */}
+        {step === 6 && (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              width: '80px', height: '80px', borderRadius: '50%',
+              background: 'linear-gradient(135deg, var(--navy, #0A1628) 0%, #1e3a5f 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 24px',
+              boxShadow: '0 4px 24px rgba(10,22,40,0.18)',
+            }}>
+              <span style={{ fontSize: '32px' }}>◆</span>
+            </div>
+            <h2 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '26px', fontWeight: 600, color: '#1A2A44', margin: '0 0 8px', lineHeight: 1.2 }}>
+              Meet Larry.
+            </h2>
+            <div style={{ width: '40px', height: '2px', background: 'var(--gold, #C6A85A)', margin: '0 auto 20px' }} />
+            <p style={{ fontSize: '14px', color: '#555', lineHeight: 1.7, margin: '0 0 24px', maxWidth: '380px', marginLeft: 'auto', marginRight: 'auto' }}>
+              Larry is your AI art market advisor — powered by Nautilus data and the world's best auction intelligence.
+              Ask him anything about a lot, an artist, or the market.
+            </p>
+            <div style={{
+              background: '#F5F4F0',
+              border: '1px solid #E8E6E0',
+              borderRadius: '12px',
+              padding: '20px 24px',
+              marginBottom: '32px',
+              textAlign: 'left',
+              maxWidth: '360px',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+            }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <div style={{
+                  width: '28px', height: '28px', borderRadius: '50%',
+                  background: 'var(--navy, #0A1628)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '10px', color: 'white', flexShrink: 0,
+                }}>◆</div>
+                <div>
+                  <div style={{ fontSize: '13px', color: '#1A2A44', lineHeight: 1.6, fontStyle: 'italic' }}>
+                    "I've analysed 500,000+ auction results. Ask me about any artist, period, or category — I'll tell you what the data says."
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#aaa', marginTop: '8px', fontFamily: 'monospace' }}>Larry · Nautilus AI</div>
+                </div>
+              </div>
+            </div>
+            <StepFooter step={6} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onSkip={goNext} canNext={true} />
+          </div>
+        )}
+
+        {/* ── Step 7: Confirmation ─────────────────────────────────── */}
+        {step === 7 && (
           <div style={{ textAlign: 'center' }}>
             <div style={{
               width: '72px', height: '72px', borderRadius: '50%',

@@ -4,6 +4,16 @@ import { useTranslation } from 'react-i18next';
 import { Logo } from './Logo';
 import { getUser, logout, getUserPlan, getToken } from '../../lib/auth';
 
+function useIsMobile(breakpoint = 900) {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < breakpoint);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < breakpoint);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 const NAV_ITEMS = [
@@ -34,6 +44,7 @@ export function Header() {
   const navigate = useNavigate();
   const user = getUser();
   const { t, i18n } = useTranslation();
+  const isMobile = useIsMobile();
 
   const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
   const toggleLang = () => {
@@ -44,10 +55,14 @@ export function Header() {
 
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [agentUnread, setAgentUnread] = useState(0);
   const [scanState, setScanState] = useState<'idle' | 'loading' | 'done'>('idle');
+
+  // Close mobile menu on route change
+  useEffect(() => { setMobileMenuOpen(false); }, [location.pathname]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchValue.trim()) {
@@ -110,6 +125,7 @@ export function Header() {
     : '?';
 
   return (
+    <>
     <header style={{
       position: 'sticky', top: 0, zIndex: 100,
       background: 'rgba(250,250,250,0.94)',
@@ -118,8 +134,8 @@ export function Header() {
       borderBottom: '1px solid var(--border)',
       height: '56px',
       display: 'flex', alignItems: 'center',
-      padding: '0 32px',
-      gap: '24px',
+      padding: '0 20px',
+      gap: '16px',
     }}>
 
       {/* Logo */}
@@ -127,8 +143,44 @@ export function Header() {
         <Logo variant="horizontal" color="dark" size={26} />
       </Link>
 
-      {/* ── Logged-in layout ── */}
-      {user ? (
+      {/* ── Mobile hamburger ── */}
+      {isMobile && user && (
+        <>
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={() => setMobileMenuOpen(o => !o)}
+            aria-label="Open navigation"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: '10px', display: 'flex', flexDirection: 'column',
+              gap: '5px', alignItems: 'center', justifyContent: 'center',
+              minWidth: '44px', minHeight: '44px',
+            }}
+          >
+            <span style={{
+              display: 'block', width: '20px', height: '1.5px',
+              background: mobileMenuOpen ? 'transparent' : 'var(--text)',
+              transition: 'all 0.2s',
+              transform: mobileMenuOpen ? 'rotate(45deg) translate(4px, 4px)' : 'none',
+            }} />
+            <span style={{
+              display: 'block', width: '20px', height: '1.5px',
+              background: 'var(--text)',
+              transition: 'all 0.2s',
+              opacity: mobileMenuOpen ? 0 : 1,
+            }} />
+            <span style={{
+              display: 'block', width: '20px', height: '1.5px',
+              background: 'var(--text)',
+              transition: 'all 0.2s',
+              transform: mobileMenuOpen ? 'rotate(-45deg) translate(4px, -4px)' : 'none',
+            }} />
+          </button>
+        </>
+      )}
+
+      {/* ── Logged-in layout (desktop) ── */}
+      {user && !isMobile ? (
         <>
           {/* Nav */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
@@ -437,24 +489,108 @@ export function Header() {
             )}
           </div>
         </>
-      ) : (
+      ) : !user ? (
         /* ── Not logged in ── */
         <>
           <div style={{ flex: 1 }} />
           <button
             onClick={() => navigate('/app/login')}
-            style={{ fontSize: '14px', color: 'var(--text-2)', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px' }}
+            style={{ fontSize: '14px', color: 'var(--text-2)', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px', minHeight: '44px' }}
           >
             Sign in
           </button>
           <button
             className="btn btn-electric"
             onClick={() => navigate('/app/signup')}
+            style={{ minHeight: '44px' }}
           >
             Get access
           </button>
         </>
-      )}
+      ) : null /* mobile logged-in: hamburger already rendered above */}
     </header>
+
+    {/* ── Mobile menu drawer ── */}
+    {isMobile && user && (
+      <div style={{
+        position: 'fixed', top: '56px', left: 0, right: 0, bottom: 0,
+        background: 'var(--bg)',
+        zIndex: 99,
+        overflowY: 'auto',
+        transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(100%)',
+        transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        borderTop: '1px solid var(--border)',
+      }}>
+        <div style={{ padding: '16px 0 32px' }}>
+          {/* User pill */}
+          <div style={{
+            padding: '12px 20px 16px',
+            borderBottom: '1px solid var(--border)',
+            marginBottom: '8px',
+          }}>
+            <span style={{
+              display: 'inline-block',
+              padding: '3px 10px', borderRadius: '20px',
+              background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)',
+              fontSize: '10px', fontWeight: 700,
+              color: 'var(--electric)', letterSpacing: '0.08em',
+              fontFamily: 'var(--font-mono)', textTransform: 'uppercase',
+            }}>
+              {planLabel}
+            </span>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)', marginTop: '6px' }}>
+              {user.email}
+            </div>
+          </div>
+
+          {/* Nav items */}
+          {NAV_ITEMS.map(item => (
+            <Link
+              key={item.to}
+              to={item.to}
+              style={{
+                display: 'flex', alignItems: 'center',
+                padding: '14px 20px',
+                fontSize: '15px', fontWeight: isActive(item) ? 600 : 400,
+                color: isActive(item) ? 'var(--navy)' : 'var(--text)',
+                textDecoration: 'none',
+                borderLeft: isActive(item) ? '3px solid var(--gold)' : '3px solid transparent',
+                background: isActive(item) ? 'var(--navy-subtle)' : 'transparent',
+                minHeight: '44px',
+              }}
+            >
+              {item.label || t(item.tKey)}
+            </Link>
+          ))}
+
+          <div style={{ height: '1px', background: 'var(--border)', margin: '8px 0' }} />
+
+          <button
+            onClick={() => { navigate('/app/alerts'); setMobileMenuOpen(false); }}
+            style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '14px 20px', fontSize: '15px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '10px', minHeight: '44px' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            Alerts
+          </button>
+
+          <button
+            onClick={() => { navigate('/app/portfolio'); setMobileMenuOpen(false); }}
+            style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '14px 20px', fontSize: '15px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '10px', minHeight: '44px' }}
+          >
+            <span style={{ opacity: 0.5 }}>◇</span> My Account
+          </button>
+
+          <div style={{ height: '1px', background: 'var(--border)', margin: '8px 0' }} />
+
+          <button
+            onClick={() => { logout(); navigate('/'); }}
+            style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '14px 20px', fontSize: '15px', color: 'var(--red)', display: 'flex', alignItems: 'center', gap: '10px', minHeight: '44px' }}
+          >
+            <span style={{ opacity: 0.6 }}>→</span> Sign out
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

@@ -738,3 +738,27 @@ class WaitlistEntry(Base):
         Index("ix_waitlist_email", "email"),
         Index("ix_waitlist_referral_code", "referral_code"),
     )
+
+
+class ScrapingRun(Base):
+    """
+    Pipeline run log — one row per connector per poll cycle.
+    Powers the admin health dashboard and circuit-breaker logic.
+    """
+    __tablename__ = "scraping_runs"
+
+    id               = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    connector        = Column(String(100), nullable=False)   # e.g. "drouot_real", "artmarketapi"
+    started_at       = Column(DateTime, default=datetime.utcnow, nullable=False)
+    finished_at      = Column(DateTime, nullable=True)
+    duration_seconds = Column(Float, nullable=True)
+    lots_fetched     = Column(Integer, default=0)
+    lots_inserted    = Column(Integer, default=0)
+    lots_updated     = Column(Integer, default=0)
+    status           = Column(String(20), default="running")  # "running", "success", "error"
+    error_message    = Column(Text, nullable=True)
+
+    __table_args__ = (
+        Index("ix_scraping_runs_connector", "connector"),
+        Index("ix_scraping_runs_started_at", "started_at"),
+    )

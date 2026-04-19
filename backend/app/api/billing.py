@@ -15,7 +15,9 @@ from slowapi.util import get_remote_address
 
 from app.services.email_service import (
     send_trial_ending_email,
+    send_trial_started_email,
     send_payment_failed_email,
+    send_payment_success_email,
     send_subscription_canceled_email,
     send_admin_notification,
 )
@@ -920,6 +922,28 @@ async def _handle_subscription_update(db: AsyncSession, stripe_sub: dict):
                 logger.info("New subscription created via webhook", user_id=user_id, plan=plan.value)
             logger.info("New subscription created via webhook", user_id=user_id, plan=plan.value)
 
+    # Send trial started email on first trialing event
+    try:
+        status_val = stripe_sub.get("status", "")
+        if status_val == "trialing" and customer_email:
+            trial_end_ts = stripe_sub.get("trial_end")
+            trial_end_str = datetime.fromtimestamp(trial_end_ts).strftime("%d %B %Y") if trial_end_ts else "7 days"
+            # Find user name
+            user_name = customer_email
+            try:
+                cust_meta = stripe_sub.get("customer_details") or {}
+                user_name = cust_meta.get("name") or customer_email
+            except Exception:
+                pass
+            asyncio.create_task(send_trial_started_email(
+                to_email=customer_email,
+                name=user_name,
+                trial_end_date=trial_end_str,
+                plan=plan.value if hasattr(plan, "value") else str(plan),
+            ))
+    except Exception:
+        pass
+
     # Notify admin of new/updated subscription
     try:
         status_val = stripe_sub.get("status", "")
@@ -1031,9 +1055,31 @@ async def _handle_payment_succeeded(db: AsyncSession, invoice: dict):
         select(Subscription).where(Subscription.stripe_customer_id == customer_id)
     )
     sub = result.scalar_one_or_none()
-    if sub and sub.status == SubscriptionStatus.PAST_DUE:
+    if not sub:
+        return
+
+    was_past_due = sub.status == SubscriptionStatus.PAST_DUE
+    if was_past_due:
         sub.status = SubscriptionStatus.ACTIVE
         sub.updated_at = datetime.utcnow()
+
+    # Send payment confirmation email (skip zero-amount invoices like free trials)
+    amount_paid = invoice.get("amount_paid", 0)
+    if amount_paid > 0:
+        user_result = await db.execute(select(User).where(User.id == sub.user_id))
+        paid_user = user_result.scalar_one_or_none()
+        if paid_user:
+            currency = invoice.get("currency", "eur").upper()
+            amount_str = f"€{amount_paid / 100:.2f}" if currency == "EUR" else f"{amount_paid / 100:.2f} {currency}"
+            period_end_ts = invoice.get("period_end")
+            period_end_str = datetime.fromtimestamp(period_end_ts).strftime("%d %B %Y") if period_end_ts else ""
+            asyncio.create_task(send_payment_success_email(
+                to_email=paid_user.email,
+                name=paid_user.full_name or paid_user.email,
+                plan=sub.plan.value,
+                amount=amount_str,
+                period_end=period_end_str,
+            ))
 
 
 async def _handle_trial_ending(db: AsyncSession, stripe_sub: dict):

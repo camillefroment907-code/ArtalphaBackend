@@ -122,3 +122,69 @@
 - [ ] Email DNS (SPF/DKIM/DMARC) — Camille must configure on get-nautilus.com
 - [ ] Import n8n workflows in n8n dashboard
 - [ ] Microsoft Clarity analytics tag
+
+---
+
+## Session 2026-04-18 — Phase 3: Final Launch Sprint
+
+### Task 1 — Pipeline Audit ✓
+
+**Connector inventory (24 files in backend/app/connectors/):**
+
+| Connector | Status | Method |
+|-----------|--------|--------|
+| Drouot Real | ✅ Active | Playwright headless |
+| Invaluable | ✅ Active | JSON API scraping |
+| LiveAuctioneers | ✅ Active | Apify actor or direct API |
+| Artsy | ✅ Active | Public GraphQL API |
+| ArtMarket API | ✅ Active | Paid REST API (Christie's, Sotheby's, Bonhams, Phillips, Heritage, Drouot, Artcurial, Tajan, Millon, Cornette) |
+| Phillips | ✅ Active | Public JSON API |
+| Artcurial | ✅ Active | Public JSON API |
+| Bonhams | ✅ Active | Public JSON API |
+| Christie's | ✅ Active | Public JSON API |
+| Sotheby's | ✅ Active | Public JSON API |
+| eBay Art | ✅ Active | eBay REST API |
+| Artsper | ✅ Active | Gallery/primary API |
+| Saatchi Art | ✅ Active | Primary market API |
+| Singulart | ✅ Active | Primary market API |
+| Interenchères | ❌ Disabled | Cloudflare blocks all |
+| Heritage (direct) | ❌ Disabled | Railway IP blocked |
+| Catawiki | ❌ Disabled | Railway IP blocked |
+| Barnebys | ❌ Disabled | No public API |
+
+**Schedule (startup_beat.py):** poll every 15 min · rescore every 60 min · historical daily 04:00 UTC · enrichment every 6h
+
+**Scale-up actions:** ScrapingRun tracking table added; ArtMarket API lots-per-cycle increased to 5000.
+
+### Task 1 Checklist
+- [x] Connector audit logged
+- [x] ScrapingRun DB model added
+- [ ] Wikidata artist enrichment (requires WIKIDATA_SPARQL env + cron)
+
+### Task 2 — Mobile Optimization ✓
+- Header.tsx: hamburger menu (mobile ≤768px), drawer with all nav items, 44px touch targets
+- Body: `overflow-x: hidden` on mobile via CSS class
+
+### Task 3 — Performance ✓
+- index.html: preconnect to backend + Google Fonts
+- apiClient.ts: localStorage caching (GET requests, TTL-aware)
+
+### Task 4 — SEO Complete ✓
+- index.html: og:image, canonical, Twitter card meta tags
+- public/sitemap.xml: static routes + blog
+- public/robots.txt: allow all, sitemap pointer
+- vercel.json: CSP headers, HSTS, Permissions-Policy
+
+### Phase 3 Checklist
+- [x] Task 1: Pipeline audit + ScrapingRun model
+- [x] Task 2: Mobile optimization (Header hamburger)
+- [x] Task 3: Performance (preconnect, caching)
+- [x] Task 4: SEO (sitemap, robots, meta tags, CSP)
+- [ ] Task 5: Stripe production (audit billing.py webhooks)
+- [ ] Task 6: Transactional email complete (11 missing templates)
+- [ ] Task 7: Onboarding flow (5-step)
+- [ ] Task 8: Landing page final polish
+- [ ] Task 9: Error states + ErrorBoundary
+- [ ] Task 10: Security hardening (done: vercel.json CSP)
+- [ ] Task 11: Production deployment checklist
+- [ ] Task 12: Launch Report
