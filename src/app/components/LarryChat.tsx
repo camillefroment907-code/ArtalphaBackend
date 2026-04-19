@@ -24,7 +24,6 @@ interface LarryChatProps {
 
 const API = 'https://artalpha-backend-production.up.railway.app';
 
-
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -57,43 +56,33 @@ export function LarryChat({ lotId }: LarryChatProps) {
   const [streaming, setStreaming] = useState(false);
   const [usage, setUsage] = useState<Usage | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [error, setError] = useState<string | null>(null);
   const [proactiveMessages, setProactiveMessages] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Fresh random 3 suggestions every time panel opens
   useEffect(() => {
     if (open) setSuggestions(shuffle(ALL_SUGGESTIONS).slice(0, 3));
   }, [open]);
 
-  // Fetch proactive messages when Larry opens
   useEffect(() => {
     if (!open) return;
     const token = getToken();
     if (!token) return;
-
-    fetch(`${API}/api/larry/proactive`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    fetch(`${API}/api/larry/proactive`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => setProactiveMessages(data.messages || []))
       .catch(() => {});
   }, [open]);
 
-  // Proactive trigger: show unread badge after 30s if user is idle and has proactive messages
   useEffect(() => {
     if (open) return;
     const token = getToken();
     if (!token) return;
     const SESSION_KEY = 'nautilus_larry_proactive_shown';
     if (sessionStorage.getItem(SESSION_KEY)) return;
-
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`${API}/api/larry/proactive`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(`${API}/api/larry/proactive`, { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) return;
         const data = await res.json();
         const msgs = data.messages || [];
@@ -102,11 +91,8 @@ export function LarryChat({ lotId }: LarryChatProps) {
           setUnreadCount(msgs.length);
           sessionStorage.setItem(SESSION_KEY, '1');
         }
-      } catch {
-        // silent
-      }
+      } catch { /* silent */ }
     }, 30_000);
-
     return () => clearTimeout(timer);
   }, [open]);
 
@@ -114,14 +100,9 @@ export function LarryChat({ lotId }: LarryChatProps) {
     const token = getToken();
     if (!token || isLocked) return;
     try {
-      const res = await fetch(`${API}/api/chat/usage`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        setUsage(await res.json());
-      } else if (res.status === 404) {
-        setUsage({ used: 0, limit: 30, plan: 'investor', can_chat: true });
-      }
+      const res = await fetch(`${API}/api/chat/usage`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setUsage(await res.json());
+      else if (res.status === 404) setUsage({ used: 0, limit: 30, plan: 'investor', can_chat: true });
     } catch {
       setUsage({ used: 0, limit: 30, plan: 'investor', can_chat: true });
     }
@@ -131,9 +112,7 @@ export function LarryChat({ lotId }: LarryChatProps) {
     const token = getToken();
     if (!token || isLocked) return;
     try {
-      const res = await fetch(`${API}/api/chat/history`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`${API}/api/chat/history`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         setMessages(data.map((m: { role: string; content: string }) => ({
@@ -142,9 +121,7 @@ export function LarryChat({ lotId }: LarryChatProps) {
           content: cleanLarry(m.content),
         })));
       }
-    } catch {
-      // silent
-    }
+    } catch { /* silent */ }
   }, [isLocked]);
 
   useEffect(() => {
@@ -161,7 +138,6 @@ export function LarryChat({ lotId }: LarryChatProps) {
   const sendMessage = async (text: string) => {
     const token = getToken();
     if (!token || streaming || !text.trim()) return;
-    setError(null);
 
     const tempId = uid();
     const userMsg: Message = { id: uid(), role: 'user', content: text.trim() };
@@ -177,50 +153,34 @@ export function LarryChat({ lotId }: LarryChatProps) {
 
       const res = await fetch(`${API}/api/chat/message`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ message: text.trim(), lot_id: lotId }),
         signal: controller.signal,
       });
-
       clearTimeout(timeoutId);
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         const detail = errData.detail || 'Connection error.';
-        let content: string;
-        if (res.status === 404) {
-          content = 'Larry will be available very soon. Deployment in progress.';
-        } else if (res.status === 403) {
-          content = '🔒 ' + detail;
-        } else if (res.status === 429) {
-          content = '⏳ ' + detail;
-        } else {
-          content = 'An error occurred. Please try again.';
-          setError(detail);
-        }
-        setMessages(prev => prev.map(m =>
-          m.id === tempId ? { ...m, content, streaming: false } : m
-        ));
+        let content = res.status === 404 ? 'Larry arrive très bientôt. Déploiement en cours.'
+          : res.status === 403 ? '🔒 ' + detail
+          : res.status === 429 ? '⏳ ' + detail
+          : 'Une erreur est survenue. Réessayez.';
+        setMessages(prev => prev.map(m => m.id === tempId ? { ...m, content, streaming: false } : m));
         return;
       }
 
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
-
       if (!reader) throw new Error('No response body');
 
       let buffer = '';
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
-
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           const raw = line.slice(6).trim();
@@ -228,54 +188,29 @@ export function LarryChat({ lotId }: LarryChatProps) {
           try {
             const parsed = JSON.parse(raw);
             if (parsed.error) {
-              setMessages(prev => prev.map(m =>
-                m.id === tempId
-                  ? { ...m, content: 'An error occurred. Please try again.', streaming: false }
-                  : m
-              ));
+              setMessages(prev => prev.map(m => m.id === tempId ? { ...m, content: 'Une erreur est survenue.', streaming: false } : m));
               return;
             }
             if (parsed.delta) {
-              setMessages(prev => prev.map(m =>
-                m.id === tempId
-                  ? { ...m, content: cleanLarry(m.content + parsed.delta) }
-                  : m
-              ));
+              setMessages(prev => prev.map(m => m.id === tempId ? { ...m, content: cleanLarry(m.content + parsed.delta) } : m));
             }
             if (parsed.done) {
-              setMessages(prev => prev.map(m =>
-                m.id === tempId
-                  ? { ...m, content: cleanLarry(parsed.full || m.content), streaming: false }
-                  : m
-              ));
+              setMessages(prev => prev.map(m => m.id === tempId ? { ...m, content: cleanLarry(parsed.full || m.content), streaming: false } : m));
               setUsage(prev => prev ? { ...prev, used: prev.used + 1 } : prev);
             }
           } catch { continue; }
         }
       }
-
-      setMessages(prev => prev.map(m =>
-        m.id === tempId ? { ...m, streaming: false } : m
-      ));
-
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, streaming: false } : m));
       fetchUsage();
     } catch (err: any) {
       const msg = err?.name === 'AbortError'
-        ? 'Larry is taking a while to respond. Please try again in a moment.'
-        : 'Could not connect to server. Please check your connection.';
-      setMessages(prev => prev.map(m =>
-        m.id === tempId
-          ? { ...m, content: msg, streaming: false }
-          : m
-      ));
+        ? 'Larry met du temps à répondre. Réessayez dans un instant.'
+        : 'Impossible de se connecter. Vérifiez votre connexion.';
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, content: msg, streaming: false } : m));
     } finally {
       setStreaming(false);
     }
-  };
-
-  const handleSuggestionClick = (s: string) => {
-    setInput(s);
-    sendMessage(s);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -290,133 +225,156 @@ export function LarryChat({ lotId }: LarryChatProps) {
     setUnreadCount(0);
   };
 
-  const usagePct = usage && usage.limit > 0
-    ? Math.round((usage.used / usage.limit) * 100)
-    : 0;
+  const newConversation = () => {
+    setMessages([]);
+    setSuggestions(shuffle(ALL_SUGGESTIONS).slice(0, 3));
+    setInput('');
+  };
 
+  const usagePct = usage && usage.limit > 0 ? Math.round((usage.used / usage.limit) * 100) : 0;
   const hasProactiveAlert = proactiveMessages.some(m => m.priority === 'high');
   const hasOpportunity = proactiveMessages.some(m => m.type === 'exceptional_lot');
 
-  const floatingVariant: LarryVariant = streaming
-    ? 'analyse'
-    : hasProactiveAlert
-    ? 'alert'
-    : hasOpportunity
-    ? 'opportunity'
-    : open
-    ? 'analyse'
+  const launcherVariant: LarryVariant = streaming ? 'analyse'
+    : hasProactiveAlert ? 'alert'
+    : hasOpportunity ? 'opportunity'
+    : open ? 'analyse'
     : 'sleep';
 
   return (
     <>
-      {/* Floating Larry mascot */}
-      <button
-        onClick={handleOpen}
-        style={{
-          position: 'fixed',
-          bottom: '16px',
-          right: '20px',
-          background: 'none',
-          border: 'none',
-          padding: 0,
-          cursor: 'pointer',
-          zIndex: 10000,
-          filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.35))',
-          transition: 'transform 0.15s ease, filter 0.15s ease',
-        }}
-        title="Talk to Larry"
-        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.07)'; }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
-      >
-        {hasProactiveAlert && !open && (
-          <div style={{
-            position: 'absolute',
-            top: '10px',
-            right: '-4px',
-            width: '12px',
-            height: '12px',
-            borderRadius: '50%',
-            background: '#C6A85A',
-            border: '2px solid white',
-            animation: 'pulseDot 2s infinite',
-            zIndex: 1,
-          }} />
-        )}
-        {unreadCount > 0 && !open && (
-          <div style={{
-            position: 'absolute',
-            top: '8px',
-            right: '-4px',
-            minWidth: '18px',
-            height: '18px',
-            borderRadius: '9px',
-            background: 'var(--gold)',
-            border: '2px solid white',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '10px',
-            fontWeight: 700,
-            color: '#0A1628',
-            paddingInline: '3px',
-            animation: 'pulse 2s infinite',
-            zIndex: 1,
-          }}>
-            {unreadCount}
-          </div>
-        )}
-        <Larry variant={floatingVariant} size={80} />
-      </button>
+      <style>{`
+        @keyframes lc-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+        @keyframes lc-pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.4);opacity:0.7} }
+        @keyframes lc-slideup { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        .lc-panel { animation: lc-slideup 0.2s ease; }
+        .lc-suggestion:hover { background: #f0f2f5 !important; }
+        .lc-send:hover:not(:disabled) { background: #1a3566 !important; }
+        .lc-new:hover { background: rgba(255,255,255,0.15) !important; }
+        .lc-close-header:hover { background: rgba(255,255,255,0.15) !important; }
+        .lc-msg-area::-webkit-scrollbar { width: 4px; }
+        .lc-msg-area::-webkit-scrollbar-track { background: transparent; }
+        .lc-msg-area::-webkit-scrollbar-thumb { background: #dde0e6; border-radius: 2px; }
+      `}</style>
 
-      {/* Chat panel */}
+      {/* ── CHAT PANEL ── */}
       {open && (
         <div
+          className="lc-panel"
           style={{
             position: 'fixed',
-            bottom: '140px',
-            right: '24px',
-            width: '380px',
-            height: '560px',
-            background: '#fff',
-            border: '1px solid var(--border)',
+            bottom: '88px',
+            right: '20px',
+            width: '375px',
+            height: '580px',
+            background: '#ffffff',
             borderRadius: '16px',
+            boxShadow: '0 12px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: '0 8px 40px rgba(0,0,0,0.15)',
-            zIndex: 9998,
+            zIndex: 10000,
             overflow: 'hidden',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           }}
         >
-          {/* Header */}
+          {/* ── HEADER ── */}
           <div style={{
-            padding: '16px 20px',
-            borderBottom: '1px solid var(--border)',
-            background: 'var(--navy)',
-            color: '#fff',
+            background: '#0A1628',
+            padding: '14px 16px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            gap: '10px',
+            flexShrink: 0,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Larry variant="analyse" size={28} />
-              <div>
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', fontWeight: 700 }}>
-                  {t('larry.title')}
-                </div>
-                <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '2px' }}>
+            {/* Larry avatar circle */}
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.08)',
+              overflow: 'hidden',
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'center',
+            }}>
+              <Larry variant="analyse" size={40} />
+            </div>
+
+            {/* Name + status */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ color: '#fff', fontSize: '15px', fontWeight: 700, fontFamily: 'var(--font-serif, Georgia, serif)' }}>
+                Larry
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '1px' }}>
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#4ade80', flexShrink: 0 }} />
+                <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {t('larry.subtitle')}
                 </div>
               </div>
             </div>
-            {usage && usage.limit < 9999 && (
-              <div style={{ fontSize: '11px', opacity: 0.8, textAlign: 'right' }}>
-                {t('larry.usage', { used: usage.used, limit: usage.limit })}
-              </div>
-            )}
+
+            {/* Actions */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+              {/* New conversation */}
+              {messages.length > 0 && (
+                <button
+                  className="lc-new"
+                  onClick={newConversation}
+                  title="Nouvelle conversation"
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'background 0.15s',
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </button>
+              )}
+              {/* Usage */}
+              {usage && usage.limit < 9999 && (
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono, monospace)', paddingInline: '6px' }}>
+                  {usage.used}/{usage.limit}
+                </div>
+              )}
+              {/* Close */}
+              <button
+                className="lc-close-header"
+                onClick={() => setOpen(false)}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'rgba(255,255,255,0.75)',
+                  fontSize: '20px',
+                  lineHeight: 1,
+                  transition: 'background 0.15s',
+                }}
+                title="Fermer"
+              >
+                ×
+              </button>
+            </div>
           </div>
 
+          {/* ── BODY ── */}
           {isLocked ? (
-            /* Locked state */
             <div style={{
               flex: 1,
               display: 'flex',
@@ -425,29 +383,28 @@ export function LarryChat({ lotId }: LarryChatProps) {
               justifyContent: 'center',
               padding: '32px 24px',
               textAlign: 'center',
-              gap: '16px',
+              gap: '14px',
             }}>
-              <Larry variant="sleep" size={80} />
+              <Larry variant="sleep" size={72} />
               <div>
-                <p style={{ fontWeight: 600, color: 'var(--navy)', margin: 0, fontSize: '15px' }}>
+                <p style={{ fontWeight: 700, color: '#0A1628', margin: 0, fontSize: '15px' }}>
                   {t('larry.lockedTitle')}
                 </p>
-                <p style={{ color: 'var(--text-2)', fontSize: '13px', margin: '8px 0 0' }}>
+                <p style={{ color: '#6b7280', fontSize: '13px', margin: '6px 0 0', lineHeight: 1.5 }}>
                   {t('larry.lockedSub')}
                 </p>
               </div>
               <a
                 href="/app/pricing"
                 style={{
-                  display: 'block',
+                  display: 'inline-block',
                   padding: '10px 24px',
-                  background: 'var(--navy)',
+                  background: '#0A1628',
                   color: '#fff',
                   borderRadius: '8px',
                   textDecoration: 'none',
                   fontSize: '13px',
                   fontWeight: 600,
-                  marginTop: '8px',
                 }}
               >
                 {t('larry.lockedCta')}
@@ -455,97 +412,96 @@ export function LarryChat({ lotId }: LarryChatProps) {
             </div>
           ) : (
             <>
-              {/* Messages area */}
-              <div style={{
-                flex: 1,
-                overflowY: 'auto',
-                padding: '16px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-              }}>
+              {/* Messages */}
+              <div
+                className="lc-msg-area"
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  background: '#f8f9fb',
+                }}
+              >
+                {/* Empty state */}
                 {messages.length === 0 && (
-                  <div>
-                    <p style={{
-                      color: 'var(--text-2)',
-                      fontSize: '13px',
-                      textAlign: 'center',
-                      margin: '0 0 16px',
-                    }}>
-                      {t('larry.welcome')}
-                    </p>
-
-                    {/* Proactive notification cards */}
-                    {proactiveMessages.length > 0 && (
-                      <div style={{ marginBottom: '16px' }}>
-                        {proactiveMessages.slice(0, 2).map((msg: any) => (
-                          <div
-                            key={msg.id}
-                            style={{
-                              background: 'var(--navy)',
-                              borderRadius: '8px',
-                              padding: '12px 14px',
-                              marginBottom: '8px',
-                              cursor: 'pointer',
-                              transition: 'opacity 0.15s',
-                            }}
-                            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.opacity = '0.85'; }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.opacity = '1'; }}
-                            onClick={() => {
-                              setMessages([{
-                                id: uid(),
-                                role: 'assistant' as const,
-                                content: msg.larry_message,
-                                streaming: false,
-                              }]);
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                                {msg.type === 'exceptional_lot' ? '◆ STRONG SIGNAL' : msg.type === 'market_signal' ? '⚡ MARKET ACTIVE' : '◐ PRIMARY MARKET'}
-                              </div>
-                              <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)' }}>
-                                {msg.priority === 'high' ? 'PRIORITY' : 'NEW'}
-                              </span>
-                            </div>
-                            <div style={{ fontSize: '12px', color: 'white', fontWeight: 600, marginBottom: '3px' }}>
-                              {msg.title}
-                            </div>
-                            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)' }}>
-                              {msg.detail}
-                            </div>
-                            <div style={{ fontSize: '10px', color: 'var(--gold)', marginTop: '8px', fontWeight: 600 }}>
-                              {msg.cta}
-                            </div>
-                          </div>
-                        ))}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Welcome bubble from Larry */}
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                      <div style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        background: '#e8ecf2',
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'center',
+                      }}>
+                        <Larry variant="analyse" size={28} />
                       </div>
-                    )}
+                      <div style={{
+                        background: '#ffffff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '18px 18px 18px 4px',
+                        padding: '10px 14px',
+                        fontSize: '13px',
+                        color: '#111827',
+                        lineHeight: 1.55,
+                        maxWidth: '82%',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                      }}>
+                        {t('larry.welcome')}
+                      </div>
+                    </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {/* Proactive cards */}
+                    {proactiveMessages.length > 0 && proactiveMessages.slice(0, 2).map((msg: any) => (
+                      <div
+                        key={msg.id}
+                        onClick={() => setMessages([{ id: uid(), role: 'assistant', content: msg.larry_message, streaming: false }])}
+                        style={{
+                          background: '#0A1628',
+                          borderRadius: '12px',
+                          padding: '12px 14px',
+                          cursor: 'pointer',
+                          transition: 'opacity 0.15s',
+                          marginLeft: '36px',
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.opacity = '0.88'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.opacity = '1'; }}
+                      >
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: '#C6A85A', fontFamily: 'monospace', letterSpacing: '0.08em', marginBottom: '4px' }}>
+                          {msg.type === 'exceptional_lot' ? '◆ SIGNAL FORT' : msg.type === 'market_signal' ? '⚡ MARCHÉ ACTIF' : '◐ MARCHÉ PRIMAIRE'}
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#fff', fontWeight: 600, marginBottom: '2px' }}>{msg.title}</div>
+                        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.55)' }}>{msg.detail}</div>
+                        <div style={{ fontSize: '11px', color: '#C6A85A', marginTop: '6px', fontWeight: 600 }}>{msg.cta} →</div>
+                      </div>
+                    ))}
+
+                    {/* Suggestions */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginLeft: '36px', marginTop: '4px' }}>
                       {suggestions.map(s => (
                         <button
                           key={s}
-                          onClick={() => handleSuggestionClick(s)}
+                          className="lc-suggestion"
+                          onClick={() => { setInput(s); sendMessage(s); }}
                           style={{
-                            background: 'none',
-                            border: '1px solid var(--navy, #0A1628)',
+                            background: '#fff',
+                            border: '1px solid #e5e7eb',
                             borderRadius: '20px',
-                            padding: '7px 14px',
+                            padding: '8px 14px',
                             textAlign: 'left',
                             cursor: 'pointer',
                             fontSize: '13px',
-                            color: 'var(--navy, #0A1628)',
-                            transition: 'all 0.15s',
+                            color: '#0A1628',
                             fontWeight: 500,
-                          }}
-                          onMouseEnter={e => {
-                            (e.currentTarget as HTMLButtonElement).style.background = 'var(--navy, #0A1628)';
-                            (e.currentTarget as HTMLButtonElement).style.color = 'white';
-                          }}
-                          onMouseLeave={e => {
-                            (e.currentTarget as HTMLButtonElement).style.background = 'none';
-                            (e.currentTarget as HTMLButtonElement).style.color = 'var(--navy, #0A1628)';
+                            transition: 'background 0.12s',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                           }}
                         >
                           {s}
@@ -555,90 +511,99 @@ export function LarryChat({ lotId }: LarryChatProps) {
                   </div>
                 )}
 
-                {messages.map(msg => (
-                  <div
-                    key={msg.id}
-                    style={{
-                      alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                      maxWidth: '85%',
-                    }}
-                  >
-                    <div style={{
-                      padding: '10px 14px',
-                      borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                      background: msg.role === 'user' ? 'var(--navy)' : 'var(--surface)',
-                      color: msg.role === 'user' ? '#fff' : 'var(--text-1)',
-                      fontSize: '13px',
-                      lineHeight: 1.55,
-                      whiteSpace: 'pre-wrap',
-                    }}>
-                      {msg.content}
-                      {msg.streaming && (
-                        <span style={{
-                          display: 'inline-block',
-                          marginLeft: '2px',
-                          animation: 'blink 1s step-end infinite',
-                          color: 'var(--gold)',
-                          fontWeight: 700,
-                        }}>▌</span>
+                {/* Message bubbles */}
+                {messages.map((msg, idx) => {
+                  const isUser = msg.role === 'user';
+                  const prevRole = idx > 0 ? messages[idx - 1].role : null;
+                  const showAvatar = !isUser && prevRole !== 'assistant';
+                  return (
+                    <div
+                      key={msg.id}
+                      style={{
+                        display: 'flex',
+                        flexDirection: isUser ? 'row-reverse' : 'row',
+                        gap: '8px',
+                        alignItems: 'flex-end',
+                      }}
+                    >
+                      {/* Larry avatar — show only at start of assistant group */}
+                      {!isUser && (
+                        <div style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '50%',
+                          background: showAvatar ? '#e8ecf2' : 'transparent',
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'center',
+                        }}>
+                          {showAvatar && <Larry variant="analyse" size={28} />}
+                        </div>
                       )}
-                    </div>
-                  </div>
-                ))}
 
-                {error && (
-                  <div style={{
-                    fontSize: '12px',
-                    color: '#c0392b',
-                    padding: '8px 12px',
-                    background: '#fdf2f2',
-                    borderRadius: '8px',
-                    border: '1px solid #f5c6c6',
-                  }}>
-                    {error}
-                  </div>
-                )}
+                      <div style={{
+                        maxWidth: '75%',
+                        padding: '10px 14px',
+                        borderRadius: isUser ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                        background: isUser ? '#0A1628' : '#ffffff',
+                        color: isUser ? '#ffffff' : '#111827',
+                        fontSize: '13px',
+                        lineHeight: 1.6,
+                        whiteSpace: 'pre-wrap',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.07)',
+                        border: isUser ? 'none' : '1px solid #e5e7eb',
+                        wordBreak: 'break-word',
+                      }}>
+                        {msg.content}
+                        {msg.streaming && (
+                          <span style={{
+                            display: 'inline-block',
+                            width: '2px',
+                            height: '14px',
+                            background: '#C6A85A',
+                            marginLeft: '3px',
+                            verticalAlign: 'middle',
+                            animation: 'lc-blink 1s step-end infinite',
+                          }} />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
 
                 <div ref={messagesEndRef} />
               </div>
 
               {/* Usage bar */}
               {usage && usage.limit < 9999 && (
-                <div style={{ padding: '0 16px 8px' }}>
-                  <div style={{
-                    height: '3px',
-                    background: 'var(--border)',
-                    borderRadius: '2px',
-                    overflow: 'hidden',
-                  }}>
+                <div style={{ padding: '0 16px 0', background: '#fff', flexShrink: 0 }}>
+                  <div style={{ height: '2px', background: '#f3f4f6', borderRadius: '1px', overflow: 'hidden' }}>
                     <div style={{
                       height: '100%',
                       width: `${usagePct}%`,
-                      background: usagePct >= 90 ? '#e74c3c' : 'var(--gold)',
+                      background: usagePct >= 90 ? '#ef4444' : '#C6A85A',
                       transition: 'width 0.3s ease',
                     }} />
                   </div>
                 </div>
               )}
 
-              {/* Input area */}
+              {/* Input */}
               {usage && !usage.can_chat && usage.limit > 0 ? (
-                <div style={{
-                  padding: '16px',
-                  borderTop: '1px solid var(--border)',
-                  textAlign: 'center',
-                  color: 'var(--text-2)',
-                  fontSize: '12px',
-                }}>
+                <div style={{ padding: '14px 16px', background: '#fff', textAlign: 'center', fontSize: '12px', color: '#6b7280', borderTop: '1px solid #f3f4f6', flexShrink: 0 }}>
                   {t('larry.monthlyLimit')}
                 </div>
               ) : (
                 <div style={{
-                  padding: '12px 16px',
-                  borderTop: '1px solid var(--border)',
+                  padding: '10px 12px',
+                  background: '#fff',
+                  borderTop: '1px solid #f3f4f6',
                   display: 'flex',
                   gap: '8px',
                   alignItems: 'flex-end',
+                  flexShrink: 0,
                 }}>
                   <textarea
                     ref={textareaRef}
@@ -651,31 +616,33 @@ export function LarryChat({ lotId }: LarryChatProps) {
                     style={{
                       flex: 1,
                       resize: 'none',
-                      border: '1px solid var(--border)',
-                      borderRadius: '10px',
-                      padding: '8px 12px',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '22px',
+                      padding: '9px 14px',
                       fontSize: '13px',
                       fontFamily: 'inherit',
                       outline: 'none',
-                      minHeight: '36px',
-                      maxHeight: '100px',
+                      minHeight: '38px',
+                      maxHeight: '96px',
                       overflowY: 'auto',
-                      color: 'var(--text-1)',
-                      background: streaming ? 'var(--surface)' : '#fff',
+                      color: '#111827',
+                      background: '#f8f9fb',
+                      lineHeight: 1.5,
                       transition: 'border-color 0.15s',
                     }}
-                    onFocus={e => (e.currentTarget.style.borderColor = 'var(--navy)')}
-                    onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+                    onFocus={e => (e.currentTarget.style.borderColor = '#0A1628')}
+                    onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}
                   />
                   <button
+                    className="lc-send"
                     onClick={() => sendMessage(input)}
                     disabled={streaming || !input.trim()}
                     style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '10px',
-                      background: streaming || !input.trim() ? 'var(--border)' : 'var(--navy)',
-                      color: '#fff',
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '50%',
+                      background: streaming || !input.trim() ? '#e5e7eb' : '#0A1628',
+                      color: streaming || !input.trim() ? '#9ca3af' : '#fff',
                       border: 'none',
                       cursor: streaming || !input.trim() ? 'not-allowed' : 'pointer',
                       display: 'flex',
@@ -685,7 +652,7 @@ export function LarryChat({ lotId }: LarryChatProps) {
                       transition: 'background 0.15s',
                     }}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="22" y1="2" x2="11" y2="13" />
                       <polygon points="22 2 15 22 11 13 2 9 22 2" />
                     </svg>
@@ -697,20 +664,83 @@ export function LarryChat({ lotId }: LarryChatProps) {
         </div>
       )}
 
-      <style>{`
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.4); opacity: 0.7; }
-        }
-        @keyframes pulseDot {
-          0%, 100% { transform: scale(1); opacity: 0.6; }
-          50% { transform: scale(1.15); opacity: 1; }
-        }
-      `}</style>
+      {/* ── LAUNCHER BUTTON ── */}
+      <button
+        onClick={handleOpen}
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          width: '56px',
+          height: '56px',
+          borderRadius: '50%',
+          background: '#0A1628',
+          border: 'none',
+          cursor: 'pointer',
+          zIndex: 10001,
+          overflow: 'hidden',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.28)',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          padding: 0,
+          transition: 'transform 0.15s, box-shadow 0.15s',
+        }}
+        title="Parler à Larry"
+        onMouseEnter={e => {
+          e.currentTarget.style.transform = 'scale(1.06)';
+          e.currentTarget.style.boxShadow = '0 6px 24px rgba(0,0,0,0.34)';
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.28)';
+        }}
+      >
+        {open ? (
+          <span style={{ color: '#fff', fontSize: '24px', lineHeight: '56px', fontWeight: 300 }}>×</span>
+        ) : (
+          <div style={{ marginTop: '-2px' }}>
+            <Larry variant={launcherVariant} size={56} />
+          </div>
+        )}
+
+        {/* Unread badge */}
+        {unreadCount > 0 && !open && (
+          <div style={{
+            position: 'absolute',
+            top: '2px',
+            right: '2px',
+            minWidth: '18px',
+            height: '18px',
+            borderRadius: '9px',
+            background: '#C6A85A',
+            border: '2px solid #fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '10px',
+            fontWeight: 700,
+            color: '#0A1628',
+            paddingInline: '3px',
+            animation: 'lc-pulse 2s infinite',
+          }}>
+            {unreadCount}
+          </div>
+        )}
+
+        {/* Alert ring */}
+        {hasProactiveAlert && !open && (
+          <div style={{
+            position: 'absolute',
+            inset: '-3px',
+            borderRadius: '50%',
+            border: '2px solid #C6A85A',
+            animation: 'lc-pulse 2s infinite',
+            opacity: 0.7,
+            pointerEvents: 'none',
+          }} />
+        )}
+      </button>
     </>
   );
 }
