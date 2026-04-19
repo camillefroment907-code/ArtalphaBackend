@@ -23,9 +23,8 @@ logger = structlog.get_logger()
 EBAY_AUTH_URL = "https://api.ebay.com/identity/v1/oauth2/token"
 EBAY_SEARCH_URL = "https://api.ebay.com/buy/browse/v1/item_summary/search"
 
-# eBay fine art category IDs
+# eBay fine art category IDs — use specific subcategories (not 550 "Art" which is too generic)
 ART_CATEGORIES = {
-    "550":   "Art",
     "20081": "Paintings",
     "10770": "Prints",
     "617":   "Sculpture",
@@ -240,7 +239,7 @@ async def fetch_lots(limit: int = 2000) -> List[LotNormalized]:
                         )
                         if resp.status_code == 200:
                             for item in resp.json().get("itemSummaries", []):
-                                parsed = _parse_item(item, "Art")
+                                parsed = _parse_item(item, "Paintings")
                                 if parsed and parsed.external_id not in seen:
                                     seen.add(parsed.external_id)
                                     lots.append(parsed)

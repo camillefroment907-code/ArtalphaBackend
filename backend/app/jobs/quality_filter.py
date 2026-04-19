@@ -26,6 +26,7 @@ CATEGORY_WHITELIST = {
     "mixed media", "media mixtes", "technique mixte",
     "street art", "urban art", "graffiti",
     "contemporary art", "modern art", "fine art",
+    "art",  # eBay top-level category
     "installation", "video", "digital art",
     "collage", "assemblage",
 }
