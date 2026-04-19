@@ -373,3 +373,19 @@ select.input:hover,
 select:hover {
   border-color: var(--text-2);
 }
+
+/* ── NPS SURVEY ANIMATIONS ──────────────────────────────────── */
+@keyframes npsSlideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes npsSlideDown {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(24px); }
+}
+@keyframes npsDrawCircle {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes npsDrawCheck {
+  to { stroke-dashoffset: 0; }
+}

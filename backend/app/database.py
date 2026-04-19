@@ -96,6 +96,8 @@ async def run_migrations():
         "ALTER TABLE lots ADD COLUMN IF NOT EXISTS size_category VARCHAR(50)",
         # Phase 5: content fingerprint for cross-source deduplication
         "ALTER TABLE lots ADD COLUMN IF NOT EXISTS lot_fingerprint VARCHAR(64)",
+        # NPS survey: add comment column
+        "ALTER TABLE nps_responses ADD COLUMN IF NOT EXISTS comment TEXT",
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_lots_fingerprint ON lots(lot_fingerprint) WHERE lot_fingerprint IS NOT NULL",
         # proprietary data tables — create_all handles new tables,
         # but ensure any future column additions are listed here

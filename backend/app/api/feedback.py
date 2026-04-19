@@ -29,6 +29,53 @@ ADMIN_EMAIL = "camillefroment907@gmail.com"
 
 # ── NPS ───────────────────────────────────────────────────────────────────────
 
+@router.post("/nps")
+async def submit_nps(
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    """
+    Called from in-app NPS survey widget.
+    Accepts score + optional comment, stores response, notifies admin on detractors.
+    """
+    score = body.get("score")
+    comment = (body.get("comment") or "").strip()
+
+    if score is None or not isinstance(score, int) or not (0 <= score <= 10):
+        raise HTTPException(400, "score must be integer 0-10")
+
+    user_id = str(current_user.id) if current_user else None
+
+    try:
+        await db.execute(
+            text("INSERT INTO nps_responses (user_id, score, comment) VALUES (:uid, :score, :comment)"),
+            {"uid": user_id, "score": score, "comment": comment or None},
+        )
+        await db.commit()
+    except Exception as e:
+        logger.warning("nps_store_failed", error=str(e))
+
+    if score <= 6:
+        try:
+            asyncio.create_task(send_admin_notification(
+                subject=f"⚠️ NPS Detractor — score {score}/10 (user: {user_id or 'unknown'})",
+                html=f"""
+                <div style="font-family: Georgia, serif; padding: 32px; max-width: 480px;">
+                  <h2 style="color: #0A1628;">NPS Detractor Alert</h2>
+                  <p><strong>Score:</strong> {score}/10</p>
+                  <p><strong>User ID:</strong> {user_id or 'anonymous'}</p>
+                  <p><strong>Comment:</strong> {comment or '(none)'}</p>
+                  <p><strong>Date:</strong> {datetime.utcnow().strftime('%d/%m/%Y %H:%M')} UTC</p>
+                </div>
+                """,
+            ))
+        except Exception:
+            pass
+
+    return {"status": "received"}
+
+
 @router.get("/nps")
 async def record_nps(
     score: int = Query(..., ge=0, le=10),
