@@ -536,6 +536,95 @@ async def lot_count(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     }
 
 
+# ── Pipeline diagnostic ───────────────────────────────────────────────────────
+
+@router.get("/debug-pipeline", dependencies=[Depends(verify_admin)])
+async def debug_pipeline(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Synchronous diagnostic: runs each connector with limit=10 and reports
+    what was fetched, what passed quality filter, and how many are new vs existing.
+    Takes ~60s. Use to diagnose why lot count isn't growing.
+    """
+    import os, traceback
+    from app.jobs.quality_filter import filter_and_deduplicate
+
+    results = {}
+
+    # 1. ArtMarket API
+    try:
+        from app.connectors.artmarketapi_connector import ArtMarketAPIConnector
+        amapi = ArtMarketAPIConnector()
+        lots = await amapi.fetch_lots(limit=10)
+        filtered, stats = filter_and_deduplicate(lots)
+        results["artmarketapi"] = {"fetched": len(lots), "after_filter": len(filtered), "filter_stats": stats, "error": None}
+    except Exception as e:
+        results["artmarketapi"] = {"fetched": 0, "error": str(e)[:200]}
+
+    # 2. Phillips
+    try:
+        from app.connectors.phillips_connector import fetch_lots as ph_fetch
+        lots = await ph_fetch(10)
+        filtered, stats = filter_and_deduplicate(lots)
+        results["phillips"] = {"fetched": len(lots), "after_filter": len(filtered), "filter_stats": stats, "error": None}
+    except Exception as e:
+        results["phillips"] = {"fetched": 0, "error": str(e)[:200]}
+
+    # 3. Artsy
+    try:
+        from app.connectors.artsy_connector import fetch_lots as artsy_fetch
+        import asyncio as _aio
+        lots = await _aio.wait_for(artsy_fetch(10), timeout=30)
+        filtered, stats = filter_and_deduplicate(lots)
+        results["artsy"] = {"fetched": len(lots), "after_filter": len(filtered), "filter_stats": stats, "error": None}
+    except Exception as e:
+        results["artsy"] = {"fetched": 0, "error": str(e)[:200]}
+
+    # 4. eBay
+    try:
+        from app.connectors.ebay_connector import fetch_lots as ebay_fetch
+        lots = await ebay_fetch(20)
+        filtered, stats = filter_and_deduplicate(lots)
+        results["ebay"] = {"fetched": len(lots), "after_filter": len(filtered), "filter_stats": stats, "error": None}
+    except Exception as e:
+        results["ebay"] = {"fetched": 0, "error": str(e)[:200]}
+
+    # 5. Artcurial
+    try:
+        from app.connectors.artcurial_connector import fetch_lots as art_fetch
+        lots = await art_fetch(10)
+        filtered, stats = filter_and_deduplicate(lots)
+        results["artcurial"] = {"fetched": len(lots), "after_filter": len(filtered), "filter_stats": stats, "error": None}
+    except Exception as e:
+        results["artcurial"] = {"fetched": 0, "error": str(e)[:200]}
+
+    # 6. Bonhams
+    try:
+        from app.connectors.bonhams_connector import fetch_lots as bon_fetch
+        lots = await bon_fetch(10)
+        filtered, stats = filter_and_deduplicate(lots)
+        results["bonhams"] = {"fetched": len(lots), "after_filter": len(filtered), "filter_stats": stats, "error": None}
+    except Exception as e:
+        results["bonhams"] = {"fetched": 0, "error": str(e)[:200]}
+
+    # Check env vars
+    env_check = {
+        "ART_MARKET_API_KEY": bool(os.getenv("ART_MARKET_API_KEY")),
+        "EBAY_CLIENT_ID": bool(os.getenv("EBAY_CLIENT_ID")),
+        "EBAY_CLIENT_SECRET": bool(os.getenv("EBAY_CLIENT_SECRET")),
+        "APIFY_API_TOKEN": bool(os.getenv("APIFY_API_TOKEN")),
+    }
+
+    # DB dedup check — how many of the total existing lots would block new inserts
+    total_in_db = (await db.execute(select(func.count(Lot.id)))).scalar() or 0
+
+    return {
+        "connectors": results,
+        "env_vars": env_check,
+        "total_in_db": total_in_db,
+        "generated_at": datetime.utcnow().isoformat(),
+    }
+
+
 # ── Bulk ingest trigger ────────────────────────────────────────────────────────
 
 @router.post("/bulk-ingest", dependencies=[Depends(verify_admin)])
