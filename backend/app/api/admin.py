@@ -172,6 +172,65 @@ async def cleanup_jewelry(
     }
 
 
+@router.post("/dedup-lots")
+async def dedup_lots(
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_admin),
+) -> Dict[str, Any]:
+    """
+    Remove duplicate lots. Two passes:
+    1. Content-hash dedup: keep earliest lot per (title+artist+est_low+est_high), delete the rest.
+    2. Exact-field dedup: keep earliest lot per exact (title, artist_name_raw, estimate_low, estimate_high), delete the rest.
+    Also backfills lot_fingerprint on all lots that are missing it.
+    """
+    import hashlib
+    from sqlalchemy import text as sa_text
+
+    # Pass 1: Backfill fingerprints on existing lots
+    fp_sql = sa_text("""
+        UPDATE lots
+        SET lot_fingerprint = md5(
+            lower(coalesce(title,'')) || '|' ||
+            lower(coalesce(artist_name_raw,'')) || '|' ||
+            round(coalesce(estimate_low,0))::text || '|' ||
+            round(coalesce(estimate_high,0))::text
+        )
+        WHERE title IS NOT NULL AND lot_fingerprint IS NULL
+    """)
+    await db.execute(fp_sql)
+    await db.commit()
+
+    # Pass 2: Delete duplicate lots — keep the oldest (MIN id) per fingerprint
+    del_sql = sa_text("""
+        DELETE FROM lots
+        WHERE id IN (
+            SELECT id FROM (
+                SELECT id,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY lot_fingerprint
+                           ORDER BY created_at ASC
+                       ) AS rn
+                FROM lots
+                WHERE lot_fingerprint IS NOT NULL
+            ) ranked
+            WHERE rn > 1
+        )
+    """)
+    result = await db.execute(del_sql)
+    deleted = result.rowcount
+    await db.commit()
+
+    # Count remaining
+    total_remaining = (await db.execute(select(func.count(Lot.id)))).scalar() or 0
+
+    return {
+        "deleted": deleted,
+        "remaining": total_remaining,
+        "message": f"Removed {deleted} duplicate lots. {total_remaining} unique lots remain.",
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
 @router.get("/health")
 async def admin_health(
     db: AsyncSession = Depends(get_db),

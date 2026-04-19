@@ -3,6 +3,7 @@ HONO Background Tasks
 All async operations are wrapped with asyncio.run() for Celery compatibility.
 """
 import asyncio
+import hashlib
 import uuid as _uuid_mod
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -226,7 +227,16 @@ async def _poll_and_score_async():
                     artist=artist_name or lot_data.artist_name_raw or "",
                 )
 
-                # 7. Create new lot record
+                # 7. Compute content fingerprint for cross-source deduplication
+                _fp_raw = (
+                    f"{(lot_data.title or '').lower().strip()}|"
+                    f"{(artist_name or lot_data.artist_name_raw or '').lower().strip()}|"
+                    f"{round(lot_data.estimate_low or 0)}|"
+                    f"{round(lot_data.estimate_high or 0)}"
+                )
+                lot_fingerprint = hashlib.md5(_fp_raw.encode()).hexdigest() if lot_data.title else None
+
+                # 8. Create new lot record
                 lot_obj = Lot(
                     external_id=lot_data.external_id,
                     source=lot_data.source,
@@ -264,10 +274,11 @@ async def _poll_and_score_async():
                     score_rationale=rationale,
                 )
                 # INSERT ... ON CONFLICT DO NOTHING — idempotent at DB level.
-                # The unique index uq_lots_source_external (source, external_id WHERE NOT NULL)
-                # guarantees concurrent workers can never produce duplicates.
+                # Two conflict targets:
+                # 1. uq_lots_source_external: same (source, external_id) — same connector, same lot
+                # 2. uq_lots_fingerprint: same content hash — cross-connector duplicate (e.g. Roseberys via artmarketapi AND direct)
                 stmt = pg_insert(Lot).values(
-                    id=_uuid_mod.uuid4(),  # explicit: ORM default runs at flush, not at instantiation
+                    id=_uuid_mod.uuid4(),
                     external_id=lot_obj.external_id,
                     source=lot_obj.source,
                     url=lot_obj.url,
@@ -302,11 +313,12 @@ async def _poll_and_score_async():
                     enriched_at=lot_obj.enriched_at,
                     confidence_score=lot_obj.confidence_score,
                     score_rationale=lot_obj.score_rationale,
+                    lot_fingerprint=lot_fingerprint,
                     created_at=lot_obj.created_at,
                     updated_at=lot_obj.updated_at,
                 ).on_conflict_do_nothing(
-                    index_elements=["source", "external_id"],
-                    index_where=Lot.external_id.isnot(None),
+                    index_elements=["lot_fingerprint"],
+                    index_where=Lot.lot_fingerprint.isnot(None),
                 )
                 await session.execute(stmt)
 

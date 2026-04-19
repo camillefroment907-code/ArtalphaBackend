@@ -220,6 +220,10 @@ class Lot(Base):
     score_rationale = Column(Text, nullable=True)        # GPT-4o-mini explanation
     confidence_score = Column(Float, nullable=True)       # 0-100 data quality score
 
+    # Content-based deduplication — hash of (title + artist + est_low + est_high).
+    # Prevents the same lot appearing from multiple connectors covering the same house.
+    lot_fingerprint = Column(String(64), nullable=True)
+
     # Meta
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -244,6 +248,14 @@ class Lot(Base):
             "source", "external_id",
             unique=True,
             postgresql_where=text("external_id IS NOT NULL"),
+        ),
+        # Content fingerprint unique index — cross-source deduplication.
+        # Prevents the same lot appearing from multiple connectors.
+        Index(
+            "uq_lots_fingerprint",
+            "lot_fingerprint",
+            unique=True,
+            postgresql_where=text("lot_fingerprint IS NOT NULL"),
         ),
     )
 
