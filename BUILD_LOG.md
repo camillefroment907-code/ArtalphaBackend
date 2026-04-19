@@ -243,3 +243,70 @@ All 9 files pass `python3 -c "import json; json.load(open(f))"` — valid.
 2. In n8n env vars: set `NAUTILUS_ADMIN_KEY` (same value as Railway backend)
 3. Import all 9 JSON files → workflows auto-link to "Resend SMTP"
 4. Toggle each workflow Active after smoke-testing
+
+---
+
+## Session 2026-04-19 — Scale to 50K Lots
+
+### Step 1 — Connector Audit (Production Baseline: 1,941 lots)
+
+| Connector | Status | Lots (prod) | Blocker |
+|-----------|--------|-------------|---------|
+| ArtMarketAPI | ✅ Working | 1,545 | 10 search terms only, 7s/request rate limit |
+| Artsy auction | ⚠️ Capped | ~50-100 | `for page in range(2)` hardcoded — 100 lot max |
+| Artsy primary | ⚠️ Capped | ~50-100 | `max_pages=2` hardcoded — 100 lot max |
+| Invaluable | ⚠️ Limited | ~96 | 8 queries × 2 pages × 48 = ~768 lot max |
+| Phillips | ⚠️ No pagination | 136 | Single request, 100 lot max |
+| Roseberys | ✅ Working | 52 | Low volume source |
+| Drouot Real | ✅ Working | ~30 | Playwright, 12 sales max |
+| Heritage | ❌ Disabled | 109 | Railway IP blocked |
+| Catawiki | ❌ Disabled | 0 | Railway IP blocked |
+| Interenchères | ❌ Disabled | 0 | Cloudflare blocked |
+| LiveAuctioneers | ⚠️ Limited | 0-99 | Requires APIFY_API_TOKEN |
+
+### Step 2 — Changes Made
+
+**artsy_connector.py:**
+- `fetch_lots`: replaced `for page in range(2)` with `while True` cursor pagination, max 200 pages (10K lot cap). Default limit 100→5000.
+- `fetch_primary_lots`: replaced `max_pages=2` with `while len(lots) < limit` cursor pagination, max 300 pages (15K cap). Default limit 100→10000.
+
+**invaluable_connector.py:**
+- SEARCH_QUERIES: 8 terms → 46 terms (mediums, categories, artist names, photography, prints)
+- Pages per query: `range(1, 3)` → `range(1, 21)` (20 pages × 48 = 960/query max)
+- Default limit: 100 → 5000
+
+**artmarketapi_connector.py:**
+- `_AUCTION_HOUSE_SEARCHES`: 10 terms → 52 terms (UK, US, European houses + medium-based searches)
+- Same 7s rate limit applies but broader coverage
+
+**aggregator.py:**
+- Default `lots_per_source`: 500 → 5000
+- Artsy primary call: `min(100, lots_per_source)` → `min(10000, lots_per_source * 2)`
+- Artsy auction call: capped at `min(5000, lots_per_source)`
+
+**tasks.py:**
+- `_poll_and_score_async()`: added `lots_per_source=500` and `skip_purge=False` parameters
+
+**admin.py:**
+- Added `GET /api/admin/lot-count` — detailed breakdown by source, market type, milestones
+- Added `POST /api/admin/bulk-ingest` — triggers full pipeline in background with `limit_per_source` param
+
+### Step 3 — Realistic Volume Estimates
+
+| Source | Before | Expected After |
+|--------|--------|----------------|
+| ArtMarketAPI | 1,545 | 3,000–5,000 (more search terms, same API limits) |
+| Artsy auction | ~100 | 500–2,000 (unlimited pagination) |
+| Artsy primary | ~100 | 5,000–15,000 (unlimited cursor, 300 pages cap) |
+| Invaluable | ~96 | 2,000–8,000 (46 queries × 20 pages) |
+| Phillips | 136 | 136–300 (single page, no API pagination) |
+| Others | ~65 | ~100–200 |
+| **TOTAL** | **~2,041** | **~11,000–30,000** |
+
+### Step 4 — Trigger bulk ingest after deploy
+```
+POST /api/admin/bulk-ingest
+X-Admin-Key: hono-admin-2024
+{"limit_per_source": 5000, "skip_purge": true}
+```
+Then poll `GET /api/admin/lot-count` every 10 minutes.

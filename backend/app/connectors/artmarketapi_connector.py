@@ -149,18 +149,62 @@ async def _fetch_page(
         return [], False
 
 
-# Search by auction house name to get real auction lots only.
+# Search by auction house name and medium to maximize lot coverage.
 _AUCTION_HOUSE_SEARCHES = [
+    # Major international houses
     "Christie's",
     "Sotheby's",
     "Bonhams",
     "Phillips",
     "Heritage Auctions",
+    # French houses
     "Drouot",
     "Artcurial",
     "Tajan",
     "Millon",
     "Cornette de Saint Cyr",
+    "Aguttes",
+    "Ader",
+    "Piasa",
+    "Binoche",
+    "Rouillac",
+    "Beaussant Lefevre",
+    "Leclere",
+    "Crait Muller",
+    "Briscadieu",
+    # UK houses
+    "Roseberys",
+    "Lyon Turnbull",
+    "Bellmans",
+    "Sworders",
+    "Chiswick Auctions",
+    "Dore",
+    # US houses
+    "Swann Galleries",
+    "Freeman's",
+    "Skinner",
+    "Doyle",
+    "Wright",
+    "Leland Little",
+    # European houses
+    "Dorotheum",
+    "Ketterer Kunst",
+    "Lempertz",
+    "Van Ham",
+    "Grisebach",
+    "Bruun Rasmussen",
+    "Bukowskis",
+    # Medium-based searches (catches cross-house results)
+    "oil on canvas",
+    "acrylic on canvas",
+    "watercolor",
+    "lithograph",
+    "etching",
+    "photography",
+    "sculpture bronze",
+    "drawing pencil",
+    "pastel",
+    "screenprint",
 ]
 
 # Gallery/primary market keywords — reject if auction house name contains any of these

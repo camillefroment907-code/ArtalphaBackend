@@ -481,3 +481,89 @@ async def set_user_plan(body: dict, db: AsyncSession = Depends(get_db)):
 
     return {"status": "ok", "email": email, "plan": plan_enum.value}
 
+
+# ── Lot count by source ────────────────────────────────────────────────────────
+
+@router.get("/lot-count", dependencies=[Depends(verify_admin)])
+async def lot_count(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    """Detailed lot count breakdown for monitoring bulk ingest progress."""
+    from sqlalchemy import text as _text
+
+    total = (await db.execute(select(func.count(Lot.id)))).scalar() or 0
+    with_score = (await db.execute(
+        select(func.count(Lot.id)).where(Lot.deal_score.isnot(None))
+    )).scalar() or 0
+    with_image = (await db.execute(
+        select(func.count(Lot.id)).where(Lot.image_url.isnot(None))
+    )).scalar() or 0
+    deals = (await db.execute(
+        select(func.count(Lot.id)).where(Lot.is_deal == True)
+    )).scalar() or 0
+
+    source_rows = (await db.execute(
+        select(Lot.source, func.count(Lot.id).label("cnt"))
+        .group_by(Lot.source)
+        .order_by(func.count(Lot.id).desc())
+    )).all()
+    by_source = {
+        (row.source.value if hasattr(row.source, "value") else str(row.source)): row.cnt
+        for row in source_rows
+    }
+
+    market_rows = (await db.execute(
+        select(Lot.market_type, func.count(Lot.id).label("cnt"))
+        .group_by(Lot.market_type)
+        .order_by(func.count(Lot.id).desc())
+    )).all()
+    by_market = {str(row.market_type): row.cnt for row in market_rows}
+
+    return {
+        "total": total,
+        "deals": deals,
+        "with_deal_score": with_score,
+        "score_pct": round(with_score / total * 100, 1) if total else 0,
+        "with_image": with_image,
+        "image_pct": round(with_image / total * 100, 1) if total else 0,
+        "by_source": by_source,
+        "by_market": by_market,
+        "milestones": {
+            "5k": total >= 5000,
+            "15k": total >= 15000,
+            "30k": total >= 30000,
+            "50k": total >= 50000,
+        },
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+# ── Bulk ingest trigger ────────────────────────────────────────────────────────
+
+@router.post("/bulk-ingest", dependencies=[Depends(verify_admin)])
+async def bulk_ingest(body: dict = None) -> Dict[str, Any]:
+    """
+    Trigger a full bulk ingest from all enabled connectors.
+    Runs _poll_and_score_async in the background with expanded limits.
+    body: { "limit_per_source": 5000 }
+    """
+    import asyncio as _asyncio
+
+    limit_per_source = int((body or {}).get("limit_per_source", 5000))
+    skip_purge = bool((body or {}).get("skip_purge", True))  # default: don't purge during bulk ingest
+
+    async def _run():
+        try:
+            from app.jobs.tasks import _poll_and_score_async
+            await _poll_and_score_async(lots_per_source=limit_per_source, skip_purge=skip_purge)
+            logger.info("bulk_ingest_complete", limit_per_source=limit_per_source)
+        except Exception as e:
+            logger.error("bulk_ingest_failed", error=str(e))
+
+    _asyncio.create_task(_run())
+
+    return {
+        "status": "started",
+        "limit_per_source": limit_per_source,
+        "skip_purge": skip_purge,
+        "message": "Bulk ingest running in background. Poll GET /api/admin/lot-count to monitor progress.",
+    }
+

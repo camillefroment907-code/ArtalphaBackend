@@ -17,14 +17,57 @@ API_URL = f"{BASE_URL}/api/search"
 HOUSE_REPUTATION = 0.78
 
 SEARCH_QUERIES = [
+    # Mediums
     "oil on canvas",
-    "contemporary painting",
-    "modern art",
-    "abstract painting",
-    "figurative art",
-    "street art",
-    "mixed media art",
+    "oil on board",
+    "oil on panel",
+    "acrylic on canvas",
     "watercolor painting",
+    "gouache on paper",
+    "pastel drawing",
+    "ink drawing",
+    "pencil drawing",
+    "charcoal drawing",
+    "mixed media",
+    # Photography
+    "photograph print",
+    "silver gelatin print",
+    "chromogenic print",
+    "archival pigment print",
+    # Prints & Multiples
+    "lithograph signed",
+    "etching aquatint",
+    "screenprint silkscreen",
+    "woodcut print",
+    "linocut print",
+    # Categories
+    "contemporary painting",
+    "modern art painting",
+    "abstract expressionist",
+    "figurative painting",
+    "landscape painting",
+    "portrait painting",
+    "still life painting",
+    "street art graffiti",
+    "pop art",
+    "impressionist painting",
+    "surrealist painting",
+    "expressionist painting",
+    # Sculptures
+    "bronze sculpture",
+    "marble sculpture",
+    "ceramic sculpture",
+    # Famous names (high probability of results)
+    "andy warhol",
+    "picasso",
+    "basquiat",
+    "banksy",
+    "keith haring",
+    "david hockney",
+    "gerhard richter",
+    "damien hirst",
+    "yayoi kusama",
+    "jeff koons",
 ]
 
 HEADERS = {
@@ -159,7 +202,7 @@ def _parse_item(item: dict) -> Optional[LotNormalized]:
         return None
 
 
-async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
+async def fetch_lots(limit: int = 5000) -> List[LotNormalized]:
     """Fetch real lots from Invaluable JSON API."""
 
     lots: List[LotNormalized] = []
@@ -180,8 +223,8 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
                 break
             try:
                 page_size = min(48, limit - len(lots))
-                # Fetch up to 2 pages per query
-                for page in range(1, 3):
+                # Fetch up to 20 pages per query
+                for page in range(1, 21):
                     if len(lots) >= limit:
                         break
 

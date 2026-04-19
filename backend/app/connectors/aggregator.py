@@ -32,7 +32,7 @@ CONNECTOR_METAS = {
 }
 
 
-async def fetch_all_lots(lots_per_source: int = 500) -> List[LotNormalized]:
+async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     """
     Fetch REAL lots only. Never returns mock/fake data.
 
@@ -116,10 +116,10 @@ async def fetch_all_lots(lots_per_source: int = 500) -> List[LotNormalized]:
         except Exception as e:
             logger.error("Live Auctioneers connector failed", error=str(e))
 
-    # --- Artsy — free public API ---
+    # --- Artsy — free public API (auction lots, full cursor pagination) ---
     try:
         from app.connectors.artsy_connector import fetch_lots as artsy_fetch
-        artsy_lots = await artsy_fetch(lots_per_source)
+        artsy_lots = await artsy_fetch(min(5000, lots_per_source))
         added = 0
         for lot in artsy_lots:
             if lot.external_id not in seen_ids:
@@ -324,7 +324,7 @@ async def fetch_all_lots(lots_per_source: int = 500) -> List[LotNormalized]:
     # --- Artsy primary market — for sale artworks ---
     try:
         from app.connectors.artsy_connector import fetch_primary_lots as artsy_primary_fetch
-        artsy_primary_lots = await artsy_primary_fetch(min(100, lots_per_source))
+        artsy_primary_lots = await artsy_primary_fetch(min(10000, lots_per_source * 2))
         added = 0
         for lot in artsy_primary_lots:
             if lot.external_id not in seen_ids:

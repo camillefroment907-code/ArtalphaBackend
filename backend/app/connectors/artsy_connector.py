@@ -195,9 +195,12 @@ def _parse_display_price(display: Optional[str]) -> Optional[float]:
         return None
 
 
-async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
-    """Fetch auction lots from Artsy via public GraphQL (no auth required)."""
+async def fetch_lots(limit: int = 5000) -> List[LotNormalized]:
+    """Fetch auction lots from Artsy via public GraphQL (no auth required).
+    Paginates fully using cursor until hasNextPage=false or limit reached.
+    """
     lots: List[LotNormalized] = []
+    _MAX_PAGES = 200  # safety cap: 200 × 50 = 10,000 lots
 
     try:
         async with httpx.AsyncClient(
@@ -205,11 +208,9 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
             headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
         ) as client:
             cursor = None
-            for page in range(2):  # max 2 pages × 50 = 100 lots
-                if len(lots) >= limit:
-                    break
-
-                if page > 0:
+            page_num = 0
+            while len(lots) < limit and page_num < _MAX_PAGES:
+                if page_num > 0:
                     await asyncio.sleep(0.5)
 
                 resp = await client.post(
@@ -218,6 +219,10 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
                     timeout=15,
                 )
 
+                if resp.status_code == 429:
+                    logger.warning("artsy_rate_limited", page=page_num)
+                    await asyncio.sleep(30)
+                    continue
                 if resp.status_code != 200:
                     logger.warning("artsy_graphql_failed", status=resp.status_code)
                     break
@@ -229,6 +234,9 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
                 )
                 edges = connection.get("edges", [])
                 page_info = connection.get("pageInfo", {})
+
+                if not edges:
+                    break
 
                 for edge in edges:
                     node = edge.get("node") or {}
@@ -290,26 +298,30 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
                         logger.debug("artsy_graphql_parse_error", error=str(e))
                         continue
 
+                page_num += 1
                 if not page_info.get("hasNextPage"):
                     break
                 cursor = page_info.get("endCursor")
+                if not cursor:
+                    break
 
     except Exception as e:
         logger.warning("artsy_graphql_fetch_failed", error=str(e))
 
-    logger.info("artsy_fetched", count=len(lots))
+    logger.info("artsy_fetched", count=len(lots), pages=page_num)
     return lots[:limit]
 
 
-async def fetch_primary_lots(limit: int = 100) -> List[LotNormalized]:
+async def fetch_primary_lots(limit: int = 10000) -> List[LotNormalized]:
     """
     Fetch primary market artworks from Artsy galleries.
     These are works for sale directly (not at auction).
+    Paginates fully — Artsy has 100K+ works for sale.
     """
     lots = []
     cursor = None
     pages_fetched = 0
-    max_pages = 2
+    _MAX_PAGES = 300  # safety cap: 300 × 50 = 15,000 lots
 
     query = """
     query PrimaryMarket($cursor: String) {
@@ -355,7 +367,7 @@ async def fetch_primary_lots(limit: int = 100) -> List[LotNormalized]:
     }
     """
 
-    while pages_fetched < max_pages and len(lots) < limit:
+    while pages_fetched < _MAX_PAGES and len(lots) < limit:
         try:
             async with httpx.AsyncClient(timeout=15, headers={
                 "Content-Type": "application/json",
@@ -466,6 +478,8 @@ async def fetch_primary_lots(limit: int = 100) -> List[LotNormalized]:
                 if not page_info.get("hasNextPage"):
                     break
                 cursor = page_info.get("endCursor")
+                if not cursor:
+                    break
                 pages_fetched += 1
                 await asyncio.sleep(0.5)
 
@@ -473,5 +487,5 @@ async def fetch_primary_lots(limit: int = 100) -> List[LotNormalized]:
             logger.warning("artsy_primary_fetch_failed", error=str(e))
             break
 
-    logger.info("artsy_primary_fetched", count=len(lots))
+    logger.info("artsy_primary_fetched", count=len(lots), pages=pages_fetched)
     return lots

@@ -49,7 +49,7 @@ def poll_and_score_lots(self):
         raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
 
 
-async def _poll_and_score_async():
+async def _poll_and_score_async(lots_per_source: int = 500, skip_purge: bool = False):
     from app.connectors.aggregator import fetch_all_lots, get_house_reputation
     from app.engines.scoring import compute_deal_score, ScoringInput
     from app.models.db_models import Lot, Artist, LotStatus
@@ -58,38 +58,39 @@ async def _poll_and_score_async():
 
     from app.database import BgSessionLocal as AsyncSessionLocal
 
-    logger.info("Starting poll & score pipeline")
+    logger.info("Starting poll & score pipeline", lots_per_source=lots_per_source)
     start_time = datetime.utcnow()
 
-    # 0. Purge expired auction lots — lots with a past auction_date are stale
-    #    and will never appear in the API feed. Remove them so the next scrape
-    #    can re-insert fresh data (connectors set auction_date=None for ongoing lots).
-    async with AsyncSessionLocal() as _cleanup_session:
-        from sqlalchemy import delete
-        from app.models.db_models import Lot as _Lot
-        expired_cutoff = datetime.utcnow() - timedelta(hours=1)
-        del_result = await _cleanup_session.execute(
-            delete(_Lot).where(
-                _Lot.auction_date.isnot(None),
-                _Lot.auction_date < expired_cutoff,
+    if not skip_purge:
+        # 0. Purge expired auction lots — lots with a past auction_date are stale
+        #    and will never appear in the API feed. Remove them so the next scrape
+        #    can re-insert fresh data (connectors set auction_date=None for ongoing lots).
+        async with AsyncSessionLocal() as _cleanup_session:
+            from sqlalchemy import delete
+            from app.models.db_models import Lot as _Lot
+            expired_cutoff = datetime.utcnow() - timedelta(hours=1)
+            del_result = await _cleanup_session.execute(
+                delete(_Lot).where(
+                    _Lot.auction_date.isnot(None),
+                    _Lot.auction_date < expired_cutoff,
+                )
             )
-        )
-        await _cleanup_session.commit()
-        expired_count = del_result.rowcount
-        if expired_count:
-            logger.info("Purged expired lots", count=expired_count)
+            await _cleanup_session.commit()
+            expired_count = del_result.rowcount
+            if expired_count:
+                logger.info("Purged expired lots", count=expired_count)
 
-        # Purge Drouot lots with countdown timer titles (legacy bad data)
-        from sqlalchemy import text as _text
-        bad_title = await _cleanup_session.execute(
-            delete(_Lot).where(_Lot.title.op("~")(r"^\d+h\s*\d+m\s*\d+s"))
-        )
-        await _cleanup_session.commit()
-        if bad_title.rowcount:
-            logger.info("Purged countdown-title lots", count=bad_title.rowcount)
+            # Purge Drouot lots with countdown timer titles (legacy bad data)
+            from sqlalchemy import text as _text
+            bad_title = await _cleanup_session.execute(
+                delete(_Lot).where(_Lot.title.op("~")(r"^\d+h\s*\d+m\s*\d+s"))
+            )
+            await _cleanup_session.commit()
+            if bad_title.rowcount:
+                logger.info("Purged countdown-title lots", count=bad_title.rowcount)
 
     # 1. Fetch lots from all sources (parallel)
-    raw_lots = await fetch_all_lots(lots_per_source=500)
+    raw_lots = await fetch_all_lots(lots_per_source=lots_per_source)
     logger.info("Lots fetched", count=len(raw_lots))
 
     # Quality filter + cross-source dedup (before DB lookup)
