@@ -16,7 +16,7 @@ _Aucun bloquant critique identifié à date._
 | 7 | GA4 Measurement ID non configuré | Conversion tracking absent | Créer propriété dans Google Analytics 4, setter `VITE_GA4_ID=<G-XXXXXX>` dans Vercel env | ⏳ Camille |
 | 8 | og:image (Open Graph) absent | Social shares sans preview image | Créer un 1200×630px PNG brandé et uploader sur Vercel → chemin `/og-image.png` | ⏳ Camille |
 | 9 | ART_MARKET_API_KEY | ArtMarket API connector silently returns 0 lots | Obtenir clé sur artmarketapi.com, setter `ART_MARKET_API_KEY` dans Railway env | ⏳ Camille |
-| 10 | Import n8n workflows | 8 workflow JSON files ready but not imported | Se connecter à n8n dashboard → Import chaque fichier dans `n8n-workflows/` | ⏳ Camille |
+| 10 | Import n8n workflows | 9 workflow JSON files ready but not imported (includes new 09-weekly-blog.json) | Se connecter à n8n dashboard → Import chaque fichier dans `n8n-workflows/` → Activer chaque workflow | ⏳ Camille |
 
 ## 🟢 RÉSOLUS
 

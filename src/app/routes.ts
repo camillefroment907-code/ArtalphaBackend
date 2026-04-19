@@ -38,6 +38,7 @@ const AdminLaunch           = lazy(() => import('./pages/AdminLaunch'));
 const AdminRecommendations  = lazy(() => import('./pages/AdminRecommendations'));
 const Blog                  = lazy(() => import('./pages/Blog'));
 const BlogPost              = lazy(() => import('./pages/BlogPost'));
+const FeedbackPage          = lazy(() => import('./pages/FeedbackPage'));
 
 export const router = createBrowserRouter([
   {
@@ -59,6 +60,8 @@ export const router = createBrowserRouter([
   // Blog
   { path: '/blog',       Component: Blog     },
   { path: '/blog/:slug', Component: BlogPost },
+  // Feedback
+  { path: '/feedback', Component: FeedbackPage },
   // Admin dashboards (JWT-gated on the backend)
   { path: '/admin/health',          Component: AdminHealth          },
   { path: '/admin/launch',          Component: AdminLaunch          },

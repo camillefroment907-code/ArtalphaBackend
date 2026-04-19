@@ -1,12 +1,64 @@
 # LAUNCH REPORT — Nautilus
 **Target launch date: May 13, 2026**
-**Report generated: 2026-04-19**
+**Report updated: 2026-04-19 (Phase 4 complete)**
 
 ---
 
 ## Executive Summary
 
-Nautilus is a production-ready art market intelligence platform targeting art collectors and investors. The full stack (frontend + backend) was built across 3 intensive phases. As of this report, the platform is **feature-complete and deployable** pending 6 Camille-action items (Stripe price IDs, DNS, analytics).
+Nautilus is a production-ready art market intelligence platform targeting art collectors and investors. The full stack (frontend + backend) was built across 4 phases. As of this report, the platform is **feature-complete and deployable** pending 7 Camille-action items (Stripe price IDs, DNS, og-image, analytics, n8n, ART_MARKET_API_KEY).
+
+**TypeScript build: PASS — 0 errors. 1699 modules. Ready to deploy.**
+
+---
+
+## Phase 4 Completed Items (2026-04-19)
+
+### Pipeline
+- ArtMarketAPIConnector default limit 500 → **5,000 lots per cycle**
+- Recommendation engine `_SCORE_FLOOR` 55 → **45** (wider net for launch)
+- `_UPCOMING_DAYS` 30 → **45** (early-access window)
+- **Global no-DNA fallback**: For You tab never empty for any user
+- **Wikidata enrichment job** — `backend/app/jobs/wikidata_enrichment.py`
+- **Deal score backfill** — `POST /api/admin/backfill-scores` (SQL UPDATE for NULL scores)
+- **Admin DB stats** — `GET /api/admin/stats` (lot count, user count, waitlist count)
+
+### Landing Page
+- **Today's Signals section** — 3 real lots from `/api/lots/public`, cards 2-3 blurred with lock overlay + signup CTA
+- **Testimonials section** — 3 collector testimonials with gold separator + disclaimer
+- Daily-changing stats (member count, lot count) via `src/lib/dailyStats.ts`
+- "Start free" CTA: blue (#4B6CF5), uppercase, gated to `/app/signup`
+- "See live opportunities" gated to `/app/signup`
+
+### Backend
+- `/api/lots/public` — public (no auth) endpoint for landing page Today's Signals
+- `/api/feedback/nps` — NPS score collection + admin notification on detractors
+- `/api/feedback/cancellation` — one-click cancellation survey + thank-you page
+- `/api/feedback/submit` — freeform feedback storage + admin email
+- `/api/blog/generate` — GPT-4o-mini auto-generation for blog posts
+- `/api/blog/seed` — seed all 4 launch posts in one call
+- `POST /api/admin/backfill-scores` — SQL backfill for NULL deal_scores
+- `POST /api/admin/enrich-artists` — trigger Wikidata batch enrichment
+- `GET /api/admin/stats` — DB counts for monitoring
+
+### Frontend
+- `/feedback` route — suggestions / help forms + submission
+- `src/lib/useSEO.ts` — dynamic meta tags, og tags, canonical URL per page
+- `src/lib/cache.ts` — TTL-aware localStorage cache utility
+- SEO applied to: Landing, Waitlist pages
+- `og-image.svg` — branded SVG fallback (navy + gold, Nautilus wordmark)
+- react-helmet-async installed
+
+### Infrastructure
+- Frontend `.env.example` — correct VITE_ vars with docs
+- Backend `.env.example` — all required Railway vars documented
+- Frontend `.gitignore` — added `.env.local`, `.env.*` variants
+- `n8n-workflows/09-weekly-blog.json` — Monday 6am auto-generation workflow
+
+### Security
+- Hardcoded secrets scan: **CLEAN** — no sk_live, sk_test, process.env violations
+- Stripe webhook `construct_event()` validation: **CONFIRMED** ✓
+- CORS no wildcards on production URLs: **CONFIRMED** ✓
 
 ---
 
@@ -74,29 +126,30 @@ Nautilus is a production-ready art market intelligence platform targeting art co
 
 ---
 
-## Pre-Launch Blocklist
+## Pre-Launch Blocklist (Updated Phase 4)
 
-| Priority | Item | Owner | ETA |
-|----------|------|-------|-----|
-| 🔴 | Stripe price IDs in Railway env | Camille | Before May 13 |
-| 🔴 | SPF/DKIM/DMARC on get-nautilus.com | Camille | Before May 1 |
-| 🟡 | Upload og-image.png to /public/ | Camille | Before May 10 |
-| 🟡 | Microsoft Clarity ID → VITE_CLARITY_ID | Camille | Before May 13 |
-| 🟡 | GA4 Measurement ID → VITE_GA4_ID | Camille | Before May 13 |
-| 🟡 | Import 8 n8n workflows + activate | Camille | Before May 13 |
-| 🟢 | ART_MARKET_API_KEY in Railway | Camille | Before May 13 |
+| Priority | Item | Owner | ETA | Notes |
+|----------|------|-------|-----|-------|
+| 🔴 | Stripe price IDs in Railway env | Camille | Before May 13 | 6 vars — see BLOCKERS.md |
+| 🔴 | SPF/DKIM/DMARC on get-nautilus.com | Camille | Before May 1 | See EMAIL_DNS_SETUP.md |
+| 🔴 | ART_MARKET_API_KEY in Railway | Camille | Before May 13 | Pipeline returns 0 lots without this |
+| 🟡 | Upload og-image.png to /public/ | Camille | Before May 10 | SVG fallback active — PNG replaces it |
+| 🟡 | Microsoft Clarity ID → VITE_CLARITY_ID | Camille | Before May 13 | clarity.microsoft.com |
+| 🟡 | GA4 Measurement ID → VITE_GA4_ID | Camille | Before May 13 | analytics.google.com |
+| 🟡 | Import 9 n8n workflows + activate | Camille | Before May 13 | New: 09-weekly-blog.json |
 
 ---
 
 ## Routes Inventory
 
 ### Public
-- `/` — Landing page
+- `/` — Landing page (Today's Signals + Testimonials)
 - `/pricing` — Pricing page
 - `/about`, `/contact`, `/faq` — Static pages
 - `/market-index` — Public market index
-- `/waitlist` — Pre-launch waitlist
-- `/blog`, `/blog/:slug` — Editorial blog
+- `/waitlist` — Pre-launch waitlist with referral
+- `/blog`, `/blog/:slug` — Editorial blog (4 seeded posts)
+- `/feedback` — NPS + cancellation survey + freeform feedback
 - `/legal/terms`, `/legal/privacy`, `/legal/disclaimer` — Legal pages
 
 ### Protected App
@@ -164,4 +217,41 @@ Landing → Waitlist/Signup → Onboarding → Explore → Alerts → Subscripti
 
 ---
 
-*Generated by Claude Code — Nautilus Phase 3 Launch Sprint*
+## Build Status
+
+**Build is done. Code is frozen. Ready to deploy on May 11.**
+
+```
+TypeScript build: PASS — 0 errors
+Modules bundled: 1699
+Largest bundle: Portfolio (85KB gzip: 17KB)
+Build time: 3.26s
+
+Backend files modified in Phase 4:
+  app/connectors/artmarketapi_connector.py   — limit 500 → 5000
+  app/api/recommendations.py                 — SCORE_FLOOR 55 → 45, fallback strategy
+  app/api/lots.py                            — /api/lots/public endpoint
+  app/api/blog.py                            — /generate + /seed endpoints
+  app/api/admin.py                           — backfill-scores, enrich-artists, stats
+  app/api/feedback.py                        — NEW: NPS + cancellation + submit
+  app/jobs/wikidata_enrichment.py            — NEW: artist enrichment batch job
+  app/main.py                                — feedback router registered
+  .env.example                               — NEW: all Railway vars documented
+
+Frontend files modified/created in Phase 4:
+  src/app/pages/Landing.tsx                  — Today's Signals, Testimonials, useSEO
+  src/app/pages/Waitlist.tsx                 — useSEO
+  src/app/pages/FeedbackPage.tsx             — NEW: /feedback route
+  src/app/routes.ts                          — /feedback route added
+  src/lib/useSEO.ts                          — NEW: dynamic meta tags hook
+  src/lib/cache.ts                           — NEW: TTL localStorage cache
+  src/lib/dailyStats.ts                      — NEW: daily-seeded social proof stats
+  public/og-image.svg                        — NEW: branded SVG og fallback
+  n8n-workflows/09-weekly-blog.json          — NEW: Monday 6am blog generation
+  .gitignore                                 — added .env.* variants
+  .env.example                               — NEW: correct VITE_ vars
+```
+
+---
+
+*Updated by Claude Code — Nautilus Phase 4 Pre-Launch Sprint*

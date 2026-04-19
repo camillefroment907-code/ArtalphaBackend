@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { Logo } from '../components/Logo';
+import { useSEO } from '../../lib/useSEO';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -34,6 +35,11 @@ function useCountdown() {
 }
 
 export default function Waitlist() {
+  useSEO({
+    title: 'Join the Waitlist — Nautilus Launches May 13, 2026',
+    description: 'Get founding member access to Nautilus, the art market intelligence platform. Lock in your price and get priority access on launch day.',
+  });
+
   const [email, setEmail]         = useState('');
   const [name, setName]           = useState('');
   const [loading, setLoading]     = useState(false);

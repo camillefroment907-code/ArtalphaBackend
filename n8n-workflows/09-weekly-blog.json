@@ -1,0 +1,138 @@
+{
+  "name": "09 — Weekly Blog Post Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * 1"
+            }
+          ]
+        }
+      },
+      "name": "Every Monday 6am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.BACKEND_URL}}/api/blog/generate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "type",
+              "value": "weekly_opportunities"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Generate Weekly Blog Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "nautilus-internal-auth",
+          "name": "Nautilus Internal API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.slug }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ]
+        }
+      },
+      "name": "Post Created?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.BACKEND_URL}}/api/admin/notify",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "subject",
+              "value": "=Weekly blog post published: {{ $('Generate Weekly Blog Post').item.json.title }}"
+            },
+            {
+              "name": "message",
+              "value": "=New post at /blog/{{ $('Generate Weekly Blog Post').item.json.slug }}"
+            }
+          ]
+        }
+      },
+      "name": "Notify Admin",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 240]
+    }
+  ],
+  "connections": {
+    "Every Monday 6am": {
+      "main": [
+        [
+          {
+            "node": "Generate Weekly Blog Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Weekly Blog Post": {
+      "main": [
+        [
+          {
+            "node": "Post Created?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Created?": {
+      "main": [
+        [
+          {
+            "node": "Notify Admin",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["nautilus", "blog", "content"],
+  "updatedAt": "2026-04-19T00:00:00.000Z",
+  "versionId": "1"
+}

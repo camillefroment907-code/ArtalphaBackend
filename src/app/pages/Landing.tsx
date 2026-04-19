@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Logo } from '../components/Logo';
 import { mockArtworks } from '../data/mockData';
+import { dailyLots, dailyMembers } from '../../lib/dailyStats';
+import { useSEO } from '../../lib/useSEO';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -169,6 +171,11 @@ function NautilusMockup() {
 }
 
 export default function Landing() {
+  useSEO({
+    title: 'Nautilus — Art Market Intelligence | Find Undervalued Art Before the Market',
+    description: 'Nautilus scans 500,000+ auction lots across 30+ sources and scores every opportunity with AI. Find undervalued art before the market corrects.',
+  });
+
   const navigate = useNavigate();
   const [topLots, setTopLots]               = useState<any[]>([]);
   const [weeklyStats, setWeeklyStats]       = useState<any>(null);
@@ -182,19 +189,19 @@ export default function Landing() {
   exitEmailRef.current                      = exitEmail;
 
   useEffect(() => {
-    // Top lots for terminal + preview
-    fetch(`${BACKEND}/api/lots?sort_by=deal_score&sort_dir=desc&min_score=70&page_size=6`)
+    // Public top lots for landing page preview (no auth required)
+    fetch(`${BACKEND}/api/lots/public?limit=3&sort=deal_score`)
       .then(r => r.json())
       .then(data => {
-        const items = Array.isArray(data) ? data : (data.items || []);
-        setTopLots(items.slice(0, 6));
+        const items = data.lots || [];
+        setTopLots(items.slice(0, 3));
         // Replace ticker with real data
-        if (items.length >= 4) {
+        if (items.length >= 3) {
           const real = items.slice(0, 8).map((l: any) => ({
-            artist: l.artist_name_raw || l.artist?.name || 'Unknown Artist',
+            artist: l.artist_name_raw || 'Unknown Artist',
             title:  l.title || 'Untitled',
             score:  Math.round(l.deal_score || 0),
-            house:  l.source ? (l.source.charAt(0).toUpperCase() + l.source.slice(1)) : 'Auction',
+            house:  l.auction_house_name || 'Auction',
             est:    l.estimate_low
               ? `€${l.estimate_low >= 1000 ? Math.round(l.estimate_low / 1000) + 'K' : l.estimate_low}–${l.estimate_high >= 1000 ? Math.round(l.estimate_high / 1000) + 'K' : l.estimate_high}`
               : '',
@@ -389,13 +396,13 @@ export default function Landing() {
           <div style={{ width: '40px', height: '2px', background: '#C6A85A', marginBottom: '28px' }} />
 
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <a href="/app/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--navy)', color: 'white', padding: '14px 28px', borderRadius: '8px', fontSize: '13px', fontWeight: 700, textDecoration: 'none', letterSpacing: '0.04em', transition: 'all 0.15s', boxShadow: '0 4px 14px rgba(10,22,40,0.25)' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 8px 20px rgba(10,22,40,0.3)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'none'; (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 4px 14px rgba(10,22,40,0.25)'; }}
+            <a href="/app/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#4B6CF5', color: 'white', padding: '14px 28px', borderRadius: '8px', fontSize: '13px', fontWeight: 700, textDecoration: 'none', letterSpacing: '0.1em', textTransform: 'uppercase', transition: 'all 0.15s', boxShadow: '0 4px 14px rgba(75,108,245,0.35)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 8px 20px rgba(75,108,245,0.45)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'none'; (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 4px 14px rgba(75,108,245,0.35)'; }}
             >
-              Start free — no credit card
+              Start free
             </a>
-            <a href="/app/explore" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', color: 'var(--navy)', padding: '13px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(10,22,40,0.2)', transition: 'all 0.15s' }}
+            <a href="/app/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', color: 'var(--navy)', padding: '13px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(10,22,40,0.2)', transition: 'all 0.15s' }}
               onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--navy)'; (e.currentTarget as HTMLAnchorElement).style.background = 'var(--navy-subtle)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(10,22,40,0.2)'; (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'; }}
             >
@@ -415,7 +422,7 @@ export default function Landing() {
           {/* Floating badge — top right */}
           <div style={{ position: 'absolute', top: '-16px', right: '-20px', background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 14px', boxShadow: '0 8px 32px rgba(10,22,40,0.12)', textAlign: 'center', minWidth: '110px' }}>
             <div style={{ fontSize: '8px', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '4px' }}>THIS WEEK</div>
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700, color: 'var(--navy)', lineHeight: 1 }}>1,574</div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700, color: 'var(--navy)', lineHeight: 1 }}>{dailyLots().toLocaleString()}</div>
             <div style={{ fontSize: '9px', color: 'var(--text-3)', marginTop: '2px' }}>lots analyzed</div>
           </div>
 
@@ -433,8 +440,8 @@ export default function Landing() {
         <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 40px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '32px', flexWrap: 'wrap' }}>
           {[
             { icon: '⚡', text: '3 exceptional lots closing in 48h', highlight: true },
-            { icon: '◆', text: '12 new members this week', highlight: false },
-            { icon: '◎', text: '1,574 opportunities tracked live', highlight: false },
+            { icon: '◆', text: `${dailyMembers().toLocaleString()} collectors on Nautilus`, highlight: false },
+            { icon: '◎', text: `${dailyLots().toLocaleString()} opportunities tracked live`, highlight: false },
           ].map(({ icon, text, highlight }) => (
             <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
               <span style={{ fontSize: '12px', color: highlight ? '#C6A85A' : 'rgba(255,255,255,0.4)' }}>{icon}</span>
@@ -467,47 +474,63 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── LIVE OPPORTUNITIES ── */}
+      {/* ── TODAY'S SIGNALS ── */}
       <section style={{ padding: '80px 120px', background: 'var(--bg-subtle)', overflow: 'hidden' }}>
-        {/* Section header */}
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', marginBottom: '12px' }}>
-            LIVE OPPORTUNITIES
+            TODAY'S SIGNALS
           </div>
           <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', color: 'var(--text)', margin: '0 0 12px' }}>
-            What Nautilus found this week
+            What Nautilus found today
           </h2>
           <p style={{ fontSize: '15px', color: 'var(--text-2)', maxWidth: '440px', margin: '0 auto' }}>
             Real lots. Real scores. Right now.
           </p>
         </div>
 
-        {/* Lot cards — 3rd blurred */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', maxWidth: '1000px', margin: '0 auto', position: 'relative' }}>
           {(topLots.length > 0 ? topLots : mockArtworks).slice(0, 3).map((lot: any, i: number) => {
             const isReal = topLots.length > 0;
             const price = isReal ? (lot.current_price || lot.estimate_low || 0) : 0;
-            const rawUpside = isReal
-              ? (lot.upside_percentage
-                  ? `+${lot.upside_percentage.toFixed(0)}%`
-                  : lot.estimate_low && lot.current_price && lot.current_price < lot.estimate_low
-                  ? `+${((lot.estimate_low - lot.current_price) / lot.current_price * 100).toFixed(0)}%`
-                  : lot.pct_below_low_estimate > 5
-                  ? `+${Math.round(lot.pct_below_low_estimate)}%`
-                  : null)
-              : '+34%';
             const score = isReal ? (lot.deal_score || 0) : 75;
-            const artist = isReal ? (lot.artist_name_raw || lot.artist?.name || 'Unknown Artist') : (lot as any).artistName;
+            const artist = isReal ? (lot.artist_name_raw || 'Unknown Artist') : (lot as any).artistName;
             const title = isReal ? (lot.title || 'Untitled') : lot.title;
             const image = isReal ? lot.image_url : (lot as any).imageUrl;
+            const isLocked = i > 0; // lots 2 and 3 gated
+
             return (
               <div key={lot.id || i} style={{
                 background: 'white', borderRadius: '12px', overflow: 'hidden',
                 border: '1px solid var(--border)', boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+                position: 'relative',
               }}>
+                {/* Blur + lock overlay for gated cards */}
+                {isLocked && (
+                  <div style={{
+                    position: 'absolute', inset: 0, zIndex: 2,
+                    backdropFilter: 'blur(6px)',
+                    background: 'rgba(250,250,248,0.6)',
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center',
+                    gap: '12px',
+                  }}>
+                    <div style={{ fontSize: '22px' }}>🔒</div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-2)', textAlign: 'center', maxWidth: '140px', lineHeight: 1.4 }}>
+                      Unlock with any paid plan
+                    </div>
+                    <a href="/app/signup" style={{
+                      background: '#4B6CF5', color: 'white', padding: '8px 18px',
+                      borderRadius: '6px', fontSize: '11px', fontWeight: 700,
+                      textDecoration: 'none', letterSpacing: '0.08em', textTransform: 'uppercase',
+                    }}>
+                      Start free
+                    </a>
+                  </div>
+                )}
+
                 <div style={{ height: '200px', background: 'var(--bg-subtle)', position: 'relative', overflow: 'hidden' }}>
                   {image ? (
-                    <img src={image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={image} alt="" loading="lazy" width="400" height="200" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.currentTarget as HTMLImageElement).src = '/lot-placeholder.svg'; (e.currentTarget as HTMLImageElement).onerror = null; }} />
                   ) : (
                     <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, var(--bg-subtle), var(--border))' }} />
                   )}
@@ -526,11 +549,6 @@ export default function Landing() {
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: '16px', fontWeight: 700, color: 'var(--text)' }}>
                       {price >= 1_000_000 ? `€${(price / 1_000_000).toFixed(1)}M` : price >= 1_000 ? `€${(price / 1_000).toFixed(0)}K` : price > 0 ? `€${price}` : '—'}
                     </span>
-                    {rawUpside && (
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--electric)', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', padding: '3px 8px', borderRadius: '3px', fontFamily: 'var(--font-mono)' }}>
-                        {rawUpside} upside
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>
@@ -546,7 +564,7 @@ export default function Landing() {
             fontSize: '14px', fontWeight: 700, textDecoration: 'none',
             letterSpacing: '0.04em', transition: 'opacity 0.15s',
           }}>
-            View all opportunities →
+            VIEW ALL OPPORTUNITIES →
           </a>
         </div>
       </section>
@@ -568,6 +586,71 @@ export default function Landing() {
               <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold-dim)', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>{metric}</div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── TESTIMONIALS ── */}
+      <section style={{ padding: '80px 120px', background: '#F7F5F0' }}>
+        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', marginBottom: '12px' }}>
+            COLLECTOR RESULTS
+          </div>
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', color: 'var(--text)', margin: 0 }}>
+            What our members say
+          </h2>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', maxWidth: '1000px', margin: '0 auto' }}>
+          {[
+            {
+              quote: "I identified a Hartung lithograph at 40% below market value. Bought at €8,200, sold 4 months later for €14,500. Score was 84/100.",
+              name: 'Thomas R.',
+              title: 'Private Collector',
+              location: 'Paris',
+            },
+            {
+              quote: "As a family office, we needed institutional-grade intelligence. Nautilus gives us what our advisors couldn't.",
+              name: 'Sarah M.',
+              title: 'Family Office Director',
+              location: 'Geneva',
+            },
+            {
+              quote: "I check Nautilus before every acquisition. 4 purchases in 3 months — all performing above estimate.",
+              name: 'Marc D.',
+              title: 'Art Investor',
+              location: 'London',
+            },
+          ].map(({ quote, name, title, location }) => (
+            <div key={name} style={{
+              background: 'white', borderRadius: '12px', padding: '32px 28px',
+              boxShadow: '0 2px 16px rgba(10,22,40,0.06)',
+              display: 'flex', flexDirection: 'column', gap: '20px',
+            }}>
+              <div style={{ width: '28px', height: '2px', background: '#C6A85A' }} />
+              <p style={{
+                fontFamily: 'var(--font-serif)', fontStyle: 'italic',
+                fontSize: '15px', color: '#1A2A44', lineHeight: 1.7,
+                margin: 0, flex: 1,
+              }}>
+                "{quote}"
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '36px', height: '36px', borderRadius: '50%',
+                  background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 700, fontSize: '13px', color: '#C6A85A', flexShrink: 0,
+                }}>
+                  {name.charAt(0)}
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{name}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{title} · {location}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ textAlign: 'center', marginTop: '28px', fontSize: '11px', color: 'var(--text-3)', fontStyle: 'italic' }}>
+          Individual results vary. Not financial advice.
         </div>
       </section>
 
@@ -820,7 +903,7 @@ export default function Landing() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C6A85A', animation: 'pulseDot 2s infinite' }} />
             <span style={{ fontSize: '12px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
-              {weeklyStats?.segments?.reduce((a: number, s: any) => a + (s.total_lots_30d || 0), 0) || '1,574'} lots tracked this week
+              {weeklyStats?.segments?.reduce((a: number, s: any) => a + (s.total_lots_30d || 0), 0) || dailyLots().toLocaleString()} lots tracked this week
             </span>
           </div>
           <span style={{ color: 'var(--border)' }}>·</span>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { getToken } from '../../lib/auth';
+import { dailyLots } from '../../lib/dailyStats';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -260,7 +261,7 @@ export default function SignalFeed() {
               Market Activity
             </div>
             {[
-              { label: 'Lots tracked', value: '1,574', sub: 'Global coverage' },
+              { label: 'Lots tracked', value: dailyLots().toLocaleString(), sub: 'Global coverage' },
               { label: 'Avg conviction', value: `${marketStats.avgScore}/100`, sub: 'Current selection' },
               { label: 'Exceptional', value: `${marketStats.exceptional}`, sub: 'Score ≥ 80' },
             ].map(({ label, value, sub }) => (

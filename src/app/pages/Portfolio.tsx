@@ -1179,7 +1179,38 @@ export default function Portfolio() {
                 </div>
                 {aiAnalysis && !aiAnalysis.insufficient_data && (
                   <div style={{ padding: '20px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border)', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden', marginBottom: '20px' }}>
+
+                    {/* Verdict + Risk level row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                      {aiAnalysis.verdict && (
+                        <span style={{
+                          fontSize: '10px', fontWeight: 700, fontFamily: 'var(--font-mono)', padding: '3px 10px', borderRadius: '4px',
+                          background: aiAnalysis.verdict === 'EXCELLENT' ? 'var(--electric-subtle)' : aiAnalysis.verdict === 'GOOD' ? 'rgba(198,168,90,0.12)' : aiAnalysis.verdict === 'NEEDS_ATTENTION' ? 'rgba(220,140,0,0.12)' : 'var(--red-subtle)',
+                          color: aiAnalysis.verdict === 'EXCELLENT' ? 'var(--electric)' : aiAnalysis.verdict === 'GOOD' ? 'var(--gold-dim)' : aiAnalysis.verdict === 'NEEDS_ATTENTION' ? '#c07000' : 'var(--red)',
+                          border: `1px solid ${aiAnalysis.verdict === 'EXCELLENT' ? 'var(--electric-border)' : aiAnalysis.verdict === 'GOOD' ? 'var(--gold-border)' : aiAnalysis.verdict === 'NEEDS_ATTENTION' ? 'rgba(220,140,0,0.25)' : 'rgba(200,50,50,0.2)'}`,
+                        }}>
+                          {aiAnalysis.verdict.replace('_', ' ')}
+                        </span>
+                      )}
+                      {aiAnalysis.risk_level && (
+                        <span style={{
+                          fontSize: '10px', fontWeight: 700, fontFamily: 'var(--font-mono)', padding: '3px 10px', borderRadius: '4px',
+                          background: aiAnalysis.risk_level === 'LOW' ? 'var(--electric-subtle)' : aiAnalysis.risk_level === 'MODERATE' ? 'rgba(198,168,90,0.12)' : 'var(--red-subtle)',
+                          color: aiAnalysis.risk_level === 'LOW' ? 'var(--electric)' : aiAnalysis.risk_level === 'MODERATE' ? 'var(--gold-dim)' : 'var(--red)',
+                          border: `1px solid ${aiAnalysis.risk_level === 'LOW' ? 'var(--electric-border)' : aiAnalysis.risk_level === 'MODERATE' ? 'var(--gold-border)' : 'rgba(200,50,50,0.2)'}`,
+                        }}>
+                          RISK: {aiAnalysis.risk_level}
+                        </span>
+                      )}
+                      {typeof aiAnalysis.total_pnl === 'number' && (
+                        <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: aiAnalysis.total_pnl >= 0 ? 'var(--electric)' : 'var(--red)', marginLeft: 'auto' }}>
+                          P&amp;L: {aiAnalysis.total_pnl >= 0 ? '+' : ''}€{aiAnalysis.total_pnl.toLocaleString()} ({aiAnalysis.total_pnl_pct >= 0 ? '+' : ''}{aiAnalysis.total_pnl_pct}%)
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Score metrics */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border)', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden', marginBottom: '16px' }}>
                       {[
                         { label: 'PORTFOLIO SCORE', value: `${aiAnalysis.score}/100` },
                         { label: 'DIVERSIFICATION', value: `${aiAnalysis.diversification_score}/100` },
@@ -1192,12 +1223,97 @@ export default function Portfolio() {
                         </div>
                       ))}
                     </div>
+
+                    {/* Summary */}
                     <p style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.8, marginBottom: '16px', padding: '12px 16px', background: 'var(--bg-subtle)', borderRadius: '6px', fontStyle: 'italic' }}>
                       {aiAnalysis.summary}
                     </p>
+
+                    {/* Strengths & Risks */}
+                    {(aiAnalysis.strengths?.length > 0 || aiAnalysis.risks?.length > 0) && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                        {aiAnalysis.strengths?.length > 0 && (
+                          <div style={{ background: 'rgba(0,180,120,0.05)', border: '1px solid rgba(0,180,120,0.18)', borderRadius: '6px', padding: '12px 14px' }}>
+                            <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--electric)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', marginBottom: '8px' }}>STRENGTHS</div>
+                            {aiAnalysis.strengths.map((s: string, i: number) => (
+                              <div key={i} style={{ fontSize: '12px', color: 'var(--text-2)', marginBottom: '4px', display: 'flex', gap: '6px' }}>
+                                <span style={{ color: 'var(--electric)', flexShrink: 0 }}>↑</span>
+                                <span>{s}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {aiAnalysis.risks?.length > 0 && (
+                          <div style={{ background: 'rgba(200,50,50,0.04)', border: '1px solid rgba(200,50,50,0.15)', borderRadius: '6px', padding: '12px 14px' }}>
+                            <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--red)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', marginBottom: '8px' }}>RISKS</div>
+                            {aiAnalysis.risks.map((r: string, i: number) => (
+                              <div key={i} style={{ fontSize: '12px', color: 'var(--text-2)', marginBottom: '4px', display: 'flex', gap: '6px' }}>
+                                <span style={{ color: 'var(--red)', flexShrink: 0 }}>↓</span>
+                                <span>{r}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Per-artwork insights */}
+                    {aiAnalysis.artwork_insights?.length > 0 && (
+                      <div style={{ marginBottom: '20px' }}>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', marginBottom: '10px' }}>Artwork Analysis</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {aiAnalysis.artwork_insights.map((insight: any, i: number) => {
+                            const outlookColor = insight.outlook === 'sell' ? 'var(--red)' : insight.outlook === 'accumulate' ? 'var(--electric)' : insight.outlook === 'opportunistic sell' ? '#c07000' : 'var(--text-3)';
+                            const standingColor = insight.market_standing === 'blue chip' ? 'var(--electric)' : insight.market_standing === 'established' ? 'var(--gold-dim)' : insight.market_standing === 'declining' || insight.market_standing === 'illiquid' ? 'var(--red)' : 'var(--text-2)';
+                            return (
+                              <div key={i} style={{ border: '1px solid var(--border)', borderRadius: '6px', padding: '12px 14px', background: 'white' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                                  <div>
+                                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{insight.artist}</span>
+                                    {insight.title && <span style={{ fontSize: '12px', color: 'var(--text-3)', marginLeft: '6px', fontStyle: 'italic' }}>— {insight.title}</span>}
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                                    <span style={{ fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)', padding: '2px 8px', borderRadius: '3px', background: 'var(--bg-subtle)', color: standingColor, border: '1px solid var(--border)' }}>
+                                      {insight.market_standing?.toUpperCase()}
+                                    </span>
+                                    <span style={{ fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)', padding: '2px 8px', borderRadius: '3px', color: outlookColor, background: insight.outlook === 'sell' ? 'var(--red-subtle)' : insight.outlook === 'accumulate' ? 'var(--electric-subtle)' : 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
+                                      {insight.outlook?.toUpperCase()}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '16px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                                  {insight.estimated_auction_range && insight.estimated_auction_range !== 'insufficient data' && (
+                                    <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-2)' }}>
+                                      Auction range: <strong>{insight.estimated_auction_range}</strong>
+                                    </span>
+                                  )}
+                                  {insight.liquidity && (
+                                    <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-3)' }}>
+                                      Liquidity: <strong style={{ color: insight.liquidity === 'high' ? 'var(--electric)' : insight.liquidity === 'low' ? 'var(--red)' : 'var(--gold-dim)' }}>{insight.liquidity}</strong>
+                                    </span>
+                                  )}
+                                  {insight.acquisition_assessment && (
+                                    <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-3)' }}>
+                                      Acquired: <strong style={{ color: insight.acquisition_assessment === 'cheap' ? 'var(--electric)' : insight.acquisition_assessment === 'expensive' ? 'var(--red)' : 'var(--text-2)' }}>{insight.acquisition_assessment}</strong>
+                                    </span>
+                                  )}
+                                </div>
+                                {insight.commentary && (
+                                  <div style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.6, borderTop: '1px solid var(--border-light)', paddingTop: '6px' }}>
+                                    {insight.commentary}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Recommendations */}
                     {aiAnalysis.recommendations?.length > 0 && (
                       <div>
-                        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', marginBottom: '10px' }}>Recommendations</div>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', marginBottom: '10px' }}>Action Plan</div>
                         {aiAnalysis.recommendations.map((rec: any, i: number) => (
                           <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '10px 0', borderBottom: i < aiAnalysis.recommendations.length - 1 ? '1px solid var(--border-light)' : 'none' }}>
                             <span style={{ fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)', padding: '2px 8px', borderRadius: '3px', flexShrink: 0, marginTop: '2px', background: rec.priority === 'HIGH' ? 'var(--red-subtle)' : rec.priority === 'MEDIUM' ? 'var(--gold-subtle)' : 'var(--bg-subtle)', color: rec.priority === 'HIGH' ? 'var(--red)' : rec.priority === 'MEDIUM' ? 'var(--gold-dim)' : 'var(--text-3)' }}>
@@ -1211,6 +1327,7 @@ export default function Portfolio() {
                         ))}
                       </div>
                     )}
+
                     <div style={{ marginTop: '16px', fontSize: '10px', color: 'var(--text-ghost)', fontFamily: 'var(--font-mono)' }}>
                       Nautilus Intelligence · {new Date(aiAnalysis.generated_at).toLocaleDateString('fr-FR')} · NOT FINANCIAL ADVICE
                     </div>

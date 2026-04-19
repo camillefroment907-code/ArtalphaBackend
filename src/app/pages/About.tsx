@@ -1,3 +1,5 @@
+import { dailyLots } from '../../lib/dailyStats';
+
 export default function About() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -64,7 +66,7 @@ export default function About() {
         <div style={{ background: 'var(--navy)', borderRadius: '12px', padding: '40px', marginBottom: '64px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', textAlign: 'center' }}>
             {[
-              { value: '1,574+', label: 'Lots tracked weekly' },
+              { value: `${dailyLots().toLocaleString()}+`, label: 'Lots tracked weekly' },
               { value: '10+', label: 'Auction houses' },
               { value: '73%', label: 'Signal accuracy' },
               { value: '200+', label: 'Active members' },
