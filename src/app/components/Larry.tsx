@@ -42,6 +42,20 @@ const cleanLarry = (text: string) =>
     .replace(/—\s*Larry/gi, '')
     .trim();
 
+// Larry avatar with fallback — TODO: replace with larry-avatar.png when uploaded
+function LarryAvatarBtn({ size }: { size: number }) {
+  const [err, setErr] = useState(false);
+  if (err) return <span style={{ fontFamily: 'var(--font-serif)', fontSize: Math.round(size * 0.4) + 'px', fontWeight: 700 }}>L</span>;
+  return (
+    <img
+      src="/larry-avatar.png"
+      alt="Larry"
+      style={{ width: size, height: size, objectFit: 'cover', borderRadius: '50%', display: 'block' }}
+      onError={() => setErr(true)}
+    />
+  );
+}
+
 export function Larry({ lotId }: LarryProps) {
   const { t } = useTranslation();
   const limits = getPlanLimits();
@@ -336,7 +350,7 @@ export function Larry({ lotId }: LarryProps) {
             pointerEvents: 'none',
           }} />
         )}
-        {open ? '×' : 'L'}
+        {open ? '×' : <LarryAvatarBtn size={36} />}
         {unreadCount > 0 && !open && (
           <span style={{
             position: 'absolute',
@@ -412,14 +426,13 @@ export function Larry({ lotId }: LarryProps) {
                 height: '48px',
                 borderRadius: '50%',
                 background: 'var(--navy)',
+                overflow: 'hidden',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#fff',
-                fontSize: '22px',
-                fontFamily: 'var(--font-serif)',
-                fontWeight: 700,
-              }}>L</div>
+              }}>
+                <LarryAvatarBtn size={48} />
+              </div>
               <div>
                 <p style={{ fontWeight: 600, color: 'var(--navy)', margin: 0, fontSize: '15px' }}>
                   {t('larry.lockedTitle')}
@@ -521,17 +534,24 @@ export function Larry({ lotId }: LarryProps) {
                           onClick={() => handleSuggestionClick(s)}
                           style={{
                             background: 'none',
-                            border: '1px solid var(--border)',
-                            borderRadius: '8px',
-                            padding: '8px 12px',
+                            border: '1px solid var(--navy, #0A1628)',
+                            borderRadius: '20px',
+                            padding: '7px 14px',
                             textAlign: 'left',
                             cursor: 'pointer',
-                            fontSize: '12px',
-                            color: 'var(--text-2)',
-                            transition: 'border-color 0.15s',
+                            fontSize: '13px',
+                            color: 'var(--navy, #0A1628)',
+                            transition: 'all 0.15s',
+                            fontWeight: 500,
                           }}
-                          onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--navy)')}
-                          onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+                          onMouseEnter={e => {
+                            (e.currentTarget as HTMLButtonElement).style.background = 'var(--navy, #0A1628)';
+                            (e.currentTarget as HTMLButtonElement).style.color = 'white';
+                          }}
+                          onMouseLeave={e => {
+                            (e.currentTarget as HTMLButtonElement).style.background = 'none';
+                            (e.currentTarget as HTMLButtonElement).style.color = 'var(--navy, #0A1628)';
+                          }}
                         >
                           {s}
                         </button>

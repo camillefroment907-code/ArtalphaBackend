@@ -58,6 +58,24 @@ const TOTAL_STEPS = 6;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+// Larry avatar component with fallback — TODO: replace with larry-avatar.png when uploaded
+function LarryAvatarImg({ size, fallbackFontSize = 14 }: { size: number; fallbackFontSize?: number }) {
+  const [error, setError] = useState(false);
+  if (error) {
+    return (
+      <div style={{ width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg, #0A1628 0%, #1e3a5f 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: fallbackFontSize, fontWeight: 700 }}>◆</div>
+    );
+  }
+  return (
+    <img
+      src="/larry-avatar.png"
+      alt="Larry — Nautilus AI Advisor"
+      style={{ width: size, height: size, objectFit: 'cover', borderRadius: '50%', display: 'block' }}
+      onError={() => setError(true)}
+    />
+  );
+}
+
 export default function Onboarding() {
   const navigate = useNavigate();
   const [step, setStep]               = useState(0);
@@ -373,9 +391,9 @@ export default function Onboarding() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <button onClick={goBack} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#888', cursor: 'pointer', padding: 0 }}>← Back</button>
-              <button onClick={goNext} style={{ padding: '13px 32px', background: '#0A1628', color: '#FFFFFF', border: 'none', fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer', borderRadius: '8px' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#162240')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#0A1628')}>
+              <button onClick={goNext} style={{ padding: '13px 32px', background: '#2563EB', color: '#FFFFFF', border: 'none', fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer', borderRadius: '8px' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#1D4ED8')}
+                onMouseLeave={e => (e.currentTarget.style.background = '#2563EB')}>
                 Continue →
               </button>
             </div>
@@ -385,20 +403,22 @@ export default function Onboarding() {
         {/* ── Step 8: Meet Larry ──────────────────────────────────────────── */}
         {step === 8 && (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ width: '88px', height: '88px', borderRadius: '50%', background: 'linear-gradient(135deg, #0A1628 0%, #1e3a5f 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', boxShadow: '0 8px 32px rgba(10,22,40,0.22)' }}>
-              <span style={{ fontSize: '36px' }}>◆</span>
+            <div style={{ width: '120px', height: '120px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto 24px', boxShadow: '0 8px 32px rgba(10,22,40,0.22)' }}>
+              <LarryAvatarImg size={120} fallbackFontSize={48} />
             </div>
             <h2 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '28px', fontWeight: 600, color: '#0A1628', margin: '0 0 8px', lineHeight: 1.2 }}>Meet Larry.</h2>
             <div style={{ width: '40px', height: '2px', background: '#C6A85A', margin: '0 auto 20px' }} />
             <p style={{ fontSize: '14px', color: '#555', lineHeight: 1.7, margin: '0 0 28px', maxWidth: '380px', marginLeft: 'auto', marginRight: 'auto' }}>
-              Larry is your private AI art market advisor — trained on 500,000+ auction results. Ask him anything about a lot, an artist, or the market direction.
+              Larry is your private art market analyst. He knows every lot, every artist trajectory, every market signal — and he works exclusively for you.
             </p>
             <div style={{ background: '#F5F4F0', border: '1px solid #E4E2DC', borderRadius: '12px', padding: '20px 24px', marginBottom: '36px', textAlign: 'left', maxWidth: '380px', marginLeft: 'auto', marginRight: 'auto' }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#0A1628', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'white', flexShrink: 0, fontWeight: 700 }}>◆</div>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
+                  <LarryAvatarImg size={32} fallbackFontSize={10} />
+                </div>
                 <div>
                   <div style={{ fontSize: '13px', color: '#333', lineHeight: 1.6, fontStyle: 'italic', marginBottom: '8px' }}>
-                    "I've analysed 500,000+ auction results. Tell me your budget and target artists — I'll surface the best undervalued lots, then brief you in 30 seconds."
+                    "I've spent years analyzing auction results across Christie's, Sotheby's, Drouot, and 27 other markets. Tell me what you collect — I'll find what others miss."
                   </div>
                   <div style={{ fontSize: '10px', color: '#bbb', fontFamily: 'var(--font-mono, monospace)' }}>Larry · Nautilus AI Advisor</div>
                 </div>
@@ -406,9 +426,9 @@ export default function Onboarding() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '380px', margin: '0 auto' }}>
               <button onClick={goBack} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#888', cursor: 'pointer', padding: 0 }}>← Back</button>
-              <button onClick={goNext} style={{ padding: '13px 32px', background: '#0A1628', color: '#FFFFFF', border: 'none', fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer', borderRadius: '8px' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#162240')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#0A1628')}>
+              <button onClick={goNext} style={{ padding: '13px 32px', background: '#2563EB', color: '#FFFFFF', border: 'none', fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer', borderRadius: '8px' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#1D4ED8')}
+                onMouseLeave={e => (e.currentTarget.style.background = '#2563EB')}>
                 Continue →
               </button>
             </div>
@@ -489,9 +509,9 @@ function StepFooter({ onBack, onNext, onSkip, canNext }: StepFooterProps) {
         <button onClick={onSkip} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#ccc', cursor: 'pointer', padding: 0 }}>Skip</button>
       </div>
       {canNext && onNext && (
-        <button onClick={onNext} style={{ padding: '12px 28px', background: '#0A1628', color: '#FFFFFF', border: 'none', fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer', borderRadius: '8px' }}
-          onMouseEnter={e => (e.currentTarget.style.background = '#162240')}
-          onMouseLeave={e => (e.currentTarget.style.background = '#0A1628')}>
+        <button onClick={onNext} style={{ padding: '12px 28px', background: '#2563EB', color: '#FFFFFF', border: 'none', fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer', borderRadius: '8px' }}
+          onMouseEnter={e => (e.currentTarget.style.background = '#1D4ED8')}
+          onMouseLeave={e => (e.currentTarget.style.background = '#2563EB')}>
           Continue →
         </button>
       )}

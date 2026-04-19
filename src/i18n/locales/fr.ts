@@ -5,8 +5,8 @@ const fr: TranslationKeys = {
     dashboard: 'Tableau de bord', signalFeed: 'Signal Feed', explorer: 'Explorer',
     calendar: 'Calendrier', intelligence: 'Intelligence', portfolio: 'Portfolio',
     signOut: 'Se déconnecter', getAccess: 'Accéder', signIn: 'Se connecter',
-    search: 'Rechercher œuvres, artistes...',
-    live: 'En direct', myAccount: 'Mon compte',
+    search: 'Search artworks, artists...',
+    live: 'Live', myAccount: 'Mon compte',
   },
   explorer: {
     title: 'Explorer',
