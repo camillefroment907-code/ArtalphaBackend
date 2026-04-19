@@ -62,17 +62,17 @@ async def _poll_and_score_async(lots_per_source: int = 500, skip_purge: bool = F
     start_time = datetime.utcnow()
 
     if not skip_purge:
-        # 0. Purge expired auction lots — lots with a past auction_date are stale
-        #    and will never appear in the API feed. Remove them so the next scrape
-        #    can re-insert fresh data (connectors set auction_date=None for ongoing lots).
+        # 0. Purge UPCOMING lots whose auction_date is more than 7 days past.
+        #    SOLD lots (historical data) are kept — never purged here.
         async with AsyncSessionLocal() as _cleanup_session:
             from sqlalchemy import delete
             from app.models.db_models import Lot as _Lot
-            expired_cutoff = datetime.utcnow() - timedelta(hours=1)
+            expired_cutoff = datetime.utcnow() - timedelta(days=7)
             del_result = await _cleanup_session.execute(
                 delete(_Lot).where(
                     _Lot.auction_date.isnot(None),
                     _Lot.auction_date < expired_cutoff,
+                    _Lot.status == LotStatus.UPCOMING,  # never purge historical sold lots
                 )
             )
             await _cleanup_session.commit()
@@ -242,6 +242,10 @@ async def _poll_and_score_async(lots_per_source: int = 500, skip_purge: bool = F
                 lot_fingerprint = hashlib.md5(_fp_raw.encode()).hexdigest() if lot_data.title else None
 
                 # 8. Create new lot record
+                # Preserve SOLD status for historical lots (prevents purge)
+                _lot_performance = (lot_data.raw_data or {}).get("lot_performance", "")
+                _lot_status = LotStatus.SOLD if _lot_performance == "sold" else LotStatus.UPCOMING
+
                 lot_obj = Lot(
                     external_id=lot_data.external_id,
                     source=lot_data.source,
@@ -262,7 +266,7 @@ async def _poll_and_score_async(lots_per_source: int = 500, skip_purge: bool = F
                     auction_date=lot_data.auction_date,
                     auction_house_name=lot_data.auction_house_name,
                     auction_sale_title=lot_data.auction_sale_title,
-                    status=LotStatus.UPCOMING,
+                    status=_lot_status,
                     market_type=lot_data.market_type,
                     is_buy_now=lot_data.is_buy_now or False,
                     gallery_name=lot_data.gallery_name,

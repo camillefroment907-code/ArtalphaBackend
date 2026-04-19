@@ -87,7 +87,9 @@ def _map_lot(record: dict) -> Optional[LotNormalized]:
 
         url = record.get("website_url") or ""
         if not url or not url.startswith("http"):
-            return None
+            # Build fallback URL from record ID rather than discarding the lot
+            lot_id = record.get("_id") or record.get("id") or ""
+            url = f"https://www.artmarketapi.com/lots/{lot_id}" if lot_id else None
 
         medium_raw = record.get("medium") or record.get("category") or ""
         category = normalize_category(medium_raw) if medium_raw else None
