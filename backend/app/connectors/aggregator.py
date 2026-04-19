@@ -6,6 +6,18 @@ import asyncio
 from typing import List, Dict, Any
 import structlog
 
+
+async def _with_timeout(coro, timeout: float, name: str):
+    """Run a coroutine with a timeout. Returns [] on timeout or error."""
+    try:
+        return await asyncio.wait_for(coro, timeout=timeout)
+    except asyncio.TimeoutError:
+        logger.warning("connector_timeout", connector=name, timeout=timeout)
+        return []
+    except Exception as e:
+        logger.warning("connector_error", connector=name, error=str(e))
+        return []
+
 from app.models.schemas import LotNormalized, AuctionHouseEnum
 from app.connectors import drouot_connector
 # interencheres_connector disabled — Cloudflare blocks all access, returns 0 real lots
@@ -43,16 +55,17 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     real_lots: List[LotNormalized] = []
     seen_ids: set = set()
 
-    # --- Drouot real scraper (Playwright) ---
+    # --- Drouot real scraper (Playwright) — 90s timeout, may hang on Railway ---
     try:
         from app.connectors.drouot_real import DrouotRealConnector
         drouot = DrouotRealConnector()
-        lots = await drouot.fetch_lots(lots_per_source)
+        lots = await _with_timeout(drouot.fetch_lots(lots_per_source), timeout=90, name="drouot")
         for lot in lots:
             if lot.external_id not in seen_ids:
                 seen_ids.add(lot.external_id)
                 real_lots.append(lot)
-        logger.info("Drouot real: fetched", count=len(lots))
+        if lots:
+            logger.info("Drouot real: fetched", count=len(lots))
     except Exception as e:
         logger.error("Drouot real connector failed", error=str(e))
 
@@ -64,10 +77,10 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     # except Exception as e:
     #     logger.warning("Interenchères real connector skipped", error=str(e))
 
-    # --- Invaluable — JSON API scraping ---
+    # --- Invaluable — JSON API scraping (300s timeout) ---
     try:
         from app.connectors.invaluable_connector import fetch_lots as inv_fetch
-        inv_lots = await inv_fetch(lots_per_source)
+        inv_lots = await _with_timeout(inv_fetch(lots_per_source), timeout=300, name="invaluable")
         added = 0
         for lot in inv_lots:
             if lot.external_id not in seen_ids:
@@ -116,10 +129,10 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
         except Exception as e:
             logger.error("Live Auctioneers connector failed", error=str(e))
 
-    # --- Artsy — free public API (auction lots, full cursor pagination) ---
+    # --- Artsy — free public API (auction lots, full cursor pagination, 180s timeout) ---
     try:
         from app.connectors.artsy_connector import fetch_lots as artsy_fetch
-        artsy_lots = await artsy_fetch(min(5000, lots_per_source))
+        artsy_lots = await _with_timeout(artsy_fetch(min(5000, lots_per_source)), timeout=180, name="artsy")
         added = 0
         for lot in artsy_lots:
             if lot.external_id not in seen_ids:
@@ -131,11 +144,11 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     except Exception as e:
         logger.warning("Artsy connector skipped", error=str(e))
 
-    # --- ArtMarket API — Christie's, Sotheby's, Bonhams, Phillips via aggregator ---
+    # --- ArtMarket API — Christie's, Sotheby's, Bonhams, Phillips via aggregator (1800s timeout) ---
     try:
         from app.connectors.artmarketapi_connector import ArtMarketAPIConnector
         amapi = ArtMarketAPIConnector()
-        amapi_lots = await amapi.fetch_lots(lots_per_source)
+        amapi_lots = await _with_timeout(amapi.fetch_lots(lots_per_source), timeout=1800, name="artmarketapi")
         added = 0
         for lot in amapi_lots:
             if lot.external_id not in seen_ids:
@@ -321,10 +334,10 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     except Exception as e:
         logger.warning("Sotheby's connector skipped", error=str(e))
 
-    # --- Artsy primary market — for sale artworks ---
+    # --- Artsy primary market — for sale artworks (600s timeout for 10K lots) ---
     try:
         from app.connectors.artsy_connector import fetch_primary_lots as artsy_primary_fetch
-        artsy_primary_lots = await artsy_primary_fetch(min(10000, lots_per_source * 2))
+        artsy_primary_lots = await _with_timeout(artsy_primary_fetch(min(10000, lots_per_source * 2)), timeout=600, name="artsy_primary")
         added = 0
         for lot in artsy_primary_lots:
             if lot.external_id not in seen_ids:
