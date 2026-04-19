@@ -25,15 +25,31 @@ EBAY_SEARCH_URL = "https://api.ebay.com/buy/browse/v1/item_summary/search"
 
 # eBay fine art category IDs
 ART_CATEGORIES = {
-    "550": "Art",
+    "550":   "Art",
     "20081": "Paintings",
     "10770": "Prints",
-    "617": "Sculpture",
-    "1040": "Photography",
+    "617":   "Sculpture",
+    "1040":  "Photography",
+    "7107":  "Drawings",
+    "11450": "Mixed Media",
 }
 
-# Marketplace: EBAY_FR, EBAY_GB, EBAY_US — FR first for French art
-MARKETPLACE_ORDER = ["EBAY_FR", "EBAY_GB", "EBAY_US"]
+# Search keywords to diversify results beyond category browsing
+ART_KEYWORDS = [
+    "oil painting signed",
+    "watercolor original",
+    "lithograph numbered",
+    "etching signed",
+    "bronze sculpture",
+    "contemporary art",
+    "impressionist painting",
+    "abstract art original",
+    "pencil drawing original",
+    "screen print signed",
+]
+
+# Marketplace: EBAY_FR, EBAY_GB, EBAY_US, EBAY_DE, EBAY_IT
+MARKETPLACE_ORDER = ["EBAY_FR", "EBAY_GB", "EBAY_US", "EBAY_DE", "EBAY_IT"]
 
 
 def _safe_float(val) -> Optional[float]:
@@ -146,32 +162,30 @@ def _parse_item(item: dict, category_name: str) -> Optional[LotNormalized]:
         return None
 
 
-async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
+async def fetch_lots(limit: int = 2000) -> List[LotNormalized]:
     """
     Fetch art auction listings from eBay Browse API.
     Returns [] if EBAY_CLIENT_ID / EBAY_CLIENT_SECRET are not set.
     """
     client_id, client_secret = _get_credentials()
     if not client_id or not client_secret:
-        logger.info("ebay_skipped", reason="EBAY_CLIENT_ID / EBAY_CLIENT_SECRET not set — get free credentials at developer.ebay.com")
+        logger.info("ebay_skipped", reason="EBAY_CLIENT_ID / EBAY_CLIENT_SECRET not set")
         return []
 
     lots: List[LotNormalized] = []
     seen: set = set()
 
     try:
-        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             token = await _get_oauth_token(client, client_id, client_secret)
             if not token:
                 logger.warning("ebay_no_token")
                 return []
 
-            per_marketplace = limit // len(MARKETPLACE_ORDER)
-
+            # Pass 1 — by category across all marketplaces
             for marketplace in MARKETPLACE_ORDER:
                 if len(lots) >= limit:
                     break
-
                 for cat_id, cat_name in ART_CATEGORIES.items():
                     if len(lots) >= limit:
                         break
@@ -179,11 +193,11 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
                         resp = await client.get(
                             EBAY_SEARCH_URL,
                             params={
-                                "q": "painting art",
+                                "q": "art",
                                 "category_ids": cat_id,
                                 "filter": "buyingOptions:{AUCTION}",
                                 "sort": "endingSoonest",
-                                "limit": min(25, limit - len(lots)),
+                                "limit": 50,
                             },
                             headers={
                                 "Authorization": f"Bearer {token}",
@@ -191,24 +205,48 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
                                 "Accept": "application/json",
                             },
                         )
-                        if resp.status_code != 200:
-                            logger.debug("ebay_category_failed", cat=cat_name, marketplace=marketplace, status=resp.status_code)
-                            continue
-
-                        data = resp.json()
-                        for item in data.get("itemSummaries", []):
-                            parsed = _parse_item(item, cat_name)
-                            if parsed and parsed.external_id not in seen:
-                                seen.add(parsed.external_id)
-                                lots.append(parsed)
-                                if len(lots) >= limit:
-                                    break
-
-                        await asyncio.sleep(0.3)
-
+                        if resp.status_code == 200:
+                            for item in resp.json().get("itemSummaries", []):
+                                parsed = _parse_item(item, cat_name)
+                                if parsed and parsed.external_id not in seen:
+                                    seen.add(parsed.external_id)
+                                    lots.append(parsed)
+                        await asyncio.sleep(0.2)
                     except Exception as e:
                         logger.debug("ebay_cat_error", cat=cat_name, error=str(e))
-                        continue
+
+            # Pass 2 — keyword searches for more diversity
+            for keyword in ART_KEYWORDS:
+                if len(lots) >= limit:
+                    break
+                for marketplace in ["EBAY_FR", "EBAY_GB", "EBAY_US"]:
+                    if len(lots) >= limit:
+                        break
+                    try:
+                        resp = await client.get(
+                            EBAY_SEARCH_URL,
+                            params={
+                                "q": keyword,
+                                "category_ids": "550",  # Art
+                                "filter": "buyingOptions:{AUCTION}",
+                                "sort": "newlyListed",
+                                "limit": 50,
+                            },
+                            headers={
+                                "Authorization": f"Bearer {token}",
+                                "X-EBAY-C-MARKETPLACE-ID": marketplace,
+                                "Accept": "application/json",
+                            },
+                        )
+                        if resp.status_code == 200:
+                            for item in resp.json().get("itemSummaries", []):
+                                parsed = _parse_item(item, "Art")
+                                if parsed and parsed.external_id not in seen:
+                                    seen.add(parsed.external_id)
+                                    lots.append(parsed)
+                        await asyncio.sleep(0.2)
+                    except Exception as e:
+                        logger.debug("ebay_kw_error", keyword=keyword, error=str(e))
 
     except Exception as e:
         logger.warning("ebay_connector_failed", error=str(e))
