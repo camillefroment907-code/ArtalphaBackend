@@ -185,9 +185,16 @@ async def dedup_lots(
     import hashlib
     from sqlalchemy import text as sa_text
 
-    # Step 1: Fetch all lots (id, title, artist, estimates, created_at, fingerprint)
+    # Step 1: Add lot_fingerprint column if it doesn't exist yet
+    try:
+        await db.execute(sa_text("ALTER TABLE lots ADD COLUMN IF NOT EXISTS lot_fingerprint VARCHAR(64)"))
+        await db.commit()
+    except Exception:
+        await db.rollback()
+
+    # Step 2: Fetch all lots (id, title, artist, estimates, created_at) — no fingerprint column dependency
     rows = (await db.execute(
-        sa_text("SELECT id, title, artist_name_raw, estimate_low, estimate_high, created_at, lot_fingerprint FROM lots ORDER BY created_at ASC")
+        sa_text("SELECT id, title, artist_name_raw, estimate_low, estimate_high, created_at FROM lots ORDER BY created_at ASC")
     )).fetchall()
 
     # Step 2: Compute fingerprints and find duplicates
