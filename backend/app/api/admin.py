@@ -178,73 +178,41 @@ async def dedup_lots(
     _: bool = Depends(verify_admin),
 ) -> Dict[str, Any]:
     """
-    Remove duplicate lots using Python-side fingerprint computation.
-    Keeps the oldest lot per unique (title, artist, estimate_low, estimate_high).
-    Also backfills lot_fingerprint column for future prevention.
+    Remove duplicate lots — keep oldest per unique (title, artist, estimate_low, estimate_high).
+    Uses a pure SQL CTE to identify and delete duplicates in one round-trip.
     """
-    import hashlib
     from sqlalchemy import text as sa_text
 
-    # Step 1: Add lot_fingerprint column if it doesn't exist yet
-    try:
-        await db.execute(sa_text("ALTER TABLE lots ADD COLUMN IF NOT EXISTS lot_fingerprint VARCHAR(64)"))
-        await db.commit()
-    except Exception:
-        await db.rollback()
-
-    # Step 2: Fetch all lots (id, title, artist, estimates, created_at) — no fingerprint column dependency
-    rows = (await db.execute(
-        sa_text("SELECT id, title, artist_name_raw, estimate_low, estimate_high, created_at FROM lots ORDER BY created_at ASC")
-    )).fetchall()
-
-    # Step 2: Compute fingerprints and find duplicates
-    seen: dict = {}   # fingerprint -> first (oldest) id
-    to_delete = []
-    to_update = []    # (id, fingerprint) pairs needing backfill
-
-    for row in rows:
-        raw = (
-            f"{(row.title or '').lower().strip()}|"
-            f"{(row.artist_name_raw or '').lower().strip()}|"
-            f"{int(round(row.estimate_low or 0))}|"
-            f"{int(round(row.estimate_high or 0))}"
+    # Single SQL: identify duplicates using ROW_NUMBER(), keep oldest, delete the rest
+    dedup_sql = sa_text("""
+        DELETE FROM lots
+        WHERE id IN (
+            SELECT id FROM (
+                SELECT
+                    id,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY
+                            lower(coalesce(title, '')),
+                            lower(coalesce(artist_name_raw, '')),
+                            coalesce(estimate_low::numeric, 0)::integer,
+                            coalesce(estimate_high::numeric, 0)::integer
+                        ORDER BY created_at ASC
+                    ) AS rn
+                FROM lots
+                WHERE title IS NOT NULL
+            ) t
+            WHERE rn > 1
         )
-        fp = hashlib.md5(raw.encode()).hexdigest() if row.title else None
-
-        if fp:
-            if row.lot_fingerprint is None:
-                to_update.append((str(row.id), fp))
-            if fp in seen:
-                to_delete.append(str(row.id))
-            else:
-                seen[fp] = str(row.id)
-
-    # Step 3: Backfill fingerprints in batches
-    if to_update:
-        for lot_id, fp in to_update:
-            await db.execute(
-                sa_text("UPDATE lots SET lot_fingerprint = :fp WHERE id = :id::uuid"),
-                {"fp": fp, "id": lot_id}
-            )
-        await db.commit()
-
-    # Step 4: Delete duplicates in a single IN query
-    deleted = 0
-    if to_delete:
-        # Batch into chunks of 500 to avoid very long IN clauses
-        for i in range(0, len(to_delete), 500):
-            chunk = to_delete[i:i + 500]
-            placeholders = ", ".join(f"'{lid}'::uuid" for lid in chunk)
-            result = await db.execute(sa_text(f"DELETE FROM lots WHERE id IN ({placeholders})"))
-            deleted += result.rowcount
-        await db.commit()
+    """)
+    result = await db.execute(dedup_sql)
+    deleted = result.rowcount
+    await db.commit()
 
     total_remaining = (await db.execute(select(func.count(Lot.id)))).scalar() or 0
 
     return {
         "deleted": deleted,
         "remaining": total_remaining,
-        "fingerprints_backfilled": len(to_update),
         "message": f"Removed {deleted} duplicate lots. {total_remaining} unique lots remain.",
         "timestamp": datetime.utcnow().isoformat(),
     }
