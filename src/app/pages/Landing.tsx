@@ -320,7 +320,10 @@ export default function Landing() {
           <button onClick={() => navigate('/app/login')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: 'var(--text-2)', padding: '0 4px' }}>
             Sign in
           </button>
-          <button onClick={() => navigate('/app/signup')} className="btn-navy" style={{ fontSize: '11px', padding: '8px 20px' }}>
+          <button onClick={() => navigate('/app/signup')} style={{ background: '#4B6CF5', color: 'white', border: 'none', borderRadius: '7px', fontSize: '13px', fontWeight: 700, padding: '9px 22px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(75,108,245,0.3)', transition: 'all 0.15s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 14px rgba(75,108,245,0.45)'; (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 8px rgba(75,108,245,0.3)'; (e.currentTarget as HTMLButtonElement).style.transform = 'none'; }}
+          >
             Start free
           </button>
         </div>
