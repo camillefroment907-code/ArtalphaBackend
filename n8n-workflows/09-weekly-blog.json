@@ -20,9 +20,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{$env.BACKEND_URL}}/api/blog/generate",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "https://artalpha-backend-production.up.railway.app/api/blog/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Admin-Key", "value": "={{ $env.NAUTILUS_ADMIN_KEY }}" }
+          ]
+        },
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
@@ -37,13 +41,7 @@
       "name": "Generate Weekly Blog Post",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [460, 300],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "nautilus-internal-auth",
-          "name": "Nautilus Internal API"
-        }
-      }
+      "position": [460, 300]
     },
     {
       "parameters": {
@@ -71,7 +69,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{$env.BACKEND_URL}}/api/admin/notify",
+        "url": "https://artalpha-backend-production.up.railway.app/api/admin/notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Admin-Key", "value": "={{ $env.NAUTILUS_ADMIN_KEY }}" }
+          ]
+        },
         "sendBody": true,
         "bodyParameters": {
           "parameters": [

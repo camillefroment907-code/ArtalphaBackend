@@ -195,4 +195,51 @@
 3. Upload og-image.png (1200×630px) to /public/
 4. Microsoft Clarity ID → VITE_CLARITY_ID in Vercel
 5. GA4 Measurement ID → VITE_GA4_ID in Vercel
-6. Import + activate 8 n8n workflows
+6. Import + activate 9 n8n workflows (see CREDENTIAL_SETUP.md)
+
+---
+
+## Session 2026-04-19 — n8n Workflow Credential Fix
+
+### Audit findings
+
+All 9 workflow JSON files scanned. Issues found:
+
+| File | Issue | Fix applied |
+|------|-------|-------------|
+| `01-welcome-email.json` | credential id `"resend-smtp"` (string, not numeric) | → `"id": "1"` |
+| `02-waitlist-confirmation.json` | credential id `"resend-smtp"` | → `"id": "1"` |
+| `03-deal-alert.json` | credential id `"resend-smtp"` | → `"id": "1"` |
+| `04-weekly-digest.json` | credential id `"resend-smtp"` | → `"id": "1"` |
+| `05-launch-day-blast.json` | credential id `"resend-smtp"` | → `"id": "1"` |
+| `06-upgrade-prompt.json` | credential id `"resend-smtp"` | → `"id": "1"` |
+| `07-subscription-confirmed.json` | credential id `"resend-smtp"` | → `"id": "1"` |
+| `08-churn-recovery.json` | credential id `"resend-smtp"` | → `"id": "1"` |
+| `09-weekly-blog.json` | `$env.BACKEND_URL` (not set in n8n) · `httpHeaderAuth` credential id `"nautilus-internal-auth"` · Notify Admin node had no auth | Hardcoded production URL · Removed httpHeaderAuth dependency · Both HTTP nodes now use `X-Admin-Key: $env.NAUTILUS_ADMIN_KEY` header |
+
+### Credential structure (all email nodes now use)
+```json
+"credentials": {
+  "smtp": { "id": "1", "name": "Resend SMTP" }
+}
+```
+
+### Webhook URLs — no changes needed
+All files already use `https://artalpha-backend-production.up.railway.app` — correct.
+
+### Cron schedules — verified correct
+- `04-weekly-digest.json` → Monday 8:00 AM ✓
+- `05-launch-day-blast.json` → May 13 8:00 AM UTC ✓ (cron: `0 8 13 5 *`)
+- `09-weekly-blog.json` → Monday 6:00 AM ✓ (cron: `0 6 * * 1`)
+
+### JSON validation
+All 9 files pass `python3 -c "import json; json.load(open(f))"` — valid.
+
+### Created
+- `n8n-workflows/CREDENTIAL_SETUP.md` — step-by-step instructions for Camille to set up credentials in n8n before importing
+
+### Camille action required (once, before importing)
+1. In n8n: create SMTP credential named **"Resend SMTP"** (smtp.resend.com:465, user=resend, password=RESEND_API_KEY)
+2. In n8n env vars: set `NAUTILUS_ADMIN_KEY` (same value as Railway backend)
+3. Import all 9 JSON files → workflows auto-link to "Resend SMTP"
+4. Toggle each workflow Active after smoke-testing

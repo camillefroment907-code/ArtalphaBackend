@@ -29,7 +29,7 @@
       "typeVersion": 2.1,
       "position": [480, 300],
       "credentials": {
-        "smtp": { "id": "resend-smtp", "name": "Resend SMTP" }
+        "smtp": { "id": "1", "name": "Resend SMTP" }
       }
     },
     {

@@ -37,7 +37,7 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [720, 300],
-      "credentials": { "smtp": { "id": "resend-smtp", "name": "Resend SMTP" } }
+      "credentials": { "smtp": { "id": "1", "name": "Resend SMTP" } }
     }
   ],
   "connections": {
