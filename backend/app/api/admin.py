@@ -376,15 +376,20 @@ async def admin_recommendations(
 @router.post("/backfill-market-type", dependencies=[Depends(verify_admin)])
 async def backfill_market_type(db: AsyncSession = Depends(get_db)):
     """Fix market_type=PRIMARY on artmarketapi lots that are actually auctions."""
-    from sqlalchemy import text
-    sql = text("""
-        UPDATE lots
-        SET market_type = 'AUCTION'
-        WHERE market_type = 'PRIMARY'
-          AND source IN ('artmarketapi', 'christies', 'sothebys', 'bonhams',
-                         'phillips', 'roseberys', 'heritage', 'drouot')
-    """)
-    result = await db.execute(sql)
+    from sqlalchemy import text, update
+    from app.models.db_models import Lot as LotModel, MarketType
+    from sqlalchemy import or_
+    # Use ORM update to avoid PostgreSQL enum casting issues with raw SQL
+    stmt = (
+        update(LotModel)
+        .where(
+            LotModel.market_type == MarketType.PRIMARY,
+            LotModel.source.in_(["artmarketapi", "christies", "sothebys", "bonhams",
+                                  "phillips", "roseberys", "heritage", "drouot"])
+        )
+        .values(market_type=MarketType.AUCTION)
+    )
+    result = await db.execute(stmt)
     await db.commit()
     return {"updated": result.rowcount, "status": "ok"}
 
