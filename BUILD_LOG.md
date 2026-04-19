@@ -175,16 +175,24 @@
 - public/robots.txt: allow all, sitemap pointer
 - vercel.json: CSP headers, HSTS, Permissions-Policy
 
-### Phase 3 Checklist
+### Phase 3 Checklist — ALL DONE ✓
 - [x] Task 1: Pipeline audit + ScrapingRun model
-- [x] Task 2: Mobile optimization (Header hamburger)
-- [x] Task 3: Performance (preconnect, caching)
-- [x] Task 4: SEO (sitemap, robots, meta tags, CSP)
-- [ ] Task 5: Stripe production (audit billing.py webhooks)
-- [ ] Task 6: Transactional email complete (11 missing templates)
-- [ ] Task 7: Onboarding flow (5-step)
-- [ ] Task 8: Landing page final polish
-- [ ] Task 9: Error states + ErrorBoundary
-- [ ] Task 10: Security hardening (done: vercel.json CSP)
-- [ ] Task 11: Production deployment checklist
-- [ ] Task 12: Launch Report
+- [x] Task 2: Mobile optimization (Header hamburger + drawer + 44px targets)
+- [x] Task 3: Performance (preconnect in index.html + sessionStorage prefetch in main.tsx)
+- [x] Task 4: SEO (sitemap.xml, robots.txt, og:image, canonical, schema.org, Twitter card)
+- [x] Task 5: Stripe production (payment_success + trial_started emails wired to webhooks)
+- [x] Task 6: Transactional email complete (6 new templates + Nautilus branding throughout)
+- [x] Task 7: Onboarding flow (7 steps: +personalized lots preview + Meet Larry)
+- [x] Task 8: Landing page final polish (CookieBanner.tsx — GDPR consent gate)
+- [x] Task 9: Error states (ErrorBoundary.tsx — global, dev stack trace, App.tsx wired)
+- [x] Task 10: Security hardening (vercel.json: CSP + HSTS + Permissions-Policy)
+- [x] Task 11: Production deployment checklist (BLOCKERS.md — 10 Camille actions)
+- [x] Task 12: Launch Report (LAUNCH_REPORT.md — architecture, funnels, success metrics)
+
+### Remaining Camille actions before May 13 launch
+1. Stripe price IDs in Railway env (6 vars)
+2. SPF/DKIM/DMARC on get-nautilus.com (see EMAIL_DNS_SETUP.md)
+3. Upload og-image.png (1200×630px) to /public/
+4. Microsoft Clarity ID → VITE_CLARITY_ID in Vercel
+5. GA4 Measurement ID → VITE_GA4_ID in Vercel
+6. Import + activate 8 n8n workflows
