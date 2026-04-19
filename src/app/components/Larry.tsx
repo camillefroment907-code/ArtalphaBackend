@@ -331,7 +331,7 @@ export function Larry({ lotId }: LarryProps) {
           alignItems: 'center',
           justifyContent: 'center',
           boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
-          zIndex: 9999,
+          zIndex: 10000,
           fontFamily: 'var(--font-serif)',
           fontSize: '20px',
           fontWeight: 700,

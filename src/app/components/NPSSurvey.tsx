@@ -132,7 +132,7 @@ export function NPSSurvey() {
   const containerStyle: React.CSSProperties = {
     position: 'fixed',
     bottom: 24,
-    right: 24,
+    left: 24,
     width: 'min(380px, calc(100vw - 48px))',
     background: '#1A2A44',
     border: '1px solid rgba(198,168,90,0.3)',
@@ -149,26 +149,31 @@ export function NPSSurvey() {
   // ── Thank-you state ──────────────────────────────────────────────────────
   if (state === 'submitted') {
     return (
-      <div style={containerStyle}>
-        <div style={{ textAlign: 'center', padding: '8px 0' }}>
-          <AnimatedCheck />
-          <div style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: 20, fontWeight: 500, color: '#fff', marginBottom: 8,
-          }}>
-            Thank you, {firstName}.
-          </div>
-          <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>
-            Your feedback shapes the future of Nautilus.
+      <>
+        <style>{`@media(max-width:480px){.nps-container{left:16px!important;right:16px!important;width:auto!important;bottom:80px!important;}}`}</style>
+        <div className="nps-container" style={containerStyle}>
+          <div style={{ textAlign: 'center', padding: '8px 0' }}>
+            <AnimatedCheck />
+            <div style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: 20, fontWeight: 500, color: '#fff', marginBottom: 8,
+            }}>
+              Thank you, {firstName}.
+            </div>
+            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>
+              Your feedback shapes the future of Nautilus.
+            </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
   // ── Main survey state ────────────────────────────────────────────────────
   return (
-    <div style={containerStyle}>
+    <>
+      <style>{`@media(max-width:480px){.nps-container{left:16px!important;right:16px!important;width:auto!important;bottom:80px!important;}}`}</style>
+      <div className="nps-container" style={containerStyle}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -220,7 +225,7 @@ export function NPSSurvey() {
       </div>
 
       {/* Score buttons */}
-      <div style={{ marginTop: 16, display: 'flex', gap: 6 }}>
+      <div style={{ marginTop: 16, display: 'flex', gap: 4 }}>
         {Array.from({ length: 11 }, (_, i) => {
           const isSelected = selectedScore === i;
           const isHovered  = hoveredScore === i && !isSelected;
@@ -318,5 +323,6 @@ export function NPSSurvey() {
       </div>
 
     </div>
+    </>
   );
 }
