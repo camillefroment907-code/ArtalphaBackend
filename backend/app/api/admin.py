@@ -456,20 +456,14 @@ async def set_user_plan(body: dict, db: AsyncSession = Depends(get_db)):
         raise HTTPException(400, f"Invalid plan: {plan_str}. Valid: {[p.value for p in SubscriptionPlan]}")
 
     # Fetch user
-    try:
-        user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
-    except Exception as e:
-        raise HTTPException(500, f"User query error: {str(e)}")
+    user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
     if not user:
         raise HTTPException(404, f"User {email} not found")
 
     # Upsert subscription via ORM
-    try:
-        sub = (await db.execute(
-            select(Subscription).where(Subscription.user_id == user.id)
-        )).scalar_one_or_none()
-    except Exception as e:
-        raise HTTPException(500, f"Sub query error: {str(e)}")
+    sub = (await db.execute(
+        select(Subscription).where(Subscription.user_id == user.id)
+    )).scalar_one_or_none()
 
     if sub:
         sub.plan = plan_enum
@@ -483,11 +477,7 @@ async def set_user_plan(body: dict, db: AsyncSession = Depends(get_db)):
         )
         db.add(sub)
 
-    try:
-        await db.commit()
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(500, f"DB error: {str(e)}")
+    await db.commit()
 
     return {"status": "ok", "email": email, "plan": plan_enum.value}
 

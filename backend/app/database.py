@@ -121,6 +121,12 @@ async def run_migrations():
         "CREATE INDEX IF NOT EXISTS idx_lots_artist_name ON lots(artist_name_raw)",
         "CREATE INDEX IF NOT EXISTS idx_lots_category ON lots(category)",
         "CREATE INDEX IF NOT EXISTS idx_lots_auction_date ON lots(auction_date)",
+        # subscriptionplan enum: add values that may be missing from older DB instances
+        "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'STARTER'",
+        "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'PRO'",
+        "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'INSTITUTIONAL'",
+        "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'ELITE'",
+        "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'EXPERT'",
     ]
     for sql in migrations:
         try:
