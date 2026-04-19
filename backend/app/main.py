@@ -193,16 +193,32 @@ app.include_router(feedback_router,         prefix="/api")
 
 @app.get("/")
 async def root():
-    return {"name": "HONO API", "version": "1.1.0", "docs": "/docs", "status": "operational"}
+    return {"name": "HONO API", "version": "5.0.0", "docs": "/docs", "status": "operational"}
 
 
 @app.get("/health")
 async def health():
+    from datetime import datetime
     db_ok = await check_db_connection()
     return {
-        "status": "healthy" if db_ok else "degraded",
+        "status": "ok" if db_ok else "degraded",
+        "version": "5.0",
         "database": "ok" if db_ok else "error",
         "environment": settings.environment,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@app.get("/api/health")
+async def api_health():
+    from datetime import datetime
+    db_ok = await check_db_connection()
+    return {
+        "status": "ok" if db_ok else "degraded",
+        "version": "5.0",
+        "database": "ok" if db_ok else "error",
+        "environment": settings.environment,
+        "timestamp": datetime.utcnow().isoformat(),
     }
 
 

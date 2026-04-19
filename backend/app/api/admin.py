@@ -429,3 +429,49 @@ async def get_db_stats(db: AsyncSession = Depends(get_db)):
         "generated_at": datetime.utcnow().isoformat(),
     }
 
+
+# ── Set user plan (admin) ─────────────────────────────────────────────────────
+
+@router.post("/set-plan", dependencies=[Depends(verify_admin)])
+async def set_user_plan(body: dict, db: AsyncSession = Depends(get_db)):
+    """
+    Manually set a user's subscription plan. Used for demo accounts and comps.
+    Body: { "email": "...", "plan": "family_office" }
+    """
+    from sqlalchemy import text
+    from app.models.db_models import Subscription, SubscriptionStatus
+
+    email = body.get("email")
+    plan = body.get("plan", "investor")
+
+    if not email:
+        raise HTTPException(400, "email required")
+
+    user_row = (await db.execute(text("SELECT id FROM users WHERE email = :email"), {"email": email})).fetchone()
+    if not user_row:
+        raise HTTPException(404, f"User {email} not found")
+
+    user_id = user_row[0]
+
+    # Upsert subscription
+    existing = (await db.execute(
+        text("SELECT id FROM subscriptions WHERE user_id = :uid"), {"uid": str(user_id)}
+    )).fetchone()
+
+    if existing:
+        await db.execute(
+            text("UPDATE subscriptions SET plan = :plan, status = 'ACTIVE', updated_at = NOW() WHERE user_id = :uid"),
+            {"plan": plan.upper(), "uid": str(user_id)}
+        )
+    else:
+        await db.execute(
+            text("""
+                INSERT INTO subscriptions (user_id, plan, status, created_at, updated_at)
+                VALUES (:uid, :plan, 'ACTIVE', NOW(), NOW())
+            """),
+            {"uid": str(user_id), "plan": plan.upper()}
+        )
+
+    await db.commit()
+    return {"status": "ok", "email": email, "plan": plan.upper()}
+
