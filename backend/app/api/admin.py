@@ -571,3 +571,90 @@ async def bulk_ingest(body: dict = None) -> Dict[str, Any]:
         "message": "Bulk ingest running in background. Poll GET /api/admin/lot-count to monitor progress.",
     }
 
+
+@router.post("/historical-ingest", dependencies=[Depends(verify_admin)])
+async def historical_ingest(body: dict = None) -> Dict[str, Any]:
+    """
+    Trigger historical lot ingest: ArtMarket API (24 months back) + Invaluable past lots.
+    These are NOT in the regular 2x/day cycle — run this once to bulk-populate the DB.
+    body: { "limit_per_source": 5000, "months_back": 24 }
+    """
+    import asyncio as _asyncio
+
+    limit_per_source = int((body or {}).get("limit_per_source", 5000))
+    months_back = int((body or {}).get("months_back", 24))
+
+    async def _run_historical():
+        from app.jobs.tasks import _poll_and_score_async
+        from app.database import BgSessionLocal
+        from app.models.db_models import Lot as _Lot
+        from sqlalchemy import select, tuple_
+        import hashlib, uuid as _uuid_mod
+        from datetime import datetime
+        from app.models.schemas import LotNormalized
+
+        logger.info("historical_ingest_start", limit=limit_per_source, months_back=months_back)
+
+        all_lots: list[LotNormalized] = []
+        seen_ids: set = set()
+
+        # ArtMarket API — 24 months of sold lots
+        try:
+            from app.connectors.artmarketapi_connector import ArtMarketAPIConnector
+            amapi = ArtMarketAPIConnector()
+            hist_lots = await amapi.fetch_historical_lots(limit_per_source, months_back=months_back)
+            for lot in hist_lots:
+                if lot.external_id not in seen_ids:
+                    seen_ids.add(lot.external_id)
+                    all_lots.append(lot)
+            logger.info("historical_ingest_artmarketapi", count=len(all_lots))
+        except Exception as e:
+            logger.error("historical_ingest_artmarketapi_failed", error=str(e))
+
+        # Invaluable — past sold lots
+        try:
+            from app.connectors.invaluable_connector import fetch_past_lots as inv_past
+            past_lots = await inv_past(limit_per_source)
+            added = 0
+            for lot in past_lots:
+                if lot.external_id not in seen_ids:
+                    seen_ids.add(lot.external_id)
+                    all_lots.append(lot)
+                    added += 1
+            logger.info("historical_ingest_invaluable_past", count=added)
+        except Exception as e:
+            logger.warning("historical_ingest_invaluable_past_skipped", error=str(e))
+
+        if not all_lots:
+            logger.info("historical_ingest_complete", inserted=0, reason="no_new_lots")
+            return
+
+        # Dedup against DB, score, and insert — reuse the main pipeline
+        from app.connectors.aggregator import fetch_all_lots as _unused
+        # Temporarily inject lots into pipeline by calling score+insert logic directly
+        from app.jobs.tasks import _poll_and_score_async as _psa
+
+        # Monkey-patch aggregator for this one call
+        import app.connectors.aggregator as _agg
+        _orig = _agg.fetch_all_lots
+
+        async def _patched_fetch(*args, **kwargs):
+            return all_lots
+
+        _agg.fetch_all_lots = _patched_fetch
+        try:
+            await _psa(lots_per_source=limit_per_source, skip_purge=True, skip_rationale=True)
+        finally:
+            _agg.fetch_all_lots = _orig
+
+        logger.info("historical_ingest_complete", candidates=len(all_lots))
+
+    _asyncio.create_task(_run_historical())
+
+    return {
+        "status": "started",
+        "limit_per_source": limit_per_source,
+        "months_back": months_back,
+        "message": "Historical ingest running in background (ArtMarket 24mo + Invaluable past). Takes 30-60 min. Monitor via GET /api/admin/health.",
+    }
+
