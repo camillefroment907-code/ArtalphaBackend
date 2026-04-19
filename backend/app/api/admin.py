@@ -553,7 +553,11 @@ async def bulk_ingest(body: dict = None) -> Dict[str, Any]:
     async def _run():
         try:
             from app.jobs.tasks import _poll_and_score_async
-            await _poll_and_score_async(lots_per_source=limit_per_source, skip_purge=skip_purge)
+            await _poll_and_score_async(
+                lots_per_source=limit_per_source,
+                skip_purge=skip_purge,
+                skip_rationale=True,  # never generate per-lot rationales during bulk ingest
+            )
             logger.info("bulk_ingest_complete", limit_per_source=limit_per_source)
         except Exception as e:
             logger.error("bulk_ingest_failed", error=str(e))

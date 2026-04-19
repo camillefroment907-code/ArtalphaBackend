@@ -49,7 +49,7 @@ def poll_and_score_lots(self):
         raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
 
 
-async def _poll_and_score_async(lots_per_source: int = 500, skip_purge: bool = False):
+async def _poll_and_score_async(lots_per_source: int = 500, skip_purge: bool = False, skip_rationale: bool = False):
     from app.connectors.aggregator import fetch_all_lots, get_house_reputation
     from app.engines.scoring import compute_deal_score, ScoringInput
     from app.models.db_models import Lot, Artist, LotStatus
@@ -200,9 +200,10 @@ async def _poll_and_score_async(lots_per_source: int = 500, skip_purge: bool = F
                 confidence = compute_confidence_score(lot_data, artist_data)
 
                 # Generate rationale for meaningful opportunities (async, non-blocking)
+                # Skipped during bulk ingest to avoid per-lot OpenAI call overhead
                 from app.engines.rationale import generate_rationale
                 rationale = None
-                if score_result.deal_score >= 45 and confidence >= 40 and settings.openai_api_key:
+                if not skip_rationale and score_result.deal_score >= 45 and confidence >= 40 and settings.openai_api_key:
                     rationale = await generate_rationale(
                         title=lot_data.title or "",
                         artist_name=artist_name or lot_data.artist_name_raw or "Unknown",
@@ -327,11 +328,16 @@ async def _poll_and_score_async(lots_per_source: int = 500, skip_purge: bool = F
                     new_deals += 1
                 processed += 1
 
+                # Batch commit every 500 lots — avoids single huge transaction
+                if processed % 500 == 0:
+                    await session.commit()
+                    logger.info("Batch committed", processed=processed)
+
             except Exception as e:
                 logger.error("Failed to process lot", title=(lot_data.title or "")[:50], error=str(e))
                 continue
 
-        # Commit all at once — much faster than per-lot flush+commit
+        # Final commit for remaining lots
         await session.commit()
         logger.info("Committed lots to DB", count=processed)
 
