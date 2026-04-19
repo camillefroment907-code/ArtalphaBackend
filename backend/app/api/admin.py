@@ -182,40 +182,45 @@ async def dedup_lots(
     Uses a pure SQL CTE to identify and delete duplicates in one round-trip.
     """
     from sqlalchemy import text as sa_text
+    import traceback
 
-    # Single SQL: identify duplicates using ROW_NUMBER(), keep oldest, delete the rest
-    dedup_sql = sa_text("""
-        DELETE FROM lots
-        WHERE id IN (
-            SELECT id FROM (
-                SELECT
-                    id,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY
-                            lower(coalesce(title, '')),
-                            lower(coalesce(artist_name_raw, '')),
-                            coalesce(estimate_low::numeric, 0)::integer,
-                            coalesce(estimate_high::numeric, 0)::integer
-                        ORDER BY created_at ASC
-                    ) AS rn
-                FROM lots
-                WHERE title IS NOT NULL
-            ) t
-            WHERE rn > 1
-        )
-    """)
-    result = await db.execute(dedup_sql)
-    deleted = result.rowcount
-    await db.commit()
+    try:
+        # Single SQL: identify duplicates using ROW_NUMBER(), keep oldest, delete the rest
+        dedup_sql = sa_text("""
+            DELETE FROM lots
+            WHERE id IN (
+                SELECT id FROM (
+                    SELECT
+                        id,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY
+                                lower(coalesce(title, '')),
+                                lower(coalesce(artist_name_raw, '')),
+                                round(coalesce(estimate_low, 0)::numeric),
+                                round(coalesce(estimate_high, 0)::numeric)
+                            ORDER BY created_at ASC
+                        ) AS rn
+                    FROM lots
+                    WHERE title IS NOT NULL
+                ) t
+                WHERE rn > 1
+            )
+        """)
+        result = await db.execute(dedup_sql)
+        deleted = result.rowcount
+        await db.commit()
 
-    total_remaining = (await db.execute(select(func.count(Lot.id)))).scalar() or 0
+        total_remaining = (await db.execute(select(func.count(Lot.id)))).scalar() or 0
 
-    return {
-        "deleted": deleted,
-        "remaining": total_remaining,
-        "message": f"Removed {deleted} duplicate lots. {total_remaining} unique lots remain.",
-        "timestamp": datetime.utcnow().isoformat(),
-    }
+        return {
+            "deleted": deleted,
+            "remaining": total_remaining,
+            "message": f"Removed {deleted} duplicate lots. {total_remaining} unique lots remain.",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Dedup failed: {str(e)} | {traceback.format_exc()[-300:]}")
 
 
 @router.get("/health")
