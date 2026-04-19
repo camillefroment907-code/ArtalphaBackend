@@ -24,7 +24,7 @@ BASE_URL = "https://api.artmarketapi.com/api/v1"
 _AUCTION_SOURCES = {
     AuctionHouseEnum.CHRISTIES, AuctionHouseEnum.SOTHEBYS, AuctionHouseEnum.BONHAMS,
     AuctionHouseEnum.PHILLIPS,  AuctionHouseEnum.ROSEBERYS, AuctionHouseEnum.HERITAGE,
-    AuctionHouseEnum.DROUOT,
+    AuctionHouseEnum.DROUOT,    AuctionHouseEnum.ARTMARKETAPI,
 }
 
 

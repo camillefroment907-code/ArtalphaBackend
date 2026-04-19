@@ -373,6 +373,22 @@ async def admin_recommendations(
 
 # ── Deal score backfill ───────────────────────────────────────────────────────
 
+@router.post("/backfill-market-type", dependencies=[Depends(verify_admin)])
+async def backfill_market_type(db: AsyncSession = Depends(get_db)):
+    """Fix market_type=PRIMARY on artmarketapi lots that are actually auctions."""
+    from sqlalchemy import text
+    sql = text("""
+        UPDATE lots
+        SET market_type = 'AUCTION'
+        WHERE market_type = 'PRIMARY'
+          AND source IN ('artmarketapi', 'christies', 'sothebys', 'bonhams',
+                         'phillips', 'roseberys', 'heritage', 'drouot')
+    """)
+    result = await db.execute(sql)
+    await db.commit()
+    return {"updated": result.rowcount, "status": "ok"}
+
+
 @router.post("/backfill-scores", dependencies=[Depends(verify_admin)])
 async def backfill_deal_scores(db: AsyncSession = Depends(get_db)):
     """
