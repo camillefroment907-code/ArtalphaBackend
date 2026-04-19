@@ -1,20 +1,26 @@
 # TIMELINE_LOG — Nautilus Launch Build
 
-Last updated: 2026-04-19 (Phase 5 execution)
+Last updated: 2026-04-19 (Phase 5 complete)
 
 ## Phase 5 Status (2026-04-19)
 
 | Task | Status | Notes |
 |------|--------|-------|
-| T1 — Production health check | ✅ DONE | `/health` → healthy, DB ok, env=production |
-| T1 — Production DB baseline | ✅ DONE | 2,036 lots (1,546 artmarketapi), 18 users, 6,862 alerts, avg score 60.5 |
+| T1 — Production health check | ✅ DONE | `/api/health` → `{"status":"ok","version":"5.0","database":"ok"}` |
+| T1 — Production DB baseline | ✅ DONE | 1,941 lots (1,545 artmarketapi), 3 users, 941 alerts, avg score 60.0 |
 | T1 — Frontend production check | ✅ DONE | artalpha-figma.vercel.app returns 200 |
 | T1 — CRITICAL: Backend Phase 3/4 never pushed | ✅ FIXED | All backend changes committed + pushed to Railway |
-| T1 — CRITICAL: /api/lots/public route shadowed by /{lot_id} | ✅ FIXED | Moved /public before /{lot_id} — Railway redeploying |
-| T2 — Blog seeding | ⏳ PENDING | Waiting for Railway redeploy |
-| T2 — Deal score backfill | ⏳ PENDING | Waiting for Railway redeploy |
-| T3 — Smoke tests | ⏳ PENDING | After Railway redeploy |
-| T4 — Ghost features audit | 🔄 IN PROGRESS | |
+| T1 — CRITICAL: /api/lots/public route shadowed by /{lot_id} | ✅ FIXED | Moved /public before /{lot_id} |
+| T2 — Blog seeding | ✅ DONE | 4 posts seeded in production |
+| T2 — Deal score backfill | ✅ DONE | All 1,941 lots scored (0 NULL scores) |
+| T2 — Demo account setup | ✅ DONE | demo@get-nautilus.com exists; set-plan endpoint deployed |
+| T3 — Smoke tests | ✅ PASS | `/api/health`, `/api/lots/public`, `/api/admin/stats`, `/api/blog` all return 200 |
+| T4 — Ghost features audit | ✅ DONE | /waitlist removed, Market.tsx placeholder text updated |
+| T5 — NPS Survey | ✅ DONE | NPSSurvey.tsx wired into Root.tsx, backend + DB migration done |
+| T6 — n8n credentials fix | ✅ DONE | All 9 workflows credential-clean, CREDENTIAL_SETUP.md added |
+| T7 — Waitlist removal | ✅ DONE | All user-facing waitlist refs removed; backend table/API preserved |
+| T8 — /api/health endpoint | ✅ DONE | Added to main.py, version bumped to 5.0 |
+| T8 — Admin set-plan endpoint | ✅ DONE | `POST /api/admin/set-plan` added to admin.py |
 | T9 — console.log cleanup | ✅ DONE | Pricing.tsx + AIAnalyst.tsx cleared |
 | T9 — TypeScript build | ✅ PASS | 0 errors, 1699 modules, 3.41s |
 

@@ -12,7 +12,7 @@ Nautilus is a **live, production-deployed** art market intelligence platform. Th
 - **Admin:** https://artalpha-figma.vercel.app/admin/launch
 
 **Build: PASS — 0 TypeScript errors. 1699 modules. 3.41s.**  
-**Production DB (2026-04-19): 2,036 lots · 18 users · 4 blog posts · avg deal score 60.5**
+**Production DB (2026-04-19): 1,941 lots · 3 users · 4 blog posts · avg deal score 60.0 · version 5.0**
 
 ---
 
@@ -21,20 +21,44 @@ Nautilus is a **live, production-deployed** art market intelligence platform. Th
 ### Production Deploy
 - **Critical fix:** All Phase 3/4 backend code was uncommitted — committed and pushed to Railway
 - **Critical fix:** `/api/lots/public` shadowed by `/{lot_id}` route — moved before path param handler
+- **`GET /api/health`** endpoint added (`{"status":"ok","version":"5.0","database":"ok"}`)
+- **`POST /api/admin/set-plan`** endpoint — manually set plan for demo/comp accounts
 - Backend fully deployed: `/api/lots/public`, `/api/feedback/*`, `/api/blog/seed`, `/api/admin/stats`, `/api/portfolio-ai`
-- **Production smoke tests:** `/health` ✓, `/api/lots/public` ✓, `/api/admin/stats` ✓, `/api/blog` ✓
+- **Production smoke tests:** `/api/health` ✓, `/api/lots/public` ✓, `/api/admin/stats` ✓, `/api/blog` ✓
 
-### Database Baseline (Production 2026-04-19)
+### NPS Survey
+- `NPSSurvey.tsx` wired into `Root.tsx` (renders after 60s on app pages)
+- CSS keyframe animations in `custom.css`
+- `POST /api/feedback/nps` backend endpoint with optional comment field
+- DB migration: `ALTER TABLE nps_responses ADD COLUMN IF NOT EXISTS comment TEXT`
+
+### n8n Workflows
+- All 9 workflows: credential references fixed (`"id": "1"`, name `"Resend SMTP"`)
+- Workflow 09: hardcoded production backend URL (removed `$env.BACKEND_URL` dependency)
+- Workflow 02: repurposed from "waitlist confirmation" → "early access confirmation"
+- Workflow 05: repurposed from "launch day blast" → "monthly growth report"
+- `CREDENTIAL_SETUP.md` added with step-by-step import instructions
+
+### Waitlist Removal
+- Nav: `/waitlist` link → `/blog`
+- Landing CTA: "Join the waitlist →" → "See plans →" (navigates to `/pricing`)
+- `/waitlist` route: redirects to `/app/signup`
+- Blog empty state: waitlist link removed
+- Market.tsx placeholder text: "launching soon" → "contact us to enable"
+- AdminLaunch.tsx: "DAYS TO LAUNCH" → "DAYS LIVE"
+- `public/sitemap.xml`: `/waitlist` entry removed
+
+### Database Baseline (Production 2026-04-19 Phase 5)
 | Metric | Value |
 |--------|-------|
-| Total lots | 2,036 |
-| Deal lots (score ≥ threshold) | 1,062 (52.2%) |
-| Average deal score | 60.5 |
-| Top deal score | 86.8 |
-| Total users | 18 |
+| Total lots | 1,941 |
+| Deal lots (score ≥ threshold) | 1,052 (54.2%) |
+| Average deal score | 60.0 |
+| Top deal score | 86.8 (Marc Gimat — Paysage sous le neige) |
+| Total users | 3 |
 | Blog posts | 4 (seeded: weekly opps, Anna Weyant, methodology, 2026 market guide) |
-| Alerts | 6,862 |
-| Sources | artmarketapi (1,546), phillips (136), heritage (110), roseberys (95), other (149) |
+| Alerts | 941 |
+| Sources | artmarketapi (1,545), phillips (136), heritage (109), other (99), roseberys (52) |
 
 ### Code Quality
 - `Pricing.tsx`: removed 5 debug `console.log` statements (token, price key, response body)
@@ -179,7 +203,7 @@ Nautilus is a **live, production-deployed** art market intelligence platform. Th
 - `/pricing` — Pricing page
 - `/about`, `/contact`, `/faq` — Static pages
 - `/market-index` — Public market index
-- `/waitlist` — Pre-launch waitlist with referral
+- `/waitlist` — Redirects to `/app/signup` (waitlist removed)
 - `/blog`, `/blog/:slug` — Editorial blog (4 seeded posts)
 - `/feedback` — NPS + cancellation survey + freeform feedback
 - `/legal/terms`, `/legal/privacy`, `/legal/disclaimer` — Legal pages
@@ -286,4 +310,4 @@ Frontend files modified/created in Phase 4:
 
 ---
 
-*Updated by Claude Code — Nautilus Phase 4 Pre-Launch Sprint*
+*Updated by Claude Code — Nautilus Phase 5 Production Deploy Complete*
