@@ -625,6 +625,67 @@ async def debug_pipeline(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     }
 
 
+# ── Force test insert ─────────────────────────────────────────────────────────
+
+@router.post("/test-insert", dependencies=[Depends(verify_admin)])
+async def test_insert(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Insert 3 guaranteed-new test lots to confirm the INSERT pipeline works.
+    Uses UUID-based external_ids so they're always new.
+    Returns before/after counts.
+    """
+    import uuid as _uuid
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+    from app.models.db_models import Lot as LotModel, LotStatus, AuctionHouse
+
+    before = (await db.execute(select(func.count(LotModel.id)))).scalar() or 0
+
+    inserted = 0
+    for i in range(3):
+        test_id = f"test-{_uuid.uuid4()}"
+        try:
+            stmt = pg_insert(LotModel).values(
+                id=_uuid.uuid4(),
+                external_id=test_id,
+                source=AuctionHouse.OTHER,
+                title=f"Test Lot {i+1} — pipeline check",
+                estimate_low=1000.0,
+                estimate_high=2000.0,
+                current_price=1000.0,
+                currency="EUR",
+                auction_house_name="Test Pipeline",
+                status=LotStatus.UPCOMING,
+                deal_score=50.0,
+                is_deal=False,
+                category="Paintings",
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+            ).on_conflict_do_nothing()
+            await db.execute(stmt)
+            inserted += 1
+        except Exception as e:
+            return {"error": str(e), "before": before, "inserted": 0}
+
+    await db.commit()
+    after = (await db.execute(select(func.count(LotModel.id)))).scalar() or 0
+
+    # Cleanup — remove the test lots
+    from sqlalchemy import delete as sa_delete
+    await db.execute(sa_delete(LotModel).where(LotModel.auction_house_name == "Test Pipeline"))
+    await db.commit()
+
+    final = (await db.execute(select(func.count(LotModel.id)))).scalar() or 0
+
+    return {
+        "pipeline_works": after == before + 3,
+        "before": before,
+        "after_insert": after,
+        "after_cleanup": final,
+        "inserted": inserted,
+        "message": "INSERT pipeline is working correctly" if after == before + 3 else "INSERT FAILED — pipeline is broken",
+    }
+
+
 # ── Bulk ingest trigger ────────────────────────────────────────────────────────
 
 @router.post("/bulk-ingest", dependencies=[Depends(verify_admin)])
