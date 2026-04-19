@@ -181,7 +181,7 @@ def _is_gallery_lot(record: dict) -> bool:
 class ArtMarketAPIConnector:
     """Fetches upcoming and recently sold lots from ArtMarket API."""
 
-    async def fetch_lots(self, limit: int = 500) -> List[LotNormalized]:
+    async def fetch_lots(self, limit: int = 5000) -> List[LotNormalized]:
         api_key = os.getenv("ART_MARKET_API_KEY")
         if not api_key:
             logger.warning("ART_MARKET_API_KEY not set — skipping ArtMarket API")
@@ -252,7 +252,7 @@ class ArtMarketAPIConnector:
                         page += 1
                         await asyncio.sleep(7.0)
 
-                    await asyncio.sleep(12.0)  # 10 req/min free plan — conservative
+                    await asyncio.sleep(7.0)  # 10 req/min free plan — conservative, 2s minimum per spec
 
         logger.info("ArtMarket API: done", total=len(all_lots))
         return all_lots[:limit]

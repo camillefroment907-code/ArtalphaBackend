@@ -41,6 +41,7 @@ from app.api.waitlist import router as waitlist_router
 from app.api.collector import router as collector_router
 from app.api.recommendations import router as recommendations_router
 from app.api.blog import router as blog_router
+from app.api.feedback import router as feedback_router
 
 settings = get_settings()
 
@@ -187,6 +188,7 @@ app.include_router(waitlist_router,         prefix="/api")
 app.include_router(collector_router,        prefix="/api")
 app.include_router(recommendations_router,  prefix="/api")
 app.include_router(blog_router,             prefix="/api")
+app.include_router(feedback_router,         prefix="/api")
 
 
 @app.get("/")

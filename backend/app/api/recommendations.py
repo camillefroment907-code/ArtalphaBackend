@@ -29,8 +29,8 @@ from app.models.db_models import (
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 
 _REC_LIMIT = 20          # max recommendations returned
-_SCORE_FLOOR = 55        # minimum deal_score to surface
-_UPCOMING_DAYS = 30      # only lots with auction within next N days
+_SCORE_FLOOR = 45        # minimum deal_score to surface (lowered for launch, tighten post scale-up)
+_UPCOMING_DAYS = 45      # only lots with auction within next N days (extended for launch)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -272,6 +272,25 @@ async def _strategy_distressed_sale(dna: Optional[CollectorDNA], excluded: set, 
     ]
 
 
+async def _strategy_global_fallback(excluded: set, db: AsyncSession, limit: int) -> List[dict]:
+    """
+    No-DNA fallback: top lots by deal_score globally.
+    Ensures For You tab is never empty for any user.
+    """
+    result = await db.execute(
+        select(Lot)
+        .where(and_(
+            Lot.status.in_([LotStatus.UPCOMING, LotStatus.LIVE]),
+            Lot.market_type == MarketType.AUCTION,
+            Lot.deal_score.isnot(None),
+        ))
+        .order_by(desc(Lot.deal_score))
+        .limit(limit * 3)
+    )
+    lots = [l for l in result.scalars().all() if str(l.id) not in excluded]
+    return [_lot_to_card(l, "deal_alert", "Top opportunity on Nautilus right now", l.deal_score or 50) for l in lots[:limit]]
+
+
 # ── Main endpoint ─────────────────────────────────────────────────────────────
 
 STRATEGIES = [
@@ -333,6 +352,13 @@ async def get_for_you(
 
         if len(results) >= limit:
             break
+
+    # If personalized strategies returned nothing: global fallback ensures non-empty feed
+    if not results:
+        try:
+            results = await _strategy_global_fallback(excluded, db, limit)
+        except Exception:
+            pass
 
     # Sort by score descending, then trim
     results.sort(key=lambda c: c["score"], reverse=True)

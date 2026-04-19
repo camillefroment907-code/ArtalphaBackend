@@ -195,3 +195,162 @@ async def delete_post(
         raise HTTPException(status_code=404, detail="Post not found")
     await db.delete(post)
     await db.commit()
+
+
+# ── Auto-generation (GPT-4o) ──────────────────────────────────────────────────
+
+_GENERATE_PROMPTS = {
+    "weekly_opportunities": (
+        "You are a senior art market analyst writing for Nautilus, a premium art investment platform. "
+        "Write a 600-word editorial blog post titled '5 Exceptional Art Investment Opportunities This Week'. "
+        "Tone: authoritative, data-driven, premium. Style: editorial, not promotional. "
+        "Include: introduction on market conditions, 5 short opportunity summaries (artist name, medium, estimated value range, why it's interesting), closing insight. "
+        "Format as clean HTML paragraphs — no markdown, no headers using markdown syntax. "
+        "Use <h3> for section headers, <p> for paragraphs."
+    ),
+    "artist_spotlight": (
+        "You are a senior art market analyst writing for Nautilus, a premium art investment platform. "
+        "Write a 500-word editorial blog post about an 'Artist to Watch' for 2026. "
+        "Choose a contemporary artist with genuine momentum (e.g. Anna Weyant, Jadé Fadojutimi, Issy Wood, Loie Hollowell). "
+        "Cover: biography highlights, market trajectory, recent auction results, why now is the right moment. "
+        "Format as clean HTML. Use <h3> for section headers."
+    ),
+    "market_outlook": (
+        "You are a senior art market analyst writing for Nautilus, a premium art investment platform. "
+        "Write a 600-word article titled 'The Art Market in 2026: What Every Investor Needs to Know'. "
+        "Cover: post-pandemic market recovery, which segments are performing (contemporary vs modern vs old masters), "
+        "where smart money is moving, key risks and opportunities. "
+        "Format as clean HTML. Use <h3> for section headers."
+    ),
+    "methodology": (
+        "You are a senior art market analyst writing for Nautilus, a premium art investment platform. "
+        "Write a 700-word educational article titled 'How Nautilus Identifies Undervalued Art Before the Market'. "
+        "Explain: the deal scoring methodology (0-100 scale), data sources (30+ auction houses), "
+        "how AI detects pricing anomalies, what a score of 65+ means, and why having this edge matters for investors. "
+        "Tone: educational, authoritative. Format as clean HTML. Use <h3> for section headers."
+    ),
+}
+
+_LAUNCH_POSTS = [
+    {
+        "type": "weekly_opportunities",
+        "title": "5 Exceptional Art Investment Opportunities This Week",
+        "slug": "5-exceptional-art-investment-opportunities-this-week",
+        "tags": ["opportunities", "weekly", "deals"],
+        "read_time_minutes": 4,
+    },
+    {
+        "type": "artist_spotlight",
+        "title": "Artist to Watch in 2026: Anna Weyant",
+        "slug": "artist-to-watch-2026-anna-weyant",
+        "tags": ["artist", "contemporary", "momentum"],
+        "read_time_minutes": 3,
+    },
+    {
+        "type": "methodology",
+        "title": "How Nautilus Identifies Undervalued Art Before the Market",
+        "slug": "how-nautilus-identifies-undervalued-art",
+        "tags": ["methodology", "education", "deal-score"],
+        "read_time_minutes": 5,
+    },
+    {
+        "type": "market_outlook",
+        "title": "The Art Market in 2026: What Every Investor Needs to Know",
+        "slug": "art-market-2026-investor-guide",
+        "tags": ["market", "2026", "outlook"],
+        "read_time_minutes": 4,
+    },
+]
+
+
+@router.post("/generate")
+async def generate_blog_post(
+    body: dict,
+    db:   AsyncSession = Depends(get_db),
+    _:    bool         = Depends(verify_admin),
+):
+    """
+    Generate a blog post using GPT-4o and publish it.
+    Body: { "type": "weekly_opportunities" | "artist_spotlight" | "market_outlook" | "methodology" }
+    """
+    import os
+    from openai import AsyncOpenAI
+
+    post_type = body.get("type", "weekly_opportunities")
+    prompt = _GENERATE_PROMPTS.get(post_type, _GENERATE_PROMPTS["weekly_opportunities"])
+
+    # Find matching metadata
+    meta = next((p for p in _LAUNCH_POSTS if p["type"] == post_type), _LAUNCH_POSTS[0])
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        # Fallback: create a placeholder post
+        content = f"<p>This article will be auto-generated once OPENAI_API_KEY is set in Railway environment. Type: {post_type}</p>"
+        title = meta["title"]
+    else:
+        try:
+            client = AsyncOpenAI(api_key=api_key)
+            response = await client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are an expert art market analyst."},
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=1200,
+                temperature=0.7,
+            )
+            content = response.choices[0].message.content or ""
+            title = meta["title"]
+        except Exception as e:
+            content = f"<p>Auto-generation failed: {str(e)[:100]}. Please edit this post manually.</p>"
+            title = meta["title"]
+
+    # Check if post with this slug already exists
+    slug = meta["slug"]
+    existing = (await db.execute(select(BlogPost).where(BlogPost.slug == slug))).scalar_one_or_none()
+    if existing:
+        # Update content
+        existing.content = content
+        existing.updated_at = datetime.utcnow()
+        await db.commit()
+        return _serialize(existing)
+
+    post = BlogPost(
+        slug=slug,
+        title=title,
+        excerpt=title + " — Art market intelligence by Nautilus.",
+        content=content,
+        author="Nautilus Editorial",
+        tags=meta.get("tags", []),
+        read_time_minutes=meta.get("read_time_minutes", 5),
+        is_published=True,
+        published_at=datetime.utcnow(),
+    )
+    db.add(post)
+    await db.commit()
+    await db.refresh(post)
+    return _serialize(post)
+
+
+@router.post("/seed", status_code=201)
+async def seed_launch_posts(
+    db: AsyncSession = Depends(get_db),
+    _:  bool         = Depends(verify_admin),
+):
+    """Seed all 4 launch blog posts if they don't exist. Uses GPT or fallback text."""
+    results = []
+    for meta in _LAUNCH_POSTS:
+        # Skip if already exists
+        existing = (await db.execute(select(BlogPost).where(BlogPost.slug == meta["slug"]))).scalar_one_or_none()
+        if existing:
+            results.append({"slug": meta["slug"], "status": "already_exists"})
+            continue
+
+        # Call generate for each type
+        try:
+            result = await generate_blog_post({"type": meta["type"]}, db, True)
+            results.append({"slug": meta["slug"], "status": "created", "id": result.get("id")})
+        except Exception as e:
+            results.append({"slug": meta["slug"], "status": "error", "error": str(e)})
+
+    return {"seeded": results}

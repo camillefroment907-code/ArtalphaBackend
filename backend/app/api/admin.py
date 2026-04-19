@@ -319,3 +319,62 @@ async def admin_recommendations(
         "generated_at": now.isoformat(),
     }
 
+
+# ── Deal score backfill ───────────────────────────────────────────────────────
+
+@router.post("/backfill-scores", dependencies=[Depends(verify_admin)])
+async def backfill_deal_scores(db: AsyncSession = Depends(get_db)):
+    """
+    Backfill deal_score for all lots where it is NULL.
+    Formula: based on current_price vs estimate_low/high.
+    Safe to run multiple times (only updates NULL records).
+    """
+    from sqlalchemy import text
+    sql = text("""
+        UPDATE lots SET deal_score =
+          CASE
+            WHEN current_price IS NULL THEN 50
+            WHEN estimate_low IS NOT NULL AND current_price < estimate_low * 0.70 THEN 85
+            WHEN estimate_low IS NOT NULL AND current_price < estimate_low * 0.85 THEN 70
+            WHEN estimate_low IS NOT NULL AND current_price <= estimate_low         THEN 55
+            WHEN estimate_high IS NOT NULL AND current_price <= estimate_high        THEN 40
+            ELSE 25
+          END
+        WHERE deal_score IS NULL
+    """)
+    result = await db.execute(sql)
+    await db.commit()
+    return {"updated": result.rowcount, "status": "ok"}
+
+
+# ── Wikidata enrichment trigger ───────────────────────────────────────────────
+
+@router.post("/enrich-artists", dependencies=[Depends(verify_admin)])
+async def trigger_wikidata_enrichment():
+    """Trigger one batch of Wikidata artist enrichment (background task)."""
+    import asyncio
+    from app.jobs.wikidata_enrichment import enrich_artists_batch
+    asyncio.create_task(enrich_artists_batch())
+    return {"status": "started", "message": "Wikidata enrichment running in background (1000 artists)"}
+
+
+# ── Lot count stats ───────────────────────────────────────────────────────────
+
+@router.get("/stats", dependencies=[Depends(verify_admin)])
+async def get_db_stats(db: AsyncSession = Depends(get_db)):
+    """Return current DB counts for TIMELINE_LOG."""
+    from sqlalchemy import text
+    lots = (await db.execute(text("SELECT COUNT(*) FROM lots"))).scalar() or 0
+    users = (await db.execute(text("SELECT COUNT(*) FROM users"))).scalar() or 0
+    waitlist = (await db.execute(text("SELECT COUNT(*) FROM waitlist_entries"))).scalar() or 0
+    blog_posts = (await db.execute(text("SELECT COUNT(*) FROM blog_posts WHERE is_published = true"))).scalar() or 0
+    scored = (await db.execute(text("SELECT COUNT(*) FROM lots WHERE deal_score IS NOT NULL"))).scalar() or 0
+    return {
+        "lots_total": lots,
+        "lots_scored": scored,
+        "users": users,
+        "waitlist": waitlist,
+        "blog_posts_published": blog_posts,
+        "generated_at": datetime.utcnow().isoformat(),
+    }
+
