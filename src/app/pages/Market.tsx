@@ -157,7 +157,7 @@ export default function Market() {
           background: 'var(--gold-subtle)', border: '1px solid var(--gold-border)',
           borderRadius: '2px', fontSize: '13px', color: 'var(--gold-dim)',
         }}>
-          Full market dashboard launching soon. Your Family Office plan includes this feature.
+          Full market dashboard included with your Family Office plan. Contact us to enable it on your account.
         </div>
 
         {/* 4 stat tiles */}

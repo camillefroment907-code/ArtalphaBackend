@@ -120,10 +120,10 @@ export default function Blog() {
         {!loading && posts.length === 0 && (
           <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-3)' }}>
             <div style={{ fontSize: '32px', marginBottom: '16px' }}>◆</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>First issue coming May 13</div>
-            <p style={{ fontSize: '14px' }}>Subscribe to the waitlist to get early access to our market intelligence briefs.</p>
-            <Link to="/waitlist" style={{ display: 'inline-block', marginTop: '20px', background: 'var(--navy)', color: 'white', padding: '12px 24px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
-              Join the waitlist →
+            <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>Market intelligence briefs coming soon</div>
+            <p style={{ fontSize: '14px' }}>Weekly analysis, collector insights, and market intelligence from Nautilus.</p>
+            <Link to="/app/signup" style={{ display: 'inline-block', marginTop: '20px', background: 'var(--navy)', color: 'white', padding: '12px 24px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
+              Start free →
             </Link>
           </div>
         )}

@@ -40,16 +40,16 @@ export default function AdminLaunch() {
 
       {data && (
         <>
-          {/* Launch countdown */}
+          {/* Users overview */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '32px' }}>
-            <Metric label="DAYS TO LAUNCH" value={data.launch.days_remaining} sub="May 13, 2026" highlight />
+            <Metric label="USERS REGISTERED" value={data.users.total.toLocaleString()} sub={`+${data.users.last_7_days} this week`} highlight />
             <Metric label="TARGET PAYING USERS" value={data.launch.target_paying.toLocaleString()} />
-            <Metric label="USERS REGISTERED" value={data.users.total.toLocaleString()} sub={`+${data.users.last_7_days} this week`} />
+            <Metric label="DAYS LIVE" value={Math.max(0, (data.launch.days_remaining !== undefined ? -data.launch.days_remaining : 0))} sub="Since launch" />
           </div>
 
-          {/* Waitlist */}
+          {/* Pre-registration signups */}
           <div style={{ marginBottom: '24px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '12px' }}>WAITLIST</div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '12px' }}>PRE-REGISTRATION SIGNUPS</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
               <Metric label="TOTAL" value={data.waitlist.total.toLocaleString()} />
               <Metric label="LAST 7 DAYS" value={data.waitlist.last_7_days.toLocaleString()} />

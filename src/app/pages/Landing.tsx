@@ -316,7 +316,7 @@ export default function Landing() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           <Link to="/pricing" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>Pricing</Link>
           <Link to="/faq" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>FAQ</Link>
-          <Link to="/waitlist" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>Waitlist</Link>
+          <Link to="/blog" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>Blog</Link>
           <button onClick={() => navigate('/app/login')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: 'var(--text-2)', padding: '0 4px' }}>
             Sign in
           </button>
@@ -867,8 +867,8 @@ export default function Landing() {
           <button onClick={() => navigate('/app/signup')} className="btn-navy" style={{ fontSize: '14px', padding: '16px 48px' }}>
             Start free today — 7-day trial
           </button>
-          <button onClick={() => navigate('/waitlist')} className="btn-outline" style={{ fontSize: '14px', padding: '16px 32px' }}>
-            Join the waitlist →
+          <button onClick={() => navigate('/pricing')} className="btn-outline" style={{ fontSize: '14px', padding: '16px 32px' }}>
+            See plans →
           </button>
         </div>
         <div style={{ marginTop: '16px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>

@@ -31,7 +31,6 @@ const Convictions      = lazy(() => import('./pages/Convictions'));
 const MarketIndex      = lazy(() => import('./pages/MarketIndex'));
 const RoomVisualizer   = lazy(() => import('./pages/RoomVisualizer'));
 const AuctionCalendar  = lazy(() => import('./pages/AuctionCalendar'));
-const Waitlist              = lazy(() => import('./pages/Waitlist'));
 const Legal                 = lazy(() => import('./pages/Legal'));
 const AdminHealth           = lazy(() => import('./pages/AdminHealth'));
 const AdminLaunch           = lazy(() => import('./pages/AdminLaunch'));
@@ -47,7 +46,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/waitlist',
-    Component: Waitlist,
+    loader: () => redirect('/app/signup'),
   },
   {
     path: '/legal/:page',
@@ -102,7 +101,7 @@ export const router = createBrowserRouter([
     Component: Root,
     children: [
       { index: true, loader: () => redirect('/app/dashboard') },
-      { path: 'waitlist', loader: () => redirect('/waitlist') },
+      { path: 'waitlist', loader: () => redirect('/app/signup') },
       { path: 'dashboard', Component: SignalFeed },
       { path: 'explore', Component: Explore },
       { path: 'login', Component: Login },
