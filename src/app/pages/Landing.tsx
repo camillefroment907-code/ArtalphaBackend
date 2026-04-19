@@ -396,7 +396,7 @@ export default function Landing() {
           <div style={{ width: '40px', height: '2px', background: '#C6A85A', marginBottom: '28px' }} />
 
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <a href="/app/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#4B6CF5', color: 'white', padding: '14px 28px', borderRadius: '8px', fontSize: '13px', fontWeight: 700, textDecoration: 'none', letterSpacing: '0.1em', textTransform: 'uppercase', transition: 'all 0.15s', boxShadow: '0 4px 14px rgba(75,108,245,0.35)' }}
+            <a href="/app/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#4B6CF5', color: 'white', padding: '14px 28px', borderRadius: '8px', fontSize: '13px', fontWeight: 700, textDecoration: 'none', transition: 'all 0.15s', boxShadow: '0 4px 14px rgba(75,108,245,0.35)' }}
               onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 8px 20px rgba(75,108,245,0.45)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'none'; (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 4px 14px rgba(75,108,245,0.35)'; }}
             >
@@ -521,7 +521,7 @@ export default function Landing() {
                     <a href="/app/signup" style={{
                       background: '#4B6CF5', color: 'white', padding: '8px 18px',
                       borderRadius: '6px', fontSize: '11px', fontWeight: 700,
-                      textDecoration: 'none', letterSpacing: '0.08em', textTransform: 'uppercase',
+                      textDecoration: 'none',
                     }}>
                       Start free
                     </a>
@@ -564,7 +564,7 @@ export default function Landing() {
             fontSize: '14px', fontWeight: 700, textDecoration: 'none',
             letterSpacing: '0.04em', transition: 'opacity 0.15s',
           }}>
-            VIEW ALL OPPORTUNITIES →
+            View all opportunities →
           </a>
         </div>
       </section>
