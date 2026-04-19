@@ -436,42 +436,47 @@ async def get_db_stats(db: AsyncSession = Depends(get_db)):
 async def set_user_plan(body: dict, db: AsyncSession = Depends(get_db)):
     """
     Manually set a user's subscription plan. Used for demo accounts and comps.
-    Body: { "email": "...", "plan": "family_office" }
+    Body: { "email": "...", "plan": "institutional" }
     """
-    from sqlalchemy import text
-    from app.models.db_models import Subscription, SubscriptionStatus
+    from app.models.db_models import SubscriptionPlan
 
     email = body.get("email")
-    plan = body.get("plan", "investor")
+    plan_str = (body.get("plan") or "investor").upper()
 
     if not email:
         raise HTTPException(400, "email required")
 
-    user_row = (await db.execute(text("SELECT id FROM users WHERE email = :email"), {"email": email})).fetchone()
-    if not user_row:
+    # Map aliases
+    if plan_str == "FAMILY_OFFICE":
+        plan_str = "INSTITUTIONAL"
+
+    try:
+        plan_enum = SubscriptionPlan(plan_str)
+    except ValueError:
+        raise HTTPException(400, f"Invalid plan: {plan_str}. Valid: {[p.value for p in SubscriptionPlan]}")
+
+    # Fetch user
+    user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
+    if not user:
         raise HTTPException(404, f"User {email} not found")
 
-    user_id = user_row[0]
+    # Upsert subscription via ORM
+    sub = (await db.execute(
+        select(Subscription).where(Subscription.user_id == user.id)
+    )).scalar_one_or_none()
 
-    # Upsert subscription
-    existing = (await db.execute(
-        text("SELECT id FROM subscriptions WHERE user_id = :uid"), {"uid": str(user_id)}
-    )).fetchone()
-
-    if existing:
-        await db.execute(
-            text("UPDATE subscriptions SET plan = :plan::subscriptionplan, status = 'ACTIVE', updated_at = NOW() WHERE user_id = :uid"),
-            {"plan": plan.upper(), "uid": str(user_id)}
-        )
+    if sub:
+        sub.plan = plan_enum
+        sub.status = SubscriptionStatus.ACTIVE
+        sub.updated_at = datetime.utcnow()
     else:
-        await db.execute(
-            text("""
-                INSERT INTO subscriptions (id, user_id, plan, status, created_at, updated_at)
-                VALUES (gen_random_uuid(), :uid, :plan::subscriptionplan, 'ACTIVE', NOW(), NOW())
-            """),
-            {"uid": str(user_id), "plan": plan.upper()}
+        sub = Subscription(
+            user_id=user.id,
+            plan=plan_enum,
+            status=SubscriptionStatus.ACTIVE,
         )
+        db.add(sub)
 
     await db.commit()
-    return {"status": "ok", "email": email, "plan": plan.upper()}
+    return {"status": "ok", "email": email, "plan": plan_enum.value}
 
