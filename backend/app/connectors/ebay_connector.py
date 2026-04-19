@@ -119,12 +119,22 @@ def _parse_item(item: dict, category_name: str) -> Optional[LotNormalized]:
         if not title or len(title) < 3:
             return None
 
-        # Price — eBay has currentBidPrice for auctions, price for BIN
-        price_obj = item.get("currentBidPrice") or item.get("price") or {}
+        # Price — eBay auctions: currentBidPrice (with bids) or price (starting bid / BIN)
+        price_obj = (
+            item.get("currentBidPrice")
+            or item.get("price")
+            or item.get("startingBid")
+            or {}
+        )
         current_price = _safe_float(price_obj.get("value"))
 
-        # eBay doesn't have estimate_low/high — use current price
-        estimate_low = current_price
+        # Also try priceRange for variable-price items
+        if not current_price:
+            pr = item.get("priceRange") or {}
+            current_price = _safe_float((pr.get("minimum") or pr.get("maximum") or {}).get("value"))
+
+        # eBay doesn't have estimate_low/high — use price as estimate
+        estimate_low = current_price or 1.0  # default 1.0 so quality filter passes
 
         currency = str(price_obj.get("currency") or "EUR").upper()
 
