@@ -319,8 +319,8 @@ async def _poll_and_score_async(lots_per_source: int = 500, skip_purge: bool = F
                     confidence_score=lot_obj.confidence_score,
                     score_rationale=lot_obj.score_rationale,
                     lot_fingerprint=lot_fingerprint,
-                    created_at=lot_obj.created_at,
-                    updated_at=lot_obj.updated_at,
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow(),
                 ).on_conflict_do_nothing(
                     index_elements=["lot_fingerprint"],
                     index_where=Lot.lot_fingerprint.isnot(None),

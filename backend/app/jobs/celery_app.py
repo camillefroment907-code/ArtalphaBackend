@@ -26,10 +26,10 @@ celery_app.conf.update(
     task_soft_time_limit=300,  # 5 minutes
     task_time_limit=600,       # 10 minutes hard limit
     beat_schedule={
-        # Poll all auction sources every 15 minutes
-        "poll-and-score-every-15min": {
+        # Poll all auction sources twice a day (6am and 6pm UTC)
+        "poll-and-score-twice-daily": {
             "task": "app.jobs.tasks.poll_and_score_lots",
-            "schedule": crontab(minute="*/15"),
+            "schedule": crontab(minute="0", hour="6,18"),
             "options": {"queue": "default"},
         },
         # Re-score existing lots every hour (prices change) — offset 5min from poll

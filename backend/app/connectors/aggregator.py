@@ -148,7 +148,7 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     try:
         from app.connectors.artmarketapi_connector import ArtMarketAPIConnector
         amapi = ArtMarketAPIConnector()
-        amapi_lots = await _with_timeout(amapi.fetch_lots(lots_per_source), timeout=1800, name="artmarketapi")
+        amapi_lots = await _with_timeout(amapi.fetch_lots(lots_per_source), timeout=1800, name="artmarketapi")  # 30 min max
         added = 0
         for lot in amapi_lots:
             if lot.external_id not in seen_ids:
@@ -349,40 +349,9 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     except Exception as e:
         logger.warning("Artsy primary connector skipped", error=str(e))
 
-    # --- Invaluable PAST lots — historical sold results (completely new external_ids) ---
-    try:
-        from app.connectors.invaluable_connector import fetch_past_lots as inv_past_fetch
-        inv_past_lots = await _with_timeout(inv_past_fetch(lots_per_source), timeout=600, name="invaluable_past")
-        added = 0
-        for lot in inv_past_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("Invaluable past: fetched", count=added)
-    except Exception as e:
-        logger.warning("Invaluable past connector skipped", error=str(e))
-
-    # --- ArtMarket API historical — sold lots going back 24 months (date-range iteration) ---
-    try:
-        from app.connectors.artmarketapi_connector import ArtMarketAPIConnector
-        amapi_hist = ArtMarketAPIConnector()
-        amapi_hist_lots = await _with_timeout(
-            amapi_hist.fetch_historical_lots(lots_per_source, months_back=24),
-            timeout=3600,
-            name="artmarketapi_historical",
-        )
-        added = 0
-        for lot in amapi_hist_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("ArtMarket API historical: fetched", count=added)
-    except Exception as e:
-        logger.warning("ArtMarket API historical connector skipped", error=str(e))
+    # NOTE: Invaluable past lots and ArtMarket API historical are NOT in the regular
+    # 15-min poll cycle — they take hours and block the pipeline.
+    # Run them manually via: python -m app.scripts.bulk_ingest
 
     logger.info("Aggregation complete — real lots only", total=len(real_lots))
     return real_lots
