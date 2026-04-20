@@ -28,8 +28,7 @@ export function Logo({ variant = 'horizontal', color = 'dark', size = 28 }: Logo
     <img
       src="/logo.png"
       alt="Nautilus"
-      height={size}
-      style={{ display: 'block', maxWidth: 'none', filter: FILTER[color] }}
+      style={{ display: 'block', height: `${size}px`, width: 'auto', filter: FILTER[color] }}
     />
   );
 
