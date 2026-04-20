@@ -2,6 +2,7 @@ import { lazy } from 'react';
 import { createBrowserRouter, redirect } from 'react-router';
 import Root from './Root';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { AdminRoute } from './components/AdminRoute';
 
 const Landing       = lazy(() => import('./pages/Landing'));
 const Pricing       = lazy(() => import('./pages/Pricing'));
@@ -61,10 +62,15 @@ export const router = createBrowserRouter([
   { path: '/blog/:slug', Component: BlogPost },
   // Feedback
   { path: '/feedback', Component: FeedbackPage },
-  // Admin dashboards (JWT-gated on the backend)
-  { path: '/admin/health',          Component: AdminHealth          },
-  { path: '/admin/launch',          Component: AdminLaunch          },
-  { path: '/admin/recommendations', Component: AdminRecommendations },
+  // Admin dashboards — only camillefroment907@gmail.com
+  {
+    Component: AdminRoute,
+    children: [
+      { path: '/admin/health',          Component: AdminHealth          },
+      { path: '/admin/launch',          Component: AdminLaunch          },
+      { path: '/admin/recommendations', Component: AdminRecommendations },
+    ],
+  },
   // Legacy URL redirects → /legal/*
   { path: '/privacy',  loader: () => redirect('/legal/privacy')    },
   { path: '/terms',    loader: () => redirect('/legal/terms')       },
