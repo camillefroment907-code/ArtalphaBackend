@@ -96,13 +96,23 @@ async def run_migrations():
         "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'heritage'",
         "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'other'",
     ]
-    async with engine.connect() as conn:
-        await conn.execution_options(isolation_level="AUTOCOMMIT")
-        for sql in enum_migrations:
-            try:
-                await conn.execute(text(sql))
-            except Exception as e:
-                logger.warning("enum_migration_skipped", sql=sql[:60], error=str(e))
+    # ALTER TYPE ADD VALUE must run outside any transaction.
+    # Use a dedicated NullPool engine with AUTOCOMMIT so asyncpg never wraps it in a TX.
+    _ac_engine = create_async_engine(
+        _db_url,
+        poolclass=NullPool,
+        connect_args=_connect_args,
+        isolation_level="AUTOCOMMIT",
+    )
+    try:
+        async with _ac_engine.connect() as conn:
+            for sql in enum_migrations:
+                try:
+                    await conn.execute(text(sql))
+                except Exception as e:
+                    logger.warning("enum_migration_skipped", sql=sql[:60], error=str(e))
+    finally:
+        await _ac_engine.dispose()
 
     migrations = [
         # users columns
