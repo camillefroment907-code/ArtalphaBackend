@@ -738,6 +738,60 @@ async def test_insert(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     }
 
 
+@router.get("/check-enum", dependencies=[Depends(verify_admin)])
+async def check_enum(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    """Check which enum values exist in PostgreSQL for auctionhouse type."""
+    from sqlalchemy import text
+    import uuid as _uuid
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+    from app.models.db_models import Lot as LotModel, LotStatus, AuctionHouse
+
+    # Read current enum values from pg_enum
+    result = await db.execute(text(
+        "SELECT enumlabel FROM pg_enum WHERE enumtypid = 'auctionhouse'::regtype ORDER BY enumsortorder"
+    ))
+    pg_values = [row[0] for row in result.fetchall()]
+
+    # Try inserting a lot with source=liveauctioneers to test if enum is usable
+    test_id = f"enumtest-{_uuid.uuid4()}"
+    insert_ok = False
+    insert_error = None
+    try:
+        stmt = pg_insert(LotModel).values(
+            id=_uuid.uuid4(),
+            external_id=test_id,
+            source=AuctionHouse.LIVEAUCTIONEERS,
+            title="Enum test lot",
+            currency="USD",
+            auction_house_name="EnumTest",
+            status=LotStatus.UPCOMING,
+            deal_score=50.0,
+            is_deal=False,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        ).on_conflict_do_nothing()
+        await db.execute(stmt)
+        await db.commit()
+        insert_ok = True
+        # Cleanup
+        from sqlalchemy import delete as sa_delete
+        await db.execute(sa_delete(LotModel).where(LotModel.external_id == test_id))
+        await db.commit()
+    except Exception as e:
+        insert_error = str(e)
+        await db.rollback()
+
+    return {
+        "auctionhouse_enum_values_in_pg": pg_values,
+        "liveauctioneers_in_pg": "liveauctioneers" in pg_values,
+        "artsy_in_pg": "artsy" in pg_values,
+        "catawiki_in_pg": "catawiki" in pg_values,
+        "artcurial_in_pg": "artcurial" in pg_values,
+        "test_insert_liveauctioneers": insert_ok,
+        "test_insert_error": insert_error,
+    }
+
+
 # ── Bulk ingest trigger ────────────────────────────────────────────────────────
 
 @router.post("/bulk-ingest", dependencies=[Depends(verify_admin)])
