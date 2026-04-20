@@ -51,8 +51,8 @@ class Settings(BaseSettings):
     telegram_chat_id: Optional[str] = None
     # Resend (replaces SendGrid)
     resend_api_key: Optional[str] = None           # RESEND_API_KEY
-    transac_from_email: str = "hello@artalpha.io"  # TRANSAC_FROM_EMAIL
-    alert_from_email: str = "alerts@artalpha.io"   # ALERT_FROM_EMAIL
+    transac_from_email: str = "hello@get-nautilus.com"     # TRANSAC_FROM_EMAIL
+    alert_from_email: str = "insights@get-nautilus.com"    # ALERT_FROM_EMAIL
 
     # Stripe
     stripe_secret_key: Optional[str] = None
