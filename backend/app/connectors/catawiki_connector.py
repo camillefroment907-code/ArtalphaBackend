@@ -1,12 +1,18 @@
 """
 Catawiki Connector
 Fetches art lots from Catawiki's public buyer API.
-No API key required — uses public JSON endpoints.
+
+Catawiki blocks datacenter IPs (Railway, AWS, GCP). To enable from Railway,
+set the SCRAPERAPI_KEY environment variable — requests are then routed through
+ScraperAPI's residential IP pool (https://scraperapi.com, free tier: 1000 req/mo).
+Without the key the connector tries direct access (works from local dev).
 """
 import asyncio
-import httpx
+import os
 from datetime import datetime
 from typing import List, Optional
+from urllib.parse import urlencode
+import httpx
 import structlog
 
 from app.models.schemas import LotNormalized, AuctionHouseEnum
@@ -16,9 +22,12 @@ logger = structlog.get_logger().bind(connector="catawiki")
 BASE_URL = "https://www.catawiki.com"
 API_URL = f"{BASE_URL}/buyer/api/v1/lots"
 
+# Optional: residential proxy to bypass Railway datacenter IP block
+SCRAPERAPI_KEY = os.getenv("SCRAPERAPI_KEY")
+SCRAPERAPI_URL = "https://api.scraperapi.com/"
+
 # Art category IDs on Catawiki
 ART_CATEGORY_IDS = [
-    1,    # Art (root)
     27,   # Paintings
     28,   # Drawings & Watercolours
     29,   # Prints & Multiples
@@ -27,7 +36,7 @@ ART_CATEGORY_IDS = [
 ]
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Accept": "application/json",
     "Accept-Language": "en-GB,en;q=0.9,fr;q=0.8",
     "Referer": "https://www.catawiki.com/en/l/art",
@@ -126,7 +135,7 @@ def _parse_lot(item: dict) -> Optional[LotNormalized]:
             title=title[:500],
             artist_name_raw=artist,
             description=(item.get("description") or "")[:1000] or None,
-            lot_number=str(item.get("lot_number") or ""),
+            lot_number=str(item.get("lot_number") or "") or None,
             category=category,
             estimate_low=est_low,
             estimate_high=est_high,
@@ -136,6 +145,7 @@ def _parse_lot(item: dict) -> Optional[LotNormalized]:
             auction_house_name="Catawiki",
             url=lot_url,
             image_url=image_url,
+            market_type="AUCTION",
             raw_data={
                 "real": True,
                 "source": "catawiki",
@@ -144,48 +154,86 @@ def _parse_lot(item: dict) -> Optional[LotNormalized]:
             },
         )
     except Exception as e:
-        logger.debug("Parse error", error=str(e))
+        logger.debug("parse_error", error=str(e))
         return None
 
 
-async def fetch_lots(limit: int = 80) -> List[LotNormalized]:
-    """Fetch art lots from Catawiki public API. No key required."""
+async def _fetch_category(
+    client: httpx.AsyncClient,
+    cat_id: int,
+    per_page: int,
+) -> list:
+    """Fetch one category page, routing through ScraperAPI if key is set."""
+    params = {
+        "category_id": cat_id,
+        "status": "open",
+        "per_page": per_page,
+        "sort": "end_date_asc",
+        "page": 1,
+    }
+
+    if SCRAPERAPI_KEY:
+        # Build the full target URL with query string
+        target = f"{API_URL}?{urlencode(params)}"
+        resp = await client.get(
+            SCRAPERAPI_URL,
+            params={"api_key": SCRAPERAPI_KEY, "url": target},
+            timeout=30.0,
+        )
+    else:
+        resp = await client.get(API_URL, params=params, timeout=20.0)
+
+    if resp.status_code != 200:
+        logger.warning("catawiki_non200", status=resp.status_code, category_id=cat_id)
+        return []
+
+    data = resp.json()
+    items = data.get("lots") or data.get("data") or data.get("results") or []
+    if isinstance(data, list):
+        items = data
+    return items
+
+
+async def fetch_lots(limit: int = 300) -> List[LotNormalized]:
+    """
+    Fetch upcoming art lots from Catawiki.
+
+    Requires SCRAPERAPI_KEY env var when running from Railway (datacenter IP).
+    Falls back to direct connection for local development.
+    """
+    if not SCRAPERAPI_KEY:
+        logger.info("catawiki_no_proxy", note="set SCRAPERAPI_KEY to enable from Railway")
+
     all_lots: List[LotNormalized] = []
     seen_ids: set = set()
 
-    async with httpx.AsyncClient(headers=HEADERS, timeout=20.0, follow_redirects=True) as client:
+    async with httpx.AsyncClient(
+        headers=HEADERS,
+        timeout=30.0,
+        follow_redirects=True,
+        verify=False,
+    ) as client:
         for cat_id in ART_CATEGORY_IDS:
             if len(all_lots) >= limit:
                 break
             try:
-                resp = await client.get(API_URL, params={
-                    "category_id": cat_id,
-                    "status": "open",
-                    "per_page": min(50, limit - len(all_lots)),
-                    "sort": "end_date_asc",
-                    "page": 1,
-                })
-
-                if resp.status_code == 200:
-                    data = resp.json()
-                    items = data.get("lots") or data.get("data") or data.get("results") or []
-                    if isinstance(data, list):
-                        items = data
-
-                    for item in items:
-                        lot = _parse_lot(item)
-                        if lot and lot.url and lot.external_id not in seen_ids:
-                            seen_ids.add(lot.external_id)
-                            all_lots.append(lot)
-                else:
-                    logger.warning("Catawiki API non-200", status=resp.status_code, category_id=cat_id)
+                items = await _fetch_category(
+                    client,
+                    cat_id,
+                    per_page=min(50, limit - len(all_lots)),
+                )
+                for item in items:
+                    lot = _parse_lot(item)
+                    if lot and lot.external_id not in seen_ids:
+                        seen_ids.add(lot.external_id)
+                        all_lots.append(lot)
 
                 await asyncio.sleep(0.5)
 
             except httpx.TimeoutException:
-                logger.warning("Timeout", category_id=cat_id)
+                logger.warning("catawiki_timeout", category_id=cat_id)
             except Exception as e:
-                logger.warning("Fetch error", category_id=cat_id, error=str(e))
+                logger.warning("catawiki_fetch_error", category_id=cat_id, error=str(e))
 
-    logger.info("Catawiki", lots_found=len(all_lots))
+    logger.info("catawiki_fetched", count=len(all_lots), proxy=bool(SCRAPERAPI_KEY))
     return all_lots[:limit]
