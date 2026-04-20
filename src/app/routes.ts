@@ -64,11 +64,12 @@ export const router = createBrowserRouter([
   { path: '/feedback', Component: FeedbackPage },
   // Admin dashboards — only camillefroment907@gmail.com
   {
+    path: '/admin',
     Component: AdminRoute,
     children: [
-      { path: '/admin/health',          Component: AdminHealth          },
-      { path: '/admin/launch',          Component: AdminLaunch          },
-      { path: '/admin/recommendations', Component: AdminRecommendations },
+      { path: 'health',          Component: AdminHealth          },
+      { path: 'launch',          Component: AdminLaunch          },
+      { path: 'recommendations', Component: AdminRecommendations },
     ],
   },
   // Legacy URL redirects → /legal/*
