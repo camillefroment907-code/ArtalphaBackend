@@ -627,12 +627,33 @@ async def debug_pipeline(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     except Exception as e:
         results["bonhams"] = {"fetched": 0, "error": str(e)[:200]}
 
+    # 7. LiveAuctioneers
+    try:
+        from app.connectors.liveauctioneers_connector import fetch_lots as la_fetch
+        import asyncio as _aio
+        lots = await _aio.wait_for(la_fetch(20), timeout=60)
+        filtered, stats = filter_and_deduplicate(lots)
+        results["liveauctioneers"] = {"fetched": len(lots), "after_filter": len(filtered), "filter_stats": stats, "error": None}
+    except Exception as e:
+        results["liveauctioneers"] = {"fetched": 0, "error": str(e)[:200]}
+
+    # 8. Catawiki
+    try:
+        from app.connectors.catawiki_connector import fetch_lots as cata_fetch
+        import asyncio as _aio
+        lots = await _aio.wait_for(cata_fetch(10), timeout=60)
+        filtered, stats = filter_and_deduplicate(lots)
+        results["catawiki"] = {"fetched": len(lots), "after_filter": len(filtered), "filter_stats": stats, "error": None}
+    except Exception as e:
+        results["catawiki"] = {"fetched": 0, "error": str(e)[:200]}
+
     # Check env vars
     env_check = {
         "ART_MARKET_API_KEY": bool(os.getenv("ART_MARKET_API_KEY")),
         "EBAY_CLIENT_ID": bool(os.getenv("EBAY_CLIENT_ID")),
         "EBAY_CLIENT_SECRET": bool(os.getenv("EBAY_CLIENT_SECRET")),
         "APIFY_API_TOKEN": bool(os.getenv("APIFY_API_TOKEN")),
+        "SCRAPERAPI_KEY": bool(os.getenv("SCRAPERAPI_KEY")),
     }
 
     # DB dedup check — how many of the total existing lots would block new inserts

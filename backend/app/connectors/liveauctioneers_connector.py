@@ -96,7 +96,23 @@ def _safe_float(val) -> Optional[float]:
         return None
 
 
-def _parse_lot(item: dict) -> Optional[LotNormalized]:
+def _query_to_category(query: str) -> Optional[str]:
+    """Map a search keyword to a normalized category label."""
+    q = query.lower()
+    if any(x in q for x in ["oil", "acrylic", "watercolor", "watercolour", "gouache", "pastel"]):
+        return "Paintings"
+    if any(x in q for x in ["drawing", "etching", "aquatint"]):
+        return "Drawings"
+    if any(x in q for x in ["lithograph", "screenprint", "silkscreen", "linocut", "print"]):
+        return "Prints & Multiples"
+    if any(x in q for x in ["sculpture", "bronze"]):
+        return "Sculpture"
+    if "photograph" in q:
+        return "Photography"
+    return None
+
+
+def _parse_lot(item: dict, query: str = "") -> Optional[LotNormalized]:
     """Map a search-party API item to LotNormalized."""
     try:
         item_id = item.get("itemId")
@@ -156,6 +172,7 @@ def _parse_lot(item: dict) -> Optional[LotNormalized]:
             source=AuctionHouseEnum.LIVEAUCTIONEERS,
             title=title[:500],
             artist_name_raw=None,  # not in search results — would need item detail API
+            category=_query_to_category(query),
             estimate_low=est_low,
             estimate_high=est_high,
             current_price=current_price,
@@ -241,7 +258,7 @@ async def fetch_lots(limit: int = 600) -> List[LotNormalized]:
                     if not items:
                         break  # no more pages
                     for item in items:
-                        parsed = _parse_lot(item)
+                        parsed = _parse_lot(item, query=query)
                         if parsed and parsed.external_id not in seen_ids:
                             seen_ids.add(parsed.external_id)
                             lots.append(parsed)

@@ -43,6 +43,22 @@ _ART_INDICATORS = [
 # Generic/empty categories that don't disqualify a lot
 _GENERIC_CATS = {"other", "divers", "miscellaneous", "various", "unknown"}
 
+# Sources that already filter for art at the connector level (art-only categories,
+# keyword queries, or API parameters). Skip the category whitelist for these.
+BYPASS_CATEGORY_WHITELIST_SOURCES = {
+    "liveauctioneers",  # art category filter (f1=1) + art keyword queries
+    "invaluable",       # art-specific platform
+    "drouot",           # French fine art auction house
+    "artcurial",        # French fine art auction house
+    "phillips",         # fine art auction house
+    "bonhams",          # fine art auction house
+    "christies",        # blue chip auction house
+    "sothebys",         # blue chip auction house
+    "artmarketapi",     # art-only aggregator
+    "catawiki",         # art-specific categories used at request time
+    "interencheres",    # French art auction aggregator
+}
+
 AUCTION_HOUSE_BLACKLIST = {
     "adam's",
     "adams",
@@ -138,8 +154,14 @@ def _is_blacklisted(lot: LotNormalized) -> bool:
 def _passes_category_whitelist(lot: LotNormalized) -> bool:
     """
     Returns True if the lot belongs to a fine art category.
-    If no category is provided, falls back to title+medium heuristic.
+    Trusted art-only sources bypass the check entirely — they filter at the
+    connector level (API category params, keyword queries, etc.).
+    For other sources, falls back to category/title/medium heuristics.
     """
+    source_str = str(lot.source.value if hasattr(lot.source, "value") else lot.source).lower()
+    if source_str in BYPASS_CATEGORY_WHITELIST_SOURCES:
+        return True
+
     category = (lot.category or "").lower().strip()
     medium = (lot.medium or "").lower().strip()
     title = (lot.title or "").lower().strip()
