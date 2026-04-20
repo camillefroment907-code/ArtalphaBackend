@@ -792,6 +792,43 @@ async def check_enum(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     }
 
 
+@router.get("/test-connector/{connector}", dependencies=[Depends(verify_admin)])
+async def test_connector(connector: str) -> Dict[str, Any]:
+    """
+    Run a single connector and report how many lots it returns.
+    connector: liveauctioneers | artsy | artcurial | catawiki | phillips | drouot
+    """
+    import asyncio as _asyncio
+    from app.jobs.quality_filter import passes_quality_filter
+
+    connector_map = {
+        "liveauctioneers": ("app.connectors.liveauctioneers_connector", "fetch_lots", 50),
+        "artsy":           ("app.connectors.artsy_connector",            "fetch_lots", 50),
+        "artcurial":       ("app.connectors.artcurial_connector",        "fetch_lots", 50),
+        "catawiki":        ("app.connectors.catawiki_connector",         "fetch_lots", 20),
+        "phillips":        ("app.connectors.phillips_connector",          "fetch_lots", 20),
+    }
+    if connector not in connector_map:
+        raise HTTPException(status_code=400, detail=f"Unknown connector. Use: {list(connector_map)}")
+
+    mod_path, fn_name, limit = connector_map[connector]
+    try:
+        import importlib
+        mod = importlib.import_module(mod_path)
+        fn = getattr(mod, fn_name)
+        lots = await _asyncio.wait_for(fn(limit), timeout=60)
+        passed = [l for l in lots if passes_quality_filter(l)]
+        sample = [{"id": l.external_id, "title": (l.title or "")[:60], "source": str(l.source)} for l in passed[:5]]
+        return {
+            "connector": connector,
+            "fetched": len(lots),
+            "passed_quality_filter": len(passed),
+            "sample": sample,
+        }
+    except Exception as e:
+        return {"connector": connector, "error": str(e), "fetched": 0}
+
+
 # ── Bulk ingest trigger ────────────────────────────────────────────────────────
 
 @router.post("/bulk-ingest", dependencies=[Depends(verify_admin)])
