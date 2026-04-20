@@ -372,8 +372,8 @@ class ArtMarketAPIConnector:
                 date_from = start_dt.strftime("%Y-%m-%d")
                 date_to = end_dt.strftime("%Y-%m-%d")
 
-                # Rotate through top search terms (major houses only for speed)
-                top_terms = _AUCTION_HOUSE_SEARCHES[:15]  # first 15 = major houses
+                # Top 5 houses only — 5 terms × 3 months × 7s = ~105s, fits in 120s window
+                top_terms = _AUCTION_HOUSE_SEARCHES[:5]  # Christie's, Sotheby's, Bonhams, Phillips, Heritage
                 for search_term in top_terms:
                     if len(all_lots) >= limit:
                         break
@@ -393,7 +393,7 @@ class ArtMarketAPIConnector:
                     records, has_more = await _fetch_page(client, params)
 
                     if not records:
-                        await asyncio.sleep(2.0)
+                        await asyncio.sleep(7.0)
                         continue
 
                     added = 0
@@ -427,9 +427,9 @@ class ArtMarketAPIConnector:
                                 seen_ids.add(lot.external_id)
                                 all_lots.append(lot)
                         page += 1
-                        await asyncio.sleep(2.0)
+                        await asyncio.sleep(7.0)
 
-                    await asyncio.sleep(2.0)
+                    await asyncio.sleep(7.0)
 
         logger.info("ArtMarket API historical: done", total=len(all_lots), months_back=months_back)
         return all_lots[:limit]
