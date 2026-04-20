@@ -1,0 +1,646 @@
+"""
+Nautilus Email Scheduler
+Celery tasks for all scheduled email campaigns.
+Each task fetches the relevant users from the DB and sends the appropriate email.
+"""
+import asyncio
+import logging
+from datetime import datetime, timedelta, timezone
+
+from app.jobs.celery_app import celery_app
+from app.config import get_settings
+
+logger = logging.getLogger(__name__)
+
+settings = get_settings()
+
+
+def _get_sync_db():
+    """Get a synchronous SQLAlchemy session for use inside Celery tasks."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    sync_url = settings.database_url.replace("postgresql+asyncpg://", "postgresql://")
+    engine = create_engine(sync_url, pool_size=5, max_overflow=10)
+    Session = sessionmaker(bind=engine)
+    return Session()
+
+
+def _run(coro):
+    """Run an async coroutine from a synchronous Celery task."""
+    return asyncio.run(coro)
+
+
+# ── WEEKLY EMAILS ─────────────────────────────────────────────────────────────
+
+@celery_app.task(name="app.jobs.email_scheduler.send_weekly_briefs")
+def send_weekly_briefs():
+    """Monday 8am UTC — send Weekly Intelligence Brief to all paid users."""
+    from app.services.email_newsletters import send_weekly_brief_email
+    from app.models.db_models import User, Subscription
+    from sqlalchemy import select
+
+    db = _get_sync_db()
+    try:
+        paid_statuses = ["active", "trialing"]
+        stmt = (
+            select(User)
+            .join(User.subscription)
+            .where(Subscription.status.in_(paid_statuses))
+            .where(User.is_active == True)
+        )
+        users = db.execute(stmt).scalars().all()
+    finally:
+        db.close()
+
+    week_date = datetime.now(timezone.utc).strftime("%B %d, %Y")
+    sent = 0
+    for user in users:
+        try:
+            _run(send_weekly_brief_email(
+                to_email=user.email,
+                week_date=week_date,
+                top_lots=[],         # TODO: fetch from DB — top scored lots for user
+                artists_to_watch=[],
+                market_insight="",
+                closing_lots=[],
+            ))
+            sent += 1
+        except Exception as e:
+            logger.error("weekly_brief_failed user=%s error=%s", user.email, e)
+    logger.info("weekly_briefs_sent count=%d", sent)
+
+
+@celery_app.task(name="app.jobs.email_scheduler.send_weekly_momentum_signals")
+def send_weekly_momentum_signals():
+    """Monday 8am UTC — send weekly momentum signal to all active users."""
+    from app.services.email_alerts import send_weekly_momentum_email
+    from app.models.db_models import User
+    from sqlalchemy import select
+
+    db = _get_sync_db()
+    try:
+        stmt = select(User).where(User.is_active == True)
+        users = db.execute(stmt).scalars().all()
+    finally:
+        db.close()
+
+    sent = 0
+    for user in users:
+        try:
+            _run(send_weekly_momentum_email(
+                to_email=user.email,
+                momentum_artists=[],  # TODO: fetch top momentum artists
+                top_lots=[],
+            ))
+            sent += 1
+        except Exception as e:
+            logger.error("weekly_momentum_failed user=%s error=%s", user.email, e)
+    logger.info("weekly_momentum_sent count=%d", sent)
+
+
+# ── MONTHLY EMAILS ────────────────────────────────────────────────────────────
+
+@celery_app.task(name="app.jobs.email_scheduler.send_monthly_reports")
+def send_monthly_reports():
+    """1st of month 9am UTC — monthly market report to all active users."""
+    from app.services.email_newsletters import send_monthly_report_email
+    from app.models.db_models import User, Subscription
+    from sqlalchemy import select
+
+    db = _get_sync_db()
+    try:
+        stmt = (
+            select(User)
+            .join(User.subscription)
+            .where(Subscription.status.in_(["active", "trialing"]))
+            .where(User.is_active == True)
+        )
+        users = db.execute(stmt).scalars().all()
+    finally:
+        db.close()
+
+    now = datetime.now(timezone.utc)
+    month = now.strftime("%B")
+    year = str(now.year)
+    sent = 0
+    for user in users:
+        try:
+            _run(send_monthly_report_email(
+                to_email=user.email,
+                month=month,
+                year=year,
+                exceptional_lots=0,   # TODO: fetch from DB
+                avg_conviction=0,
+                total_lots_scanned=0,
+                top_categories=[],
+                notable_sales=[],
+                artists_next_month=[],
+            ))
+            sent += 1
+        except Exception as e:
+            logger.error("monthly_report_failed user=%s error=%s", user.email, e)
+    logger.info("monthly_reports_sent count=%d", sent)
+
+
+@celery_app.task(name="app.jobs.email_scheduler.send_portfolio_valuations")
+def send_portfolio_valuations():
+    """1st of month 9am UTC — portfolio valuation to users with portfolio items."""
+    from app.services.email_portfolio import send_portfolio_valuation_email
+    from app.models.db_models import User, PortfolioItem
+    from sqlalchemy import select
+
+    db = _get_sync_db()
+    try:
+        stmt = (
+            select(User)
+            .join(PortfolioItem, PortfolioItem.user_id == User.id)
+            .where(User.is_active == True)
+            .distinct()
+        )
+        users = db.execute(stmt).scalars().all()
+    finally:
+        db.close()
+
+    now = datetime.now(timezone.utc)
+    month = now.strftime("%B")
+    sent = 0
+    for user in users:
+        try:
+            name = user.full_name or user.email
+            _run(send_portfolio_valuation_email(
+                to_email=user.email,
+                name=name,
+                month=month,
+                total_value="—",   # TODO: compute from DB
+                monthly_change_pct=0.0,
+                total_return_pct=0.0,
+                artists=[],
+            ))
+            sent += 1
+        except Exception as e:
+            logger.error("portfolio_valuation_failed user=%s error=%s", user.email, e)
+    logger.info("portfolio_valuations_sent count=%d", sent)
+
+
+@celery_app.task(name="app.jobs.email_scheduler.send_family_office_reports")
+def send_family_office_reports():
+    """1st of month 9am UTC — detailed report to Family Office+ plan users."""
+    from app.services.email_institutional import send_family_office_report_email
+    from app.models.db_models import User, Subscription
+    from sqlalchemy import select
+
+    db = _get_sync_db()
+    try:
+        stmt = (
+            select(User)
+            .join(User.subscription)
+            .where(Subscription.plan.in_(["pro", "elite"]))
+            .where(Subscription.status.in_(["active", "trialing"]))
+            .where(User.is_active == True)
+        )
+        users = db.execute(stmt).scalars().all()
+    finally:
+        db.close()
+
+    now = datetime.now(timezone.utc)
+    month = now.strftime("%B")
+    year = str(now.year)
+    sent = 0
+    for user in users:
+        try:
+            name = user.full_name or user.email
+            _run(send_family_office_report_email(
+                to_email=user.email,
+                name=name,
+                month=month,
+                year=year,
+                macro_context="",   # TODO: generate from AI
+                categories=[],
+                notable_transactions=[],
+                institutional_artists=[],
+                top_lots=[],
+                portfolio_summary="",
+                upcoming_sales=[],
+            ))
+            sent += 1
+        except Exception as e:
+            logger.error("family_office_report_failed user=%s error=%s", user.email, e)
+    logger.info("family_office_reports_sent count=%d", sent)
+
+
+# ── DAILY CHECK TASKS ─────────────────────────────────────────────────────────
+
+@celery_app.task(name="app.jobs.email_scheduler.run_daily_email_checks")
+def run_daily_email_checks():
+    """
+    Daily 9am UTC — run all time-based email checks:
+    - NPS survey (J+7 after signup)
+    - Re-engagement (J+14, J+30 inactive)
+    - 1-year anniversary
+    - Artwork anniversary
+    - Trial checks (ending 48h, expired)
+    - Annual subscription expiring (7 days)
+    - Winback (7 days post-cancellation)
+    """
+    _check_nps()
+    _check_reengagement()
+    _check_anniversaries()
+    _check_artwork_anniversaries()
+    _check_trial_ending()
+    _check_trial_expired()
+    _check_annual_expiring()
+    _check_winback()
+
+
+def _check_nps():
+    from app.services.email_retention import send_nps_email
+    from app.models.db_models import User
+    from sqlalchemy import select
+
+    now = datetime.now(timezone.utc)
+    cutoff_min = now - timedelta(days=7, hours=1)
+    cutoff_max = now - timedelta(days=7)
+
+    db = _get_sync_db()
+    try:
+        stmt = select(User).where(
+            User.created_at.between(cutoff_min, cutoff_max),
+            User.is_active == True,
+        )
+        users = db.execute(stmt).scalars().all()
+    finally:
+        db.close()
+
+    for user in users:
+        try:
+            _run(send_nps_email(user.email, user.full_name or "", str(user.id)))
+        except Exception as e:
+            logger.error("nps_email_failed user=%s error=%s", user.email, e)
+
+
+def _check_reengagement():
+    from app.services.email_retention import send_reengagement_14_email, send_reengagement_30_email
+    from app.models.db_models import User
+    from sqlalchemy import select
+
+    now = datetime.now(timezone.utc)
+
+    db = _get_sync_db()
+    try:
+        cutoff_14_min = now - timedelta(days=14, hours=1)
+        cutoff_14_max = now - timedelta(days=14)
+        stmt14 = select(User).where(
+            User.updated_at.between(cutoff_14_min, cutoff_14_max),
+            User.is_active == True,
+        )
+        users_14 = db.execute(stmt14).scalars().all()
+
+        cutoff_30_min = now - timedelta(days=30, hours=1)
+        cutoff_30_max = now - timedelta(days=30)
+        stmt30 = select(User).where(
+            User.updated_at.between(cutoff_30_min, cutoff_30_max),
+            User.is_active == True,
+        )
+        users_30 = db.execute(stmt30).scalars().all()
+    finally:
+        db.close()
+
+    for user in users_14:
+        try:
+            _run(send_reengagement_14_email(
+                user.email, user.full_name or "",
+                exceptional_count=0,
+                artist_movement="",
+                market_shift="",
+                current_lots=[],
+            ))
+        except Exception as e:
+            logger.error("reengagement_14_failed user=%s error=%s", user.email, e)
+
+    for user in users_30:
+        try:
+            _run(send_reengagement_30_email(user.email, user.full_name or ""))
+        except Exception as e:
+            logger.error("reengagement_30_failed user=%s error=%s", user.email, e)
+
+
+def _check_anniversaries():
+    from app.services.email_retention import send_anniversary_email
+    from app.models.db_models import User
+    from sqlalchemy import select, extract
+
+    now = datetime.now(timezone.utc)
+
+    db = _get_sync_db()
+    try:
+        stmt = select(User).where(
+            extract("month", User.created_at) == now.month,
+            extract("day", User.created_at) == now.day,
+            extract("year", User.created_at) == now.year - 1,
+            User.is_active == True,
+        )
+        users = db.execute(stmt).scalars().all()
+    finally:
+        db.close()
+
+    for user in users:
+        try:
+            _run(send_anniversary_email(
+                user.email, user.full_name or "",
+                lots_viewed=0,
+                larry_queries=0,
+                portfolio_change_pct=0.0,
+                exceptional_count=0,
+            ))
+        except Exception as e:
+            logger.error("anniversary_email_failed user=%s error=%s", user.email, e)
+
+
+def _check_artwork_anniversaries():
+    from app.services.email_portfolio import send_artwork_anniversary_email
+    from app.models.db_models import PortfolioItem, User
+    from sqlalchemy import select, extract
+
+    now = datetime.now(timezone.utc)
+
+    db = _get_sync_db()
+    try:
+        stmt = (
+            select(PortfolioItem, User)
+            .join(User, User.id == PortfolioItem.user_id)
+            .where(
+                extract("month", PortfolioItem.created_at) == now.month,
+                extract("day", PortfolioItem.created_at) == now.day,
+                extract("year", PortfolioItem.created_at) == now.year - 1,
+                User.is_active == True,
+            )
+        )
+        results = db.execute(stmt).all()
+    finally:
+        db.close()
+
+    for item, user in results:
+        try:
+            title = getattr(item, "title", None) or "Untitled"
+            artist = getattr(item, "artist_name", "") or ""
+            _run(send_artwork_anniversary_email(
+                user.email,
+                title,
+                artist,
+                original_estimate="—",
+                current_estimate="—",
+                pct_change=0.0,
+                comparable_sales_count=0,
+            ))
+        except Exception as e:
+            logger.error("artwork_anniversary_failed user=%s error=%s", user.email, e)
+
+
+def _check_trial_ending():
+    from app.services.email_trial import send_trial_ending_email
+    from app.models.db_models import User, Subscription
+    from sqlalchemy import select
+
+    now = datetime.now(timezone.utc)
+    cutoff_min = now + timedelta(hours=47)
+    cutoff_max = now + timedelta(hours=49)
+
+    db = _get_sync_db()
+    try:
+        stmt = (
+            select(User, Subscription)
+            .join(User.subscription)
+            .where(
+                Subscription.status == "trialing",
+                Subscription.current_period_end.between(cutoff_min, cutoff_max),
+            )
+        )
+        results = db.execute(stmt).all()
+    finally:
+        db.close()
+
+    for user, sub in results:
+        try:
+            end_str = sub.current_period_end.strftime("%B %d, %Y") if sub.current_period_end else ""
+            _run(send_trial_ending_email(user.email, user.full_name or "", end_str, sub.plan or "investor"))
+        except Exception as e:
+            logger.error("trial_ending_failed user=%s error=%s", user.email, e)
+
+
+def _check_trial_expired():
+    from app.services.email_trial import send_trial_expired_email
+    from app.models.db_models import User, Subscription
+    from sqlalchemy import select
+
+    now = datetime.now(timezone.utc)
+    cutoff_min = now - timedelta(hours=25)
+    cutoff_max = now - timedelta(hours=23)
+
+    db = _get_sync_db()
+    try:
+        stmt = (
+            select(User, Subscription)
+            .join(User.subscription)
+            .where(
+                Subscription.plan == "free",
+                Subscription.current_period_end.between(cutoff_min, cutoff_max),
+            )
+        )
+        results = db.execute(stmt).all()
+    finally:
+        db.close()
+
+    for user, sub in results:
+        try:
+            _run(send_trial_expired_email(user.email, user.full_name or ""))
+        except Exception as e:
+            logger.error("trial_expired_failed user=%s error=%s", user.email, e)
+
+
+def _check_annual_expiring():
+    from app.services.email_billing import send_annual_expiring_email
+    from app.models.db_models import User, Subscription
+    from sqlalchemy import select
+
+    now = datetime.now(timezone.utc)
+    cutoff_min = now + timedelta(days=6, hours=23)
+    cutoff_max = now + timedelta(days=7, hours=1)
+
+    db = _get_sync_db()
+    try:
+        stmt = (
+            select(User, Subscription)
+            .join(User.subscription)
+            .where(
+                Subscription.billing_interval == "year",
+                Subscription.status == "active",
+                Subscription.current_period_end.between(cutoff_min, cutoff_max),
+            )
+        )
+        results = db.execute(stmt).all()
+    finally:
+        db.close()
+
+    for user, sub in results:
+        try:
+            renewal_str = sub.current_period_end.strftime("%B %d, %Y") if sub.current_period_end else ""
+            plan_label = {
+                "starter": "Collector",
+                "investor": "Investor",
+                "pro": "Family Office",
+            }.get(str(sub.plan or "").lower(), "")
+            portal_url = getattr(settings, "stripe_billing_portal_url", "https://billing.stripe.com/p/login")
+            _run(send_annual_expiring_email(
+                user.email, user.full_name or "",
+                plan_label, renewal_str, "—", portal_url,
+            ))
+        except Exception as e:
+            logger.error("annual_expiring_failed user=%s error=%s", user.email, e)
+
+
+def _check_winback():
+    from app.services.email_retention import send_winback_email
+    from app.models.db_models import User, Subscription
+    from sqlalchemy import select
+
+    now = datetime.now(timezone.utc)
+    cutoff_min = now - timedelta(days=7, hours=1)
+    cutoff_max = now - timedelta(days=7)
+
+    db = _get_sync_db()
+    try:
+        stmt = (
+            select(User, Subscription)
+            .join(User.subscription)
+            .where(
+                Subscription.status == "canceled",
+                Subscription.updated_at.between(cutoff_min, cutoff_max),
+            )
+        )
+        results = db.execute(stmt).all()
+    finally:
+        db.close()
+
+    for user, sub in results:
+        try:
+            _run(send_winback_email(user.email, user.full_name or ""))
+        except Exception as e:
+            logger.error("winback_email_failed user=%s error=%s", user.email, e)
+
+
+# ── SEASONAL/SPECIAL TASKS ────────────────────────────────────────────────────
+
+@celery_app.task(name="app.jobs.email_scheduler.send_tax_reminders")
+def send_tax_reminders():
+    """December 1 — tax report reminder to all users with portfolio items."""
+    from app.services.email_portfolio import send_tax_reminder_email
+    from app.models.db_models import User, PortfolioItem
+    from sqlalchemy import select
+
+    db = _get_sync_db()
+    try:
+        stmt = (
+            select(User)
+            .join(PortfolioItem, PortfolioItem.user_id == User.id)
+            .where(User.is_active == True)
+            .distinct()
+        )
+        users = db.execute(stmt).scalars().all()
+    finally:
+        db.close()
+
+    sent = 0
+    for user in users:
+        try:
+            _run(send_tax_reminder_email(user.email, user.full_name or ""))
+            sent += 1
+        except Exception as e:
+            logger.error("tax_reminder_failed user=%s error=%s", user.email, e)
+    logger.info("tax_reminders_sent count=%d", sent)
+
+
+@celery_app.task(name="app.jobs.email_scheduler.send_quarterly_outlooks")
+def send_quarterly_outlooks():
+    """First week of Jan/Apr/Jul/Oct — quarterly market outlook."""
+    from app.services.email_newsletters import send_quarterly_outlook_email
+    from app.models.db_models import User, Subscription
+    from sqlalchemy import select
+
+    db = _get_sync_db()
+    try:
+        stmt = (
+            select(User)
+            .join(User.subscription)
+            .where(Subscription.status.in_(["active", "trialing"]))
+            .where(User.is_active == True)
+        )
+        users = db.execute(stmt).scalars().all()
+    finally:
+        db.close()
+
+    now = datetime.now(timezone.utc)
+    month = now.month
+    quarter = f"Q{(month - 1) // 3 + 1}"
+    year = str(now.year)
+    sent = 0
+    for user in users:
+        try:
+            _run(send_quarterly_outlook_email(
+                user.email,
+                quarter,
+                year,
+                trends=[],
+                categories_to_watch=[],
+                upcoming_sales=[],
+            ))
+            sent += 1
+        except Exception as e:
+            logger.error("quarterly_outlook_failed user=%s error=%s", user.email, e)
+    logger.info("quarterly_outlooks_sent count=%d", sent)
+
+
+@celery_app.task(name="app.jobs.email_scheduler.send_annual_reviews")
+def send_annual_reviews():
+    """January 15 — annual art market review."""
+    from app.services.email_newsletters import send_annual_review_email
+    from app.models.db_models import User, Subscription
+    from sqlalchemy import select
+
+    db = _get_sync_db()
+    try:
+        stmt = (
+            select(User)
+            .join(User.subscription)
+            .where(Subscription.status.in_(["active", "trialing"]))
+            .where(User.is_active == True)
+        )
+        users = db.execute(stmt).scalars().all()
+    finally:
+        db.close()
+
+    now = datetime.now(timezone.utc)
+    year = str(now.year - 1)
+    new_year = str(now.year)
+    sent = 0
+    for user in users:
+        try:
+            _run(send_annual_review_email(
+                user.email,
+                user.full_name or "",
+                year=year,
+                lots_scanned=0,
+                exceptional_opps=0,
+                top_artists=[],
+                top_categories=[],
+                top_5_results=[],
+                user_lots_viewed=0,
+                user_larry_queries=0,
+                user_portfolio_change_pct=0.0,
+                user_exceptional_count=0,
+                new_year=new_year,
+            ))
+            sent += 1
+        except Exception as e:
+            logger.error("annual_review_failed user=%s error=%s", user.email, e)
+    logger.info("annual_reviews_sent count=%d", sent)

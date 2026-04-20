@@ -25,6 +25,7 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
     task_soft_time_limit=300,  # 5 minutes
     task_time_limit=600,       # 10 minutes hard limit
+    include=["app.jobs.tasks", "app.jobs.email_scheduler"],
     beat_schedule={
         # Poll all auction sources twice a day (6am and 6pm UTC)
         "poll-and-score-twice-daily": {
@@ -54,6 +55,58 @@ celery_app.conf.update(
         "ingest-artsy-liveauctioneers-every-3h": {
             "task": "app.jobs.tasks.ingest_artsy_liveauctioneers",
             "schedule": crontab(minute="30", hour="*/3"),
+            "options": {"queue": "default"},
+        },
+        # ── Email Campaigns ───────────────────────────────────────────────────
+        # Monday 8am: weekly brief + weekly momentum signal
+        "weekly-brief-monday-8am": {
+            "task": "app.jobs.email_scheduler.send_weekly_briefs",
+            "schedule": crontab(minute="0", hour="8", day_of_week="1"),
+            "options": {"queue": "default"},
+        },
+        "weekly-momentum-monday-8am": {
+            "task": "app.jobs.email_scheduler.send_weekly_momentum_signals",
+            "schedule": crontab(minute="10", hour="8", day_of_week="1"),
+            "options": {"queue": "default"},
+        },
+        # 1st of month 9am: monthly reports + portfolio valuations + FO reports
+        "monthly-reports-1st-9am": {
+            "task": "app.jobs.email_scheduler.send_monthly_reports",
+            "schedule": crontab(minute="0", hour="9", day_of_month="1"),
+            "options": {"queue": "default"},
+        },
+        "portfolio-valuations-1st-9am": {
+            "task": "app.jobs.email_scheduler.send_portfolio_valuations",
+            "schedule": crontab(minute="15", hour="9", day_of_month="1"),
+            "options": {"queue": "default"},
+        },
+        "family-office-reports-1st-9am": {
+            "task": "app.jobs.email_scheduler.send_family_office_reports",
+            "schedule": crontab(minute="30", hour="9", day_of_month="1"),
+            "options": {"queue": "default"},
+        },
+        # Daily 9am: NPS + re-engagement + anniversaries + trial checks + winback
+        "daily-email-checks-9am": {
+            "task": "app.jobs.email_scheduler.run_daily_email_checks",
+            "schedule": crontab(minute="0", hour="9"),
+            "options": {"queue": "default"},
+        },
+        # December 1: tax reminder
+        "tax-reminder-dec-1": {
+            "task": "app.jobs.email_scheduler.send_tax_reminders",
+            "schedule": crontab(minute="0", hour="10", day_of_month="1", month_of_year="12"),
+            "options": {"queue": "default"},
+        },
+        # Quarterly outlook: first Monday of Jan/Apr/Jul/Oct
+        "quarterly-outlook-q1": {
+            "task": "app.jobs.email_scheduler.send_quarterly_outlooks",
+            "schedule": crontab(minute="0", hour="9", day_of_week="1", day_of_month="1-7", month_of_year="1,4,7,10"),
+            "options": {"queue": "default"},
+        },
+        # January 15: annual review
+        "annual-review-jan-15": {
+            "task": "app.jobs.email_scheduler.send_annual_reviews",
+            "schedule": crontab(minute="0", hour="9", day_of_month="15", month_of_year="1"),
             "options": {"queue": "default"},
         },
     },
