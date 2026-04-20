@@ -1001,7 +1001,10 @@ async def historical_ingest(body: dict = None) -> Dict[str, Any]:
             try:
                 from app.connectors.artmarketapi_connector import ArtMarketAPIConnector
                 amapi = ArtMarketAPIConnector()
-                hist_lots = await amapi.fetch_historical_lots(limit_per_source, months_back=months_back)
+                hist_lots = await _asyncio.wait_for(
+                    amapi.fetch_historical_lots(limit_per_source, months_back=months_back),
+                    timeout=120,
+                )
                 for lot in hist_lots:
                     if lot.external_id not in seen_ids:
                         seen_ids.add(lot.external_id)

@@ -125,30 +125,55 @@ def _map_lot(record: dict) -> Optional[LotNormalized]:
         return None
 
 
+MAX_RATE_LIMIT_WAIT = 30  # seconds — if API asks for more, skip the page
+
+
 async def _fetch_page(
     client: httpx.AsyncClient,
     params: dict,
+    max_retries: int = 2,
 ) -> tuple[List[dict], bool]:
-    """Fetch one page. Returns (records, has_more)."""
-    try:
-        resp = await client.get(f"{BASE_URL}/auction_records", params=params, timeout=15.0)
-        if resp.status_code == 429:
-            retry_after = int(resp.headers.get("Retry-After", 60))
-            wait = max(retry_after, 60)
-            logger.warning("ArtMarket API rate limited", wait=wait)
-            await asyncio.sleep(wait)
+    """Fetch one page. Returns (records, has_more).
+
+    Rate limit policy:
+    - If Retry-After <= 30s: wait and retry (up to max_retries times)
+    - If Retry-After > 30s: log and skip immediately (return [], False)
+    """
+    for attempt in range(max_retries):
+        try:
             resp = await client.get(f"{BASE_URL}/auction_records", params=params, timeout=15.0)
-        if resp.status_code != 200:
-            logger.warning("ArtMarket API bad status", status=resp.status_code)
-            return [], False
-        body = resp.json()
-        records = body.get("data") or []
-        # has_more: if we got a full page, assume there may be more
-        has_more = len(records) >= params.get("limit", 100)
-        return records, has_more
-    except Exception as e:
-        logger.warning("ArtMarket API fetch error", error=str(e))
-        return [], False
+
+            if resp.status_code == 429:
+                retry_after = int(resp.headers.get("Retry-After", 60))
+                if retry_after > MAX_RATE_LIMIT_WAIT:
+                    logger.warning(
+                        "ArtMarket API rate limited — skipping page",
+                        retry_after=retry_after,
+                        search=params.get("search"),
+                        page=params.get("page"),
+                    )
+                    return [], False
+                # Short wait — worth retrying
+                wait = min(retry_after, MAX_RATE_LIMIT_WAIT)
+                logger.warning("ArtMarket API rate limited — waiting", wait=wait, attempt=attempt + 1)
+                await asyncio.sleep(wait)
+                continue  # retry
+
+            if resp.status_code != 200:
+                logger.warning("ArtMarket API bad status", status=resp.status_code)
+                return [], False
+
+            body = resp.json()
+            records = body.get("data") or []
+            has_more = len(records) >= params.get("limit", 100)
+            return records, has_more
+
+        except Exception as e:
+            logger.warning("ArtMarket API fetch error", error=str(e), attempt=attempt + 1)
+            if attempt < max_retries - 1:
+                await asyncio.sleep(2.0)
+
+    return [], False
 
 
 # Search by auction house name and medium to maximize lot coverage.
@@ -328,10 +353,18 @@ class ArtMarketAPIConnector:
         from datetime import timezone
         now = datetime.now(timezone.utc)
 
+        import time
+        start_time = time.monotonic()
+        max_seconds = 110  # stop fetching after 110s so caller's 120s wrapper has margin
+
         async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
             # Start from 2 months ago and go back month by month
             for month_offset in range(2, months_back + 1):
                 if len(all_lots) >= limit:
+                    break
+                if time.monotonic() - start_time > max_seconds:
+                    logger.warning("ArtMarket API historical: time limit reached, returning early",
+                                   total=len(all_lots), elapsed=round(time.monotonic() - start_time))
                     break
 
                 end_dt = now.replace(day=1) - timedelta(days=(month_offset - 1) * 30)
@@ -343,6 +376,8 @@ class ArtMarketAPIConnector:
                 top_terms = _AUCTION_HOUSE_SEARCHES[:15]  # first 15 = major houses
                 for search_term in top_terms:
                     if len(all_lots) >= limit:
+                        break
+                    if time.monotonic() - start_time > max_seconds:
                         break
 
                     params: dict = {
@@ -358,7 +393,7 @@ class ArtMarketAPIConnector:
                     records, has_more = await _fetch_page(client, params)
 
                     if not records:
-                        await asyncio.sleep(7.0)
+                        await asyncio.sleep(2.0)
                         continue
 
                     added = 0
@@ -381,7 +416,7 @@ class ArtMarketAPIConnector:
 
                     # Paginate if full page
                     page = 2
-                    while has_more and len(all_lots) < limit:
+                    while has_more and len(all_lots) < limit and (time.monotonic() - start_time) < max_seconds:
                         params["page"] = page
                         records, has_more = await _fetch_page(client, params)
                         for rec in records:
@@ -392,9 +427,9 @@ class ArtMarketAPIConnector:
                                 seen_ids.add(lot.external_id)
                                 all_lots.append(lot)
                         page += 1
-                        await asyncio.sleep(7.0)
+                        await asyncio.sleep(2.0)
 
-                    await asyncio.sleep(7.0)
+                    await asyncio.sleep(2.0)
 
         logger.info("ArtMarket API historical: done", total=len(all_lots), months_back=months_back)
         return all_lots[:limit]
