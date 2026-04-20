@@ -627,7 +627,17 @@ async def debug_pipeline(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     except Exception as e:
         results["bonhams"] = {"fetched": 0, "error": str(e)[:200]}
 
-    # 7. LiveAuctioneers
+    # 7. Drouot (ScraperAPI)
+    try:
+        from app.connectors.drouot_scraperapi_connector import fetch_lots as drouot_fetch
+        import asyncio as _aio
+        lots = await _aio.wait_for(drouot_fetch(10), timeout=90)
+        filtered, stats = filter_and_deduplicate(lots)
+        results["drouot_scraperapi"] = {"fetched": len(lots), "after_filter": len(filtered), "filter_stats": stats, "error": None}
+    except Exception as e:
+        results["drouot_scraperapi"] = {"fetched": 0, "error": str(e)[:200]}
+
+    # 8. LiveAuctioneers
     try:
         from app.connectors.liveauctioneers_connector import fetch_lots as la_fetch
         import asyncio as _aio
