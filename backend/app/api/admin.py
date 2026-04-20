@@ -799,7 +799,6 @@ async def test_connector(connector: str) -> Dict[str, Any]:
     connector: liveauctioneers | artsy | artcurial | catawiki | phillips | drouot
     """
     import asyncio as _asyncio
-    from app.jobs.quality_filter import passes_quality_filter
 
     connector_map = {
         "liveauctioneers": ("app.connectors.liveauctioneers_connector", "fetch_lots", 50),
@@ -814,15 +813,17 @@ async def test_connector(connector: str) -> Dict[str, Any]:
     mod_path, fn_name, limit = connector_map[connector]
     try:
         import importlib
+        from app.jobs.quality_filter import filter_and_deduplicate
         mod = importlib.import_module(mod_path)
         fn = getattr(mod, fn_name)
         lots = await _asyncio.wait_for(fn(limit), timeout=60)
-        passed = [l for l in lots if passes_quality_filter(l)]
+        passed, _stats = filter_and_deduplicate(lots)
         sample = [{"id": l.external_id, "title": (l.title or "")[:60], "source": str(l.source)} for l in passed[:5]]
         return {
             "connector": connector,
             "fetched": len(lots),
             "passed_quality_filter": len(passed),
+            "filter_stats": _stats,
             "sample": sample,
         }
     except Exception as e:
