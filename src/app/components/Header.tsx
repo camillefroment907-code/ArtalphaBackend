@@ -140,7 +140,7 @@ export function Header() {
 
       {/* Logo */}
       <Link to={getToken() ? '/app/explore' : '/'} style={{ textDecoration: 'none', flexShrink: 0 }}>
-        <Logo variant="horizontal" color="dark" size={32} />
+        <Logo variant="horizontal" color="dark" size={40} />
       </Link>
 
       {/* ── Mobile hamburger ── */}

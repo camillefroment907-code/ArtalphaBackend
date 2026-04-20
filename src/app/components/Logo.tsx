@@ -39,7 +39,7 @@ export function Logo({ variant = 'horizontal', color = 'dark', size = 28 }: Logo
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
       <Symbol />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
         <span style={{
