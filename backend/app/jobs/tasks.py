@@ -727,6 +727,89 @@ def dedup_cleanup():
         logger.error("dedup_cleanup failed", error=str(exc))
 
 
+@celery_app.task(name="app.jobs.tasks.ingest_artsy_liveauctioneers", bind=True)
+def ingest_artsy_liveauctioneers(self):
+    """Fetch artsy + liveauctioneers every 3 hours and insert new lots."""
+    try:
+        asyncio.run(_ingest_artsy_liveauctioneers_async())
+    except Exception as exc:
+        logger.error("ingest_artsy_liveauctioneers failed", error=str(exc))
+        raise self.retry(exc=exc, countdown=300)
+
+
+async def _ingest_artsy_liveauctioneers_async():
+    import uuid as _uuid
+    import hashlib
+    import importlib
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+    from sqlalchemy import select, func
+    from app.models.db_models import Lot as LotModel, LotStatus
+    from app.jobs.quality_filter import filter_and_deduplicate
+    from app.database import BgSessionLocal as AsyncSessionLocal
+
+    sources = {
+        "artsy":           ("app.connectors.artsy_connector",            "fetch_lots", 200),
+        "liveauctioneers": ("app.connectors.liveauctioneers_connector",  "fetch_lots", 200),
+    }
+
+    counts = {}
+    all_passed = []
+
+    for name, (mod_path, fn_name, limit) in sources.items():
+        try:
+            mod = importlib.import_module(mod_path)
+            fn = getattr(mod, fn_name)
+            lots = await asyncio.wait_for(fn(limit), timeout=90)
+            passed, _ = filter_and_deduplicate(lots)
+            counts[name] = len(passed)
+            all_passed.extend(passed)
+        except Exception as e:
+            logger.warning("scheduled_ingest_fetch_failed", source=name, error=str(e))
+            counts[name] = 0
+
+    inserted = 0
+    async with AsyncSessionLocal() as session:
+        for lot in all_passed:
+            try:
+                _fp = hashlib.md5(
+                    f"{(lot.title or '').lower()}|{round(lot.estimate_low or 0)}".encode()
+                ).hexdigest()
+                stmt = pg_insert(LotModel).values(
+                    id=_uuid.uuid4(),
+                    external_id=lot.external_id,
+                    source=lot.source,
+                    title=lot.title,
+                    estimate_low=lot.estimate_low,
+                    estimate_high=lot.estimate_high,
+                    current_price=lot.current_price,
+                    currency=lot.currency or "USD",
+                    auction_date=lot.auction_date,
+                    auction_house_name=lot.auction_house_name,
+                    status=LotStatus.UPCOMING,
+                    market_type=lot.market_type or "AUCTION",
+                    is_buy_now=False,
+                    deal_score=50.0,
+                    is_deal=False,
+                    image_url=lot.image_url,
+                    url=lot.url,
+                    lot_fingerprint=_fp,
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow(),
+                ).on_conflict_do_nothing()
+                await session.execute(stmt)
+                inserted += 1
+            except Exception as e:
+                logger.warning("scheduled_ingest_insert_failed", error=str(e))
+        await session.commit()
+
+    logger.info(
+        "scheduled_ingest",
+        artsy=counts.get("artsy", 0),
+        liveauctioneers=counts.get("liveauctioneers", 0),
+        inserted=inserted,
+    )
+
+
 async def _generate_rationales_async(max_lots: int = 20):
     """
     Separate task: generate GPT rationales for lots missing them.

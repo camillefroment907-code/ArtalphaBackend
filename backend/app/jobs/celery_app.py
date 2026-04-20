@@ -50,6 +50,12 @@ celery_app.conf.update(
             "schedule": crontab(minute="0", hour="2", day_of_week="1"),
             "options": {"queue": "maintenance"},
         },
+        # Artsy + LiveAuctioneers ingest every 3 hours
+        "ingest-artsy-liveauctioneers-every-3h": {
+            "task": "app.jobs.tasks.ingest_artsy_liveauctioneers",
+            "schedule": crontab(minute="30", hour="*/3"),
+            "options": {"queue": "default"},
+        },
     },
     task_routes={
         "app.jobs.tasks.poll_and_score_lots": {"queue": "default"},
