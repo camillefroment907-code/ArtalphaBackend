@@ -75,6 +75,35 @@ async def create_tables():
 
 async def run_migrations():
     """Slow path: ALTER TABLE / CREATE INDEX statements run after startup to avoid blocking healthcheck."""
+    # IMPORTANT: ALTER TYPE ADD VALUE cannot run inside a PostgreSQL transaction.
+    # These must run first with AUTOCOMMIT, then regular DDL runs in engine.begin().
+    enum_migrations = [
+        # subscriptionplan enum: add values that may be missing from older DB instances
+        "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'STARTER'",
+        "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'PRO'",
+        "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'INSTITUTIONAL'",
+        "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'ELITE'",
+        "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'EXPERT'",
+        # auctionhouse enum: add sources that were missing, causing silent insert failures
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'liveauctioneers'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'artsy'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'catawiki'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'artcurial'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'bonhams'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'phillips'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'christies'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'sothebys'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'heritage'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'other'",
+    ]
+    async with engine.connect() as conn:
+        await conn.execution_options(isolation_level="AUTOCOMMIT")
+        for sql in enum_migrations:
+            try:
+                await conn.execute(text(sql))
+            except Exception as e:
+                logger.warning("enum_migration_skipped", sql=sql[:60], error=str(e))
+
     migrations = [
         # users columns
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)",
@@ -121,17 +150,6 @@ async def run_migrations():
         "CREATE INDEX IF NOT EXISTS idx_lots_artist_name ON lots(artist_name_raw)",
         "CREATE INDEX IF NOT EXISTS idx_lots_category ON lots(category)",
         "CREATE INDEX IF NOT EXISTS idx_lots_auction_date ON lots(auction_date)",
-        # subscriptionplan enum: add values that may be missing from older DB instances
-        "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'STARTER'",
-        "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'PRO'",
-        "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'INSTITUTIONAL'",
-        "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'ELITE'",
-        "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'EXPERT'",
-        # auctionhouse enum: add sources that were missing, causing silent insert failures
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'liveauctioneers'",
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'artsy'",
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'catawiki'",
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'artcurial'",
     ]
     for sql in migrations:
         try:
