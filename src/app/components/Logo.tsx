@@ -26,11 +26,10 @@ const TEXT_COLOR: Record<ColorScheme, string> = {
 export function Logo({ variant = 'horizontal', color = 'dark', size = 28 }: LogoProps) {
   const Symbol = () => (
     <img
-      src="/logo.svg"
+      src="/logo.png"
       alt="Nautilus"
-      width={size}
       height={size}
-      style={{ objectFit: 'contain', display: 'block', filter: FILTER[color] }}
+      style={{ display: 'block', maxWidth: 'none', filter: FILTER[color] }}
     />
   );
 
