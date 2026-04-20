@@ -26,7 +26,7 @@ const TEXT_COLOR: Record<ColorScheme, string> = {
 export function Logo({ variant = 'horizontal', color = 'dark', size = 28 }: LogoProps) {
   const Symbol = () => (
     <img
-      src="/logo.png"
+      src="/logo.svg"
       alt="Nautilus"
       width={size}
       height={size}
