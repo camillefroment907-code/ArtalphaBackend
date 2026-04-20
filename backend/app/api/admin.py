@@ -792,6 +792,84 @@ async def check_enum(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     }
 
 
+@router.post("/ingest-connector/{connector}", dependencies=[Depends(verify_admin)])
+async def ingest_connector(connector: str, db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Fetch from a single connector, run quality filter, and insert into DB.
+    Returns how many lots were inserted.
+    """
+    import asyncio as _asyncio
+    import uuid as _uuid
+    import hashlib
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+    from app.models.db_models import Lot as LotModel, LotStatus, AuctionHouse
+    from app.jobs.quality_filter import filter_and_deduplicate
+
+    connector_map = {
+        "liveauctioneers": ("app.connectors.liveauctioneers_connector", "fetch_lots", 100),
+        "artcurial":       ("app.connectors.artcurial_connector",        "fetch_lots", 100),
+        "catawiki":        ("app.connectors.catawiki_connector",         "fetch_lots", 50),
+        "artsy":           ("app.connectors.artsy_connector",            "fetch_lots", 50),
+    }
+    if connector not in connector_map:
+        raise HTTPException(status_code=400, detail=f"Unknown. Use: {list(connector_map)}")
+
+    mod_path, fn_name, limit = connector_map[connector]
+    try:
+        import importlib
+        mod = importlib.import_module(mod_path)
+        fn = getattr(mod, fn_name)
+        lots = await _asyncio.wait_for(fn(limit), timeout=90)
+        passed, stats = filter_and_deduplicate(lots)
+    except Exception as e:
+        return {"connector": connector, "error": f"Fetch failed: {e}", "fetched": 0}
+
+    before = (await db.execute(select(func.count(LotModel.id)))).scalar() or 0
+    inserted = 0
+    errors = []
+    for lot in passed:
+        try:
+            _fp = hashlib.md5(f"{(lot.title or '').lower()}|{round(lot.estimate_low or 0)}".encode()).hexdigest()
+            stmt = pg_insert(LotModel).values(
+                id=_uuid.uuid4(),
+                external_id=lot.external_id,
+                source=lot.source,
+                title=lot.title,
+                estimate_low=lot.estimate_low,
+                estimate_high=lot.estimate_high,
+                current_price=lot.current_price,
+                currency=lot.currency or "USD",
+                auction_date=lot.auction_date,
+                auction_house_name=lot.auction_house_name or connector,
+                status=LotStatus.UPCOMING,
+                market_type=lot.market_type or "AUCTION",
+                is_buy_now=False,
+                deal_score=50.0,
+                is_deal=False,
+                image_url=lot.image_url,
+                url=lot.url,
+                lot_fingerprint=_fp,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+            ).on_conflict_do_nothing()
+            await db.execute(stmt)
+            inserted += 1
+        except Exception as e:
+            errors.append(str(e)[:100])
+    await db.commit()
+    after = (await db.execute(select(func.count(LotModel.id)))).scalar() or 0
+
+    return {
+        "connector": connector,
+        "fetched": len(lots),
+        "passed_filter": len(passed),
+        "filter_stats": stats,
+        "attempted_inserts": inserted,
+        "actually_inserted": after - before,
+        "errors": errors[:5],
+    }
+
+
 @router.get("/test-connector/{connector}", dependencies=[Depends(verify_admin)])
 async def test_connector(connector: str) -> Dict[str, Any]:
     """
