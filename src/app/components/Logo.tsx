@@ -7,20 +7,30 @@ interface LogoProps {
   size?: number;
 }
 
-export function Logo({ variant = 'horizontal', color = 'dark', size = 28 }: LogoProps) {
-  const c = {
-    dark:  { text: '#0A1628' },
-    white: { text: '#FFFFFF' },
-    gold:  { text: '#C6A85A' },
-  }[color];
+// CSS filters applied to the transparent-background PNG
+// 'dark'  → no filter   (blue palette on light bg)
+// 'white' → invert       (white palette on dark bg)
+// 'gold'  → sepia tint   (gold palette on dark bg)
+const FILTER: Record<ColorScheme, string> = {
+  dark:  'none',
+  white: 'brightness(0) invert(1)',
+  gold:  'brightness(0) sepia(1) saturate(4) hue-rotate(5deg)',
+};
 
+const TEXT_COLOR: Record<ColorScheme, string> = {
+  dark:  '#0A1628',
+  white: '#FFFFFF',
+  gold:  '#C6A85A',
+};
+
+export function Logo({ variant = 'horizontal', color = 'dark', size = 28 }: LogoProps) {
   const Symbol = () => (
     <img
       src="/logo.png"
-      alt="Nautilus logo"
+      alt="Nautilus"
       width={size}
       height={size}
-      style={{ objectFit: 'contain', display: 'block' }}
+      style={{ objectFit: 'contain', display: 'block', filter: FILTER[color] }}
     />
   );
 
@@ -36,7 +46,7 @@ export function Logo({ variant = 'horizontal', color = 'dark', size = 28 }: Logo
           fontFamily: "'Playfair Display', Georgia, serif",
           fontSize: `${Math.round(size * 0.68)}px`,
           fontWeight: 600,
-          color: c.text,
+          color: TEXT_COLOR[color],
           letterSpacing: '0.04em',
           lineHeight: 1,
         }}>
@@ -47,7 +57,7 @@ export function Logo({ variant = 'horizontal', color = 'dark', size = 28 }: Logo
             fontFamily: "'Inter', sans-serif",
             fontSize: `${Math.round(size * 0.32)}px`,
             fontWeight: 500,
-            color: c.text,
+            color: TEXT_COLOR[color],
             letterSpacing: '0.12em',
             textTransform: 'uppercase' as const,
             opacity: 0.55,
