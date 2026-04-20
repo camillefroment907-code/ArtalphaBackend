@@ -55,19 +55,21 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     real_lots: List[LotNormalized] = []
     seen_ids: set = set()
 
-    # --- Drouot real scraper (Playwright) — 90s timeout, may hang on Railway ---
-    try:
-        from app.connectors.drouot_real import DrouotRealConnector
-        drouot = DrouotRealConnector()
-        lots = await _with_timeout(drouot.fetch_lots(lots_per_source), timeout=90, name="drouot")
-        for lot in lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-        if lots:
-            logger.info("Drouot real: fetched", count=len(lots))
-    except Exception as e:
-        logger.error("Drouot real connector failed", error=str(e))
+    # --- Drouot real scraper (Playwright) — disabled on Railway (no browser runtime) ---
+    # To re-enable: install playwright browsers in Dockerfile, set DROUOT_ENABLED=1
+    if False:
+        try:
+            from app.connectors.drouot_real import DrouotRealConnector
+            drouot = DrouotRealConnector()
+            lots = await _with_timeout(drouot.fetch_lots(lots_per_source), timeout=90, name="drouot")
+            for lot in lots:
+                if lot.external_id not in seen_ids:
+                    seen_ids.add(lot.external_id)
+                    real_lots.append(lot)
+            if lots:
+                logger.info("Drouot real: fetched", count=len(lots))
+        except Exception as e:
+            logger.error("Drouot real connector failed", error=str(e))
 
     # --- Interenchères — disabled (Cloudflare blocks all access, 0 real lots) ---
     # try:

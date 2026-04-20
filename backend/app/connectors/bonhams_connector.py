@@ -105,7 +105,7 @@ def _parse_lot(lot: dict) -> Optional[LotNormalized]:
 
         return LotNormalized(
             external_id=f"bonhams-{lot_id}",
-            source=AuctionHouseEnum.OTHER,
+            source=AuctionHouseEnum.BONHAMS,
             title=str(title).strip()[:500],
             artist_name_raw=str(artist).strip()[:500] if artist else None,
             estimate_low=estimate_low,
@@ -198,7 +198,7 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
 
 CONNECTOR_META = {
     "name": "Bonhams",
-    "source": AuctionHouseEnum.OTHER,
+    "source": AuctionHouseEnum.BONHAMS,
     "house_reputation_score": 0.88,
     "currency": "GBP",
     "country": "GB",

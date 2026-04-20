@@ -98,7 +98,7 @@ def _parse_artwork(item: dict) -> Optional[LotNormalized]:
 
         return LotNormalized(
             external_id=f"artsy-{slug}",
-            source=AuctionHouseEnum.OTHER,
+            source=AuctionHouseEnum.ARTSY,
             title=title[:500],
             artist_name_raw=str(artist)[:300] if artist else None,
             description=item.get("description") or item.get("blurb"),
@@ -273,7 +273,7 @@ async def fetch_lots(limit: int = 5000) -> List[LotNormalized]:
 
                         lots.append(LotNormalized(
                             external_id=f"artsy-{artwork_id}",
-                            source=AuctionHouseEnum.OTHER,
+                            source=AuctionHouseEnum.ARTSY,
                             title=str(title)[:500],
                             artist_name_raw=str(artist)[:300] if artist else None,
                             estimate_low=low,
@@ -453,7 +453,7 @@ async def fetch_primary_lots(limit: int = 10000) -> List[LotNormalized]:
 
                         lots.append(LotNormalized(
                             external_id=f"artsy-primary-{artwork_id}",
-                            source=AuctionHouseEnum.OTHER,
+                            source=AuctionHouseEnum.ARTSY,
                             title=str(title)[:500],
                             artist_name_raw=str(artist)[:500] if artist else None,
                             estimate_low=price,

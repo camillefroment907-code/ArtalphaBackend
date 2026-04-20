@@ -131,7 +131,7 @@ def _parse_lot(item: dict) -> Optional[LotNormalized]:
 
         return LotNormalized(
             external_id=f"catawiki-{lot_id}",
-            source=AuctionHouseEnum.OTHER,
+            source=AuctionHouseEnum.CATAWIKI,
             title=title[:500],
             artist_name_raw=artist,
             description=(item.get("description") or "")[:1000] or None,

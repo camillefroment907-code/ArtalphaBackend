@@ -127,6 +127,11 @@ async def run_migrations():
         "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'INSTITUTIONAL'",
         "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'ELITE'",
         "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'EXPERT'",
+        # auctionhouse enum: add sources that were missing, causing silent insert failures
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'liveauctioneers'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'artsy'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'catawiki'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'artcurial'",
     ]
     for sql in migrations:
         try:

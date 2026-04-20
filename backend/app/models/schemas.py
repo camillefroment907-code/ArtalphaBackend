@@ -19,6 +19,9 @@ class AuctionHouseEnum(str, Enum):
     HERITAGE = "heritage"
     ARTMARKETAPI = "artmarketapi"
     LIVEAUCTIONEERS = "liveauctioneers"
+    ARTSY = "artsy"
+    CATAWIKI = "catawiki"
+    ARTCURIAL = "artcurial"
     OTHER = "other"
 
 
