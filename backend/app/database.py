@@ -84,17 +84,14 @@ async def run_migrations():
         "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'INSTITUTIONAL'",
         "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'ELITE'",
         "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'EXPERT'",
-        # auctionhouse enum: add sources that were missing, causing silent insert failures
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'liveauctioneers'",
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'artsy'",
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'catawiki'",
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'artcurial'",
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'bonhams'",
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'phillips'",
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'christies'",
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'sothebys'",
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'heritage'",
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'other'",
+        # auctionhouse enum: SQLAlchemy uses Python member NAMES (uppercase) as DB values.
+        # Existing PG values: DROUOT, INTERENCHERES, INVALUABLE, CHRISTIES, SOTHEBYS,
+        # BONHAMS, OTHER, PHILLIPS, ROSEBERYS, HERITAGE, ARTMARKETAPI (all uppercase).
+        # New sources must also be uppercase to match member names.
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'LIVEAUCTIONEERS'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'ARTSY'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'CATAWIKI'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'ARTCURIAL'",
     ]
     # ALTER TYPE ADD VALUE must run outside any transaction.
     # Use a dedicated NullPool engine with AUTOCOMMIT so asyncpg never wraps it in a TX.
