@@ -442,30 +442,6 @@ function AgentPage() {
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
 
-      {/* ── 1. STATUS BAR ────────────────────────────────────── */}
-      <div style={{
-        background: 'var(--navy)', height: '44px', padding: '0 40px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '6px', height: '6px', borderRadius: '50%',
-            background: 'var(--gold)', animation: 'pulseDot 2s infinite', flexShrink: 0,
-          }} />
-          <span style={{
-            fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.12em',
-            color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase',
-          }}>
-            AI Analyst Active · Scanning new lots every 15 min
-          </span>
-        </div>
-        {limits && (
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.06em' }}>
-            {alerts.length}/{maxStrategies} strategies
-          </span>
-        )}
-      </div>
-
       {/* ── 2. PAGE HEADER ───────────────────────────────────── */}
       <div style={{ padding: '32px 40px 24px', borderBottom: '1px solid var(--border)', background: 'white' }}>
         {/* Title row */}
@@ -497,14 +473,13 @@ function AgentPage() {
 
         {/* 4-tile KPI grid */}
         <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
           border: '1px solid var(--border)', borderRadius: '8px',
           overflow: 'hidden', gap: '1px', background: 'var(--border)',
         }}>
           {[
             { label: 'Strategies',       value: String(alerts.length),                           sub: `of ${maxStrategies} max`   },
             { label: 'Recommendations',  value: String(recs.length),                             sub: 'this cycle'                },
-            { label: 'Last Scan',        value: '< 15 min',                                      sub: 'ago'                       },
             { label: 'Conviction Avg',   value: avgConviction > 0 ? `${avgConviction}/100` : '—', sub: 'across signals'            },
           ].map(({ label, value, sub }) => (
             <div key={label} style={{ background: 'white', padding: '16px 20px' }}>
@@ -570,7 +545,7 @@ function AgentPage() {
                 Once you create a strategy, the agent scans every new auction lot and returns AI-graded signals here.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '240px', margin: '0 auto', textAlign: 'left' }}>
-                {['Scans every 15 min', 'Nautilus AI analysis', 'Conviction scoring'].map(item => (
+                {['Nautilus AI analysis', 'Conviction scoring'].map(item => (
                   <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ color: 'var(--gold)', fontSize: '8px', flexShrink: 0 }}>◆</span>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.06em' }}>

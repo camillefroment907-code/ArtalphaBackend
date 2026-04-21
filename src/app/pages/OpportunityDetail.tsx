@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { getPlanLimits, getToken } from '../../lib/auth';
 import { AIAnalyst } from '../components/AIAnalyst';
+import NautilusLoader from '../components/NautilusLoader';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -145,17 +146,7 @@ export default function OpportunityDetail() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', background: DK, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
-      <div style={{ display: 'flex', gap: '4px', alignItems: 'flex-end', height: '32px' }}>
-        {[0, 1, 2, 3, 4].map(i => (
-          <div key={i} style={{ width: '4px', background: BLD, borderRadius: '2px', animation: `bpulse 1s ease ${i * 0.12}s infinite` }} />
-        ))}
-      </div>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.24em', color: '#6B7280' }}>LOADING</span>
-      <style>{`@keyframes bpulse{0%,100%{height:8px;opacity:0.3}50%{height:28px;opacity:1}}`}</style>
-    </div>
-  );
+  if (loading) return <NautilusLoader />;
 
   if (!lot) return (
     <div style={{ minHeight: '100vh', background: DK, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

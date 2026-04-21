@@ -95,21 +95,15 @@ export default function Login() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#FAFAFA' }}>
+    <div style={{ display: 'flex', height: '100vh', maxHeight: '100vh', overflow: 'hidden', background: '#FAFAFA' }}>
       {/* Left — form */}
-      <div style={{ flex: '0 0 50%', background: 'white', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '24px 72px', maxWidth: '480px', margin: '0 auto', width: '100%' }}>
-          <div style={{ marginBottom: '8px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--electric)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>
-            Nautilus Terminal
-          </div>
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px', lineHeight: 1.2 }}>
+      <div style={{ flex: '0 0 50%', background: 'white', display: 'flex', flexDirection: 'column', overflowY: 'hidden' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '20px 72px', maxWidth: '480px', margin: '0 auto', width: '100%' }}>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px', lineHeight: 1.2 }}>
             Access your intelligence
           </h1>
-          <p style={{ fontSize: '14px', color: 'var(--text-2)', margin: '0 0 32px', lineHeight: 1.6 }}>
-            Market signals and investment opportunities await.
-          </p>
 
-          <div style={{ width: '32px', height: '2px', background: 'var(--gold)', marginBottom: '32px' }} />
+          <div style={{ width: '32px', height: '2px', background: 'var(--gold)', marginBottom: '20px' }} />
 
           {error && (
             <div style={{ padding: '12px 16px', background: 'var(--red-subtle)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: '6px', fontSize: '13px', color: 'var(--red)', marginBottom: '20px' }}>
@@ -173,13 +167,13 @@ export default function Login() {
               onClick={handleLogin}
               disabled={loading}
               className="btn-electric"
-              style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: '13px', opacity: loading ? 0.7 : 1, textTransform: 'none' as const, letterSpacing: '0.02em' }}
+              style={{ width: '100%', justifyContent: 'center', padding: '10px', fontSize: '13px', opacity: loading ? 0.7 : 1, textTransform: 'none' as const, letterSpacing: '0.02em' }}
             >
               {loading ? 'Signing in...' : 'Sign in →'}
             </button>
 
             {/* Sign up link */}
-            <p style={{ fontSize: '13px', color: 'var(--text-3)', textAlign: 'center', marginTop: '20px' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-3)', textAlign: 'center', marginTop: '12px' }}>
               Don't have an account?{' '}
               <Link to="/app/signup" style={{ color: 'var(--electric)', fontWeight: 600, textDecoration: 'none' }}>
                 Get access

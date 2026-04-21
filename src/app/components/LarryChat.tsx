@@ -24,6 +24,16 @@ interface LarryChatProps {
 
 const API = 'https://artalpha-backend-production.up.railway.app';
 
+function renderWithLinks(text: string) {
+  const urlRegex = /(https:\/\/(?:www\.)?get-nautilus\.com\S*)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, i) =>
+    part.match(/^https:\/\/(?:www\.)?get-nautilus\.com/)
+      ? <a key={i} href={part} target="_blank" rel="noreferrer" style={{ color: '#C6A85A', textDecoration: 'underline', wordBreak: 'break-all' }}>{part}</a>
+      : part
+  );
+}
+
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -556,7 +566,7 @@ export function LarryChat({ lotId }: LarryChatProps) {
                         border: isUser ? 'none' : '1px solid #e5e7eb',
                         wordBreak: 'break-word',
                       }}>
-                        {msg.content}
+                        {isUser ? msg.content : renderWithLinks(msg.content)}
                         {msg.streaming && (
                           <span style={{
                             display: 'inline-block',
