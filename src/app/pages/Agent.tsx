@@ -245,8 +245,9 @@ function AgentPage() {
   const [fcategory, setFcategory]   = useState('');
   const [fbudgetMin, setFbudgetMin] = useState('');
   const [fbudgetMax, setFbudgetMax] = useState('');
+  const [fbudgetRange, setFbudgetRange] = useState('');
   const [fhorizon, setFhorizon]     = useState('medium');
-  const [fconviction, setFconviction] = useState(65);
+  const [fconviction, setFconviction] = useState(70);
   const [fnameError, setFnameError]   = useState('');
 
   const recsRef = useRef<HTMLDivElement>(null);
@@ -272,8 +273,8 @@ function AgentPage() {
 
   function resetForm() {
     setFname(''); setFartist(''); setFcategory('');
-    setFbudgetMin(''); setFbudgetMax('');
-    setFhorizon('medium'); setFconviction(65);
+    setFbudgetMin(''); setFbudgetMax(''); setFbudgetRange('');
+    setFhorizon('medium'); setFconviction(70);
     setFnameError(''); setFormStep(1); setFormError('');
   }
 
@@ -882,145 +883,174 @@ function AgentPage() {
 
       {/* ── 4. CREATE FORM ───────────────────────────────────── */}
       {showCreateForm && (
-        <div style={{ margin: '0 40px 40px', background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '28px 32px' }}>
+        <div style={{ margin: '0 40px 40px' }}>
+          <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '28px 32px' }}>
 
-          {/* Form header */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <div>
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 400, color: 'var(--navy)', margin: '0 0 4px' }}>
-                {formStep === 1 ? 'Define your investment criteria' : 'Set your parameters'}
-              </h3>
-              <span style={{ fontSize: '12px', color: 'var(--text-3)' }}>Step {formStep} of 2</span>
-            </div>
-
-            {/* Step indicator circles */}
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              {([1, 2] as const).map((step, i) => (
-                <div key={step} style={{ display: 'flex', alignItems: 'center' }}>
-                  <div
-                    onClick={() => { if (step < formStep) setFormStep(step); }}
-                    style={{
-                      width: '24px', height: '24px', borderRadius: '50%',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '11px', fontWeight: 700, fontFamily: 'var(--font-mono)',
-                      background: formStep >= step ? 'var(--electric)' : 'var(--bg-subtle)',
-                      color: formStep >= step ? 'white' : 'var(--text-3)',
-                      cursor: step < formStep ? 'pointer' : 'default',
-                      transition: 'background 0.2s',
-                    }}
-                  >{step}</div>
-                  {i < 1 && (
-                    <div style={{ width: '32px', height: '1px', background: formStep > 1 ? 'var(--electric)' : 'var(--border)' }} />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Step labels */}
-          <div style={{ display: 'flex', gap: '80px', marginBottom: '24px' }}>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.08em', color: formStep === 1 ? 'var(--electric)' : 'var(--text-3)' }}>What to watch</span>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.08em', color: formStep === 2 ? 'var(--electric)' : 'var(--text-3)' }}>How to filter</span>
-          </div>
-
-          {formError && (
-            <div style={{ fontSize: '12px', color: '#C0392B', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', padding: '10px 14px', borderRadius: '6px', marginBottom: '20px' }}>
-              {formError}
-            </div>
-          )}
-
-          {/* Step 1 */}
-          {formStep === 1 && (
-            <form onSubmit={e => { e.preventDefault(); if (!fname.trim()) { setFnameError('Required'); return; } setFnameError(''); setFormStep(2); }}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={lbl}>Strategy name</label>
-                <input
-                  style={{ ...inp, borderColor: fnameError ? '#C0392B' : 'var(--border)' }}
-                  value={fname}
-                  onChange={e => { setFname(e.target.value); if (e.target.value.trim()) setFnameError(''); }}
-                  placeholder="e.g. Impressionist paintings under €10K"
-                  autoFocus
-                />
-                {fnameError && <div style={{ fontSize: '11px', color: '#C0392B', marginTop: '4px' }}>{fnameError}</div>}
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+              <div>
+                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 400, color: 'var(--navy)', margin: '0 0 4px' }}>
+                  New Investment Strategy
+                </h3>
+                <p style={{ fontSize: '11px', color: 'var(--text-3)', margin: 0, fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
+                  Your AI analyst scans every 15 min and alerts you instantly
+                </p>
               </div>
+              <button onClick={closeForm} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--text-3)', padding: '4px 8px', lineHeight: 1 }}>×</button>
+            </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '24px' }}>
-                <div>
-                  <label style={lbl}>Artist (optional)</label>
-                  <input style={inp} value={fartist} onChange={e => setFartist(e.target.value)} placeholder="e.g. Picasso, Matisse..." />
-                </div>
-                <div>
+            {formError && (
+              <div style={{ fontSize: '12px', color: '#C0392B', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', padding: '10px 14px', borderRadius: '6px', marginBottom: '20px' }}>
+                {formError}
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '32px', alignItems: 'start' }}>
+
+              {/* LEFT — form */}
+              <form id="strategy-form" onSubmit={handleCreate}>
+
+                {/* 1. Category chips */}
+                <div style={{ marginBottom: '18px' }}>
                   <label style={lbl}>Category</label>
-                  <select style={{ ...inp, cursor: 'pointer' }} value={fcategory} onChange={e => setFcategory(e.target.value)}>
-                    <option value="">All categories</option>
-                    {['Paintings', 'Drawings', 'Sculpture', 'Photography', 'Prints', 'Mixed Media'].map(c => (
-                      <option key={c} value={c}>{c}</option>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
+                    {['Paintings', 'Sculptures', 'Prints & Multiples', 'Photography', 'Drawings', 'Contemporary', 'Modern'].map(cat => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setFcategory(fcategory === cat ? '' : cat)}
+                        style={{
+                          padding: '5px 12px', fontSize: '12px', borderRadius: '4px', cursor: 'pointer',
+                          border: '1px solid var(--border)',
+                          background: fcategory === cat ? '#1A2A44' : '#F5F4F0',
+                          color: fcategory === cat ? '#C6A85A' : '#888',
+                          fontWeight: fcategory === cat ? 600 : 400,
+                          transition: 'all 0.12s',
+                        }}
+                      >{cat}</button>
                     ))}
+                  </div>
+                </div>
+
+                {/* 2. Artists */}
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={lbl}>Artists (optional)</label>
+                  <input style={inp} value={fartist} onChange={e => setFartist(e.target.value)} placeholder="Chagall, Wou-Ki, Basquiat..." />
+                </div>
+
+                {/* 3. Budget */}
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={lbl}>Budget range</label>
+                  <select
+                    style={{ ...inp, cursor: 'pointer' }}
+                    value={fbudgetRange}
+                    onChange={e => {
+                      const v = e.target.value;
+                      setFbudgetRange(v);
+                      if (!v) { setFbudgetMin(''); setFbudgetMax(''); }
+                      else if (v === '-5000') { setFbudgetMin(''); setFbudgetMax('5000'); }
+                      else if (v === '500000-') { setFbudgetMin('500000'); setFbudgetMax(''); }
+                      else { const [mn, mx] = v.split('-'); setFbudgetMin(mn); setFbudgetMax(mx); }
+                    }}
+                  >
+                    <option value="">Any budget</option>
+                    <option value="-5000">&lt; €5K</option>
+                    <option value="5000-20000">€5K – €20K</option>
+                    <option value="20000-100000">€20K – €100K</option>
+                    <option value="100000-500000">€100K – €500K</option>
+                    <option value="500000-">€500K+</option>
                   </select>
                 </div>
-              </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={closeForm} style={ghostBtn}>Cancel</button>
-                <button
-                  type="submit"
-                  className="btn-electric"
-                  style={{ fontSize: '12px', padding: '9px 20px', letterSpacing: '0.04em', opacity: !fname.trim() ? 0.5 : 1 }}
-                  disabled={!fname.trim()}
-                >
-                  Next →
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Step 2 */}
-          {formStep === 2 && (
-            <form onSubmit={handleCreate}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
-                <div>
-                  <label style={lbl}>Min budget (€)</label>
-                  <input type="number" style={inp} value={fbudgetMin} onChange={e => setFbudgetMin(e.target.value)} placeholder="500" />
+                {/* 4. Conviction slider */}
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={lbl}>Alert me when score ≥ {fconviction}/100</label>
+                  <input
+                    type="range" min={60} max={95} step={5}
+                    value={fconviction}
+                    onChange={e => setFconviction(parseInt(e.target.value, 10))}
+                    style={{ width: '100%', accentColor: '#1A2A44', marginBottom: '4px' }}
+                  />
+                  <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>
+                    Higher = fewer but stronger signals
+                  </div>
                 </div>
-                <div>
-                  <label style={lbl}>Max budget (€)</label>
-                  <input type="number" style={inp} value={fbudgetMax} onChange={e => setFbudgetMax(e.target.value)} placeholder="50 000" />
-                </div>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '28px' }}>
-                <div>
+                {/* 5. Time horizon */}
+                <div style={{ marginBottom: '16px' }}>
                   <label style={lbl}>Investment horizon</label>
-                  <select style={{ ...inp, cursor: 'pointer' }} value={fhorizon} onChange={e => setFhorizon(e.target.value)}>
-                    <option value="short">Short — &lt; 2 years</option>
-                    <option value="medium">Medium — 2–5 years</option>
-                    <option value="long">Long — 5+ years</option>
-                  </select>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {[
+                      { value: 'short', label: 'Quick flip', sub: '<6mo' },
+                      { value: 'medium', label: 'Medium', sub: '6–24mo' },
+                      { value: 'long', label: 'Long term', sub: '2y+' },
+                    ].map(({ value, label, sub }) => (
+                      <label key={value} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '9px 6px', border: `1px solid ${fhorizon === value ? '#1A2A44' : 'var(--border)'}`, borderRadius: '6px', cursor: 'pointer', background: fhorizon === value ? 'rgba(26,42,68,0.04)' : 'transparent', transition: 'all 0.12s' }}>
+                        <input type="radio" name="horizon" value={value} checked={fhorizon === value} onChange={() => setFhorizon(value)} style={{ display: 'none' }} />
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: fhorizon === value ? '#1A2A44' : 'var(--text-2)' }}>{label}</span>
+                        <span style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '2px' }}>{sub}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-                <div>
-                  <label style={lbl}>Min conviction</label>
-                  <select style={{ ...inp, cursor: 'pointer' }} value={String(fconviction)} onChange={e => setFconviction(parseInt(e.target.value, 10))}>
-                    <option value="50">50+ — Any signal</option>
-                    <option value="65">65+ — Strong</option>
-                    <option value="80">80+ — High conviction only</option>
-                  </select>
+
+                {/* 6. Strategy name */}
+                <div style={{ marginBottom: '8px' }}>
+                  <label style={lbl}>Strategy name *</label>
+                  <input
+                    style={{ ...inp, borderColor: fnameError ? '#C0392B' : 'var(--border)' }}
+                    value={fname}
+                    onChange={e => { setFname(e.target.value); if (e.target.value.trim()) setFnameError(''); }}
+                    placeholder={fcategory ? `My ${fcategory} strategy` : 'e.g. Impressionist paintings under €10K'}
+                  />
+                  {fnameError && <div style={{ fontSize: '11px', color: '#C0392B', marginTop: '4px' }}>{fnameError}</div>}
+                </div>
+
+              </form>
+
+              {/* RIGHT — preview + CTA */}
+              <div>
+                <div style={{ background: '#1A2A44', padding: 20, borderLeft: '3px solid #C6A85A', borderRadius: '4px' }}>
+                  <div style={{ color: 'rgba(198,168,90,0.6)', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8, fontFamily: 'var(--font-mono)' }}>SIGNAL PREVIEW</div>
+                  <div style={{ display: 'inline-block', background: '#C6A85A', color: '#1A2A44', fontSize: 10, fontWeight: 700, padding: '3px 10px', marginBottom: 10, letterSpacing: '0.06em' }}>84/100 · EXCEPTIONAL</div>
+                  <div style={{ color: '#999', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 3, fontFamily: 'var(--font-mono)' }}>MARC CHAGALL</div>
+                  <div style={{ color: 'white', fontFamily: 'Georgia,serif', fontSize: 15, marginBottom: 6 }}>Lithographie originale, 1972</div>
+                  <div style={{ color: '#aaa', fontSize: 11, marginBottom: 12 }}>Capitolium Art · Est. €1,000–2,000</div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
+                    <span style={{ color: 'white', fontWeight: 600, fontSize: 12 }}>Fair value: €3,500–5,000</span>
+                    <span style={{ background: '#EAF4EE', color: '#1F6B3A', fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>+120% upside</span>
+                  </div>
+                  <div style={{ borderTop: '1px solid rgba(198,168,90,0.2)', paddingTop: 10, color: 'rgba(198,168,90,0.6)', fontSize: 10, fontFamily: 'var(--font-mono)' }}>
+                    This is what a match looks like in your inbox.
+                  </div>
+                </div>
+                <div style={{ marginTop: 10, color: '#888', fontSize: 11, lineHeight: 1.6 }}>
+                  Scan frequency: Every 15 min · Email alerts: Immediate · Max 5 alerts/week
+                </div>
+
+                <div style={{ marginTop: '18px' }}>
+                  <button
+                    type="submit"
+                    form="strategy-form"
+                    className="btn-electric"
+                    style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: '13px' }}
+                    disabled={saving}
+                    onClick={() => { if (!fname.trim()) setFnameError('Required'); }}
+                  >
+                    {saving ? 'Launching…' : 'Activate this strategy →'}
+                  </button>
+                  <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-3)', marginTop: '7px' }}>
+                    Your analyst starts scanning immediately
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button type="button" onClick={closeForm} style={ghostBtn}>Cancel</button>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={() => setFormStep(1)} style={ghostBtn}>← Back</button>
-                <button type="button" onClick={closeForm} style={ghostBtn}>Cancel</button>
-                <button
-                  type="submit"
-                  className="btn-electric"
-                  style={{ fontSize: '12px', padding: '9px 22px', letterSpacing: '0.04em' }}
-                  disabled={saving}
-                >
-                  {saving ? 'Launching…' : 'Launch strategy ◆'}
-                </button>
-              </div>
-            </form>
-          )}
+            </div>
+          </div>
         </div>
       )}
 

@@ -49,18 +49,21 @@ function RightPanel() {
     <div style={{ flex: '0 0 50%', background: '#0A1628', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '64px 56px' }}>
       <div style={{ position: 'absolute', inset: 0, opacity: 0.04, backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
-      <div style={{ marginBottom: '32px', position: 'relative' }}>
-        <Logo variant="symbol" color="white" size={56} />
+      <div style={{ marginBottom: '20px', position: 'relative' }}>
+        <Logo variant="symbol" color="white" size={40} />
       </div>
 
-      <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'white', margin: '0 0 12px', lineHeight: 1.3, position: 'relative' }}>
-        Uncover hidden value.
-      </h2>
-      <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', margin: '0 0 40px', lineHeight: 1.6, position: 'relative' }}>
-        AI-powered market intelligence for art investment.
-      </p>
+      {/* Hero text */}
+      <div style={{ marginBottom: '24px', position: 'relative' }}>
+        <h2 style={{ color: '#FFFFFF', fontFamily: 'Georgia,serif', fontSize: 28, fontWeight: 'normal', lineHeight: 1.2, margin: '0 0 8px' }}>
+          The market has a gap.<br />You're about to see it.
+        </h2>
+        <p style={{ color: 'rgba(198,168,90,0.7)', fontSize: 13, margin: 0, fontFamily: 'Arial,sans-serif' }}>
+          Real opportunities. Right now.
+        </p>
+      </div>
 
-      <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.08)', marginBottom: '32px', position: 'relative' }} />
+      <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.08)', marginBottom: '20px', position: 'relative' }} />
 
       <div style={{ position: 'relative' }}>
         {cards.map((card, i) => (
@@ -74,7 +77,14 @@ function RightPanel() {
         ))}
       </div>
 
-      <div style={{ position: 'absolute', bottom: '28px', left: '56px', right: '56px' }}>
+      {/* Stats strip */}
+      <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 16, flexWrap: 'wrap', position: 'relative' }}>
+        {['3,500+ lots scored', 'Avg +31% upside on 80+', '6 exceptional lots today'].map(s => (
+          <span key={s} style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: 'Arial,sans-serif' }}>{s}</span>
+        ))}
+      </div>
+
+      <div style={{ position: 'absolute', bottom: '20px', left: '56px', right: '56px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#C6A85A', animation: 'pulseDot 2s infinite' }} />
           <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>
@@ -127,21 +137,21 @@ export default function Signup() {
   const passwordMismatch = confirmPassword.length > 0 && password !== confirmPassword;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#FAFAFA' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#FAFAFA' }}>
       {/* Left — form */}
       <div style={{ flex: '0 0 50%', background: 'white', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 72px', maxWidth: '480px', margin: '0 auto', width: '100%', overflowY: 'auto' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '24px 72px', maxWidth: '480px', margin: '0 auto', width: '100%' }}>
           <div style={{ marginBottom: '8px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>
             Nautilus Terminal
           </div>
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px', lineHeight: 1.2 }}>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px', lineHeight: 1.2 }}>
             Get access to the platform
           </h1>
-          <p style={{ fontSize: '14px', color: 'var(--text-2)', margin: '0 0 32px', lineHeight: 1.6 }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-2)', margin: '0 0 20px', lineHeight: 1.6 }}>
             Join investors identifying undervalued artworks before the market corrects.
           </p>
 
-          <div style={{ width: '32px', height: '2px', background: 'var(--gold)', marginBottom: '32px' }} />
+          <div style={{ width: '32px', height: '2px', background: 'var(--gold)', marginBottom: '20px' }} />
 
           {error && (
             <div style={{ padding: '12px 16px', background: 'var(--red-subtle)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: '6px', fontSize: '13px', color: 'var(--red)', marginBottom: '20px' }}>
