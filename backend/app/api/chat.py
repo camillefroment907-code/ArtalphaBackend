@@ -92,12 +92,31 @@ Golden rule: never buy what you don't understand. The art you love, you'll hold 
 
 Current opportunities → https://get-nautilus.com/app/explore?tab=best"
 
-## NAUTILUS LINKS — use when relevant
-- Best opportunities: https://get-nautilus.com/app/explore?tab=best
-- Primary market: https://get-nautilus.com/app/explore?tab=primary
-- My agent: https://get-nautilus.com/app/agent
-- My portfolio: https://get-nautilus.com/app/portfolio
-- Pricing: https://get-nautilus.com/app/pricing
+## NAUTILUS LINKS — ALWAYS INCLUDE
+When you reference a specific lot, artist, or platform page, always include the direct Nautilus URL as a clickable link.
+
+URL patterns:
+- Specific lot: https://www.get-nautilus.com/app/lot/{lot_id}
+- Artist search: https://www.get-nautilus.com/app/artists?search={artist_name_url_encoded}
+- Best lots: https://www.get-nautilus.com/app/explore?tab=best
+- Opportunities for user: https://www.get-nautilus.com/app/explore?tab=for-you
+- Primary market: https://www.get-nautilus.com/app/explore?tab=primary
+- My agent: https://www.get-nautilus.com/app/agent
+- My portfolio: https://www.get-nautilus.com/app/portfolio
+- Pricing: https://www.get-nautilus.com/app/pricing
+
+URL formatting rules:
+- Always put the URL on a new line starting with "→"
+- If referencing multiple lots: list each with its own "→" URL line
+- If no specific lot ID is available: link to the Explorer filtered by artist
+- For platform questions: link to the relevant page
+
+Examples:
+"This Chagall is priced 34% below comparable sales. Score 84/100. My recommendation: buy.
+→ View this lot: https://www.get-nautilus.com/app/lot/12345"
+
+"Zao Wou-Ki has strong momentum right now — 3 lots available above score 70.
+→ See all Wou-Ki lots: https://www.get-nautilus.com/app/artists?search=Zao+Wou-Ki"
 
 ## PROACTIVE BEHAVIOR
 When the user opens without a specific question, or says "hi", "hello", "what's new":
@@ -232,9 +251,7 @@ async def _get_user_context(user: User, _db: AsyncSession) -> str:
                     ctx += f" | Price: €{price:,.0f} | Score: {lot.deal_score:.0f}/100"
                     if lot.pct_below_low_estimate and lot.pct_below_low_estimate > 5:
                         ctx += f" | -{lot.pct_below_low_estimate:.0f}% below estimate"
-                    ctx += f" | ID: {lot.id}"
-                    if lot.url:
-                        ctx += f" | URL: {lot.url}"
+                    ctx += f" | lot_id: {lot.id} | URL: https://www.get-nautilus.com/app/lot/{lot.id}"
                     lines.append(ctx)
         except Exception:
             await session.rollback()
@@ -283,7 +300,8 @@ async def _get_lot_context(lot_id: str, db: AsyncSession) -> str:
         f"- Discount vs estimate: {upside:.0f}%\n"
         f"- Nautilus deal score: {deal_score}\n"
         f"- Auction house: {lot.auction_house_name or 'Unknown'}\n"
-        f"- Sale date: {sale_date}"
+        f"- Sale date: {sale_date}\n"
+        f"- Nautilus URL: https://www.get-nautilus.com/app/lot/{lot.id}"
     )
 
 
