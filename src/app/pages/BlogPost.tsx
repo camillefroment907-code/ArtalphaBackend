@@ -3,6 +3,7 @@
  */
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router';
+import { useSEO } from '../../lib/useSEO';
 import { Logo } from '../components/Logo';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
@@ -17,6 +18,27 @@ export default function BlogPostPage() {
   const [post, setPost]     = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState('');
+
+  useSEO({
+    title: post ? `${post.title} · Nautilus` : 'Art Market Intelligence · Nautilus',
+    description: post?.excerpt || 'Art market analysis and investment signals from Nautilus.',
+    image: post?.cover_image || undefined,
+    ogType: 'article',
+    schema: post ? {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: post.title,
+      description: post.excerpt,
+      image: post.cover_image,
+      author: { '@type': 'Person', name: post.author },
+      datePublished: post.published_at,
+      publisher: {
+        '@type': 'Organization',
+        name: 'Nautilus',
+        url: 'https://get-nautilus.com',
+      },
+    } : undefined,
+  });
 
   useEffect(() => {
     if (!slug) return;

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { Logo } from '../components/Logo';
 import { loginApi } from '../../lib/api';
 import { setUser } from '../../lib/auth';
+import { useSEO } from '../../lib/useSEO';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 
 const SIGNAL_CARDS = [
@@ -60,6 +61,8 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  useSEO({ title: 'Sign In · Nautilus', noindex: true });
 
   async function handleLogin() {
     setError('');

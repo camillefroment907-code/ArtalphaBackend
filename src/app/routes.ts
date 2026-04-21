@@ -64,7 +64,7 @@ export const router = createBrowserRouter([
   { path: '/feedback', Component: FeedbackPage },
   // Admin dashboards — only camillefroment907@gmail.com
   {
-    path: '/admin',
+    path: '/nx-ctrl',
     Component: AdminRoute,
     children: [
       { path: 'health',          Component: AdminHealth          },

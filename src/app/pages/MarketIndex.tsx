@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { useSEO } from '../../lib/useSEO';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -11,6 +12,11 @@ export default function MarketIndex() {
   const [lotsAnalyzed, setLotsAnalyzed] = useState<number | null>(null);
   const [avgScore, setAvgScore] = useState<number | null>(null);
   const [exceptionalCount, setExceptionalCount] = useState<number | null>(null);
+
+  useSEO({
+    title: 'Art Market Index · Nautilus',
+    description: 'Live art market signals, price trends, and auction intelligence. Updated in real time.',
+  });
 
   useEffect(() => {
     const meta = document.createElement('meta');
@@ -65,7 +71,7 @@ export default function MarketIndex() {
             <path d="M 20 36 A 8 8 0 0 1 12 28" stroke="#C6A85A" strokeWidth="2.5" strokeLinecap="round"/>
             <circle cx="20" cy="20" r="2" fill="#C6A85A"/>
           </svg>
-          <span style={{ fontFamily: 'Georgia, serif', fontSize: '16px', fontWeight: 600, color: 'var(--navy)', letterSpacing: '0.06em' }}>Nautilus</span>
+          <span style={{ fontFamily: "-apple-system, 'Inter', 'Helvetica Neue', Arial, sans-serif", fontSize: '16px', fontWeight: 700, color: 'var(--navy)', letterSpacing: '-0.02em' }}>Nautilus</span>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <a href="/app/signup" style={{ background: 'var(--electric)', color: 'white', padding: '8px 20px', borderRadius: '6px', textDecoration: 'none', fontSize: '12px', fontWeight: 700, letterSpacing: '0.06em' }}>

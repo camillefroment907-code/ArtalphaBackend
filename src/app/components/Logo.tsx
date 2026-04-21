@@ -41,11 +41,11 @@ export function Logo({ variant = 'horizontal', color = 'dark', size = 28 }: Logo
       <Symbol />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
         <span style={{
-          fontFamily: "'Playfair Display', Georgia, serif",
+          fontFamily: "-apple-system, 'Inter', 'Helvetica Neue', Arial, sans-serif",
           fontSize: `${Math.round(size * 0.68)}px`,
-          fontWeight: 600,
+          fontWeight: 700,
           color: TEXT_COLOR[color],
-          letterSpacing: '0.04em',
+          letterSpacing: '-0.02em',
           lineHeight: 1,
         }}>
           Nautilus

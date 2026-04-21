@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { getSubscription } from "../../lib/api";
 import { setUser, getUser } from "../../lib/auth";
+import { useSEO } from "../../lib/useSEO";
 
 const PLAN_LABELS: Record<string, string> = {
   starter: "Collector",
@@ -14,6 +15,8 @@ export default function BillingSuccess() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [plan, setPlan] = useState("");
+
+  useSEO({ title: 'Subscription Confirmed · Nautilus', noindex: true });
 
   useEffect(() => {
     const sync = async () => {

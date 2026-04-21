@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Logo } from '../components/Logo';
+import { useSEO } from '../../lib/useSEO';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -9,6 +10,11 @@ export default function Contact() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useSEO({
+    title: 'Contact · Nautilus',
+    description: 'Get in touch with the Nautilus team.',
+  });
 
   const handleSubmit = async () => {
     if (!form.name || !form.email || !form.message) return;

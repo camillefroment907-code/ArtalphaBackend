@@ -3,6 +3,7 @@
  * Lists all published posts.
  */
 import { useState, useEffect } from 'react';
+import { useSEO } from '../../lib/useSEO';
 import { Link } from 'react-router';
 import { Logo } from '../components/Logo';
 
@@ -70,6 +71,11 @@ export default function Blog() {
   const [posts, setPosts]   = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal]   = useState(0);
+
+  useSEO({
+    title: 'The Nautilus Brief · Art Market Intelligence',
+    description: 'Art market analysis, investment signals, and collector intelligence — updated weekly.',
+  });
 
   useEffect(() => {
     fetch(`${BACKEND}/api/blog?per_page=12`)

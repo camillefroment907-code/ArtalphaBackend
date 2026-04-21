@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router';
 import { Logo } from '../components/Logo';
+import { useSEO } from '../../lib/useSEO';
 
 type LegalPage = 'terms' | 'privacy' | 'disclaimer';
 
@@ -156,6 +157,8 @@ export default function Legal() {
   const { page } = useParams<{ page: string }>();
   const legalPage = (page as LegalPage) || 'terms';
   const content = PAGES[legalPage] || PAGES.terms;
+
+  useSEO({ title: 'Legal · Nautilus', noindex: true });
 
   const tabs: { key: LegalPage; label: string }[] = [
     { key: 'terms',      label: 'Terms of Service'     },

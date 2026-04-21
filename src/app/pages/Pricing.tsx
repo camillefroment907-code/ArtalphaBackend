@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import { getToken } from "../../lib/auth";
+import { useSEO } from "../../lib/useSEO";
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -138,6 +139,11 @@ export default function Pricing() {
   const [currentPlan, setCurrentPlan] = useState('free');
   const [loading, setLoading] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  useSEO({
+    title: 'Pricing · Nautilus',
+    description: 'Simple, transparent pricing for serious art investors. From first purchase to family office.',
+  });
 
   useEffect(() => {
     const token = getToken();

@@ -1,6 +1,11 @@
 import { dailyLots } from '../../lib/dailyStats';
+import { useSEO } from '../../lib/useSEO';
 
 export default function About() {
+  useSEO({
+    title: 'About',
+    description: 'Nautilus is an art market intelligence platform built for collectors who think like investors. AI-powered deal scoring across 30+ global auction sources.',
+  });
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       {/* Header */}
@@ -12,7 +17,7 @@ export default function About() {
             <path d="M 20 36 A 8 8 0 0 1 12 28" stroke="#C6A85A" strokeWidth="2.5" strokeLinecap="round"/>
             <circle cx="20" cy="20" r="2" fill="#C6A85A"/>
           </svg>
-          <span style={{ fontFamily: 'Georgia, serif', fontSize: '16px', fontWeight: 600, color: 'var(--navy)', letterSpacing: '0.06em' }}>Nautilus</span>
+          <span style={{ fontFamily: "-apple-system, 'Inter', 'Helvetica Neue', Arial, sans-serif", fontSize: '16px', fontWeight: 700, color: 'var(--navy)', letterSpacing: '-0.02em' }}>Nautilus</span>
         </a>
         <a href="/app/signup" style={{ background: 'var(--electric)', color: 'white', padding: '8px 20px', borderRadius: '6px', textDecoration: 'none', fontSize: '12px', fontWeight: 700, letterSpacing: '0.06em' }}>
           GET ACCESS

@@ -78,7 +78,7 @@ function NautilusMockup() {
             <path d="M 20 36 A 8 8 0 0 1 12 28" stroke="#C6A85A" strokeWidth="2.5" strokeLinecap="round"/>
             <circle cx="20" cy="20" r="2" fill="#C6A85A"/>
           </svg>
-          <span style={{ fontFamily: 'Georgia, serif', fontSize: '12px', fontWeight: 600, color: 'var(--navy)', letterSpacing: '0.06em' }}>Nautilus</span>
+          <span style={{ fontFamily: "-apple-system, 'Inter', 'Helvetica Neue', Arial, sans-serif", fontSize: '12px', fontWeight: 700, color: 'var(--navy)', letterSpacing: '-0.02em' }}>Nautilus</span>
         </div>
         {['Dashboard', 'Explorer', 'Portfolio'].map((item, i) => (
           <span key={item} style={{ fontSize: '11px', color: i === 1 ? 'var(--navy)' : 'var(--text-3)', fontWeight: i === 1 ? 700 : 400, borderBottom: i === 1 ? '2px solid var(--navy)' : 'none', paddingBottom: '2px' }}>
@@ -892,7 +892,7 @@ export default function Landing() {
                   <path d="M 20 36 A 8 8 0 0 1 12 28" stroke="#C6A85A" strokeWidth="2.5" strokeLinecap="round"/>
                   <circle cx="20" cy="20" r="2" fill="#C6A85A"/>
                 </svg>
-                <span style={{ fontFamily: 'Georgia, serif', fontSize: '16px', color: 'white', letterSpacing: '0.06em', fontWeight: 600 }}>Nautilus</span>
+                <span style={{ fontFamily: "-apple-system, 'Inter', 'Helvetica Neue', Arial, sans-serif", fontSize: '16px', color: 'white', letterSpacing: '-0.02em', fontWeight: 700 }}>Nautilus</span>
               </div>
               <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '14px' }}>
                 MARKET INTELLIGENCE

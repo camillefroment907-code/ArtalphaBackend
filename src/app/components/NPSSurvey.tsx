@@ -186,8 +186,8 @@ export function NPSSurvey() {
             <circle cx="10" cy="10" r="1.2" fill="#C6A85A"/>
           </svg>
           <span style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: 13, color: '#C6A85A', letterSpacing: '0.02em',
+            fontFamily: "-apple-system, 'Inter', 'Helvetica Neue', Arial, sans-serif",
+            fontSize: 13, color: '#C6A85A', fontWeight: 700, letterSpacing: '-0.02em',
           }}>
             Nautilus
           </span>

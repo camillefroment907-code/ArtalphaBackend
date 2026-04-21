@@ -3,5 +3,6 @@ Allow: /
 Disallow: /app/
 Disallow: /admin/
 Disallow: /api/
+Disallow: /billing/
 
 Sitemap: https://get-nautilus.com/sitemap.xml
