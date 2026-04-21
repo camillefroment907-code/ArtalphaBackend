@@ -90,6 +90,7 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
         )
         verify_url = f"{settings.frontend_url}/app/verify-email?token={verify_token}"
         asyncio.create_task(send_verification_email(user.email, verify_url))
+        print(f"[AUTH] Verification email task created for {user.email}")
     except Exception:
         pass
 

@@ -117,6 +117,50 @@ def divider() -> str:
     return '<hr class="divider">'
 
 
+def hero_artwork(image_url: str, artist: str, title: str, alt: str = "") -> str:
+    """Full-width artwork hero image block above the fold."""
+    alt_text = alt or f"{artist} — {title}"
+    return f"""<div style="margin: -48px -40px 32px; overflow: hidden; max-height: 260px;">
+  <img src="{image_url}" alt="{alt_text}" style="width: 100%; height: 260px; object-fit: cover; display: block;" />
+  <div style="background: #1A2A44; padding: 10px 24px; display: flex; justify-content: space-between; align-items: center;">
+    <span style="color: rgba(198,168,90,0.85); font-family: Georgia, serif; font-size: 12px; letter-spacing: 0.08em;">{artist}</span>
+    <span style="color: rgba(255,255,255,0.35); font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;">{title}</span>
+  </div>
+</div>"""
+
+
+def decision_block(verdict: str, score: int, rationale: str) -> str:
+    """Conviction verdict block: STRONG BUY / HOLD / AVOID with score and rationale."""
+    colors = {
+        "STRONG BUY": ("#C6A85A", "#1A2A44"),
+        "BUY": ("#2563EB", "#FFFFFF"),
+        "HOLD": ("#6B7280", "#FFFFFF"),
+        "AVOID": ("#EF4444", "#FFFFFF"),
+    }
+    bg, fg = colors.get(verdict.upper(), ("#1A2A44", "#FFFFFF"))
+    badge_cls = "score-badge score-exceptional" if score >= 80 else "score-badge"
+    return f"""<div style="border: 1px solid #E8E4DC; border-radius: 6px; overflow: hidden; margin: 24px 0;">
+  <div style="background: {bg}; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;">
+    <span style="color: {fg}; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;">◆ {verdict.upper()}</span>
+    <span class="{badge_cls}">{score}/100</span>
+  </div>
+  <div style="padding: 16px 20px; background: #FAFAF8;">
+    <p style="margin: 0; font-size: 13px; color: #444444; line-height: 1.7;">{rationale}</p>
+  </div>
+</div>"""
+
+
+def urgency_block(closes_in: str, auction_house: str, auction_date: str) -> str:
+    """Urgency/countdown block shown when a lot closes soon."""
+    return f"""<div style="background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.25); border-radius: 6px; padding: 14px 20px; margin: 20px 0; display: flex; align-items: center; gap: 14px;">
+  <div style="font-size: 20px;">⏰</div>
+  <div>
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 13px; font-weight: 700; color: #EF4444; letter-spacing: 0.04em;">Closes in {closes_in}</div>
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11px; color: #888888; margin-top: 2px;">{auction_house} · {auction_date}</div>
+  </div>
+</div>"""
+
+
 def _configured() -> bool:
     if not settings.resend_api_key:
         logger.warning("RESEND_API_KEY not configured — emails disabled")
