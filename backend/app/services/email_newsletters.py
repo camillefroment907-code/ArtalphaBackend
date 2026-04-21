@@ -226,10 +226,12 @@ async def send_lot_of_week_email(
     analysis: str, comparable_sales: str, lot_url: str,
 ) -> bool:
     """Email 35 — lot of the week, Friday 10am"""
+    lot_details = f"{auction_house} · {sale_date}"
+    lot_estimate = f"Est. {estimate}"
     content = f"""
 {label("EDITORIAL PICK")}
 <h1>Why this lot is interesting.</h1>
-{lot_card(artist_name.upper(), lot_title, f"{auction_house} \u00b7 {sale_date}", f"Est. {estimate}", score=score)}
+{lot_card(artist_name.upper(), lot_title, lot_details, lot_estimate, score=score)}
 <h2>Nautilus Analysis</h2>
 <p>{analysis}</p>
 <h2>Comparable Sales</h2>
