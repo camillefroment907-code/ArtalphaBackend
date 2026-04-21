@@ -80,10 +80,16 @@ logger = structlog.get_logger()
 async def lifespan(app: FastAPI):
     logger.info("Starting HONO API", env=settings.environment)
 
-    # Retry DB connection up to 10 times (Docker startup race)
+    # Retry DB connection up to 5 times with a hard 5-second timeout per attempt.
+    # asyncpg's default TCP timeout can be 60s, which causes Railway's 300s healthcheck
+    # to expire (5 retries × 60s + sleeps ≈ 618s). The timeout keeps startup under 60s.
     import asyncio
-    for attempt in range(10):
-        db_ok = await check_db_connection()
+    db_ok = False
+    for attempt in range(5):
+        try:
+            db_ok = await asyncio.wait_for(check_db_connection(), timeout=5.0)
+        except asyncio.TimeoutError:
+            db_ok = False
         if db_ok:
             break
         logger.warning("DB not ready, retrying...", attempt=attempt + 1)
