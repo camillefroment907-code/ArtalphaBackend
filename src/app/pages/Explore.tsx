@@ -170,46 +170,13 @@ function mapLot(lot: any) {
 type MappedLot = ReturnType<typeof mapLot>;
 
 // ── Nautilus Loader ──────────────────────────────────────────
-function NautilusLoader({ label = "SCANNING MARKET" }: { label?: string }) {
-  const [dots, setDots] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setDots(d => (d + 1) % 4), 500);
-    return () => clearInterval(t);
-  }, []);
-
+function NautilusLoader({ label = "SCANNING..." }: { label?: string }) {
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', minHeight: '60vh', background: '#FAFAF8',
-    }}>
-      <svg width="72" height="72" viewBox="0 0 100 100"
-        style={{ animation: 'nautilusPulse 1.8s ease-in-out infinite' }}>
-        <style>{`
-          @keyframes nautilusPulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.08); opacity: 0.85; }
-          }
-        `}</style>
-        <ellipse cx="50" cy="60" rx="30" ry="24" fill="#2563EB" opacity="0.15"/>
-        <ellipse cx="50" cy="58" rx="28" ry="22" fill="#2563EB" opacity="0.25"/>
-        <path d="M22 58 Q18 35 35 26 Q52 16 68 32 Q80 44 72 60 Z" fill="#2563EB"/>
-        <ellipse cx="50" cy="60" rx="28" ry="22" fill="#2563EB"/>
-        <circle cx="38" cy="54" r="10" fill="white"/>
-        <circle cx="62" cy="54" r="10" fill="white"/>
-        <circle cx="72" cy="46" r="5" fill="white"/>
-        <circle cx="39" cy="55" r="5" fill="#1A2A44"/>
-        <circle cx="63" cy="55" r="5" fill="#1A2A44"/>
-        <circle cx="72" cy="47" r="2.5" fill="#1A2A44"/>
-        <path d="M43 67 Q50 72 57 67" stroke="#C6A85A" strokeWidth="2.5"
-          fill="none" strokeLinecap="round"/>
-      </svg>
-      <p style={{
-        marginTop: 20, fontSize: 11, letterSpacing: '0.2em',
-        textTransform: 'uppercase', color: '#1A2A44', opacity: 0.5,
-        fontFamily: 'Arial, sans-serif',
-      }}>
-        {label}{'...'.slice(0, dots + 1)}
-      </p>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: '#FAFAF8' }}>
+      <span style={{ fontFamily: 'Georgia,serif', fontSize: 13, letterSpacing: '0.3em', color: '#1A2A44', opacity: 0.5, textTransform: 'uppercase', animation: 'fade 1.4s ease-in-out infinite' }}>
+        {label}
+      </span>
+      <style>{'@keyframes fade{0%,100%{opacity:0.3}50%{opacity:0.8}}'}</style>
     </div>
   );
 }
@@ -908,14 +875,7 @@ export default function Explore() {
               )}
 
               {/* Loading */}
-              {exploreTab !== 'for-you' && loading && (
-                <NautilusLoader label={
-                  exploreTab === 'best' ? 'SCANNING BEST DEALS' :
-                  exploreTab === 'auctions' ? 'SCANNING AUCTIONS' :
-                  exploreTab === 'primary' ? 'SCANNING PRIMARY MARKET' :
-                  'SCANNING MARKET'
-                } />
-              )}
+              {exploreTab !== 'for-you' && loading && <NautilusLoader />}
 
               {/* Error */}
               {exploreTab !== 'for-you' && !loading && hasError && lots.length === 0 && (
@@ -948,7 +908,7 @@ export default function Explore() {
               {/* ─── FOR YOU TAB ────────────────────────────── */}
               {exploreTab === 'for-you' && (
                 <div style={{ padding: '8px 0' }}>
-                  {recoLoading && <NautilusLoader label="BUILDING YOUR SELECTION" />}
+                  {recoLoading && <NautilusLoader label="SCANNING..." />}
                   {!recoLoading && !getToken() && (
                     <div style={{ textAlign: 'center', padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                       <Larry variant="sleep" size={80} />

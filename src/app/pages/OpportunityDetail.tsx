@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { getPlanLimits, getToken } from '../../lib/auth';
 import { AIAnalyst } from '../components/AIAnalyst';
-import NautilusLoader from '../components/NautilusLoader';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -146,7 +145,14 @@ export default function OpportunityDetail() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  if (loading) return <NautilusLoader />;
+  if (loading) return (
+    <div style={{position:'fixed',inset:0,background:'#FAFAF8',display:'flex',alignItems:'center',justifyContent:'center',zIndex:50}}>
+      <span style={{fontFamily:'Georgia,serif',fontSize:13,letterSpacing:'0.3em',color:'#1A2A44',opacity:0.5,textTransform:'uppercase',animation:'fade 1.4s ease-in-out infinite'}}>
+        Scanning...
+      </span>
+      <style>{'@keyframes fade{0%,100%{opacity:0.3}50%{opacity:0.8}}'}</style>
+    </div>
+  );
 
   if (!lot) return (
     <div style={{ minHeight: '100vh', background: DK, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
