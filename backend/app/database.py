@@ -115,6 +115,9 @@ async def run_migrations():
         # users columns
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS accepted_terms_at TIMESTAMP",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS accepted_terms_ip VARCHAR(45)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS accepted_terms_version VARCHAR(10)",
         # preferences columns — add ALL non-core columns (table may be very old)
         "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS budget_max FLOAT",
         "ALTER TABLE preferences ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100)",

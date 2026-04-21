@@ -35,6 +35,7 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
         raise HTTPException(status_code=400, detail="Email already registered")
 
     try:
+        from datetime import datetime
         user = User(
             email=body.email,
             hashed_password=hash_password(body.password),
@@ -42,6 +43,9 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
             is_active=True,
             is_verified=False,
         )
+        user.accepted_terms_at = datetime.utcnow()
+        user.accepted_terms_ip = request.client.host if request.client else None
+        user.accepted_terms_version = '3.0'
         db.add(user)
         await db.flush()
     except Exception as e:

@@ -373,21 +373,26 @@ export default function Pricing() {
                     {plan.cta}
                   </button>
                 ) : (
-                  <button
-                    onClick={() => handleSelect(plan)}
-                    disabled={loading === plan.key}
-                    style={{
-                      width: '100%', padding: '11px', borderRadius: '6px',
-                      background: isHighlight ? 'white' : 'var(--navy)',
-                      color: isHighlight ? 'var(--navy)' : 'white',
-                      border: 'none', fontSize: '12px', fontWeight: 700,
-                      cursor: loading === plan.key ? 'not-allowed' : 'pointer',
-                      letterSpacing: '0.06em', textTransform: 'uppercase' as const,
-                      opacity: loading === plan.key ? 0.7 : 1,
-                    }}
-                  >
-                    {loading === plan.key ? 'Loading...' : plan.cta}
-                  </button>
+                  <>
+                    <button
+                      onClick={() => handleSelect(plan)}
+                      disabled={loading === plan.key}
+                      style={{
+                        width: '100%', padding: '11px', borderRadius: '6px',
+                        background: isHighlight ? 'white' : 'var(--navy)',
+                        color: isHighlight ? 'var(--navy)' : 'white',
+                        border: 'none', fontSize: '12px', fontWeight: 700,
+                        cursor: loading === plan.key ? 'not-allowed' : 'pointer',
+                        letterSpacing: '0.06em', textTransform: 'uppercase' as const,
+                        opacity: loading === plan.key ? 0.7 : 1,
+                      }}
+                    >
+                      {loading === plan.key ? 'Loading...' : plan.cta}
+                    </button>
+                    <div style={{ fontSize: '10px', color: isHighlight ? 'rgba(255,255,255,0.3)' : 'var(--text-3)', marginTop: '8px', lineHeight: 1.5, textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
+                      Renews automatically · No refunds · Cancel anytime
+                    </div>
+                  </>
                 )}
               </div>
 

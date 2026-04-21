@@ -5,6 +5,7 @@ import { registerApi } from '../../lib/api';
 import { setUser } from '../../lib/auth';
 import { useSEO } from '../../lib/useSEO';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { LegalAcceptance } from '../components/LegalAcceptance';
 
 const SIGNAL_CARDS = [
   { badge: '◆ STRONG BUY', badgeColor: '#C6A85A', artist: 'Pierre Soulages', detail: '−28% vs estimate', detailColor: '#2563EB' },
@@ -63,6 +64,7 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [legalAccepted, setLegalAccepted] = useState(false);
 
   useSEO({ title: 'Get Access · Nautilus', noindex: true });
 
@@ -187,23 +189,18 @@ export default function Signup() {
               )}
             </div>
 
+            {/* Legal acceptance checkboxes */}
+            <LegalAcceptance onChange={setLegalAccepted} />
+
             {/* Submit */}
             <button
               onClick={handleRegister}
-              disabled={loading || passwordMismatch}
+              disabled={loading || passwordMismatch || !legalAccepted}
               className="btn-electric"
-              style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: '13px', opacity: loading ? 0.7 : 1, textTransform: 'none' as const, letterSpacing: '0.02em' }}
+              style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: '13px', opacity: (loading || !legalAccepted) ? 0.7 : 1, textTransform: 'none' as const, letterSpacing: '0.02em' }}
             >
-              {loading ? 'Creating account...' : 'Create account →'}
+              {loading ? 'Creating account...' : 'Create my account — I accept the Terms of Service'}
             </button>
-
-            {/* Legal */}
-            <p style={{ fontSize: '11px', color: 'var(--text-3)', textAlign: 'center', marginTop: '16px', lineHeight: 1.6 }}>
-              By creating an account, you agree to our{' '}
-              <a href="/legal/terms" style={{ color: 'var(--text-2)' }}>Terms</a>
-              {' '}and{' '}
-              <a href="/legal/privacy" style={{ color: 'var(--text-2)' }}>Privacy Policy</a>.
-            </p>
 
             {/* Already have account */}
             <p style={{ fontSize: '13px', color: 'var(--text-3)', textAlign: 'center', marginTop: '20px' }}>
