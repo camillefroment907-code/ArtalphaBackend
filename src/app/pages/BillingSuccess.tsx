@@ -40,12 +40,24 @@ export default function BillingSuccess() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#FAFAF8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <div style={{ textAlign: "center", maxWidth: "480px", padding: "48px" }}>
 
         {status === "loading" && (
           <>
-            <div style={{ width: "48px", height: "48px", border: "3px solid #E5E5E5", borderTopColor: "#1A2A44", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 24px" }} />
+            <svg width="72" height="72" viewBox="0 0 100 100" style={{ animation: 'nautilusPulse 1.8s ease-in-out infinite', margin: '0 auto 24px', display: 'block' }}>
+              <style>{`@keyframes nautilusPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.08);opacity:0.85}}`}</style>
+              <ellipse cx="50" cy="60" rx="30" ry="24" fill="#2563EB" opacity="0.15"/>
+              <ellipse cx="50" cy="58" rx="28" ry="22" fill="#2563EB" opacity="0.25"/>
+              <path d="M22 58 Q18 35 35 26 Q52 16 68 32 Q80 44 72 60 Z" fill="#2563EB"/>
+              <ellipse cx="50" cy="60" rx="28" ry="22" fill="#2563EB"/>
+              <circle cx="38" cy="54" r="10" fill="white"/>
+              <circle cx="62" cy="54" r="10" fill="white"/>
+              <circle cx="72" cy="46" r="5" fill="white"/>
+              <circle cx="39" cy="55" r="5" fill="#1A2A44"/>
+              <circle cx="63" cy="55" r="5" fill="#1A2A44"/>
+              <circle cx="72" cy="47" r="2.5" fill="#1A2A44"/>
+              <path d="M43 67 Q50 72 57 67" stroke="#C6A85A" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+            </svg>
             <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "24px", color: "#1A1A1A", marginBottom: "8px" }}>
               Confirming your subscription…
             </h2>

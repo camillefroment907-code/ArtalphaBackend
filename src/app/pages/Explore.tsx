@@ -170,158 +170,46 @@ function mapLot(lot: any) {
 type MappedLot = ReturnType<typeof mapLot>;
 
 // ── Nautilus Loader ──────────────────────────────────────────
-const LOADER_CSS = `
-  @keyframes nl-spin      { from { transform: rotate(0deg) }   to { transform: rotate(360deg) } }
-  @keyframes nl-counter   { from { transform: rotate(0deg) }   to { transform: rotate(-360deg) } }
-  @keyframes nl-spin-med  { from { transform: rotate(0deg) }   to { transform: rotate(360deg) } }
-  @keyframes nl-spin-fast { from { transform: rotate(0deg) }   to { transform: rotate(360deg) } }
-  @keyframes nl-glow      { 0%,100% { filter: drop-shadow(0 0 6px rgba(198,168,90,0.25)) }
-                             50%    { filter: drop-shadow(0 0 18px rgba(198,168,90,0.7)) } }
-  @keyframes nl-bg        { 0%,100% { opacity:.4; transform:scale(1) }
-                             50%    { opacity:1;  transform:scale(1.1) } }
-  @keyframes nl-text      { 0%,100% { opacity:.45; letter-spacing:.22em }
-                             50%    { opacity:.9;  letter-spacing:.28em } }
-  @keyframes nl-dot       { 0%,80%,100% { opacity:.2; transform:scale(.8) }
-                             40%         { opacity:1;  transform:scale(1.2) } }
-  @keyframes nl-scan      { 0%   { transform:translateY(0);    opacity:.6 }
-                             100% { transform:translateY(240px); opacity:0 } }
-  @keyframes nl-fadein    { from { opacity:0; transform:translateY(6px) }
-                             to   { opacity:1; transform:translateY(0) } }
-`;
-
 function NautilusLoader({ label = "SCANNING MARKET" }: { label?: string }) {
+  const [dots, setDots] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setDots(d => (d + 1) % 4), 500);
+    return () => clearInterval(t);
+  }, []);
+
   return (
     <div style={{
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      height: "480px",
-      position: "relative",
-      overflow: "hidden",
-      userSelect: "none",
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', minHeight: '60vh', background: '#FAFAF8',
     }}>
-      <style>{LOADER_CSS}</style>
-
-      {/* ── radial background glow ── */}
-      <div style={{
-        position: "absolute",
-        width: "280px", height: "280px",
-        borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(198,168,90,0.07) 0%, transparent 68%)",
-        animation: "nl-bg 5s ease-in-out infinite",
-        pointerEvents: "none",
-      }} />
-
-      {/* ── scanline sweep ── */}
-      <div style={{
-        position: "absolute",
-        top: 0, left: "50%",
-        transform: "translateX(-50%)",
-        width: "320px", height: "2px",
-        background: "linear-gradient(90deg, transparent, rgba(198,168,90,0.18), transparent)",
-        animation: "nl-scan 3.5s linear infinite",
-        pointerEvents: "none",
-      }} />
-
-      {/* ── ring layer 1 — outermost, slow CW ── */}
-      <div style={{ position: "absolute", animation: "nl-spin 22s linear infinite" }}>
-        <svg width="200" height="200" viewBox="0 0 200 200">
-          <circle cx="100" cy="100" r="95" fill="none" stroke="#0A1628" strokeWidth="0.7"
-            strokeDasharray="3 14" opacity="0.1" />
-        </svg>
-      </div>
-
-      {/* ── ring layer 2 — medium, CCW ── */}
-      <div style={{ position: "absolute", animation: "nl-counter 15s linear infinite" }}>
-        <svg width="160" height="160" viewBox="0 0 160 160">
-          <circle cx="80" cy="80" r="76" fill="none" stroke="#C6A85A" strokeWidth="0.8"
-            strokeDasharray="2 11" opacity="0.18" />
-        </svg>
-      </div>
-
-      {/* ── ring layer 3 — inner, faster CW ── */}
-      <div style={{ position: "absolute", animation: "nl-spin-med 9s linear infinite" }}>
-        <svg width="120" height="120" viewBox="0 0 120 120">
-          <circle cx="60" cy="60" r="56" fill="none" stroke="#0A1628" strokeWidth="0.6"
-            strokeDasharray="1 7" opacity="0.09" />
-        </svg>
-      </div>
-
-      {/* ── orbiting gold dot (outer orbit) ── */}
-      <div style={{ position: "absolute", animation: "nl-spin 6s linear infinite" }}>
-        <svg width="200" height="200" viewBox="0 0 200 200">
-          <circle cx="100" cy="5" r="4.5" fill="#C6A85A" opacity="0.85" />
-          <circle cx="100" cy="5" r="7" fill="none" stroke="#C6A85A" strokeWidth="1" opacity="0.2" />
-        </svg>
-      </div>
-
-      {/* ── orbiting navy dot (medium orbit, opposite) ── */}
-      <div style={{ position: "absolute", animation: "nl-counter 9s linear infinite" }}>
-        <svg width="160" height="160" viewBox="0 0 160 160">
-          <circle cx="80" cy="4" r="3" fill="#0A1628" opacity="0.45" />
-        </svg>
-      </div>
-
-      {/* ── orbiting small gold dot (inner orbit) ── */}
-      <div style={{ position: "absolute", animation: "nl-spin-fast 4s linear infinite", animationDelay: "-2s" }}>
-        <svg width="120" height="120" viewBox="0 0 120 120">
-          <circle cx="60" cy="4" r="2" fill="#C6A85A" opacity="0.5" />
-        </svg>
-      </div>
-
-      {/* ── main Nautilus symbol ── */}
-      <div style={{
-        position: "relative",
-        zIndex: 2,
-        animation: "nl-spin 7s linear infinite, nl-glow 4s ease-in-out infinite",
+      <svg width="72" height="72" viewBox="0 0 100 100"
+        style={{ animation: 'nautilusPulse 1.8s ease-in-out infinite' }}>
+        <style>{`
+          @keyframes nautilusPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.08); opacity: 0.85; }
+          }
+        `}</style>
+        <ellipse cx="50" cy="60" rx="30" ry="24" fill="#2563EB" opacity="0.15"/>
+        <ellipse cx="50" cy="58" rx="28" ry="22" fill="#2563EB" opacity="0.25"/>
+        <path d="M22 58 Q18 35 35 26 Q52 16 68 32 Q80 44 72 60 Z" fill="#2563EB"/>
+        <ellipse cx="50" cy="60" rx="28" ry="22" fill="#2563EB"/>
+        <circle cx="38" cy="54" r="10" fill="white"/>
+        <circle cx="62" cy="54" r="10" fill="white"/>
+        <circle cx="72" cy="46" r="5" fill="white"/>
+        <circle cx="39" cy="55" r="5" fill="#1A2A44"/>
+        <circle cx="63" cy="55" r="5" fill="#1A2A44"/>
+        <circle cx="72" cy="47" r="2.5" fill="#1A2A44"/>
+        <path d="M43 67 Q50 72 57 67" stroke="#C6A85A" strokeWidth="2.5"
+          fill="none" strokeLinecap="round"/>
+      </svg>
+      <p style={{
+        marginTop: 20, fontSize: 11, letterSpacing: '0.2em',
+        textTransform: 'uppercase', color: '#1A2A44', opacity: 0.5,
+        fontFamily: 'Arial, sans-serif',
       }}>
-        <svg width="88" height="88" viewBox="0 0 40 40" fill="none">
-          <path d="M 20 4 A 16 16 0 0 1 36 20" stroke="#0A1628" strokeWidth="2.4" strokeLinecap="round" />
-          <path d="M 36 20 A 16 16 0 0 1 20 36" stroke="#0A1628" strokeWidth="2.4" strokeLinecap="round" opacity="0.55" />
-          <path d="M 20 36 A 8 8 0 0 1 12 28" stroke="#C6A85A" strokeWidth="2.4" strokeLinecap="round" />
-          <path d="M 12 28 A 8 8 0 0 1 20 20" stroke="#C6A85A" strokeWidth="2.4" strokeLinecap="round" opacity="0.65" />
-          <path d="M 20 20 A 4 4 0 0 1 24 24" stroke="#0A1628" strokeWidth="2" strokeLinecap="round" />
-          <circle cx="20" cy="20" r="2.2" fill="#C6A85A">
-            <animate attributeName="opacity" values="0.4;1;0.4" dur="2s" repeatCount="indefinite" />
-            <animate attributeName="r" values="1.6;2.4;1.6" dur="2s" repeatCount="indefinite" />
-          </circle>
-        </svg>
-      </div>
-
-      {/* ── text + dots ── */}
-      <div style={{
-        position: "relative",
-        zIndex: 2,
-        marginTop: "28px",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: "10px",
-        animation: "nl-fadein .4s ease",
-      }}>
-        <div style={{
-          fontSize: "10px",
-          fontFamily: "var(--font-mono, 'Courier New', monospace)",
-          color: "#0A1628",
-          letterSpacing: "0.24em",
-          fontWeight: 600,
-          animation: "nl-text 3.5s ease-in-out infinite",
-        }}>
-          {label}
-        </div>
-        <div style={{ display: "flex", gap: "5px" }}>
-          {[0, 1, 2, 3].map(i => (
-            <div key={i} style={{
-              width: "4px", height: "4px",
-              borderRadius: "50%",
-              background: i % 2 === 0 ? "#C6A85A" : "#0A1628",
-              animation: `nl-dot 1.6s ease-in-out infinite`,
-              animationDelay: `${i * 0.22}s`,
-            }} />
-          ))}
-        </div>
-      </div>
+        {label}{'...'.slice(0, dots + 1)}
+      </p>
     </div>
   );
 }
