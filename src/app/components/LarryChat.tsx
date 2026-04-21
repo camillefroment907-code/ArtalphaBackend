@@ -69,6 +69,7 @@ export function LarryChat({ lotId }: LarryChatProps) {
   const [proactiveMessages, setProactiveMessages] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isNewConversation = useRef(false);
 
   useEffect(() => {
     if (open) setSuggestions(shuffle(ALL_SUGGESTIONS).slice(0, 3));
@@ -137,7 +138,7 @@ export function LarryChat({ lotId }: LarryChatProps) {
   useEffect(() => {
     if (open && !isLocked) {
       fetchUsage();
-      if (messages.length === 0) fetchHistory();
+      if (messages.length === 0 && !isNewConversation.current) fetchHistory();
     }
   }, [open, isLocked, fetchUsage, fetchHistory, messages.length]);
 
@@ -236,6 +237,7 @@ export function LarryChat({ lotId }: LarryChatProps) {
   };
 
   const newConversation = () => {
+    isNewConversation.current = true;
     setMessages([]);
     setSuggestions(shuffle(ALL_SUGGESTIONS).slice(0, 3));
     setInput('');
