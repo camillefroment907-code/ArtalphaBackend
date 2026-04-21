@@ -537,6 +537,7 @@ async def _process_alerts_async():
                 alerts = await send_deal_alert(lot, user, prefs, artist_avg)
                 for alert in alerts:
                     session.add(alert)
+                    logger.info(f"Alert sent: deal → user {user.id}, lot {lot.id}, score {lot.deal_score:.0f}")
                 total_sent += len(alerts)
 
         await session.commit()
