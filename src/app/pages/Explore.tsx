@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { getUser } from "../../lib/auth";
 import { WelcomeTour } from "../components/WelcomeTour";
-import Larry from "../components/Larry";
 
 type ExploreTab = "best" | "auctions" | "primary" | "convictions" | "for-you";
 type ViewMode = "grid-large" | "grid" | "list";
@@ -880,12 +879,11 @@ export default function Explore() {
               {/* Error */}
               {exploreTab !== 'for-you' && !loading && hasError && lots.length === 0 && (
                 <div style={{ textAlign: "center", padding: "60px 40px", display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                  <Larry variant="alert" size={80} />
                   <div style={{ fontFamily: "var(--font-serif)", fontSize: "18px", color: "var(--text)" }}>
                     Unable to connect
                   </div>
                   <p style={{ fontSize: "13px", color: "var(--text-3)", margin: 0, maxWidth: '280px' }}>
-                    Larry can't reach the market data right now. Check your connection and try again.
+                    Check your connection and try again.
                   </p>
                   <button
                     onClick={doFetch}
@@ -899,9 +897,8 @@ export default function Explore() {
               {/* Empty */}
               {exploreTab !== 'for-you' && !loading && !hasError && lots.length === 0 && (
                 <div style={{ textAlign: "center", padding: "60px 20px", display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                  <Larry variant="sleep" size={80} />
                   <div style={{ fontSize: "15px", color: "var(--text-2)", fontWeight: 600 }}>{tab === "alpha" ? "No high-score opportunities right now" : "No lots match your filters"}</div>
-                  <div style={{ fontSize: "13px", color: "var(--text-3)" }}>{tab === "alpha" ? "Larry scans every 15 minutes — check back soon." : "Try broadening your search or removing filters."}</div>
+                  <div style={{ fontSize: "13px", color: "var(--text-3)" }}>{tab === "alpha" ? "Check back soon." : "Try broadening your search or removing filters."}</div>
                 </div>
               )}
 
@@ -911,7 +908,6 @@ export default function Explore() {
                   {recoLoading && <NautilusLoader label="SCANNING..." />}
                   {!recoLoading && !getToken() && (
                     <div style={{ textAlign: 'center', padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <Larry variant="sleep" size={80} />
                       <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)' }}>Sign in to see your recommendations</div>
                       <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0, maxWidth: '300px' }}>Nautilus builds a personalized collector profile for you — sign in to unlock.</p>
                       <button onClick={() => navigate('/app/login')} style={{ background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '6px', padding: '12px 28px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '4px' }}>
@@ -921,7 +917,6 @@ export default function Explore() {
                   )}
                   {!recoLoading && recoDone && getToken() && recos.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <Larry variant="analyse" size={80} />
                       <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)' }}>Your recommendations are being generated</div>
                       <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0, maxWidth: '320px' }}>Add works to your portfolio and tell Larry your preferences to unlock personalized recommendations.</p>
                       <p style={{ fontSize: '12px', color: 'var(--text-3)', margin: 0 }}>This usually takes less than 7 days of activity on the platform.</p>
