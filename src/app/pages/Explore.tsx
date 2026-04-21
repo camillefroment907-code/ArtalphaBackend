@@ -894,13 +894,6 @@ export default function Explore() {
                 </div>
               )}
 
-              {/* Empty */}
-              {exploreTab !== 'for-you' && !loading && !hasError && lots.length === 0 && (
-                <div style={{ textAlign: "center", padding: "60px 20px", display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ fontSize: "15px", color: "var(--text-2)", fontWeight: 600 }}>{tab === "alpha" ? "No high-score opportunities right now" : "No lots match your filters"}</div>
-                  <div style={{ fontSize: "13px", color: "var(--text-3)" }}>{tab === "alpha" ? "Check back soon." : "Try broadening your search or removing filters."}</div>
-                </div>
-              )}
 
               {/* ─── FOR YOU TAB ────────────────────────────── */}
               {exploreTab === 'for-you' && (

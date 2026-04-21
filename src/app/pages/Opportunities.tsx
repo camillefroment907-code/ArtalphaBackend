@@ -1142,20 +1142,6 @@ export default function Opportunities() {
             </div>
           )}
 
-          {/* Empty */}
-          {!loading && !hasError && lots.length === 0 && (
-            <div style={{ textAlign: "center", padding: "80px 20px" }}>
-              <div style={{ fontFamily: "var(--font-serif)", fontSize: "36px", color: "var(--border)", marginBottom: "16px" }}>◇</div>
-              <div style={{ fontSize: "15px", color: "var(--text-2)", marginBottom: "8px" }}>
-                {tab === "alpha" ? "No high-score opportunities right now" : "No lots match your filters"}
-              </div>
-              <div style={{ fontSize: "13px", color: "var(--text-3)" }}>
-                {tab === "alpha"
-                  ? "We scan every 15 minutes — check back soon."
-                  : "Try broadening your search or removing filters."}
-              </div>
-            </div>
-          )}
 
           {/* ── LIST VIEW ────────────────────────────────── */}
           {!loading && !hasError && lots.length > 0 && viewMode === "list" && (
