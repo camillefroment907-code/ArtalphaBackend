@@ -37,13 +37,13 @@ export function Logo({ variant = 'horizontal', color = 'dark', size = 28 }: Logo
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
       <Symbol />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
         <span style={{
           fontFamily: "-apple-system, 'Inter', 'Helvetica Neue', Arial, sans-serif",
-          fontSize: `${Math.round(size * 0.68)}px`,
-          fontWeight: 700,
+          fontSize: '16px',
+          fontWeight: 500,
           color: TEXT_COLOR[color],
           letterSpacing: '-0.02em',
           lineHeight: 1,

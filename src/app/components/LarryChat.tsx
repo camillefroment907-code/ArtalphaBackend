@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getPlanLimits, getToken } from '../../lib/auth';
-import Larry from './Larry';
+import { LarryFace } from './Larry';
 import type { LarryVariant } from './Larry';
 
 interface Message {
@@ -295,10 +295,10 @@ export function LarryChat({ lotId }: LarryChatProps) {
               overflow: 'hidden',
               flexShrink: 0,
               display: 'flex',
-              alignItems: 'flex-start',
+              alignItems: 'center',
               justifyContent: 'center',
             }}>
-              <Larry variant="analyse" size={40} />
+              <LarryFace size={40} />
             </div>
 
             {/* Name + status */}
@@ -700,7 +700,7 @@ export function LarryChat({ lotId }: LarryChatProps) {
           <span style={{ color: '#fff', fontSize: '24px', lineHeight: '56px', fontWeight: 300 }}>×</span>
         ) : (
           <div style={{ marginTop: '-2px' }}>
-            <Larry variant={launcherVariant} size={56} />
+            <LarryFace size={56} />
           </div>
         )}
 

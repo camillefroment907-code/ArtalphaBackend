@@ -359,3 +359,41 @@ export default function Larry({ variant = "analyse", size = 160, className = "" 
     </svg>
   );
 }
+
+/** Eyes-only face — used in chat header, launcher button, and onboarding. */
+export function LarryFace({ size = 40 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      style={{ display: 'block' }}
+      role="img"
+      aria-label="Larry"
+    >
+      <style>{`@keyframes lfBlink { 0%,87%,100%{transform:scaleY(1)} 91%{transform:scaleY(.05)} }`}</style>
+      {/* Face */}
+      <circle cx="50" cy="50" r="48" fill="#1A2A44" />
+      <circle cx="50" cy="50" r="48" fill="none" stroke="#C6A85A" strokeWidth="0.5" opacity="0.2" />
+      {/* Eyes with blink */}
+      <g style={{ animation: 'lfBlink 5.8s ease-in-out infinite', transformOrigin: '50px 50px' }}>
+        {/* Left eye */}
+        <circle cx="33" cy="50" r="17" fill="#020509" />
+        <circle cx="33" cy="50" r="15" fill="#edf3fc" />
+        <circle cx="33" cy="50" r="11" fill="#1e3a80" />
+        <circle cx="33" cy="50" r="7"  fill="#020509" />
+        <circle cx="37" cy="44" r="3.5" fill="white" opacity="0.97" />
+        <circle cx="29" cy="57" r="2"   fill="#7ab8f8" opacity="0.5" />
+        <circle cx="33" cy="50" r="17" fill="none" stroke="#C6A85A" strokeWidth="1.8" />
+        {/* Right eye */}
+        <circle cx="67" cy="50" r="17" fill="#020509" />
+        <circle cx="67" cy="50" r="15" fill="#edf3fc" />
+        <circle cx="67" cy="50" r="11" fill="#1e3a80" />
+        <circle cx="67" cy="50" r="7"  fill="#020509" />
+        <circle cx="71" cy="44" r="3.5" fill="white" opacity="0.97" />
+        <circle cx="63" cy="57" r="2"   fill="#7ab8f8" opacity="0.5" />
+        <circle cx="67" cy="50" r="17" fill="none" stroke="#C6A85A" strokeWidth="1.8" />
+      </g>
+    </svg>
+  );
+}

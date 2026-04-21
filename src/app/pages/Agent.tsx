@@ -86,72 +86,126 @@ const HORIZON_LABELS: Record<string, string> = {
 function LockedPage() {
   const navigate = useNavigate();
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '60px 40px', textAlign: 'center' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
 
-      <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '20px' }}>
-        Investor+
+      {/* Top — 40% navy */}
+      <div style={{ flex: '0 0 40vh', background: '#0A1628', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 64px', position: 'relative', overflow: 'hidden' }}>
+        {/* Subtle grid */}
+        <div style={{ position: 'absolute', inset: 0, opacity: 0.03, backgroundImage: 'linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)', backgroundSize: '48px 48px' }} />
+        <div style={{ position: 'relative', maxWidth: '680px', width: '100%' }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.22em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '14px' }}>
+            Investment Intelligence · Investor+
+          </div>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '36px', fontWeight: 600, color: 'white', margin: '0 0 14px', lineHeight: 1.2 }}>
+            Your private art investment analyst.<br />Always on.
+          </h1>
+          <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.5)', margin: '0 0 28px', lineHeight: 1.7, maxWidth: '520px' }}>
+            While you sleep, your AI analyst scans thousands of artworks across 10+ global auction houses — surfacing only what matches your strategy, at the right price, at the right moment.
+          </p>
+          <button
+            onClick={() => navigate('/app/pricing')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#2563EB', color: 'white', border: 'none', borderRadius: '6px', padding: '12px 28px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', letterSpacing: '0.01em' }}
+          >
+            Activate my AI analyst →
+          </button>
+          <div style={{ marginTop: '10px', fontSize: '11px', color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-mono)' }}>
+            Available from Investor plan · €29/month · Cancel anytime
+          </div>
+        </div>
       </div>
 
-      <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '42px', fontWeight: 600, color: 'var(--text)', marginBottom: '16px', lineHeight: 1.15 }}>
-        Your private art investment analyst. Always on.
-      </h1>
+      {/* Bottom — 60% white, 3 columns */}
+      <div style={{ flex: '1', background: '#FAFAFA', padding: '40px 64px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px', maxWidth: '960px', margin: '0 auto' }}>
 
-      <p style={{ fontSize: '16px', color: 'var(--text-2)', lineHeight: 1.8, marginBottom: '48px', maxWidth: '480px', margin: '0 auto 48px' }}>
-        While you sleep, your AI analyst scans thousands of artworks across 10+ global auction houses — and surfaces only what matches your strategy, at the right price, at the right moment.
-      </p>
+          {/* Column 1 — Features */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '4px' }}>
+              How it works
+            </div>
+            {[
+              { icon: '◆', title: 'Set your strategy once', body: 'Define your artist preferences, budget, time horizon and risk appetite. Your agent learns your profile and never forgets it.' },
+              { icon: '⚡', title: 'Get alerted first', body: "The moment a matching lot appears — Drouot, Phillips, or Christie's — you receive a precision signal with a conviction score and clear recommendation." },
+              { icon: '◎', title: 'Know exactly what to do', body: 'Every recommendation includes a price target, upside estimate, and detailed rationale. Not a suggestion — a decision.' },
+            ].map(({ icon, title, body }) => (
+              <div key={title} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '14px', color: 'var(--gold)', flexShrink: 0, marginTop: '2px' }}>{icon}</span>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>{title}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.65 }}>{body}</div>
+                </div>
+              </div>
+            ))}
+          </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '48px', textAlign: 'left' }}>
-        {[
-          {
-            icon: '◆',
-            title: 'Set your strategy once',
-            body: 'Define your artist preferences, budget, time horizon and risk appetite. Your agent learns your profile and never forgets it.',
-          },
-          {
-            icon: '⚡',
-            title: 'Get alerted before everyone else',
-            body: "The moment a matching lot appears — whether at Drouot, Phillips or Christie's — you receive a precision signal with a conviction score and a clear recommendation.",
-          },
-          {
-            icon: '◎',
-            title: 'Know exactly what to do',
-            body: 'Every recommendation comes with a price target, an upside estimate, and a detailed rationale. Not a suggestion — a decision.',
-          },
-        ].map(({ icon, title, body }) => (
-          <div key={title} style={{
-            display: 'flex', gap: '16px', alignItems: 'flex-start',
-            padding: '20px 24px',
-            background: 'white', border: '1px solid var(--border)', borderRadius: '8px',
-            textAlign: 'left',
-          }}>
-            <span style={{ fontSize: '16px', color: 'var(--gold)', flexShrink: 0, marginTop: '2px' }}>{icon}</span>
-            <div>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)', marginBottom: '4px' }}>{title}</div>
-              <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.7 }}>{body}</div>
+          {/* Column 2 — Sample alert card */}
+          <div>
+            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '12px' }}>
+              Sample signal
+            </div>
+            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              <div style={{ background: '#0A1628', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '10px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>◆ STRONG BUY</span>
+                <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)' }}>Score: 91/100</span>
+              </div>
+              <div style={{ padding: '16px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>Zao Wou-Ki</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '14px' }}>Composition abstraite, 1972 · Oil on canvas</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '14px' }}>
+                  {[
+                    { label: 'Estimate', value: '€45–60k' },
+                    { label: 'Target price', value: '€38k' },
+                    { label: 'Upside', value: '+31%' },
+                    { label: 'Closes in', value: '14h' },
+                  ].map(({ label, value }) => (
+                    <div key={label} style={{ background: 'var(--bg-subtle)', borderRadius: '6px', padding: '8px 10px' }}>
+                      <div style={{ fontSize: '10px', color: 'var(--text-3)', marginBottom: '2px' }}>{label}</div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{value}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-2)', lineHeight: 1.6, borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+                  31% below 3-year auction average. Rare early-period composition. Drouot estimate appears conservative relative to comparable sales.
+                </div>
+              </div>
+            </div>
+            <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>
+              Illustrative · real signals delivered to Investor members
             </div>
           </div>
-        ))}
-      </div>
 
-      {/* Social proof */}
-      <div style={{ padding: '20px 24px', background: 'var(--navy)', borderRadius: '8px', marginBottom: '32px' }}>
-        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', color: 'white', fontStyle: 'italic', marginBottom: '8px', lineHeight: 1.7 }}>
-          "The first time it flagged a Zao Wou-Ki 31% below market average, I thought it was a mistake. It wasn't."
-        </div>
-        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
-          — Nautilus Investor member
-        </div>
-      </div>
+          {/* Column 3 — Coming soon */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '4px' }}>
+              What's included
+            </div>
+            {[
+              { title: 'Personalized alert feed', live: true },
+              { title: 'Conviction score per lot', live: true },
+              { title: 'Email & in-app notifications', live: true },
+              { title: 'Portfolio Correlation Matrix', live: false },
+            ].map(({ title, live }) => (
+              <div key={title} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'white', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text)', fontWeight: 500 }}>{title}</span>
+                {live ? (
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#16a34a', fontFamily: 'var(--font-mono)', background: 'rgba(22,163,74,0.08)', padding: '2px 7px', borderRadius: '4px' }}>LIVE</span>
+                ) : (
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', background: 'var(--bg-subtle)', padding: '2px 7px', borderRadius: '4px' }}>SOON</span>
+                )}
+              </div>
+            ))}
+            {/* Social proof */}
+            <div style={{ marginTop: '8px', padding: '16px', background: '#0A1628', borderRadius: '8px' }}>
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '13px', color: 'white', fontStyle: 'italic', marginBottom: '8px', lineHeight: 1.65 }}>
+                "The first time it flagged a Zao Wou-Ki 31% below market average, I thought it was a mistake. It wasn't."
+              </div>
+              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)' }}>
+                — Nautilus Investor member
+              </div>
+            </div>
+          </div>
 
-      <button
-        onClick={() => navigate('/app/pricing')}
-        className="btn-electric"
-        style={{ fontSize: '14px', padding: '16px 48px', width: '100%', justifyContent: 'center', marginBottom: '12px' }}
-      >
-        Activate my AI analyst →
-      </button>
-      <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-        Available from the Investor plan · €29/month · Cancel anytime
+        </div>
       </div>
 
     </div>

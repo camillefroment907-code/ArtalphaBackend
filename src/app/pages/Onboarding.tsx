@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Logo } from '../components/Logo';
-import Larry from '../components/Larry';
+import { LarryFace } from '../components/Larry';
 import { useNavigate } from 'react-router';
 import { getToken } from '../../lib/auth';
 
@@ -185,9 +185,9 @@ export default function Onboarding() {
             <p style={{ fontSize: '13px', color: '#aaa', lineHeight: 1.6, margin: '0 0 44px', maxWidth: '380px', marginLeft: 'auto', marginRight: 'auto', fontFamily: 'var(--font-mono, monospace)' }}>
               Takes under 2 minutes · Used to personalise your deal flow
             </p>
-            <button onClick={goNext} style={{ padding: '15px 48px', background: '#0A1628', color: '#FFFFFF', border: 'none', fontSize: '13px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', borderRadius: '8px' }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#162240')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#0A1628')}>
+            <button onClick={goNext} style={{ padding: '15px 48px', background: '#2563EB', color: '#FFFFFF', border: 'none', fontSize: '13px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', borderRadius: '8px' }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#1D4ED8')}
+              onMouseLeave={e => (e.currentTarget.style.background = '#2563EB')}>
               Get started →
             </button>
             <div style={{ marginTop: '16px' }}>
@@ -387,7 +387,7 @@ export default function Onboarding() {
         {step === 8 && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'center', margin: '0 auto 24px', filter: 'drop-shadow(0 8px 32px rgba(10,22,40,0.3))' }}>
-              <Larry variant="analyse" size={100} />
+              <LarryFace size={100} />
             </div>
             <h2 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '28px', fontWeight: 600, color: '#0A1628', margin: '0 0 8px', lineHeight: 1.2 }}>Meet Larry.</h2>
             <div style={{ width: '40px', height: '2px', background: '#C6A85A', margin: '0 auto 20px' }} />
@@ -397,7 +397,7 @@ export default function Onboarding() {
             <div style={{ background: '#F5F4F0', border: '1px solid #E4E2DC', borderRadius: '12px', padding: '20px 24px', marginBottom: '36px', textAlign: 'left', maxWidth: '380px', marginLeft: 'auto', marginRight: 'auto' }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                 <div style={{ flexShrink: 0 }}>
-                  <Larry variant="analyse" size={24} />
+                  <LarryFace size={24} />
                 </div>
                 <div>
                   <div style={{ fontSize: '13px', color: '#333', lineHeight: 1.6, fontStyle: 'italic', marginBottom: '8px' }}>
@@ -444,9 +444,9 @@ export default function Onboarding() {
               ))}
             </div>
 
-            <button onClick={handleComplete} disabled={saving} style={{ padding: '15px 48px', background: '#0A1628', color: '#FFFFFF', border: 'none', fontSize: '13px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, borderRadius: '8px', marginBottom: '16px' }}
-              onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLButtonElement).style.background = '#162240'; }}
-              onMouseLeave={e => { if (!saving) (e.currentTarget as HTMLButtonElement).style.background = '#0A1628'; }}>
+            <button onClick={handleComplete} disabled={saving} style={{ padding: '15px 48px', background: '#2563EB', color: '#FFFFFF', border: 'none', fontSize: '13px', fontWeight: 700, letterSpacing: '0.1em', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, borderRadius: '8px', marginBottom: '16px' }}
+              onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLButtonElement).style.background = '#1D4ED8'; }}
+              onMouseLeave={e => { if (!saving) (e.currentTarget as HTMLButtonElement).style.background = '#2563EB'; }}>
               {saving ? 'Saving…' : 'See my opportunities →'}
             </button>
           </div>

@@ -379,8 +379,8 @@ export default function Pricing() {
                       disabled={loading === plan.key}
                       style={{
                         width: '100%', padding: '11px', borderRadius: '6px',
-                        background: isHighlight ? 'white' : 'var(--navy)',
-                        color: isHighlight ? 'var(--navy)' : 'white',
+                        background: '#2563EB',
+                        color: 'white',
                         border: 'none', fontSize: '12px', fontWeight: 700,
                         cursor: loading === plan.key ? 'not-allowed' : 'pointer',
                         letterSpacing: '0.06em', textTransform: 'uppercase' as const,

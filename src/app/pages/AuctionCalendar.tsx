@@ -249,24 +249,34 @@ export default function AuctionCalendar() {
   const urgentCount = data?.by_date.filter(d => d.urgent).reduce((s, d) => s + d.lot_count, 0) ?? 0;
 
   return (
-    <div style={{ padding: '32px', maxWidth: '900px', margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--navy)', margin: 0, letterSpacing: '-0.02em' }}>
-          Auction Calendar
+    <div style={{ padding: '0', maxWidth: '900px', margin: '0 auto' }}>
+      {/* Hero section */}
+      <div style={{ padding: '40px 32px 32px', borderBottom: '1px solid var(--border)', marginBottom: '28px' }}>
+        <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '10px' }}>
+          Auction Intelligence
+        </div>
+        <h1 style={{ fontSize: '28px', fontWeight: 700, color: 'var(--navy)', margin: '0 0 8px', letterSpacing: '-0.02em', fontFamily: 'var(--font-serif)' }}>
+          Upcoming Auction Calendar
         </h1>
-        <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: '4px 0 0' }}>
-          {data ? `${data.total_lots} lots across upcoming sales` : 'Loading…'}
-          {urgentCount > 0 && (
-            <span style={{ marginLeft: '10px', color: '#EF4444', fontWeight: 600 }}>
-              · {urgentCount} closing within 3 days
-            </span>
-          )}
+        <p style={{ fontSize: '14px', color: 'var(--text-2)', margin: '0 0 24px', lineHeight: 1.6, maxWidth: '560px' }}>
+          Track every major sale before it closes. Scored, ranked, and filtered for conviction opportunities.
         </p>
+        <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
+          {[
+            { label: 'Live lots tracked', value: data ? `${data.total_lots.toLocaleString()}` : '—' },
+            { label: 'Closing within 3 days', value: urgentCount > 0 ? `${urgentCount}` : '0', urgent: urgentCount > 0 },
+            { label: 'Auction houses', value: data ? `${data.by_house.length}` : '—' },
+          ].map(({ label, value, urgent }) => (
+            <div key={label}>
+              <div style={{ fontSize: '22px', fontWeight: 700, color: urgent ? '#EF4444' : 'var(--navy)', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>{value}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '4px', letterSpacing: '0.04em' }}>{label}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', padding: '0 32px' }}>
         {/* Day range */}
         <div style={{ display: 'flex', gap: '4px' }}>
           {DAY_OPTIONS.map(d => (
@@ -277,9 +287,9 @@ export default function AuctionCalendar() {
                 padding: '5px 12px',
                 fontSize: '12px', fontWeight: days === d ? 600 : 400,
                 fontFamily: 'var(--font-mono)',
-                background: days === d ? 'var(--navy)' : 'var(--bg-subtle)',
+                background: days === d ? '#2563EB' : 'var(--bg-subtle)',
                 color: days === d ? '#fff' : 'var(--text-2)',
-                border: `1px solid ${days === d ? 'var(--navy)' : 'var(--border)'}`,
+                border: `1px solid ${days === d ? '#2563EB' : 'var(--border)'}`,
                 borderRadius: '6px', cursor: 'pointer',
                 transition: 'all 0.12s',
               }}
@@ -313,35 +323,37 @@ export default function AuctionCalendar() {
       </div>
 
       {/* Content */}
-      {loading ? (
-        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-3)', fontSize: '13px' }}>
-          Loading calendar…
-        </div>
-      ) : !data || (view === 'houses' ? data.by_house.length === 0 : data.by_date.length === 0) ? (
-        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-3)', fontSize: '13px' }}>
-          No upcoming auctions found for this period.
-        </div>
-      ) : view === 'houses' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
-          {data.by_house.map(entry => (
-            <HouseCard
-              key={entry.house}
-              entry={entry}
-              onLotClick={id => nav(`/app/explore?lot=${id}`)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {data.by_date.map(entry => (
-            <DateRow
-              key={entry.date}
-              entry={entry}
-              onLotClick={id => nav(`/app/explore?lot=${id}`)}
-            />
-          ))}
-        </div>
-      )}
+      <div style={{ padding: '0 32px 32px' }}>
+        {loading ? (
+          <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-3)', fontSize: '13px' }}>
+            Loading calendar…
+          </div>
+        ) : !data || (view === 'houses' ? data.by_house.length === 0 : data.by_date.length === 0) ? (
+          <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-3)', fontSize: '13px' }}>
+            No upcoming auctions found for this period.
+          </div>
+        ) : view === 'houses' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+            {data.by_house.map(entry => (
+              <HouseCard
+                key={entry.house}
+                entry={entry}
+                onLotClick={id => nav(`/app/explore?lot=${id}`)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {data.by_date.map(entry => (
+              <DateRow
+                key={entry.date}
+                entry={entry}
+                onLotClick={id => nav(`/app/explore?lot=${id}`)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

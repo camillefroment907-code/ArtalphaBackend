@@ -36,7 +36,7 @@ export function LegalAcceptance({ onChange }: LegalAcceptanceProps) {
         required={required}
         style={{ marginTop: 3, flexShrink: 0, accentColor: '#1A2A44', width: 16, height: 16 }}
       />
-      <span style={{ fontSize: 13, color: '#444', lineHeight: 1.6 }}>
+      <span style={{ fontSize: 11, color: '#444', lineHeight: 1.45 }}>
         {required && <span style={{ color: '#C0392B', marginRight: 4 }}>*</span>}
         {children}
       </span>

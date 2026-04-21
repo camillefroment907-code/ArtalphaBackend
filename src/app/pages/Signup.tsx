@@ -1,19 +1,50 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Logo } from '../components/Logo';
 import { registerApi } from '../../lib/api';
 import { setUser } from '../../lib/auth';
 import { useSEO } from '../../lib/useSEO';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
-import { LegalAcceptance } from '../components/LegalAcceptance';
 
-const SIGNAL_CARDS = [
-  { badge: '◆ STRONG BUY', badgeColor: '#C6A85A', artist: 'Pierre Soulages', detail: '−28% vs estimate', detailColor: '#2563EB' },
-  { badge: '⚡ NEW SIGNAL', badgeColor: 'rgba(255,255,255,0.7)', artist: 'Zao Wou-Ki', detail: 'Deal score: 87/100', detailColor: 'rgba(255,255,255,0.5)' },
-  { badge: '◎ LIVE AUCTION', badgeColor: 'rgba(255,255,255,0.7)', artist: 'Drouot · Closes in 14h', detail: '+€32K upside', detailColor: '#2563EB' },
+const API = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
+
+const FALLBACK_LOTS = [
+  { badge: '◆ STRONG BUY',  badgeColor: '#C6A85A',               artist: 'Pierre Soulages', detail: '−28% vs estimate', detailColor: '#2563EB' },
+  { badge: '⚡ NEW SIGNAL',  badgeColor: 'rgba(255,255,255,0.7)', artist: 'Zao Wou-Ki',      detail: 'Score: 87/100',    detailColor: 'rgba(255,255,255,0.5)' },
+  { badge: '◎ LIVE AUCTION', badgeColor: 'rgba(255,255,255,0.7)', artist: 'Drouot · Closes in 14h', detail: '+€32K upside', detailColor: '#C6A85A' },
+];
+
+const BADGE_META = [
+  { badge: '◆ STRONG BUY',  badgeColor: '#C6A85A',               detailColor: '#2563EB' },
+  { badge: '⚡ NEW SIGNAL',  badgeColor: 'rgba(255,255,255,0.7)', detailColor: 'rgba(255,255,255,0.5)' },
+  { badge: '◎ LIVE AUCTION', badgeColor: 'rgba(255,255,255,0.7)', detailColor: '#C6A85A' },
 ];
 
 function RightPanel() {
+  const [cards, setCards] = useState(FALLBACK_LOTS);
+
+  useEffect(() => {
+    fetch(`${API}/api/lots/public?limit=3&sort=deal_score&min_price=500`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        const items: any[] = Array.isArray(data) ? data : (data.items || data.lots || []);
+        if (items.length < 1) return;
+        setCards(items.slice(0, 3).map((lot: any, i: number) => ({
+          badge:       BADGE_META[i]?.badge       ?? '◆',
+          badgeColor:  BADGE_META[i]?.badgeColor  ?? '#C6A85A',
+          artist:      lot.artist_name_raw || lot.title || 'Unknown',
+          detail:      lot.deal_score
+            ? `Score: ${Math.round(lot.deal_score)}/100`
+            : lot.pct_below_low_estimate
+              ? `−${Math.abs(lot.pct_below_low_estimate).toFixed(0)}% vs estimate`
+              : '—',
+          detailColor: BADGE_META[i]?.detailColor ?? '#C6A85A',
+        })));
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <div style={{ flex: '0 0 50%', background: '#0A1628', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '64px 56px' }}>
       <div style={{ position: 'absolute', inset: 0, opacity: 0.04, backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
@@ -32,7 +63,7 @@ function RightPanel() {
       <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.08)', marginBottom: '32px', position: 'relative' }} />
 
       <div style={{ position: 'relative' }}>
-        {SIGNAL_CARDS.map((card, i) => (
+        {cards.map((card, i) => (
           <div key={i} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '14px 16px', marginBottom: i < 2 ? '10px' : 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ fontSize: '10px', fontWeight: 700, color: card.badgeColor, letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', marginBottom: '4px' }}>{card.badge}</div>
@@ -64,7 +95,7 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [legalAccepted, setLegalAccepted] = useState(false);
+  const [tosAccepted, setTosAccepted] = useState(false);
 
   useSEO({ title: 'Get Access · Nautilus', noindex: true });
 
@@ -100,7 +131,7 @@ export default function Signup() {
       {/* Left — form */}
       <div style={{ flex: '0 0 50%', background: 'white', display: 'flex', flexDirection: 'column' }}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 72px', maxWidth: '480px', margin: '0 auto', width: '100%', overflowY: 'auto' }}>
-          <div style={{ marginBottom: '8px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--electric)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>
+          <div style={{ marginBottom: '8px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>
             Nautilus Terminal
           </div>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px', lineHeight: 1.2 }}>
@@ -119,7 +150,6 @@ export default function Signup() {
           )}
 
           <div style={{ width: '100%', maxWidth: '400px' }}>
-
             {/* Google — PRIMARY */}
             <GoogleSignInButton onError={(err) => setError(err)} />
 
@@ -170,7 +200,7 @@ export default function Signup() {
             </div>
 
             {/* Confirm password */}
-            <div style={{ marginBottom: '24px' }}>
+            <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
                 Confirm password
               </label>
@@ -181,7 +211,7 @@ export default function Signup() {
                 onChange={e => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
                 autoComplete="new-password"
-                onKeyDown={e => { if (e.key === 'Enter') handleRegister(); }}
+                onKeyDown={e => { if (e.key === 'Enter' && tosAccepted) handleRegister(); }}
                 style={passwordMismatch ? { borderColor: 'var(--red)' } : {}}
               />
               {passwordMismatch && (
@@ -189,17 +219,43 @@ export default function Signup() {
               )}
             </div>
 
-            {/* Legal acceptance checkboxes */}
-            <LegalAcceptance onChange={setLegalAccepted} />
+            {/* Legal — 2 checkboxes only */}
+            <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={tosAccepted}
+                  onChange={e => setTosAccepted(e.target.checked)}
+                  required
+                  style={{ marginTop: '3px', flexShrink: 0, accentColor: '#2563EB', width: '14px', height: '14px' }}
+                />
+                <span style={{ fontSize: '11px', color: 'var(--text-2)', lineHeight: 1.5 }}>
+                  <span style={{ color: 'var(--red)', marginRight: '3px' }}>*</span>
+                  I accept the{' '}
+                  <a href="/legal#tos" target="_blank" rel="noreferrer" style={{ color: 'var(--electric)' }}>Terms of Service</a>
+                  {' '}and{' '}
+                  <a href="/legal#privacy" target="_blank" rel="noreferrer" style={{ color: 'var(--electric)' }}>Privacy Policy</a>
+                </span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  style={{ marginTop: '3px', flexShrink: 0, accentColor: '#2563EB', width: '14px', height: '14px' }}
+                />
+                <span style={{ fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.5 }}>
+                  I'd like to receive market intelligence newsletters from Nautilus
+                </span>
+              </label>
+            </div>
 
             {/* Submit */}
             <button
               onClick={handleRegister}
-              disabled={loading || passwordMismatch || !legalAccepted}
+              disabled={loading || passwordMismatch || !tosAccepted}
               className="btn-electric"
-              style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: '13px', opacity: (loading || !legalAccepted) ? 0.7 : 1, textTransform: 'none' as const, letterSpacing: '0.02em' }}
+              style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: '13px', opacity: (loading || !tosAccepted) ? 0.7 : 1, textTransform: 'none' as const, letterSpacing: '0.02em' }}
             >
-              {loading ? 'Creating account...' : 'Create my account — I accept the Terms of Service'}
+              {loading ? 'Creating account…' : 'Create my account'}
             </button>
 
             {/* Already have account */}
@@ -209,12 +265,11 @@ export default function Signup() {
                 Sign in
               </Link>
             </p>
-
           </div>
         </div>
       </div>
 
-      {/* Right — visual */}
+      {/* Right — live signal panel */}
       <RightPanel />
     </div>
   );
