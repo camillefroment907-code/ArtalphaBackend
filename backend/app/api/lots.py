@@ -536,6 +536,12 @@ async def get_top_deals(
     return top_deals
 
 
+@router.get("/count")
+async def get_lot_count(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(func.count(Lot.id)))
+    return {"total": result.scalar() or 0}
+
+
 @router.get("/stats", response_model=DashboardStats)
 async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
