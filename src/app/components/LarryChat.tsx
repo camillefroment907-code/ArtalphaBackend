@@ -385,7 +385,7 @@ export function LarryChat({ lotId }: LarryChatProps) {
               textAlign: 'center',
               gap: '14px',
             }}>
-              <Larry variant="sleep" size={72} />
+              <LarryFace size={72} />
               <div>
                 <p style={{ fontWeight: 700, color: '#0A1628', margin: 0, fontSize: '15px' }}>
                   {t('larry.lockedTitle')}
@@ -441,7 +441,7 @@ export function LarryChat({ lotId }: LarryChatProps) {
                         alignItems: 'flex-start',
                         justifyContent: 'center',
                       }}>
-                        <Larry variant="analyse" size={28} />
+                        <LarryFace size={28} />
                       </div>
                       <div style={{
                         background: '#ffffff',
@@ -539,7 +539,7 @@ export function LarryChat({ lotId }: LarryChatProps) {
                           alignItems: 'flex-start',
                           justifyContent: 'center',
                         }}>
-                          {showAvatar && <Larry variant="analyse" size={28} />}
+                          {showAvatar && <LarryFace size={28} />}
                         </div>
                       )}
 

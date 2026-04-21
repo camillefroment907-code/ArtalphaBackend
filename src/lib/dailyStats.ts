@@ -5,9 +5,9 @@ function _seed(): number {
   return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
 }
 
-/** Lots tracked live: 22,000–27,000 range, shifts daily. */
+/** Lots tracked live: 3,000–3,800 range, shifts daily. */
 export function dailyLots(): number {
-  return 22000 + (_seed() % 5000);
+  return 3000 + (_seed() % 800);
 }
 
 /** Cumulative collector count: started at 312 on Jan 1 2026, +4 per day. */

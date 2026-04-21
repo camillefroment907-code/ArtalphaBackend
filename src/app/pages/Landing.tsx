@@ -180,6 +180,7 @@ export default function Landing() {
   const [topLots, setTopLots]               = useState<any[]>([]);
   const [weeklyStats, setWeeklyStats]       = useState<any>(null);
   const [tickerItems, setTickerItems]       = useState(SEED_TICKER);
+  const [lotCount, setLotCount]             = useState<number | null>(null);
   const [showExitPopup, setShowExitPopup]   = useState(false);
   const [showStickyCTA, setShowStickyCTA]   = useState(false);
   const [exitEmail, setExitEmail]           = useState('');
@@ -209,6 +210,12 @@ export default function Landing() {
           setTickerItems([...real, ...SEED_TICKER].slice(0, 10));
         }
       })
+      .catch(() => {});
+
+    // Real lot count
+    fetch(`${BACKEND}/api/lots/count`)
+      .then(r => r.json())
+      .then(d => { if (d.total) setLotCount(d.total); })
       .catch(() => {});
 
     // Weekly stats for urgency bar
@@ -425,7 +432,7 @@ export default function Landing() {
           {/* Floating badge — top right */}
           <div style={{ position: 'absolute', top: '-16px', right: '-20px', background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 14px', boxShadow: '0 8px 32px rgba(10,22,40,0.12)', textAlign: 'center', minWidth: '110px' }}>
             <div style={{ fontSize: '8px', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '4px' }}>THIS WEEK</div>
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700, color: 'var(--navy)', lineHeight: 1 }}>{dailyLots().toLocaleString()}</div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700, color: 'var(--navy)', lineHeight: 1 }}>{(lotCount ?? dailyLots()).toLocaleString()}</div>
             <div style={{ fontSize: '9px', color: 'var(--text-3)', marginTop: '2px' }}>lots analyzed</div>
           </div>
 
@@ -444,7 +451,7 @@ export default function Landing() {
           {[
             { icon: '⚡', text: '3 exceptional lots closing in 48h', highlight: true },
             { icon: '◆', text: `${dailyMembers().toLocaleString()} collectors on Nautilus`, highlight: false },
-            { icon: '◎', text: `${dailyLots().toLocaleString()} opportunities tracked live`, highlight: false },
+            { icon: '◎', text: `${(lotCount ?? dailyLots()).toLocaleString()} opportunities tracked live`, highlight: false },
           ].map(({ icon, text, highlight }) => (
             <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
               <span style={{ fontSize: '12px', color: highlight ? '#C6A85A' : 'rgba(255,255,255,0.4)' }}>{icon}</span>
@@ -841,7 +848,7 @@ export default function Landing() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C6A85A', animation: 'pulseDot 2s infinite' }} />
             <span style={{ fontSize: '12px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
-              {weeklyStats?.segments?.reduce((a: number, s: any) => a + (s.total_lots_30d || 0), 0) || dailyLots().toLocaleString()} lots tracked this week
+              {weeklyStats?.segments?.reduce((a: number, s: any) => a + (s.total_lots_30d || 0), 0) || (lotCount ?? dailyLots()).toLocaleString()} lots tracked this week
             </span>
           </div>
           <span style={{ color: 'var(--border)' }}>·</span>

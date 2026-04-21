@@ -4,7 +4,7 @@ const MESSAGES = [
   'Scanning auction houses…',
   'Ranking by conviction score…',
   'Surfacing your opportunities…',
-  'Analyzing 22,000+ active lots…',
+  'Analyzing 3,500+ active lots…',
 ];
 
 export function PageLoader() {
