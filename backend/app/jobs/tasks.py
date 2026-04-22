@@ -77,12 +77,12 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
     start_time = datetime.utcnow()
 
     if not skip_purge:
-        # 0. Purge UPCOMING lots whose auction_date is more than 7 days past.
+        # 0. Purge UPCOMING lots whose auction_date is more than 1 day past.
         #    SOLD lots (historical data) are kept — never purged here.
         async with AsyncSessionLocal() as _cleanup_session:
             from sqlalchemy import delete
             from app.models.db_models import Lot as _Lot
-            expired_cutoff = datetime.utcnow() - timedelta(days=7)
+            expired_cutoff = datetime.utcnow() - timedelta(days=1)
             del_result = await _cleanup_session.execute(
                 delete(_Lot).where(
                     _Lot.auction_date.isnot(None),
@@ -94,6 +94,20 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
             expired_count = del_result.rowcount
             if expired_count:
                 logger.info("Purged expired lots", count=expired_count)
+
+            # Purge UPCOMING lots with no auction_date older than 3 days
+            # (Artsy primary market lots accumulate indefinitely with no date)
+            no_date_cutoff = datetime.utcnow() - timedelta(days=3)
+            no_date_result = await _cleanup_session.execute(
+                delete(_Lot).where(
+                    _Lot.auction_date.is_(None),
+                    _Lot.created_at < no_date_cutoff,
+                    _Lot.status == LotStatus.UPCOMING,
+                )
+            )
+            await _cleanup_session.commit()
+            if no_date_result.rowcount:
+                logger.info("Purged no-date lots", count=no_date_result.rowcount)
 
             # Purge Drouot lots with countdown timer titles (legacy bad data)
             from sqlalchemy import text as _text
