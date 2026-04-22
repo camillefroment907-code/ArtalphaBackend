@@ -1,7 +1,19 @@
+import { useState, useEffect } from 'react';
 import { dailyLots } from '../../lib/dailyStats';
 import { useSEO } from '../../lib/useSEO';
 
 export default function About() {
+  const [lotCount, setLotCount] = useState<number>(dailyLots());
+
+  useEffect(() => {
+    fetch('https://artalpha-backend-production.up.railway.app/api/n8n/health-check', {
+      headers: { 'x-api-key': 'eee50ac99b4fca0ff5c5c205fe3ed79a' },
+    })
+      .then(r => r.json())
+      .then(d => { if (d.lot_count) setLotCount(d.lot_count); })
+      .catch(() => {});
+  }, []);
+
   useSEO({
     title: 'About',
     description: 'Nautilus is an art market intelligence platform built for collectors who think like investors. AI-powered deal scoring across 30+ global auction sources.',
@@ -71,7 +83,7 @@ export default function About() {
         <div style={{ background: 'var(--navy)', borderRadius: '12px', padding: '40px', marginBottom: '64px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', textAlign: 'center' }}>
             {[
-              { value: `${dailyLots().toLocaleString()}+`, label: 'Lots tracked weekly' },
+              { value: `${lotCount.toLocaleString()}+`, label: 'Lots tracked' },
               { value: '10+', label: 'Auction houses' },
               { value: '73%', label: 'Signal accuracy' },
               { value: '200+', label: 'Active members' },

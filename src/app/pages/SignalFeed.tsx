@@ -14,6 +14,16 @@ export default function SignalFeed() {
   const [countdown, setCountdown] = useState<Record<string, string>>({});
   const [portfolioValue, setPortfolioValue] = useState(0);
   const [portfolioReturn, setPortfolioReturn] = useState(0);
+  const [lotCount, setLotCount] = useState<number>(dailyLots());
+
+  useEffect(() => {
+    fetch('https://artalpha-backend-production.up.railway.app/api/n8n/health-check', {
+      headers: { 'x-api-key': 'eee50ac99b4fca0ff5c5c205fe3ed79a' },
+    })
+      .then(r => r.json())
+      .then(d => { if (d.lot_count) setLotCount(d.lot_count); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const token = getToken();
@@ -261,7 +271,7 @@ export default function SignalFeed() {
               Market Activity
             </div>
             {[
-              { label: 'Lots tracked', value: dailyLots().toLocaleString(), sub: 'Global coverage' },
+              { label: 'Lots tracked', value: lotCount.toLocaleString(), sub: 'Global coverage' },
               { label: 'Avg conviction', value: `${marketStats.avgScore}/100`, sub: 'Current selection' },
               { label: 'Exceptional', value: `${marketStats.exceptional}`, sub: 'Score ≥ 80' },
             ].map(({ label, value, sub }) => (
