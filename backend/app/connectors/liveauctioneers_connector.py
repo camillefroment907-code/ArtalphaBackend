@@ -53,31 +53,8 @@ ART_QUERIES = [
 
 # Titles that typically indicate non-art lots — skip these
 NON_ART_KEYWORDS = {
-    # Numismatics / currency
-    "coin", "cent", "dollar bill", "banknote", "currency note", "red seal", "federal reserve",
-    "ngc", "pcgs", "pmg", "braided hair", "lincoln cent",
-    # Jewelry / watches
-    "watch", "rolex", "patek", "cartier watch", "omega watch",
-    "jewelry", "jewellery", "bracelet", "necklace", "bangle",
-    "diamond ring", "engagement ring", "wedding ring",
-    "sapphire", "ruby", "emerald", "topaz", "amethyst",
-    # Fashion / handbags
-    "hermes birkin", "hermes kelly", "louis vuitton", "gucci bag", "chanel bag",
-    "louboutin", "handbag", "purse", "clutch bag",
-    # Furniture / decorative
-    "armchair", "sofa", "settee", "chaise longue",
-    "chest of drawers", "writing desk", "credenza",
-    # Vehicles
-    "ford galaxie", "chevrolet", "pontiac", "mustang", "ferrari", "porsche",
-    "automobile", "motorcycle",
-    # Stamps
-    "stamp", "philatelic",
-    # Weapons
-    "pistol", "rifle", "revolver", "shotgun", "musket",
-    # Other
-    "comic book", "trading card", "baseball card",
-    "toy train", "action figure",
-    "silver spoon", "silver fork",
+    "coin", "stamp", "philatelic", "comic book", "trading card", "baseball card",
+    "action figure", "toy train", "banknote", "currency note", "gold coin", "silver coin",
 }
 
 

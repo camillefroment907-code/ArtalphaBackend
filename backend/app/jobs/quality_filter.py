@@ -70,17 +70,8 @@ AUCTION_HOUSE_BLACKLIST = {
 
 # Title keyword blacklist — exact substring matches (lowercase)
 TITLE_BLACKLIST_KEYWORDS = [
-    "diamond ring", "cocktail ring", "pearl ring", "sapphire ring",
-    "ruby ring", "emerald ring", "diamond pendant", "diamond necklace",
-    "diamond brooch", "cultured pearl", "diamond earring", "gold ring",
-    "silver ring", "engagement ring", "wedding ring", "signet ring",
-    "dress ring", "cluster ring", "solitaire ring", "band ring",
-    "diamond bracelet", "tennis bracelet", "charm bracelet",
-    "pocket watch", "wristwatch", "rolex", "cartier watch",
     "gold coin", "silver coin", "postage stamp", "first day cover",
-    "medal for", "médaille", "monnaie", "numismatic",
-    "prix sur demande", "price on request", "price upon request",
-    "furniture", "meuble", "armoire", "commode", "table basse",
+    "numismatic", "prix sur demande", "price on request", "price upon request",
 ]
 
 
@@ -180,6 +171,14 @@ def _has_minimum_data(lot: LotNormalized) -> bool:
     est_low = lot.estimate_low or 0
     est_high = lot.estimate_high or 0
     return not (price == 0 and est_low == 0 and est_high == 0)
+
+
+def _meets_minimum_price(lot: LotNormalized, minimum: float = 200.0) -> bool:
+    """Reject lots where ALL prices are below the minimum threshold."""
+    price = lot.current_price or 0
+    est_low = lot.estimate_low or 0
+    est_high = lot.estimate_high or 0
+    return not (price < minimum and est_low < minimum and est_high < minimum)
 
 
 PRICE_ON_REQUEST_KEYWORDS = [
@@ -326,7 +325,7 @@ def filter_and_deduplicate(lots: List[LotNormalized]) -> tuple[List[LotNormalize
         "output": int,
     }
     """
-    stats = {"input": len(lots), "blacklisted": 0, "no_price": 0, "price_on_request": 0, "category_rejected": 0, "intra_source_dupes": 0, "cross_source_dupes": 0, "output": 0}
+    stats = {"input": len(lots), "blacklisted": 0, "no_price": 0, "below_min_price": 0, "price_on_request": 0, "category_rejected": 0, "intra_source_dupes": 0, "cross_source_dupes": 0, "output": 0}
 
     # Step 1–4: basic quality filters
     qualified = []
@@ -336,6 +335,9 @@ def filter_and_deduplicate(lots: List[LotNormalized]) -> tuple[List[LotNormalize
             continue
         if not _has_minimum_data(lot):
             stats["no_price"] += 1
+            continue
+        if not _meets_minimum_price(lot, minimum=200.0):
+            stats["below_min_price"] += 1
             continue
         if _is_price_on_request(lot):
             stats["price_on_request"] += 1
