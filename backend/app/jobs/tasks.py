@@ -285,6 +285,12 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
                 _lot_performance = (lot_data.raw_data or {}).get("lot_performance", "")
                 _lot_status = LotStatus.SOLD if _lot_performance == "sold" else LotStatus.UPCOMING
 
+                # Truncate long fields to prevent DB column overflow
+                if lot_data.medium:        lot_data.medium = lot_data.medium[:300]
+                if lot_data.dimensions:    lot_data.dimensions = lot_data.dimensions[:300]
+                if lot_data.description:   lot_data.description = lot_data.description[:1000]
+                if lot_data.auction_sale_title: lot_data.auction_sale_title = lot_data.auction_sale_title[:300]
+
                 lot_obj = Lot(
                     external_id=lot_data.external_id,
                     source=lot_data.source,
@@ -365,16 +371,19 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
                     created_at=datetime.utcnow(),
                     updated_at=datetime.utcnow(),
                 ).on_conflict_do_nothing()  # catches ALL unique violations (source+ext_id AND fingerprint)
-                await session.execute(stmt)
+                try:
+                    await session.execute(stmt)
+                    if score_result.is_deal:
+                        new_deals += 1
+                    processed += 1
 
-                if score_result.is_deal:
-                    new_deals += 1
-                processed += 1
-
-                # Batch commit every 500 lots — avoids single huge transaction
-                if processed % 100 == 0:
-                    await session.commit()
-                    logger.info("Batch committed", processed=processed)
+                    # Batch commit every 100 lots — avoids single huge transaction
+                    if processed % 100 == 0:
+                        await session.commit()
+                        logger.info("Batch committed", processed=processed)
+                except Exception as insert_err:
+                    logger.error("Insert failed — rolling back lot", title=(lot_data.title or "")[:50], error=str(insert_err))
+                    await session.rollback()
 
             except Exception as e:
                 logger.error("Failed to process lot", title=(lot_data.title or "")[:50], error=str(e))
