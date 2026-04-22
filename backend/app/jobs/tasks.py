@@ -49,7 +49,7 @@ def poll_and_score_lots(self):
         raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
 
 
-async def _poll_and_score_async(lots_per_source: int = 500, skip_purge: bool = False, skip_rationale: bool = False):
+async def _poll_and_score_async(lots_per_source: int = 1500, skip_purge: bool = False, skip_rationale: bool = False):
     from app.connectors.aggregator import fetch_all_lots, get_house_reputation
     from app.engines.scoring import compute_deal_score, ScoringInput
     from app.models.db_models import Lot, Artist, LotStatus
@@ -749,8 +749,8 @@ async def _ingest_artsy_liveauctioneers_async():
     from app.database import BgSessionLocal as AsyncSessionLocal
 
     sources = {
-        "artsy":           ("app.connectors.artsy_connector",            "fetch_lots", 200),
-        "liveauctioneers": ("app.connectors.liveauctioneers_connector",  "fetch_lots", 200),
+        "artsy":           ("app.connectors.artsy_connector",            "fetch_lots", 1000),
+        "liveauctioneers": ("app.connectors.liveauctioneers_connector",  "fetch_lots", 1000),
     }
 
     counts = {}

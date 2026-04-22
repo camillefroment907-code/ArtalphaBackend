@@ -207,6 +207,7 @@ async def fetch_lots(limit: int = 200) -> List[LotNormalized]:
     Fetch upcoming fine art lots from Drouot via ScraperAPI headless rendering.
     Returns [] if SCRAPERAPI_KEY is not set.
     """
+    return []  # temporarily disabled
     if not SCRAPERAPI_KEY:
         logger.info("drouot_scraperapi_skipped", reason="SCRAPERAPI_KEY not set")
         return []

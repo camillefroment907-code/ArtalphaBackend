@@ -305,6 +305,7 @@ async def fetch_past_lots(limit: int = 5000) -> List[LotNormalized]:
 
 async def fetch_lots(limit: int = 5000) -> List[LotNormalized]:
     """Fetch real lots from Invaluable JSON API."""
+    return []  # temporarily disabled
 
     lots: List[LotNormalized] = []
     seen: set = set()
