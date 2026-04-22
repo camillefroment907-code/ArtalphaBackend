@@ -17,8 +17,11 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 logger = structlog.get_logger()
 settings = get_settings()
 
-# Simple in-process lock — prevents concurrent scraping runs in single-worker uvicorn
+# In-process lock — prevents concurrent scraping runs in single-worker uvicorn
+# Stores start time so a stuck lock auto-resets after 20 minutes
 _SCRAPING_RUNNING = False
+_SCRAPING_STARTED_AT: Optional[datetime] = None
+_SCRAPING_LOCK_MAX_SECONDS = 20 * 60  # 20 minutes
 
 
 def _get_sync_db():
@@ -53,15 +56,22 @@ def poll_and_score_lots(self):
 
 
 async def _poll_and_score_async(lots_per_source: int = 800, skip_purge: bool = False, skip_rationale: bool = False):
-    global _SCRAPING_RUNNING
+    global _SCRAPING_RUNNING, _SCRAPING_STARTED_AT
     if _SCRAPING_RUNNING:
-        logger.warning("scraping_already_running — skipping concurrent run")
-        return
+        # Auto-reset if lock has been held for more than 20 minutes (stuck run)
+        if _SCRAPING_STARTED_AT and (datetime.utcnow() - _SCRAPING_STARTED_AT).total_seconds() > _SCRAPING_LOCK_MAX_SECONDS:
+            logger.warning("scraping_lock_expired — auto-resetting after 20 min", started_at=str(_SCRAPING_STARTED_AT))
+            _SCRAPING_RUNNING = False
+        else:
+            logger.warning("scraping_already_running — skipping concurrent run")
+            return
     _SCRAPING_RUNNING = True
+    _SCRAPING_STARTED_AT = datetime.utcnow()
     try:
         await _poll_and_score_inner(lots_per_source=lots_per_source, skip_purge=skip_purge, skip_rationale=skip_rationale)
     finally:
         _SCRAPING_RUNNING = False
+        _SCRAPING_STARTED_AT = None
 
 
 async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = False, skip_rationale: bool = False):
