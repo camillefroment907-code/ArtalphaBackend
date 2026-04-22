@@ -826,67 +826,6 @@ export default function Portfolio() {
               ))}
             </div>
 
-            {portfolioItems.length >= 2 && (
-              <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px 24px', marginBottom: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <div>
-                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px' }}>
-                      Portfolio Performance
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: returnPct >= 0 ? 'var(--electric)' : 'var(--red)' }}>
-                      {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(1)}% total return
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    {['Paintings', 'Prints', 'Photography', 'Sculpture', 'Other'].map(cat => {
-                      const count = portfolioItems.filter(i => (i.medium || '').toLowerCase().includes(cat.toLowerCase())).length;
-                      if (count === 0) return null;
-                      return (
-                        <div key={cat} style={{ padding: '3px 10px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: '20px', fontSize: '10px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
-                          {cat} · {count}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '4px', alignItems: 'flex-end', height: '48px' }}>
-                  {portfolioItems.map((item) => {
-                    const val = item.estimated_current_value_eur || item.purchase_price_eur || 0;
-                    const maxVal = Math.max(...portfolioItems.map(x => x.estimated_current_value_eur || x.purchase_price_eur || 0));
-                    const height = maxVal > 0 ? Math.max(8, (val / maxVal) * 48) : 8;
-                    const ret = item.purchase_price_eur && item.estimated_current_value_eur
-                      ? (item.estimated_current_value_eur - item.purchase_price_eur) / item.purchase_price_eur
-                      : 0;
-                    return (
-                      <div
-                        key={item.id}
-                        title={`${item.artist_name || item.title} — €${val.toLocaleString()}`}
-                        style={{
-                          flex: 1, height: `${height}px`, borderRadius: '3px',
-                          background: ret > 0.1 ? 'var(--electric)' : ret < -0.05 ? 'var(--red)' : 'var(--border)',
-                          transition: 'opacity 0.15s', cursor: 'pointer', opacity: 0.8,
-                        }}
-                        onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.opacity = '1'}
-                        onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.opacity = '0.8'}
-                      />
-                    );
-                  })}
-                </div>
-                <div style={{ display: 'flex', gap: '16px', marginTop: '10px' }}>
-                  {[
-                    { color: 'var(--electric)', label: 'Appreciation (>10%)' },
-                    { color: 'var(--border)', label: 'Stable' },
-                    { color: 'var(--red)', label: 'Depreciation' },
-                  ].map(({ color, label }) => (
-                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: color }} />
-                      <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Collection header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', margin: 0 }}>My Collection</h2>
