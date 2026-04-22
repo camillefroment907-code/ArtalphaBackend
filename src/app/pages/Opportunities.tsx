@@ -370,6 +370,11 @@ function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => vo
 function LiveCard({ lot, onClick }: { lot: MappedLot; onClick: () => void }) {
   const src  = (lot.source || "").toLowerCase();
   const flag = SOURCE_FLAG[src] || "🌐";
+  const ds = lot.dealScore;
+  const tier      = ds >= 80 ? "EXCEPTIONAL" : ds >= 65 ? "STRONG" : ds >= 45 ? "INTERESTING" : null;
+  const tierColor = tier === "EXCEPTIONAL" ? "#92400E" : tier === "STRONG" ? "#065F46" : "#1E40AF";
+  const tierBg    = tier === "EXCEPTIONAL" ? "rgba(217,119,6,0.12)" : tier === "STRONG" ? "rgba(6,95,70,0.10)" : "rgba(30,64,175,0.10)";
+  const tierBorder= tier === "EXCEPTIONAL" ? "rgba(217,119,6,0.4)" : tier === "STRONG" ? "rgba(6,95,70,0.3)" : "rgba(30,64,175,0.3)";
 
   return (
     <div
@@ -426,6 +431,18 @@ function LiveCard({ lot, onClick }: { lot: MappedLot; onClick: () => void }) {
           <span>{flag}</span>
           <span style={{ color: "var(--text-2)", fontSize: "10px" }}>{SOURCE_LABEL[src] || lot.source}</span>
         </div>
+
+        {/* Deal score badge top-right */}
+        {tier && (
+          <div style={{
+            position: "absolute", top: "8px", right: "8px",
+            padding: "2px 7px",
+            background: tierBg, border: `1px solid ${tierBorder}`,
+            borderRadius: "3px",
+          }}>
+            <span style={{ fontSize: "8px", fontWeight: 800, color: tierColor, letterSpacing: "0.08em" }}>{tier}</span>
+          </div>
+        )}
 
         {/* Auction date bottom-right */}
         {lot.auctionDate && (
@@ -665,7 +682,7 @@ export default function Opportunities() {
   // ── Build fetch params ───────────────────────────────────
   const buildFetchParams = useCallback((page = 1): Record<string, any> => {
     if (tab === "live") {
-      const sort = LIVE_SORT_MAP[filters.sortBy || "auction_date_asc"] || { by: "auction_date", dir: "asc" };
+      const sort = LIVE_SORT_MAP[filters.sortBy || "created_at_desc"] || { by: "created_at", dir: "desc" };
       const dateFrom = filters.auctionDateFrom || getDateParams(dateFilter).auction_date_from;
       const dateTo   = filters.auctionDateTo   || getDateParams(dateFilter).auction_date_to;
       const sourcesStr = filters.sources?.length ? filters.sources.join(",") : undefined;
