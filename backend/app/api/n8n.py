@@ -62,7 +62,10 @@ async def trigger_scraping(
         error = str(e)
 
     # Count after
-    count_after = (await db.execute(text("SELECT COUNT(*) FROM lots"))).scalar() or 0
+    try:
+        count_after = (await db.execute(text("SELECT COUNT(*) FROM lots"))).scalar() or 0
+    except Exception:
+        count_after = 0
 
     duration = (datetime.utcnow() - start).total_seconds()
     new_lots = count_after - count_before
