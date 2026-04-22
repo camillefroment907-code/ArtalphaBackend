@@ -48,7 +48,7 @@ async def trigger_scraping(
         # Run with timeout — 4 minutes max (n8n times out at 5min)
         await asyncio.wait_for(
             _poll_and_score_async(),
-            timeout=240
+            timeout=550
         )
 
         status = "completed"

@@ -333,7 +333,7 @@ async def _poll_and_score_async(lots_per_source: int = 800, skip_purge: bool = F
                 processed += 1
 
                 # Batch commit every 500 lots — avoids single huge transaction
-                if processed % 500 == 0:
+                if processed % 100 == 0:
                     await session.commit()
                     logger.info("Batch committed", processed=processed)
 
