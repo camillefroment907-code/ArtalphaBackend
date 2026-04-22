@@ -49,7 +49,7 @@ def poll_and_score_lots(self):
         raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
 
 
-async def _poll_and_score_async(lots_per_source: int = 1500, skip_purge: bool = False, skip_rationale: bool = False):
+async def _poll_and_score_async(lots_per_source: int = 800, skip_purge: bool = False, skip_rationale: bool = False):
     from app.connectors.aggregator import fetch_all_lots, get_house_reputation
     from app.engines.scoring import compute_deal_score, ScoringInput
     from app.models.db_models import Lot, Artist, LotStatus
