@@ -17,6 +17,9 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 logger = structlog.get_logger()
 settings = get_settings()
 
+# Simple in-process lock — prevents concurrent scraping runs in single-worker uvicorn
+_SCRAPING_RUNNING = False
+
 
 def _get_sync_db():
     """Get synchronous DB session for Celery tasks."""
@@ -50,6 +53,18 @@ def poll_and_score_lots(self):
 
 
 async def _poll_and_score_async(lots_per_source: int = 800, skip_purge: bool = False, skip_rationale: bool = False):
+    global _SCRAPING_RUNNING
+    if _SCRAPING_RUNNING:
+        logger.warning("scraping_already_running — skipping concurrent run")
+        return
+    _SCRAPING_RUNNING = True
+    try:
+        await _poll_and_score_inner(lots_per_source=lots_per_source, skip_purge=skip_purge, skip_rationale=skip_rationale)
+    finally:
+        _SCRAPING_RUNNING = False
+
+
+async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = False, skip_rationale: bool = False):
     from app.connectors.aggregator import fetch_all_lots, get_house_reputation
     from app.engines.scoring import compute_deal_score, ScoringInput
     from app.models.db_models import Lot, Artist, LotStatus
