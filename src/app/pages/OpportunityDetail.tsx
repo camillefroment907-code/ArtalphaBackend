@@ -318,7 +318,7 @@ export default function OpportunityDetail() {
       </div>
 
       {/* ═══ HERO — dark ═══ */}
-      <div ref={heroRef} style={{ background: DK, display: 'grid', gridTemplateColumns: '35% 65%' }}>
+      <div ref={heroRef} style={{ background: DK, display: 'grid', gridTemplateColumns: '45% 55%' }}>
 
         {/* LEFT — image panel */}
         <div style={{ background: DK4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '400px', padding: '24px 4px 24px 24px', gap: '16px', borderRight: `0.5px solid ${DKB}`, position: 'relative' }}>
@@ -472,37 +472,6 @@ export default function OpportunityDetail() {
               ? `Moderate signal — monitor as auction date approaches.`
               : `Below threshold — better opportunities currently available.`}
           </p>
-
-          {/* HOW TO BID */}
-          {(() => {
-            const targetEntry = lot.current_price;
-            const avoidAbove = lot.real_cost?.breakeven_hammer
-              ? Math.round(lot.real_cost.breakeven_hammer * 0.85)
-              : null;
-            const currency = lot.currency || 'EUR';
-            const currencySymbol = currency === 'USD' ? '$' : currency === 'GBP' ? '£' : '€';
-            return (
-              <div style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '12px 16px', marginTop: 10 }}>
-                <div style={{ fontFamily: 'monospace', fontSize: 9, letterSpacing: '0.15em', color: '#60A5FA', marginBottom: 8, textTransform: 'uppercase' as const }}>
-                  HOW TO BID
-                </div>
-                <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 4 }}>
-                  → Target entry: {currencySymbol}{targetEntry?.toLocaleString()}
-                </div>
-                {avoidAbove && (
-                  <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 4 }}>
-                    → Avoid above: {currencySymbol}{avoidAbove.toLocaleString()}<span style={{ color: '#F87171' }}> (erases upside)</span>
-                  </div>
-                )}
-                <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 4 }}>
-                  → Bid timing: final minutes — avoid early bidding
-                </div>
-                <div style={{ fontSize: 12, color: '#9CA3AF' }}>
-                  → Max conviction: bid up to {currencySymbol}{lot.estimate_low?.toLocaleString() || 'estimate low'}
-                </div>
-              </div>
-            );
-          })()}
 
           {/* External link */}
           <div>
@@ -658,6 +627,44 @@ export default function OpportunityDetail() {
           </div>
 
         </div>
+
+        {/* ── HOW TO BID ───────────────────────────────────────────────────────── */}
+        {(() => {
+          const targetEntry = lot.current_price;
+          const avoidAbove = lot.real_cost?.breakeven_hammer
+            ? Math.round(lot.real_cost.breakeven_hammer * 0.85)
+            : null;
+          const currency = lot.currency || 'EUR';
+          const currencySymbol = currency === 'USD' ? '$' : currency === 'GBP' ? '£' : '€';
+          const content = (
+            <>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '14px' }}>HOW TO BID</div>
+              <div style={{ fontSize: '13px', color: LTT2, marginBottom: '6px' }}>→ Target entry: {currencySymbol}{targetEntry?.toLocaleString()}</div>
+              {avoidAbove && (
+                <div style={{ fontSize: '13px', color: LTT2, marginBottom: '6px' }}>
+                  → Avoid above: {currencySymbol}{avoidAbove.toLocaleString()}<span style={{ color: RED }}> (erases upside)</span>
+                </div>
+              )}
+              <div style={{ fontSize: '13px', color: LTT2, marginBottom: '6px' }}>→ Bid timing: final minutes — avoid early bidding</div>
+              <div style={{ fontSize: '13px', color: LTT2 }}>→ Max conviction: bid up to {currencySymbol}{lot.estimate_low?.toLocaleString() || 'estimate low'}</div>
+            </>
+          );
+          return (
+            <div style={{ padding: '0 40px 32px' }}>
+              <div style={{ position: 'relative', background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 24px', overflow: 'hidden' }}>
+                {canSeeAI ? content : (
+                  <>
+                    <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none' as const }}>{content}</div>
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' as const, gap: 8 }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>INVESTOR+ FEATURE</span>
+                      <a href="/app/pricing" style={{ background: DK, color: '#F0EDE6', fontFamily: 'var(--font-mono)', fontSize: '10px', padding: '8px 16px', borderRadius: 6, textDecoration: 'none' }}>Unlock →</a>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── KEY RISKS + FUTURE VALUE PROJECTIONS — side by side ─────────────── */}
         {canSeeAnalysis && (
