@@ -107,11 +107,11 @@ def _parse_lot(item: dict, query: str = "") -> Optional[LotNormalized]:
         image_version = item.get("imageVersion", 1)
         photos = item.get("photos", [])
 
-        # Image URL — LiveAuctioneers CDN pattern
-        if photos and seller_id:
+        # Image URL — real CDN pattern: /{seller_id}/{catalog_id}/{item_id}_1_x.jpg
+        catalog_id = item.get("catalogId")
+        if photos and seller_id and catalog_id:
             image_url = (
-                f"https://p1.liveauctioneers.com/houses/{seller_id}"
-                f"/{item_id}_1_l.jpg?quality=80&version={image_version}"
+                f"https://p1.liveauctioneers.com/{seller_id}/{catalog_id}/{item_id}_1_x.jpg"
             )
         else:
             image_url = None
