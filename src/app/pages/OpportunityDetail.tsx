@@ -426,7 +426,7 @@ export default function OpportunityDetail() {
           {(() => {
             const reasons: string[] = [];
             if ((lot.pct_below_low_estimate || 0) > 30)
-              reasons.push(`${Math.round(lot.pct_below_low_estimate)}% below estimate — strong entry point`);
+              reasons.push(`${Math.round(lot.pct_below_low_estimate)}% below estimate — entry at €${lot.current_price} vs market estimate €${lot.estimate_high}`);
             if ((lot.pct_below_low_estimate || 0) < -5)
               reasons.push("Priced above market estimate — limited upside");
             if ((lot.deal_score || 0) >= 80)
@@ -438,7 +438,12 @@ export default function OpportunityDetail() {
             if (lot.is_low_supply)
               reasons.push("Limited supply — scarcity signal");
             if ((lot.real_cost?.breakeven_pct || 0) > 60)
-              reasons.push("High break-even threshold — requires significant appreciation");
+              reasons.push(`Break-even at €${lot.real_cost?.breakeven_hammer} — needs only ${Math.round(lot.real_cost?.breakeven_pct)}% appreciation`);
+            const compsAvg = displayComps.length > 0
+              ? Math.round(displayComps.reduce((s: number, c: any) => s + (c.current_price || 0), 0) / displayComps.length)
+              : null;
+            if (compsAvg && compsAvg > lot.current_price)
+              reasons.push(`Comparable works average €${compsAvg} — ${Math.round((compsAvg / lot.current_price - 1) * 100)}% above this entry price`);
             const isBuy = (lot.deal_score || 0) >= 65;
             const whyLabel = isBuy ? "WHY BUY" : "WHY PASS";
             const whyColor = isBuy ? "#C6A85A" : "#F87171";
