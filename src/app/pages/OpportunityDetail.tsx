@@ -422,6 +422,52 @@ export default function OpportunityDetail() {
 
           </div>
 
+          {/* WHY block */}
+          {(() => {
+            const reasons: string[] = [];
+            if ((lot.pct_below_low_estimate || 0) > 30)
+              reasons.push(`${Math.round(lot.pct_below_low_estimate)}% below estimate — strong entry point`);
+            if ((lot.pct_below_low_estimate || 0) < -5)
+              reasons.push("Priced above market estimate — limited upside");
+            if ((lot.deal_score || 0) >= 80)
+              reasons.push("Top 5% conviction score this month");
+            if ((lot.deal_score || 0) < 45)
+              reasons.push("Low conviction — fees may exceed upside");
+            if ((lot.due_diligence?.flags?.length || 0) > 0)
+              reasons.push("Due diligence flags detected — verify before bidding");
+            if (lot.is_low_supply)
+              reasons.push("Limited supply — scarcity signal");
+            if ((lot.real_cost?.breakeven_pct || 0) > 60)
+              reasons.push("High break-even threshold — requires significant appreciation");
+            const isBuy = (lot.deal_score || 0) >= 65;
+            const whyLabel = isBuy ? "WHY BUY" : "WHY PASS";
+            const whyColor = isBuy ? "#C6A85A" : "#F87171";
+            if (reasons.length === 0) return null;
+            return (
+              <div style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '12px 16px', marginTop: 14 }}>
+                <div style={{ fontFamily: 'monospace', fontSize: 9, letterSpacing: '0.15em', color: whyColor, marginBottom: 8, textTransform: 'uppercase' as const }}>
+                  {whyLabel}
+                </div>
+                {reasons.map((r, i) => (
+                  <div key={i} style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 4 }}>
+                    → {r}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* Market narrative */}
+          <p style={{ fontSize: 13, fontStyle: 'italic', color: '#6B7280', marginTop: 8 }}>
+            {(lot.deal_score || 0) >= 80
+              ? `Strong buy signal at ${lot.auction_house_name || 'this auction house'} — top conviction tier.`
+              : (lot.deal_score || 0) >= 65
+              ? `Solid opportunity at ${lot.auction_house_name || 'this auction house'} — above average for this category.`
+              : (lot.deal_score || 0) >= 45
+              ? `Moderate signal — monitor as auction date approaches.`
+              : `Below threshold — better opportunities currently available.`}
+          </p>
+
           {/* External link */}
           <div>
             <a href={externalUrl} target="_blank" rel="noopener noreferrer"
@@ -507,6 +553,25 @@ export default function OpportunityDetail() {
                   }
                 />
               )}
+              {/* Score breakdown */}
+              <div style={{ display: 'flex', gap: 24, padding: '16px 0 0', flexWrap: 'wrap' as const }}>
+                {(Object.entries({
+                  Pricing:   Math.min(100, Math.max(0, Math.round((lot.pct_below_low_estimate || 0) * 1.2))),
+                  Liquidity: (lot.due_diligence?.flags?.length || 0) === 0 ? 75 : 35,
+                  Momentum:  lot.deal_score || 0,
+                  Rarity:    lot.is_low_supply ? 80 : 40,
+                }) as [string, number][]).map(([label, value]) => (
+                  <div key={label} style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
+                    <span style={{ fontFamily: 'monospace', fontSize: 8, letterSpacing: '0.15em', color: '#9CA3AF', textTransform: 'uppercase' as const }}>{label}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 60, height: 3, background: '#E8E4DD', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{ width: `${value}%`, height: '100%', background: '#C6A85A' }} />
+                      </div>
+                      <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#111827' }}>{value}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
           </div>
@@ -721,6 +786,11 @@ export default function OpportunityDetail() {
                           </span>
                         )}
                       </div>
+                      {comp.deal_score > (lot.deal_score || 0) && (
+                        <div style={{ fontFamily: 'monospace', fontSize: 9, color: '#1A7F4B', marginTop: 3 }}>
+                          ↑ Better deal
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
