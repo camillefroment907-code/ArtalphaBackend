@@ -276,13 +276,10 @@ function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => vo
 // ── LiveCard ─────────────────────────────────────────────────
 function LiveCard({ lot, onClick }: { lot: MappedLot; onClick: () => void }) {
   const nav  = useNavigate();
-  const src  = (lot.source || "").toLowerCase();
-  const flag = SOURCE_FLAG[src] || "🌐";
   return (
     <div onClick={onClick} onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.transform = "translateY(-4px)"; el.style.boxShadow = "0 12px 40px rgba(0,0,0,0.1)"; const img = el.querySelector("img") as HTMLImageElement | null; if (img) img.style.transform = "scale(1.05)"; }} onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.transform = "translateY(0)"; el.style.boxShadow = "none"; el.style.borderColor = "var(--border)"; const img = el.querySelector("img") as HTMLImageElement | null; if (img) img.style.transform = "scale(1)"; }} style={{ background: "white", borderRadius: "8px", overflow: "hidden", cursor: "pointer", border: "1px solid var(--border)", transition: "transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease", contain: "layout style paint" }}>
       <div style={{ position: "relative", paddingTop: "65%", background: "var(--bg-subtle)", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0 }}><LotImage src={lot.imageUrl} alt={lot.title} /></div>
-        <div style={{ position: "absolute", top: "8px", left: "8px", padding: "2px 7px", background: "rgba(250,250,248,0.92)", backdropFilter: "blur(4px)", borderRadius: "3px", border: "1px solid var(--border)", fontSize: "11px", display: "flex", alignItems: "center", gap: "4px" }}><span>{flag}</span><span style={{ color: "var(--text-2)", fontSize: "10px" }}>{SOURCE_LABEL[src] || lot.source}</span></div>
         {lot.auctionDate && <div style={{ position: "absolute", bottom: "7px", right: "7px", background: "var(--navy)", color: "white", padding: "2px 7px", borderRadius: "3px", fontSize: "10px", fontWeight: 700 }}>{new Date(lot.auctionDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</div>}
         {lot.category && <div style={{ position: "absolute", bottom: "7px", left: "8px", background: "rgba(250,250,248,0.88)", backdropFilter: "blur(3px)", padding: "2px 6px", borderRadius: "3px", fontSize: "9px", fontWeight: 600, color: "var(--text-2)", border: "1px solid rgba(0,0,0,0.08)" }}>{lot.category}</div>}
       </div>
@@ -357,7 +354,7 @@ export default function Explore() {
   const [showFilters, setShowFilters] = useState(false);
   const [primaryStats, setPrimaryStats] = useState<{ total?: number; avg_score?: number; avg_price?: number; new_this_week?: number } | null>(null);
   const [viewMode, setViewMode]     = useState<ViewMode>("grid");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState(searchParams.get('date') || 'all');
   const [sourceStats, setSourceStats] = useState<SourceStat[]>([]);
 
   // ── Filter state ─────────────────────────────────────────────
@@ -366,10 +363,10 @@ export default function Explore() {
   const [maxScore, setMaxScore]       = useState(0);
   const [minPrice, setMinPrice]       = useState(0);
   const [maxPrice, setMaxPrice]       = useState(0);
-  const [category, setCategory]       = useState('');
+  const [category, setCategory]       = useState(searchParams.get('category') || '');
   const [sources, setSources]         = useState<string[]>([]);
-  const [sortBy, setSortBy]           = useState('deal_score');
-  const [sortDir, setSortDir]         = useState('desc');
+  const [sortBy, setSortBy]           = useState(searchParams.get('sort_by') || 'deal_score');
+  const [sortDir, setSortDir]         = useState(searchParams.get('sort_dir') || 'desc');
 
   const resetFilters = () => {
     setMinScore(0); setMaxScore(0); setMinPrice(0); setMaxPrice(0);
@@ -380,6 +377,19 @@ export default function Explore() {
   };
 
   const hasActiveFilters = minScore > 0 || minPrice > 0 || maxPrice > 0 || category !== '' || sources.length > 0 || dateFilter !== 'all';
+
+  // Sync filter state → URL
+  useEffect(() => {
+    setSearchParams(prev => {
+      const p = new URLSearchParams(prev);
+      if (category) p.set('category', category); else p.delete('category');
+      if (sortBy && sortBy !== 'deal_score') p.set('sort_by', sortBy); else p.delete('sort_by');
+      if (sortDir && sortDir !== 'desc') p.set('sort_dir', sortDir); else p.delete('sort_dir');
+      if (dateFilter && dateFilter !== 'all') p.set('date', dateFilter); else p.delete('date');
+      return p;
+    }, { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category, sortBy, sortDir, dateFilter]);
 
   // Fetch recommendations for "For You" tab
   useEffect(() => {
@@ -718,30 +728,7 @@ export default function Explore() {
               </div>
               <div style={{ borderBottom: '1px solid #E8E4DD', margin: '12px 0' }} />
 
-              {/* 3 — AUCTION HOUSE */}
-              <div style={{ marginBottom: '6px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Auction House</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  {([
-                    { value: 'drouot',   label: 'Drouot',   flag: '🇫🇷' },
-                    { value: 'phillips', label: 'Phillips', flag: '🇬🇧' },
-                    { value: 'heritage', label: 'Heritage', flag: '🇺🇸' },
-                    { value: 'other',    label: 'Artsy',    flag: '🌐' },
-                  ] as { value: string; label: string; flag: string }[]).map(({ value, label, flag }) => (
-                    <label key={value} style={{ display: 'flex', alignItems: 'center', gap: '7px', cursor: 'pointer', padding: '4px 2px' }}>
-                      <input type="checkbox"
-                        checked={sources.includes(value)}
-                        onChange={() => setSources(prev => prev.includes(value) ? prev.filter(s => s !== value) : [...prev, value])}
-                        style={{ width: '13px', height: '13px', accentColor: 'var(--navy)', cursor: 'pointer', flexShrink: 0 }}
-                      />
-                      <span style={{ fontSize: '12px', color: 'var(--text-2)' }}>{flag} {label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div style={{ borderBottom: '1px solid #E8E4DD', margin: '12px 0' }} />
-
-              {/* 4 — CATEGORY */}
+              {/* 3 — CATEGORY */}
               <div style={{ marginBottom: '6px' }}>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Category</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
