@@ -473,6 +473,37 @@ export default function OpportunityDetail() {
               : `Below threshold — better opportunities currently available.`}
           </p>
 
+          {/* HOW TO BID */}
+          {(() => {
+            const targetEntry = lot.current_price;
+            const avoidAbove = lot.real_cost?.breakeven_hammer
+              ? Math.round(lot.real_cost.breakeven_hammer * 0.85)
+              : null;
+            const currency = lot.currency || 'EUR';
+            const currencySymbol = currency === 'USD' ? '$' : currency === 'GBP' ? '£' : '€';
+            return (
+              <div style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '12px 16px', marginTop: 10 }}>
+                <div style={{ fontFamily: 'monospace', fontSize: 9, letterSpacing: '0.15em', color: '#60A5FA', marginBottom: 8, textTransform: 'uppercase' as const }}>
+                  HOW TO BID
+                </div>
+                <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 4 }}>
+                  → Target entry: {currencySymbol}{targetEntry?.toLocaleString()}
+                </div>
+                {avoidAbove && (
+                  <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 4 }}>
+                    → Avoid above: {currencySymbol}{avoidAbove.toLocaleString()}<span style={{ color: '#F87171' }}> (erases upside)</span>
+                  </div>
+                )}
+                <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 4 }}>
+                  → Bid timing: final minutes — avoid early bidding
+                </div>
+                <div style={{ fontSize: 12, color: '#9CA3AF' }}>
+                  → Max conviction: bid up to {currencySymbol}{lot.estimate_low?.toLocaleString() || 'estimate low'}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* External link */}
           <div>
             <a href={externalUrl} target="_blank" rel="noopener noreferrer"
