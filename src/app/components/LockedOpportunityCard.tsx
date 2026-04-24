@@ -1,5 +1,9 @@
+import { useState } from 'react';
 import { Lock } from 'lucide-react';
 import { Artwork } from '../data/mockData';
+import { UpgradeModal } from './UpgradeModal';
+
+const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 interface LockedOpportunityCardProps {
   artwork: Artwork;
@@ -7,8 +11,22 @@ interface LockedOpportunityCardProps {
 }
 
 export function LockedOpportunityCard({ artwork, onClick }: LockedOpportunityCardProps) {
+  const [showUpgrade, setShowUpgrade] = useState(false);
+
+  const handleClick = () => {
+    fetch(`${BACKEND}/api/analytics/event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event: 'view_locked_lot', lot_id: (artwork as any).id }),
+    }).catch(() => {});
+    setShowUpgrade(true);
+    onClick();
+  };
+
   return (
-    <div className="cursor-pointer group" onClick={onClick}>
+    <>
+      {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
+    <div className="cursor-pointer group" onClick={handleClick}>
       <div className="relative aspect-[3/4] overflow-hidden mb-4" style={{ backgroundColor: '#F5F5F5' }}>
         {/* Blurred Image */}
         <img
@@ -64,5 +82,6 @@ export function LockedOpportunityCard({ artwork, onClick }: LockedOpportunityCar
         </div>
       </div>
     </div>
+    </>
   );
 }
