@@ -256,7 +256,8 @@ export default function ArtistDetail() {
     );
   }
 
-  const plan = getUserPlan();
+  const [plan, setPlan] = useState(getUserPlan());
+  useEffect(() => { setPlan(getUserPlan()); }, []);
   const showTrend = data.shows_prev_12m !== undefined && data.shows_prev_12m !== null;
   const trendUp = showTrend && data.shows_last_12m > (data.shows_prev_12m ?? 0);
 

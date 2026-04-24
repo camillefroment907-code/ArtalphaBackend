@@ -143,6 +143,7 @@ export function isAuthenticated(): boolean {
 }
 
 export function getUserPlan(): string {
+  console.log('AUTH DEBUG', localStorage.getItem('artalpha_auth'), localStorage.getItem('artalpha-auth'));
   return getUser()?.plan ?? 'free';
 }
 
