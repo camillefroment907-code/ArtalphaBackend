@@ -49,6 +49,13 @@ const CATEGORY_API_MAP: Record<string, string> = {
   'Sculpture': 'Sculpture',
   'Photography': 'Photography',
   'Street Art': 'Street Art',
+  'Jewelry': 'Jewelry',
+  'Watches': 'Watches',
+  'Furniture': 'Furniture',
+  'Ceramics': 'Ceramics',
+  'Books': 'Books',
+  'Asian Art': 'Asian Art',
+  'Maroquinerie': 'Leather Goods',
 };
 
 interface SourceStat {
@@ -732,7 +739,7 @@ export default function Explore() {
               <div style={{ marginBottom: '6px' }}>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Category</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                  {['Paintings', 'Prints', 'Drawings', 'Sculpture', 'Photography', 'Street Art'].map(cat => (
+                  {['Paintings', 'Prints', 'Drawings', 'Sculpture', 'Photography', 'Street Art', 'Jewelry', 'Watches', 'Furniture', 'Ceramics', 'Books', 'Asian Art', 'Maroquinerie'].map(cat => (
                     <button key={cat} onClick={() => setCategory(category === cat ? '' : cat)}
                       style={{ padding: '4px 8px', borderRadius: '20px', fontSize: '11px', cursor: 'pointer', background: category === cat ? 'var(--navy)' : 'transparent', color: category === cat ? 'white' : 'var(--text-2)', border: `1px solid ${category === cat ? 'var(--navy)' : 'var(--border)'}`, transition: 'all 0.12s', whiteSpace: 'nowrap' }}>
                       {cat}
@@ -885,6 +892,14 @@ export default function Explore() {
               {/* ─── FOR YOU TAB ────────────────────────────── */}
               {exploreTab === 'for-you' && (
                 <div style={{ padding: '8px 0' }}>
+                  {!isAdmin && userPlan === 'free' ? (
+                    <div style={{textAlign:'center',padding:'64px 24px',background:'#f8f8f6',borderRadius:8,marginTop:32,border:'1px solid #e8e4dc'}}>
+                      <div style={{fontSize:11,letterSpacing:'0.2em',color:'#C6A85A',marginBottom:12,fontWeight:700}}>INVESTOR+ FEATURE</div>
+                      <div style={{fontSize:22,fontFamily:'Georgia,serif',color:'#1A2A44',marginBottom:12}}>Personalized recommendations require an Investor plan</div>
+                      <a href="/app/pricing" style={{display:'inline-block',background:'#2563EB',color:'#fff',padding:'14px 32px',fontSize:13,fontWeight:600,textDecoration:'none',borderRadius:4}}>Get Investor access — €19/mo →</a>
+                    </div>
+                  ) : (
+                  <>
                   {recoLoading && <NautilusLoader label="SCANNING..." />}
                   {!recoLoading && !getToken() && (
                     <div style={{ textAlign: 'center', padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
@@ -960,6 +975,8 @@ export default function Explore() {
                         })}
                       </div>
                     </>
+                  )}
+                  </>
                   )}
                 </div>
               )}
