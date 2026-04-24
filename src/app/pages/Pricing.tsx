@@ -9,13 +9,10 @@ interface Plan {
   key: string;
   name: string;
   monthlyPriceKey?: string;
-  annualPriceKey?: string;
   price: number;
-  annualPrice: number;
   description: string;
   highlight: boolean;
   cta: string;
-  badge: string | null;
   features: string[];
 }
 
@@ -24,106 +21,84 @@ const PLANS: Plan[] = [
     key: 'free',
     name: 'Explorer',
     price: 0,
-    annualPrice: 0,
-    description: 'Discover what Nautilus can do',
+    description: 'Discover the market',
     highlight: false,
     cta: 'Start free',
-    badge: null,
     features: [
-      '3 AI-scored opportunities/day',
-      'Basic deal score (0–100)',
-      'Price vs estimate analysis',
-      '3 messages with Larry',
-      '3 portfolio items',
-      'Limited artist profiles',
-    ],
-  },
-  {
-    key: 'collector',
-    name: 'Collector',
-    monthlyPriceKey: 'collector_monthly',
-    annualPriceKey: 'collector_annual',
-    price: 9,
-    annualPrice: 7,
-    description: 'Your first edge in the art market',
-    highlight: false,
-    cta: 'Get access',
-    badge: null,
-    features: [
-      '10 AI-detected opportunities/day',
-      'Full deal score + rationale',
-      'Price vs estimate analysis',
-      'Market signals & alerts',
-      '10 Larry messages/month',
-      '5-artist watchlist',
-      'Primary market access (10 works)',
-      '10 portfolio items',
+      '5 scored lots per day',
+      'Deal score visible (0–100)',
+      'Upside % visible',
+      '1 top deal fully unlocked daily',
+      '✗ Auction source hidden',
+      '✗ Bidding links locked',
+      '✗ No alerts',
+      '✗ No AI analyst',
     ],
   },
   {
     key: 'investor',
     name: 'Investor',
     monthlyPriceKey: 'investor_monthly',
-    annualPriceKey: 'investor_annual',
-    price: 29,
-    annualPrice: 24,
-    description: 'Professional-grade art investment intelligence',
+    price: 19,
+    description: 'For active collectors & investors',
     highlight: true,
-    cta: 'Get access',
-    badge: 'Most popular',
+    cta: 'Get founding access →',
     features: [
-      'Unlimited opportunities',
-      'Full AI scoring & valuation',
-      'Real-time market alerts',
-      'AI agent with 3 custom strategies',
-      '30 Larry messages/month',
-      'Investment Memo generator',
-      'Full primary market access',
-      'Unlimited portfolio tracking',
-      'Full artist profiles & momentum',
-      'Priority support',
+      'Unlimited scored lots',
+      'Full auction source revealed',
+      'Direct bidding links',
+      'How to bid guide',
+      'Early access — before free users',
+      'Real-time alerts (score ≥ 70)',
+      'Ask your AI art analyst (20/month)',
+      'Investment Memo (5/month)',
+      '1 active strategy',
+      'Basic portfolio tracking',
     ],
   },
   {
     key: 'pro',
-    name: 'Family Office',
+    name: 'Pro',
     monthlyPriceKey: 'pro_monthly',
-    annualPriceKey: 'pro_annual',
-    price: 99,
-    annualPrice: 82,
-    description: 'Complete infrastructure for serious capital',
+    price: 79,
+    description: 'For serious investors',
     highlight: false,
-    cta: 'Get access',
-    badge: null,
+    cta: 'Go Pro →',
     features: [
       'Everything in Investor',
-      'Investment Dossier (5–50yr projections)',
-      'Unlimited Larry messages',
-      'Unlimited AI agent strategies',
-      'Unlimited AI analyses',
-      'Institutional reporting',
-      'CSV export',
-      'API access',
-      'Dedicated support',
+      'Unlimited AI art analyst',
+      'Unlimited Investment Memos',
+      'Unlimited active strategies',
+      'Alerts from score 60+',
+      'Arbitrage signals',
+      'Price projections (12/24 months)',
+      'Portfolio IRR tracking',
+      '+€X gained from Nautilus signals',
+      'Export CSV / PDF',
+      'Priority support',
     ],
   },
 ];
 
 const COMPARE_ROWS = [
-  { feature: 'AI-scored opportunities/day', free: '3',        collector: '10',       investor: 'Unlimited', pro: 'Unlimited' },
-  { feature: 'Deal score (0–100)',          free: '✓',        collector: '✓',        investor: '✓',         pro: '✓'         },
-  { feature: 'Primary market access',       free: '3 works',  collector: '10 works', investor: 'Unlimited', pro: 'Unlimited' },
-  { feature: 'Convictions (AI top picks)',  free: '✗',        collector: '✓',        investor: '✓',         pro: '✓'         },
-  { feature: 'Larry AI advisor',            free: '3 msg',    collector: '10 msg/mo',investor: '30 msg/mo', pro: 'Unlimited' },
-  { feature: 'AI agent strategies',         free: '✗',        collector: '1',        investor: '3',         pro: 'Unlimited' },
-  { feature: 'Investment Memo',             free: '✗',        collector: '✗',        investor: '20/mo',     pro: 'Unlimited' },
-  { feature: 'Investment Dossier',          free: '✗',        collector: '✗',        investor: '✗',         pro: 'Unlimited' },
-  { feature: 'Portfolio tracking',          free: '3 items',  collector: '10 items', investor: 'Unlimited', pro: 'Unlimited' },
-  { feature: 'Artist profiles',             free: 'Basic',    collector: '✓',        investor: 'Full',      pro: 'Full'      },
-  { feature: 'Market alerts',               free: '✗',        collector: '✓',        investor: '✓',         pro: '✓'         },
-  { feature: 'API access',                  free: '✗',        collector: '✗',        investor: '✗',         pro: '✓'         },
-  { feature: 'CSV export',                  free: '✗',        collector: '✗',        investor: '✗',         pro: '✓'         },
-  { feature: 'Support',                     free: 'Community',collector: 'Email',    investor: 'Priority',  pro: 'Dedicated' },
+  { feature: 'Lots per day',            free: '5',               investor: 'Unlimited',     pro: 'Unlimited'  },
+  { feature: 'Deal score (0–100)',       free: '✓',               investor: '✓',             pro: '✓'          },
+  { feature: 'Upside %',                free: '✓',               investor: '✓',             pro: '✓'          },
+  { feature: 'Auction source',          free: 'Hidden',          investor: '✓',             pro: '✓'          },
+  { feature: 'Bidding links',           free: '✗',               investor: '✓',             pro: '✓'          },
+  { feature: 'How to bid',              free: '✗',               investor: '✓',             pro: '✓'          },
+  { feature: 'Early access',            free: '✗',               investor: '✓ (5 min edge)',pro: '✓'          },
+  { feature: 'Daily top deal',          free: '✓ (1/day)',       investor: '✓',             pro: '✓'          },
+  { feature: 'Real-time alerts',        free: '✗',               investor: 'Score ≥ 70',    pro: 'Score ≥ 60' },
+  { feature: 'AI art analyst',          free: '✗',               investor: '20/month',      pro: 'Unlimited'  },
+  { feature: 'Investment Memo',         free: '✗',               investor: '5/month',       pro: 'Unlimited'  },
+  { feature: 'Active strategies',       free: '✗',               investor: '1',             pro: 'Unlimited'  },
+  { feature: 'Arbitrage signals',       free: '✗',               investor: '✗',             pro: '✓'          },
+  { feature: 'Price projections',       free: '✗',               investor: '✗',             pro: '✓'          },
+  { feature: 'Portfolio IRR',           free: '✗',               investor: '✗',             pro: '✓'          },
+  { feature: '+€X performance track',   free: '✗',               investor: '✗',             pro: '✓'          },
+  { feature: 'Export CSV/PDF',          free: '✗',               investor: '✗',             pro: '✓'          },
+  { feature: 'Support',                 free: 'Community',       investor: 'Email',         pro: 'Priority'   },
 ];
 
 const FAQ_ITEMS = [
@@ -135,7 +110,6 @@ const FAQ_ITEMS = [
 
 export default function Pricing() {
   const navigate = useNavigate();
-  const [isAnnual, setIsAnnual] = useState(true);
   const [currentPlan, setCurrentPlan] = useState('free');
   const [loading, setLoading] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -172,8 +146,6 @@ export default function Pricing() {
     setLoading(plan.key);
     setError(null);
 
-    const priceKey = isAnnual ? plan.annualPriceKey : plan.monthlyPriceKey;
-
     try {
       const resp = await fetch(
         'https://artalpha-backend-production.up.railway.app/api/billing/create-checkout-session',
@@ -183,7 +155,7 @@ export default function Pricing() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify({ price_key: priceKey }),
+          body: JSON.stringify({ price_key: plan.monthlyPriceKey }),
         }
       );
 
@@ -199,9 +171,7 @@ export default function Pricing() {
       }
 
       const url = data?.checkout_url || data?.url;
-
       if (!url) throw new Error('No checkout URL in response: ' + JSON.stringify(data));
-
       window.location.href = url;
 
     } catch (e: any) {
@@ -212,9 +182,7 @@ export default function Pricing() {
     }
   };
 
-  // "starter" in DB = "collector" plan key in frontend
-  const effectivePlan = currentPlan === 'starter' ? 'collector' : currentPlan;
-  const comparePlanKeys = ['free', 'starter', 'investor', 'pro'];
+  const effectivePlan = currentPlan === 'starter' ? 'investor' : currentPlan;
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -245,43 +213,17 @@ export default function Pricing() {
         <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 600, color: 'var(--text)', marginBottom: '12px', lineHeight: 1.15 }}>
           Choose your level of access
         </h1>
-        <p style={{ fontSize: '15px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto 32px', lineHeight: 1.7 }}>
+        <p style={{ fontSize: '15px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto 8px', lineHeight: 1.7 }}>
           From market discovery to full investment intelligence.
         </p>
-
-        {/* Monthly / Annual toggle */}
-        <div style={{ display: 'inline-flex', borderBottom: '2px solid var(--border)' }}>
-          {(['monthly', 'annual'] as const).map(i => (
-            <button
-              key={i}
-              onClick={() => setIsAnnual(i === 'annual')}
-              style={{
-                padding: '10px 28px', background: 'transparent', border: 'none',
-                borderBottom: (i === 'annual') === isAnnual ? '2px solid var(--electric)' : '2px solid transparent',
-                marginBottom: '-2px',
-                fontSize: '13px', fontWeight: (i === 'annual') === isAnnual ? 600 : 400,
-                color: (i === 'annual') === isAnnual ? 'var(--text)' : 'var(--text-3)',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
-              }}
-            >
-              {i === 'annual' ? 'Annual' : 'Monthly'}
-              {i === 'annual' && (
-                <span style={{ background: 'var(--electric)', color: 'white', fontSize: '9px', fontWeight: 700, padding: '1px 6px', borderRadius: '3px', fontFamily: 'var(--font-mono)' }}>
-                  −25%
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ marginTop: '12px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
           7-day free trial included · Cancel anytime
         </div>
       </div>
 
       {/* Error banner */}
       {error && (
-        <div style={{ maxWidth: '1100px', margin: '0 auto 24px', padding: '0 24px' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto 24px', padding: '0 24px' }}>
           <div style={{ padding: '14px 20px', background: 'var(--red-subtle)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: '6px', fontSize: '13px', color: 'var(--red)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>{error}</span>
             <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '20px', lineHeight: 1 }}>×</button>
@@ -289,145 +231,180 @@ export default function Pricing() {
         </div>
       )}
 
-      {/* Plan cards — 4-column grid */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px',
-        alignItems: 'stretch',
-        maxWidth: '1100px', margin: '0 auto', padding: '0 24px 64px',
-      }}>
-        {PLANS.map(plan => {
-          const isCurrentPlan = effectivePlan === plan.key;
-          const price = isAnnual ? plan.annualPrice : plan.price;
-          const isHighlight = plan.highlight;
+      {/* Plan cards — 3-column grid */}
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 24px 64px' }}>
 
-          return (
-            <div
-              key={plan.key}
-              style={{
-                background: isHighlight ? 'var(--navy)' : 'white',
-                border: isCurrentPlan
-                  ? '2px solid var(--electric)'
-                  : isHighlight
-                  ? '2px solid var(--navy)'
-                  : '1px solid var(--border)',
-                borderRadius: '12px',
-                padding: '28px 24px',
-                display: 'flex', flexDirection: 'column',
-                height: '100%',
-                transition: 'box-shadow 0.2s',
-              }}
-            >
-              {/* TOP SECTION — fixed 184px so all CTAs align */}
-              <div style={{ height: '184px', display: 'flex', flexDirection: 'column' }}>
-                {/* Badge slot — always 32px, empty if no badge */}
-                <div style={{ height: '32px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '12px' }}>
-                  {(isCurrentPlan || plan.badge) && (
-                    <div style={{ background: 'var(--electric)', color: 'white', fontSize: '9px', fontWeight: 700, padding: '3px 12px', borderRadius: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>
-                      {isCurrentPlan ? 'YOUR CURRENT PLAN' : plan.badge!.toUpperCase()}
-                    </div>
-                  )}
-                </div>
+        {/* Urgency strip */}
+        <div style={{ textAlign: 'center', padding: '10px 20px', background: 'rgba(198,168,90,0.1)', borderRadius: 4, marginBottom: 28, fontSize: 12, color: '#1A2A44', letterSpacing: '0.06em' }}>
+          ⚡ Founding member pricing — increases to €99 after launch
+        </div>
 
-                {/* Plan name */}
-                <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', fontFamily: 'var(--font-mono)', color: isHighlight ? 'rgba(255,255,255,0.5)' : 'var(--text-3)', textTransform: 'uppercase', marginBottom: '8px' }}>
-                  {plan.name}
-                </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', alignItems: 'start' }}>
+          {PLANS.map(plan => {
+            const isCurrentPlan = effectivePlan === plan.key;
+            const isHighlight = plan.highlight;
 
-                {/* Price */}
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '13px', color: isHighlight ? 'rgba(255,255,255,0.6)' : 'var(--text-2)' }}>€</span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '42px', fontWeight: 700, color: isHighlight ? 'white' : 'var(--text)', lineHeight: 1 }}>
-                    {price}
-                  </span>
-                  {plan.price > 0 && (
-                    <span style={{ fontSize: '12px', color: isHighlight ? 'rgba(255,255,255,0.5)' : 'var(--text-3)' }}>/mo</span>
-                  )}
-                </div>
-
-                {/* Savings — always 20px height */}
-                <div style={{ height: '20px', marginBottom: '8px' }}>
-                  {isAnnual && plan.price > 0 && (
-                    <div style={{ fontSize: '11px', fontWeight: 600, color: isHighlight ? 'var(--gold)' : 'var(--electric)' }}>
-                      €{plan.annualPrice * 12}/year · save €{(plan.price - plan.annualPrice) * 12}/year
-                    </div>
-                  )}
-                </div>
-
-                {/* Description — always 2 lines */}
-                <p style={{ fontSize: '12px', lineHeight: 1.6, margin: 0, color: isHighlight ? 'rgba(255,255,255,0.55)' : 'var(--text-3)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }}>
-                  {plan.description}
-                </p>
-              </div>
-
-              {/* CTA — immediately after fixed-height top section, all at same Y */}
-              <div style={{ marginBottom: '20px' }}>
-                {isCurrentPlan ? (
-                  <div style={{ width: '100%', padding: '11px', borderRadius: '6px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', color: 'var(--electric)', fontSize: '12px', fontWeight: 700, textAlign: 'center', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                    ✓ Current plan
+            return (
+              <div key={plan.key} style={{ display: 'flex', flexDirection: 'column' }}>
+                {/* Founding badge above Investor card */}
+                {plan.key === 'investor' && (
+                  <div style={{ textAlign: 'center', marginBottom: 8, fontSize: 11, color: '#C6A85A', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>
+                    ⚡ 47 founding members · Only available before public launch
                   </div>
-                ) : plan.key === 'free' ? (
-                  <button
-                    onClick={() => navigate('/app/dashboard')}
-                    style={{ width: '100%', padding: '11px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}
-                  >
-                    {plan.cta}
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => handleSelect(plan)}
-                      disabled={loading === plan.key}
-                      style={{
-                        width: '100%', padding: '11px', borderRadius: '6px',
-                        background: '#2563EB',
-                        color: 'white',
-                        border: 'none', fontSize: '12px', fontWeight: 700,
-                        cursor: loading === plan.key ? 'not-allowed' : 'pointer',
-                        letterSpacing: '0.06em', textTransform: 'uppercase' as const,
-                        opacity: loading === plan.key ? 0.7 : 1,
-                      }}
-                    >
-                      {loading === plan.key ? 'Loading...' : plan.cta}
-                    </button>
-                    <div style={{ fontSize: '10px', color: isHighlight ? 'rgba(255,255,255,0.3)' : 'var(--text-3)', marginTop: '8px', lineHeight: 1.5, textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
-                      Renews automatically · No refunds · Cancel anytime
-                    </div>
-                  </>
                 )}
-              </div>
 
-              {/* Divider */}
-              <div style={{ height: '1px', background: isHighlight ? 'rgba(255,255,255,0.1)' : 'var(--border)', marginBottom: '16px' }} />
-
-              {/* Features */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-                {plan.features.map((feature, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                    <span style={{ color: isHighlight ? 'var(--gold)' : 'var(--electric)', fontSize: '10px', marginTop: '3px', flexShrink: 0 }}>✓</span>
-                    <span style={{ fontSize: '12px', lineHeight: 1.5, color: isHighlight ? 'rgba(255,255,255,0.75)' : 'var(--text-2)' }}>{feature}</span>
+                <div
+                  style={{
+                    flex: 1,
+                    background: isHighlight ? 'var(--navy)' : 'white',
+                    border: isCurrentPlan
+                      ? '2px solid var(--electric)'
+                      : isHighlight
+                      ? '2px solid var(--navy)'
+                      : '1px solid var(--border)',
+                    borderRadius: '12px',
+                    padding: '28px 24px',
+                    display: 'flex', flexDirection: 'column',
+                    transition: 'box-shadow 0.2s',
+                  }}
+                >
+                  {/* Current plan badge */}
+                  <div style={{ height: '28px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '12px' }}>
+                    {isCurrentPlan && (
+                      <div style={{ background: 'var(--electric)', color: 'white', fontSize: '9px', fontWeight: 700, padding: '3px 12px', borderRadius: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+                        YOUR CURRENT PLAN
+                      </div>
+                    )}
                   </div>
-                ))}
+
+                  {/* Plan name */}
+                  <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', fontFamily: 'var(--font-mono)', color: isHighlight ? 'rgba(255,255,255,0.5)' : 'var(--text-3)', textTransform: 'uppercase' as const, marginBottom: '12px' }}>
+                    {plan.name}
+                  </div>
+
+                  {/* Price block */}
+                  {plan.key === 'investor' ? (
+                    <div style={{ marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
+                        <span style={{ fontSize: 32, fontWeight: 700, color: 'white', fontFamily: 'var(--font-mono)' }}>€19</span>
+                        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}> / month</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: '#C6A85A', letterSpacing: '0.08em', marginTop: 4, fontFamily: 'var(--font-mono)' }}>
+                        FOUNDING PRICE — INCREASES TO €99 AT LAUNCH
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '8px' }}>
+                      {plan.price > 0 && <span style={{ fontSize: '13px', color: isHighlight ? 'rgba(255,255,255,0.6)' : 'var(--text-2)' }}>€</span>}
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '42px', fontWeight: 700, color: isHighlight ? 'white' : 'var(--text)', lineHeight: 1 }}>
+                        {plan.price === 0 ? '€0' : plan.price}
+                      </span>
+                      {plan.price > 0 && (
+                        <span style={{ fontSize: '12px', color: isHighlight ? 'rgba(255,255,255,0.5)' : 'var(--text-3)' }}>/mo</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Description */}
+                  <p style={{ fontSize: '12px', lineHeight: 1.6, margin: '0 0 20px', color: isHighlight ? 'rgba(255,255,255,0.55)' : 'var(--text-3)' }}>
+                    {plan.description}
+                  </p>
+
+                  {/* CTA */}
+                  <div style={{ marginBottom: '20px' }}>
+                    {isCurrentPlan ? (
+                      <div style={{ width: '100%', padding: '11px', borderRadius: '6px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', color: 'var(--electric)', fontSize: '12px', fontWeight: 700, textAlign: 'center', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
+                        ✓ Current plan
+                      </div>
+                    ) : plan.key === 'free' ? (
+                      <button
+                        onClick={() => navigate('/app/dashboard')}
+                        style={{ width: '100%', padding: '11px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--navy)', color: 'var(--navy)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}
+                      >
+                        {plan.cta}
+                      </button>
+                    ) : plan.key === 'investor' ? (
+                      <>
+                        <button
+                          onClick={() => handleSelect(plan)}
+                          disabled={loading === plan.key}
+                          style={{
+                            width: '100%', padding: '13px', borderRadius: '6px',
+                            background: '#2563EB', color: 'white', border: 'none',
+                            fontSize: '13px', fontWeight: 700,
+                            cursor: loading === plan.key ? 'not-allowed' : 'pointer',
+                            letterSpacing: '0.04em',
+                            opacity: loading === plan.key ? 0.7 : 1,
+                          }}
+                        >
+                          {loading === plan.key ? 'Loading...' : plan.cta}
+                        </button>
+                        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '8px', textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
+                          Renews automatically · Cancel anytime
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleSelect(plan)}
+                          disabled={loading === plan.key}
+                          style={{
+                            width: '100%', padding: '11px', borderRadius: '6px',
+                            background: 'var(--navy)', color: 'white', border: 'none',
+                            fontSize: '12px', fontWeight: 700,
+                            cursor: loading === plan.key ? 'not-allowed' : 'pointer',
+                            letterSpacing: '0.06em', textTransform: 'uppercase' as const,
+                            opacity: loading === plan.key ? 0.7 : 1,
+                          }}
+                        >
+                          {loading === plan.key ? 'Loading...' : plan.cta}
+                        </button>
+                        <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '8px', lineHeight: 1.5, textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
+                          Renews automatically · Cancel anytime
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Divider */}
+                  <div style={{ height: '1px', background: isHighlight ? 'rgba(255,255,255,0.1)' : 'var(--border)', marginBottom: '16px' }} />
+
+                  {/* Features */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                    {plan.features.map((feature, i) => {
+                      const isNeg = feature.startsWith('✗');
+                      const label = isNeg ? feature.slice(1).trim() : feature;
+                      return (
+                        <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                          <span style={{ color: isNeg ? '#F87171' : (isHighlight ? 'var(--gold)' : 'var(--electric)'), fontSize: '10px', marginTop: '3px', flexShrink: 0 }}>
+                            {isNeg ? '✗' : '✓'}
+                          </span>
+                          <span style={{ fontSize: '12px', lineHeight: 1.5, color: isNeg ? (isHighlight ? 'rgba(255,255,255,0.35)' : 'var(--text-3)') : (isHighlight ? 'rgba(255,255,255,0.75)' : 'var(--text-2)') }}>
+                            {label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* Compare table */}
-      <div style={{ maxWidth: '1100px', margin: '0 auto 64px', padding: '0 24px' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto 64px', padding: '0 24px' }}>
         <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--text)', textAlign: 'center', marginBottom: '32px' }}>
           Compare plans
         </h2>
         <div style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
           {/* Header */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', background: 'var(--navy)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', background: 'var(--navy)' }}>
             <div style={{ padding: '16px 20px', fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.1em' }}>FEATURE</div>
-            {(['Explorer', 'Collector', 'Investor', 'Family Office'] as const).map((name, i) => (
-              <div key={name} style={{ padding: '16px 12px', textAlign: 'center', fontSize: '11px', fontWeight: 700, color: i === 2 ? 'var(--gold)' : 'white', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+            {(['Explorer (Free)', 'Investor (€19)', 'Pro (€79)'] as const).map((name, i) => (
+              <div key={name} style={{ padding: '16px 12px', textAlign: 'center', fontSize: '11px', fontWeight: 700, color: i === 1 ? 'var(--gold)' : 'white', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
                 {name.toUpperCase()}
-                {(currentPlan === comparePlanKeys[i] || (currentPlan === 'collector' && comparePlanKeys[i] === 'starter')) && (
-                  <div style={{ fontSize: '8px', color: 'var(--electric)', marginTop: '2px' }}>● YOUR PLAN</div>
-                )}
               </div>
             ))}
           </div>
@@ -436,13 +413,13 @@ export default function Pricing() {
           {COMPARE_ROWS.map((row, idx) => (
             <div
               key={row.feature}
-              style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', background: idx % 2 === 0 ? 'white' : 'var(--bg-subtle)', borderTop: '1px solid var(--border)' }}
+              style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', background: idx % 2 === 0 ? 'white' : 'var(--bg-subtle)', borderTop: '1px solid var(--border)' }}
             >
               <div style={{ padding: '14px 20px', fontSize: '13px', color: 'var(--text-2)', fontWeight: 500 }}>{row.feature}</div>
-              {[row.free, row.collector, row.investor, row.pro].map((val, i) => (
+              {[row.free, row.investor, row.pro].map((val, i) => (
                 <div key={i} style={{
                   padding: '14px 12px', textAlign: 'center', fontSize: '12px',
-                  color: val === '✓' ? 'var(--electric)' : val === '✗' ? 'var(--border)' : 'var(--text)',
+                  color: val === '✓' ? 'var(--electric)' : val === '✗' ? 'var(--border)' : val === 'Hidden' ? 'var(--text-3)' : 'var(--text)',
                   fontWeight: val === '✓' || val === 'Unlimited' ? 700 : 400,
                   fontFamily: (val === '✓' || val === '✗') ? 'inherit' : 'var(--font-mono)',
                 }}>
@@ -455,7 +432,7 @@ export default function Pricing() {
       </div>
 
       {/* Institutional */}
-      <div style={{ maxWidth: '1100px', margin: '0 auto 64px', padding: '0 24px' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto 64px', padding: '0 24px' }}>
         <div style={{ background: '#0A1628', borderRadius: '8px', padding: '40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', flexWrap: 'wrap' as const }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
@@ -481,7 +458,7 @@ export default function Pricing() {
       </div>
 
       {/* FAQ */}
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px 80px' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 24px 80px' }}>
         <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--text)', marginBottom: '32px' }}>
           FAQ
         </h2>
