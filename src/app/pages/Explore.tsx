@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { getUser } from "../../lib/auth";
 import { WelcomeTour } from "../components/WelcomeTour";
-import { LegalDisclaimer } from '../components/LegalDisclaimer';
 
 type ExploreTab = "best" | "auctions" | "primary" | "convictions" | "for-you";
 type ViewMode = "grid-large" | "grid" | "list";
@@ -1075,7 +1074,6 @@ export default function Explore() {
           )}
         </main>
       </div>
-      <LegalDisclaimer />
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { getToken, getUserPlan } from '../../lib/auth';
-import { LegalDisclaimer } from '../components/LegalDisclaimer';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -380,7 +379,6 @@ export default function AuctionCalendar() {
           </>
         )}
       </div>
-      <LegalDisclaimer />
     </div>
   );
 }
