@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { getToken } from '../../lib/auth';
+import { getToken, getUserPlan } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -302,6 +302,8 @@ export default function ArtistIntelligence() {
   const [liquidityMap, setLiquidityMap] = useState<any>(null);
   const [calendarOverlay, setCalendarOverlay] = useState<any>(null);
   const [investmentGrade, setInvestmentGrade] = useState<any>(null);
+  const [plan, setPlan] = useState(getUserPlan());
+  useEffect(() => { setPlan(getUserPlan()); }, []);
 
   // Must be before any early return — Rules of Hooks
   const auctionHouseStats = useMemo(() => {
@@ -778,8 +780,17 @@ export default function ArtistIntelligence() {
           />
         )}
 
-        {/* Format Performance Matrix */}
-        {formatMatrix.length > 0 && (
+        {plan === 'free' ? (
+          <div style={{textAlign:'center',padding:'64px 24px',background:'#f8f8f6',borderRadius:8,marginTop:32,border:'1px solid #e8e4dc'}}>
+            <div style={{fontSize:11,letterSpacing:'0.2em',color:'#C6A85A',marginBottom:12,fontWeight:700}}>INVESTOR+ FEATURE</div>
+            <div style={{fontSize:22,fontFamily:'Georgia,serif',color:'#1A2A44',marginBottom:12,fontWeight:600}}>Unlock full artist intelligence</div>
+            <div style={{fontSize:14,color:'#666',marginBottom:28,lineHeight:1.6}}>Format performance, geographic arbitrage, auction timing, liquidity depth and all tracked lots.</div>
+            <a href="/app/pricing" style={{display:'inline-block',background:'#2563EB',color:'#fff',padding:'14px 32px',fontSize:13,fontWeight:600,textDecoration:'none',borderRadius:4,letterSpacing:'0.04em'}}>Get Investor access — €19/mo →</a>
+          </div>
+        ) : (
+          <>
+            {/* Format Performance Matrix */}
+            {formatMatrix.length > 0 && (
           <div style={{ marginBottom: '32px' }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '16px' }}>
@@ -1335,6 +1346,8 @@ export default function ArtistIntelligence() {
               </table>
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
     </div>
