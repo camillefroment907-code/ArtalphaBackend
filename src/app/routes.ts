@@ -115,7 +115,7 @@ export const router = createBrowserRouter([
       { path: 'signup', Component: Signup },
       { path: 'contact', Component: ContactSales },
       { path: 'pricing', Component: Pricing },
-      { path: 'opportunities', Component: Opportunities },
+      { path: 'opportunities', loader: () => redirect('/app/explore') },
       { path: 'primary', Component: Primary },
       { path: 'convictions', Component: Convictions },
       { path: 'opportunities/:id', Component: OpportunityDetail },
