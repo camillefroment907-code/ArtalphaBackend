@@ -341,7 +341,7 @@ export default function Pricing() {
                 </div>
 
                 {/* Price + description — fixed height so CTA aligns across cards */}
-                <div style={{ minHeight: '120px' }}>
+                <div style={{ minHeight: '80px' }}>
 
                 {/* Price block */}
                 {plan.key === 'institutional' ? (
