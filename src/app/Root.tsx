@@ -10,7 +10,7 @@ export default function Root() {
   const isOnboarding = location.pathname.startsWith('/app/onboarding');
 
   return (
-    <div className="min-h-screen bg-white" style={{ paddingBottom: isOnboarding ? 0 : 44 }}>
+    <div className="min-h-screen bg-white">
       <Header />
       <Outlet />
       {!isOnboarding && <LarryChat />}

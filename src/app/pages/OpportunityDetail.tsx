@@ -78,13 +78,21 @@ export default function OpportunityDetail() {
   const [showMemo, setShowMemo]           = useState(false);
   const [comparables, setComparables]     = useState<any>(null);
   const [stickyVisible, setStickyVisible] = useState(false);
+  const [isDailyDeal, setIsDailyDeal]     = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    fetch(`${BACKEND}/api/lots/daily-unlock`)
+      .then(r => r.json())
+      .then(data => { if (data?.id && data.id === id) setIsDailyDeal(true); })
+      .catch(() => {});
+  }, [id]);
+
   const limits         = getPlanLimits();
-  const plan           = getUserPlan();
-  const canSeeAnalysis = limits.hasProjections || limits.hasArtistCotation;
-  const canSeeAI       = limits.hasAIVerdict;
-  const visibleYears   = limits.projectionYears || [];
+  const plan           = isDailyDeal ? 'investor' : getUserPlan();
+  const canSeeAnalysis = isDailyDeal || limits.hasProjections || limits.hasArtistCotation;
+  const canSeeAI       = isDailyDeal || limits.hasAIVerdict;
+  const visibleYears   = isDailyDeal ? [5, 10, 20] : (limits.projectionYears || []);
 
   const generateMemo = async () => {
     if (!lot?.id) return;
@@ -835,13 +843,6 @@ export default function OpportunityDetail() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* ═══ FOOTER ═══ */}
-      <div style={{ background: '#E8E4DD', borderTop: `1px solid #D6D1C7`, padding: '16px 40px', textAlign: 'center' }}>
-        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
-          NOT FINANCIAL ADVICE · FOR INFORMATIONAL PURPOSES ONLY · NAUTILUS DATA AGGREGATED FROM PUBLIC AUCTION SOURCES
-        </p>
       </div>
 
       {/* ── IMAGE LIGHTBOX ───────────────────────────────────────────────────── */}
