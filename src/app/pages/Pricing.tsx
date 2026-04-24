@@ -313,6 +313,7 @@ export default function Pricing() {
                   padding: '24px 20px',
                   display: 'flex',
                   flexDirection: 'column',
+                  height: '100%',
                   transition: 'box-shadow 0.2s',
                 }}
               >
