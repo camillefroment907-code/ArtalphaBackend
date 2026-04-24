@@ -91,22 +91,6 @@ const PLANS: Plan[] = [
       'Priority support',
     ],
   },
-  {
-    key: 'institutional',
-    name: 'Institutional',
-    price: 0,
-    description: 'For auction houses, family offices, and art funds.',
-    highlight: false,
-    cta: 'Contact us →',
-    features: [
-      'Everything in Pro',
-      'Custom data limits',
-      'Dedicated analytics team',
-      'API integration',
-      'SLA guarantees',
-      'White-label options',
-    ],
-  },
 ];
 
 const COMPARE_ROWS = [
@@ -309,7 +293,7 @@ export default function Pricing() {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', alignItems: 'stretch' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', alignItems: 'stretch' }}>
           {PLANS.map(plan => {
             const isCurrentPlan = effectivePlan === plan.key;
             const isHighlight = plan.highlight;
@@ -442,18 +426,6 @@ export default function Pricing() {
                     >
                       {plan.cta}
                     </button>
-                  ) : plan.key === 'institutional' ? (
-                    <button
-                      onClick={() => navigate('/app/contact?plan=institutional')}
-                      style={{
-                        width: '100%', padding: '11px', borderRadius: '6px',
-                        background: 'transparent', border: '1px solid var(--navy)',
-                        color: 'var(--navy)', fontSize: '12px', fontWeight: 700,
-                        cursor: 'pointer', letterSpacing: '0.06em',
-                      }}
-                    >
-                      {plan.cta}
-                    </button>
                   ) : isCurrentPlan ? (
                     <div style={{ width: '100%', padding: '11px', borderRadius: '6px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', color: 'var(--electric)', fontSize: '12px', fontWeight: 700, textAlign: 'center', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
                       ✓ Current plan
@@ -503,6 +475,31 @@ export default function Pricing() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Institutional banner */}
+      <div style={{ maxWidth: '1100px', margin: '0 auto 48px', padding: '0 24px' }}>
+        <div style={{ background: '#0A1628', borderRadius: '8px', padding: '40px 48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', flexWrap: 'wrap' as const }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, color: 'white' }}>
+                Institutional Access
+              </div>
+              <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--gold)', background: 'rgba(198,168,90,0.12)', padding: '3px 10px', borderRadius: '4px', border: '1px solid rgba(198,168,90,0.25)', fontFamily: 'var(--font-mono)' }}>
+                CUSTOM
+              </span>
+            </div>
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', maxWidth: '500px', lineHeight: 1.6, margin: 0 }}>
+              For auction houses, family offices, wealth managers and art funds. Custom limits, dedicated analytics team, API integration, SLA guarantees.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/app/contact?plan=institutional')}
+            style={{ whiteSpace: 'nowrap' as const, padding: '12px 24px', borderRadius: '6px', background: 'var(--gold)', color: '#0A1628', border: 'none', fontSize: '13px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em' }}
+          >
+            Contact Sales →
+          </button>
         </div>
       </div>
 
