@@ -1663,6 +1663,15 @@ export default function Portfolio() {
               <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>Configure exactly when Nautilus contacts you — and how</p>
             </div>
 
+            {plan === 'free' && (
+              <div style={{textAlign:'center',padding:'32px 24px',background:'#f8f8f6',borderRadius:8,marginBottom:24,border:'1px solid #e8e4dc'}}>
+                <div style={{fontSize:11,letterSpacing:'0.2em',color:'#C6A85A',marginBottom:8,fontWeight:700}}>INVESTOR+ FEATURE</div>
+                <div style={{fontSize:18,fontFamily:'Georgia,serif',color:'#1A2A44',marginBottom:8}}>Alerts are available from the Investor plan</div>
+                <a href="/app/pricing" style={{display:'inline-block',background:'#2563EB',color:'#fff',padding:'12px 28px',fontSize:13,fontWeight:600,textDecoration:'none',borderRadius:4}}>Unlock alerts — €19/mo →</a>
+              </div>
+            )}
+
+            <div style={plan === 'free' ? {pointerEvents:'none' as const,opacity:0.5} : {}}>
             {[
               {
                 title: 'Market signals',
@@ -1760,6 +1769,7 @@ export default function Portfolio() {
                 ))}
               </div>
             ))}
+            </div>
 
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '8px' }}>
               <button
