@@ -64,6 +64,7 @@ class TokenResponse(BaseModel):
     user_id: str
     email: str
     is_new_user: bool = False
+    plan: str = "free"
 
 
 class UserOut(BaseModel):
@@ -72,6 +73,7 @@ class UserOut(BaseModel):
     full_name: Optional[str]
     is_active: bool
     created_at: datetime
+    plan: str = "free"
 
     class Config:
         from_attributes = True

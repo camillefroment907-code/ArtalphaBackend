@@ -7,6 +7,7 @@ from fastapi.responses import RedirectResponse
 from jose import JWTError, jwt as jose_jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
+from sqlalchemy.orm import selectinload
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from pydantic import BaseModel
@@ -94,11 +95,12 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
     except Exception:
         pass
 
-    token = create_access_token({"sub": str(user.id), "email": user.email})
+    token = create_access_token({"sub": str(user.id), "email": user.email, "plan": "free"})
     return TokenResponse(
         access_token=token,
         user_id=str(user.id),
         email=user.email,
+        plan="free",
     )
 
 
@@ -125,7 +127,9 @@ async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("20/minute")
 async def login(request: Request, body: UserLogin, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == body.email))
+    result = await db.execute(
+        select(User).where(User.email == body.email).options(selectinload(User.subscription))
+    )
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(body.password, user.hashed_password):
@@ -134,11 +138,13 @@ async def login(request: Request, body: UserLogin, db: AsyncSession = Depends(ge
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account disabled")
 
-    token = create_access_token({"sub": str(user.id), "email": user.email})
+    plan = user.active_plan.value.lower()
+    token = create_access_token({"sub": str(user.id), "email": user.email, "plan": plan})
     return TokenResponse(
         access_token=token,
         user_id=str(user.id),
         email=user.email,
+        plan=plan,
     )
 
 
@@ -180,7 +186,9 @@ async def google_auth(request: Request, body: GoogleAuthRequest, db: AsyncSessio
     if not email:
         raise HTTPException(400, "Google account has no email address")
 
-    result = await db.execute(select(User).where(User.email == email))
+    result = await db.execute(
+        select(User).where(User.email == email).options(selectinload(User.subscription))
+    )
     user = result.scalar_one_or_none()
     is_new = user is None
 
@@ -224,12 +232,14 @@ async def google_auth(request: Request, body: GoogleAuthRequest, db: AsyncSessio
         except Exception:
             pass
 
-    token = create_access_token({"sub": str(user.id), "email": user.email})
+    plan = "free" if is_new else user.active_plan.value.lower()
+    token = create_access_token({"sub": str(user.id), "email": user.email, "plan": plan})
     return TokenResponse(
         access_token=token,
         user_id=str(user.id),
         email=user.email,
         is_new_user=is_new,
+        plan=plan,
     )
 
 

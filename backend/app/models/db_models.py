@@ -102,6 +102,10 @@ class User(Base):
             return self.subscription.plan
         return SubscriptionPlan.FREE
 
+    @property
+    def plan(self) -> str:
+        return self.active_plan.value.lower()
+
 
 class UserPreference(Base):
     __tablename__ = "preferences"
