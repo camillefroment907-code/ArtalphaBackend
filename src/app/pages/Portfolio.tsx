@@ -755,6 +755,7 @@ export default function Portfolio() {
     if (opportunitiesSort === 'date_asc') return new Date(a.auctionDate || '9999').getTime() - new Date(b.auctionDate || '9999').getTime();
     return b.dealScore - a.dealScore; // default: deal_score
   });
+  const displayedLots = plan === 'free' ? sortedLots.slice(0, 6) : sortedLots.slice(0, 12);
 
   // ══════════════════════════════════════════════════════════════════════════
   // RENDER
@@ -1325,7 +1326,7 @@ export default function Portfolio() {
               {!lotsLoading && !lotsError && sortedLots.length > 0 && (
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
-                    {sortedLots.slice(0, 12).map(lot => (
+                    {displayedLots.map(lot => (
                       <AlphaCard key={lot.id} lot={lot} onClick={() => navigate(`/app/opportunities/${lot.id}`)} />
                     ))}
                   </div>
