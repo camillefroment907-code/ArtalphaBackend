@@ -143,8 +143,14 @@ export function isAuthenticated(): boolean {
 }
 
 export function getUserPlan(): string {
-  console.log('AUTH DEBUG', localStorage.getItem('artalpha_auth'), localStorage.getItem('artalpha-auth'));
-  return getUser()?.plan ?? 'free';
+  try {
+    const raw = localStorage.getItem('artalpha_auth');
+    if (!raw) return 'free';
+    const user = JSON.parse(raw);
+    return user.plan || 'free';
+  } catch {
+    return 'free';
+  }
 }
 
 export function getPlanLimits(): PlanLimits {
