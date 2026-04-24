@@ -392,29 +392,8 @@ export default function Pricing() {
                   {plan.description}
                 </p>
 
-                {/* Divider */}
-                <div style={{ height: '1px', background: isHighlight ? 'rgba(255,255,255,0.1)' : 'var(--border)', marginBottom: '14px' }} />
-
-                {/* Features — flex: 1 fills space, pushing CTA to bottom */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, marginBottom: '20px', ...(plan.key === 'free' ? { minHeight: '380px' } : {}) }}>
-                  {plan.features.map((feature, i) => {
-                    const isNeg = feature.startsWith('✗');
-                    const label = isNeg ? feature.slice(1).trim() : feature;
-                    return (
-                      <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                        <span style={{ color: isNeg ? '#F87171' : (isHighlight ? 'var(--gold)' : 'var(--electric)'), fontSize: '10px', marginTop: '3px', flexShrink: 0 }}>
-                          {isNeg ? '✗' : '✓'}
-                        </span>
-                        <span style={{ fontSize: '12px', lineHeight: 1.5, color: isNeg ? (isHighlight ? 'rgba(255,255,255,0.35)' : 'var(--text-3)') : (isHighlight ? 'rgba(255,255,255,0.75)' : 'var(--text-2)') }}>
-                          {label}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* CTA — always at bottom */}
-                <div style={{ marginTop: 'auto' }}>
+                {/* CTA — above feature list */}
+                <div style={{ marginTop: '24px', marginBottom: '24px' }}>
                   {plan.key === 'free' ? (
                     <button
                       disabled
@@ -472,6 +451,27 @@ export default function Pricing() {
                       </div>
                     </>
                   )}
+                </div>
+
+                {/* Divider */}
+                <div style={{ height: '1px', background: isHighlight ? 'rgba(255,255,255,0.1)' : 'var(--border)', marginBottom: '14px' }} />
+
+                {/* Features */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                  {plan.features.map((feature, i) => {
+                    const isNeg = feature.startsWith('✗');
+                    const label = isNeg ? feature.slice(1).trim() : feature;
+                    return (
+                      <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                        <span style={{ color: isNeg ? '#F87171' : (isHighlight ? 'var(--gold)' : 'var(--electric)'), fontSize: '10px', marginTop: '3px', flexShrink: 0 }}>
+                          {isNeg ? '✗' : '✓'}
+                        </span>
+                        <span style={{ fontSize: '12px', lineHeight: 1.5, color: isNeg ? (isHighlight ? 'rgba(255,255,255,0.35)' : 'var(--text-3)') : (isHighlight ? 'rgba(255,255,255,0.75)' : 'var(--text-2)') }}>
+                          {label}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
