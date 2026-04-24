@@ -5,22 +5,16 @@ export function LegalDisclaimer() {
       bottom: 0,
       left: 0,
       right: 0,
-      background: 'rgba(13, 30, 53, 0.96)',
-      borderTop: '1px solid rgba(184,151,58,.3)',
-      padding: '8px 24px',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      zIndex: 50,
-      backdropFilter: 'blur(4px)',
+      background: 'rgba(10,22,40,0.92)',
+      color: 'rgba(255,255,255,0.35)',
+      fontSize: 10,
+      textAlign: 'center',
+      padding: '5px 16px',
+      letterSpacing: '0.04em',
+      zIndex: 999,
+      pointerEvents: 'none',
     }}>
-      <p style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', margin: 0, fontFamily: 'var(--font-mono)', letterSpacing: '.03em' }}>
-        Nautilus provides market data for informational purposes only. No content constitutes financial advice or an investment recommendation.
-        All decisions are at your own risk.
-      </p>
-      <a href="/legal" style={{ fontSize: 11, color: '#B8973A', fontFamily: 'var(--font-mono)', textDecoration: 'none', flexShrink: 0, marginLeft: 24 }}>
-        Legal →
-      </a>
+      Nautilus provides market data for informational purposes only. Not financial advice.
     </div>
   );
 }
