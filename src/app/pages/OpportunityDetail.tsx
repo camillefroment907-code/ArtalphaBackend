@@ -40,14 +40,13 @@ const isFrench = (s: string) =>
 
 // ── LOCKED BLOCK (light theme) ────────────────────────────────────────────────
 
-function LockedBlock({ title, teaser, ctaText, ctaPrice, planId, preview }: {
+function LockedBlock({ preview }: {
   title: string; teaser: string; ctaText: string; ctaPrice: string;
   planId: string; preview?: React.ReactNode;
 }) {
-  const navigate = useNavigate();
   return (
     <div style={{ position: 'relative', border: `1px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden' }}>
-      <div style={{ filter: 'blur(3px)', pointerEvents: 'none', opacity: 0.35, padding: '24px', userSelect: 'none' }}>
+      <div style={{ filter: 'blur(4px)', pointerEvents: 'none', padding: '24px', userSelect: 'none' }}>
         {preview || (
           <div style={{ display: 'flex', gap: '12px' }}>
             {[1, 2, 3].map(i => (
@@ -56,22 +55,10 @@ function LockedBlock({ title, teaser, ctaText, ctaPrice, planId, preview }: {
           </div>
         )}
       </div>
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: `linear-gradient(to bottom, transparent 0%, ${LTC} 45%)`,
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        padding: '32px', textAlign: 'center',
-      }}>
-        <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 600, color: LTT1, marginBottom: '8px' }}>{title}</div>
-        <p style={{ fontSize: '13px', color: LTT2, marginBottom: '20px', maxWidth: '340px', lineHeight: 1.65 }}>{teaser}</p>
-        <button
-          onClick={() => navigate(`/app/pricing?plan=${planId}`)}
-          style={{ padding: '11px 28px', background: DK, border: 'none', color: '#F0EDE6', cursor: 'pointer', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', borderRadius: '8px', fontFamily: 'var(--font-mono)' }}
-        >
-          {ctaText}
-        </button>
-        <div style={{ marginTop: '8px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>{ctaPrice} · 7-day free trial</div>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+        <span onClick={() => window.location.href = '/app/pricing'} style={{ cursor: 'pointer', background: '#1A2A44', color: '#C6A85A', fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', padding: '8px 18px', borderRadius: 3 }}>
+          INVESTOR+ · UNLOCK →
+        </span>
       </div>
     </div>
   );
@@ -661,9 +648,10 @@ export default function OpportunityDetail() {
                 {canSeeAI ? content : (
                   <>
                     <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none' as const }}>{content}</div>
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' as const, gap: 8 }}>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>INVESTOR+ FEATURE</span>
-                      <a href="/app/pricing" style={{ background: DK, color: '#F0EDE6', fontFamily: 'var(--font-mono)', fontSize: '10px', padding: '8px 16px', borderRadius: 6, textDecoration: 'none' }}>Unlock →</a>
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+                      <span onClick={() => window.location.href = '/app/pricing'} style={{ cursor: 'pointer', background: '#1A2A44', color: '#C6A85A', fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', padding: '8px 18px', borderRadius: 3 }}>
+                        INVESTOR+ · UNLOCK →
+                      </span>
                     </div>
                   </>
                 )}
