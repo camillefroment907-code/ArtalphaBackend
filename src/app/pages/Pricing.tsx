@@ -340,6 +340,9 @@ export default function Pricing() {
                   {plan.name}
                 </div>
 
+                {/* Price + description — fixed height so CTA aligns across cards */}
+                <div style={{ minHeight: '120px' }}>
+
                 {/* Price block */}
                 {plan.key === 'institutional' ? (
                   <div style={{ marginBottom: '12px', minHeight: '52px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -391,6 +394,8 @@ export default function Pricing() {
                 <p style={{ fontSize: '12px', lineHeight: 1.6, margin: '0 0 16px', color: isHighlight ? 'rgba(255,255,255,0.55)' : 'var(--text-3)' }}>
                   {plan.description}
                 </p>
+
+                </div>{/* end price+description wrapper */}
 
                 {/* CTA — above feature list */}
                 <div style={{ marginTop: '24px', marginBottom: '24px' }}>
