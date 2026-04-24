@@ -42,6 +42,29 @@ def lot_to_list_dict(lot) -> dict:
     }
 
 
+def serialize_lot(lot, plan: str) -> dict:
+    """Plan-aware lot serializer. Free users get a reduced payload."""
+    data = {
+        "id": str(lot.id),
+        "title": lot.title,
+        "artist_name_raw": lot.artist_name_raw,
+        "image_url": lot.image_url,
+        "deal_score": lot.deal_score,
+        "estimate_low": lot.estimate_low,
+        "pct_below_low_estimate": lot.pct_below_low_estimate,
+        "auction_house_name": lot.auction_house_name,
+        "currency": lot.currency,
+    }
+    if plan != "free":
+        data.update({
+            "url": lot.url,
+            "estimate_high": lot.estimate_high,
+            "current_price": lot.current_price,
+            "source": lot.source.value if lot.source else None,
+        })
+    return data
+
+
 def parse_dimensions(dimensions_str: str) -> dict:
     """
     Parse dimensions from strings like:
@@ -258,6 +281,9 @@ async def list_lots(
             Lot.auction_date >= datetime.utcnow(),
         )
     ]
+    # Free-tier delay: only show lots ingested >5 min ago (prevents API racing)
+    if plan == "free":
+        filters.append(Lot.created_at <= datetime.utcnow() - timedelta(minutes=5))
     if min_score is not None:
         filters.append(Lot.deal_score >= min_score)
     if max_score is not None:
@@ -406,6 +432,36 @@ async def list_lots(
     response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=120"
     response.headers["Vary"] = "Accept-Encoding"
     return result
+
+
+@router.get("/daily-unlock")
+async def daily_unlock(db: AsyncSession = Depends(get_db)):
+    """Returns the single best-scored lot from the last 24h (free to access — teaser)."""
+    cutoff = datetime.utcnow() - timedelta(days=1)
+    stmt = (
+        select(Lot)
+        .where(
+            and_(
+                Lot.created_at >= cutoff,
+                Lot.image_url.isnot(None),
+                Lot.deal_score.isnot(None),
+            )
+        )
+        .order_by(desc(Lot.deal_score))
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    lot = result.scalar_one_or_none()
+    if not lot:
+        stmt2 = (
+            select(Lot)
+            .where(Lot.image_url.isnot(None))
+            .order_by(desc(Lot.deal_score))
+            .limit(1)
+        )
+        result2 = await db.execute(stmt2)
+        lot = result2.scalar_one_or_none()
+    return serialize_lot(lot, "investor") if lot else {}
 
 
 @router.get("/hot-deals")

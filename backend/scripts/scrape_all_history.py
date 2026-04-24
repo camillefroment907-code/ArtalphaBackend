@@ -55,13 +55,36 @@ AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
+async def _get_existing_count(name: str) -> int:
+    """Fresh session — isolated from any prior transaction errors."""
+    try:
+        async with AsyncSessionLocal() as db:
+            r = await db.execute(
+                text("SELECT COUNT(*) FROM hammer_prices WHERE artist_name ILIKE :name"),
+                {"name": f"%{name}%"},
+            )
+            return r.scalar() or 0
+    except Exception:
+        return 0
+
+
+async def _save(prices: list, name: str) -> int:
+    """Fresh session for each save — prevents transaction pollution."""
+    try:
+        async with AsyncSessionLocal() as db:
+            return await save_hammer_prices(prices, db)
+    except Exception as e:
+        print(f"     ✗  DB save error for {name}: {e}")
+        return 0
+
+
 async def main():
+    start = time.time()
     print("── Artsy history backfill ──────────────────────────────────────")
     print(f"   MIN_RECORDS={MIN_RECORDS}  MAX_PER_ARTIST={MAX_PER_ARTIST}  SLEEP={SLEEP}s\n")
 
+    # 1. Fetch artist list in its own session
     async with AsyncSessionLocal() as db:
-
-        # 1. All distinct artist names ordered by lot count (most important first)
         result = await db.execute(text("""
             SELECT artist_name_raw, COUNT(*) n
             FROM lots
@@ -70,58 +93,55 @@ async def main():
             ORDER BY COUNT(*) DESC
         """))
         all_artists = result.fetchall()
-        print(f"Found {len(all_artists)} distinct artists in lots\n")
+    print(f"Found {len(all_artists)} distinct artists in lots\n")
 
-        done = 0
-        skipped = 0
-        failed = 0
-        total_saved = 0
+    done = 0
+    skipped = 0
+    failed = 0
+    total_saved = 0
 
-        for i, row in enumerate(all_artists):
-            name: str = (row[0] or "").strip()
-            lot_count: int = row[1]
-            if not name:
-                continue
+    for i, row in enumerate(all_artists):
+        name: str = (row[0] or "").strip()
+        lot_count: int = row[1]
+        if not name:
+            continue
 
-            # 2. Check existing hammer records
-            existing = await db.execute(
-                text("SELECT COUNT(*) FROM hammer_prices WHERE artist_name ILIKE :name"),
-                {"name": f"%{name}%"}
+        # 2. Check existing records (isolated session)
+        count = await _get_existing_count(name)
+
+        if count >= MIN_RECORDS:
+            print(f"  ✓  [{i+1}/{len(all_artists)}] {name} — {count} records, skipping")
+            skipped += 1
+            continue
+
+        print(f"  →  [{i+1}/{len(all_artists)}] {name} ({lot_count} lots, {count} existing) — fetching Artsy…")
+
+        try:
+            prices = await fetch_artist_auction_results(
+                artist_name=name,
+                artsy_token=None,
+                max_results=MAX_PER_ARTIST,
             )
-            count = existing.scalar() or 0
 
-            if count >= MIN_RECORDS:
-                print(f"  ✓  [{i+1}/{len(all_artists)}] {name} — {count} records, skipping")
-                skipped += 1
+            if not prices:
+                print(f"     ✗  No Artsy data found")
+                failed += 1
+                await asyncio.sleep(SLEEP)
                 continue
 
-            print(f"  →  [{i+1}/{len(all_artists)}] {name} ({lot_count} lots, {count} existing) — fetching Artsy…")
+            # 3. Save in isolated session
+            saved = await _save(prices, name)
+            total_saved += saved
+            print(f"     ✓  {len(prices)} fetched, {saved} new saved (total: {count + saved})")
+            done += 1
 
-            try:
-                prices = await fetch_artist_auction_results(
-                    artist_name=name,
-                    artsy_token=None,  # public API
-                    max_results=MAX_PER_ARTIST,
-                )
+        except Exception as e:
+            print(f"     ✗  Error: {e}")
+            failed += 1
 
-                if not prices:
-                    print(f"     ✗  No Artsy data found")
-                    failed += 1
-                    await asyncio.sleep(SLEEP)
-                    continue
+        await asyncio.sleep(SLEEP)
 
-                saved = await save_hammer_prices(prices, db)
-                total_saved += saved
-                print(f"     ✓  {len(prices)} fetched, {saved} new saved (total: {count + saved})")
-                done += 1
-
-            except Exception as e:
-                print(f"     ✗  Error: {e}")
-                failed += 1
-
-            await asyncio.sleep(SLEEP)
-
-    elapsed = time.time()
+    elapsed = time.time() - start
     print(f"\n── Done ──────────────────────────────────────────────────────────")
     print(f"   Enriched: {done}  |  Skipped (already full): {skipped}  |  Not on Artsy: {failed}")
     print(f"   New hammer records saved: {total_saved:,}")

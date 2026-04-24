@@ -42,6 +42,7 @@ from app.api.collector import router as collector_router
 from app.api.recommendations import router as recommendations_router
 from app.api.blog import router as blog_router
 from app.api.feedback import router as feedback_router
+from app.api.analytics import router as analytics_router
 
 settings = get_settings()
 
@@ -195,6 +196,7 @@ app.include_router(collector_router,        prefix="/api")
 app.include_router(recommendations_router,  prefix="/api")
 app.include_router(blog_router,             prefix="/api")
 app.include_router(feedback_router,         prefix="/api")
+app.include_router(analytics_router,       prefix="/api")
 
 
 @app.get("/")
