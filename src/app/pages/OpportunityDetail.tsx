@@ -476,7 +476,7 @@ export default function OpportunityDetail() {
           {/* External link */}
           <div>
             {plan === 'free' ? (
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, letterSpacing: '0.06em' }}>Source locked</span>
+              <span onClick={() => { window.location.href = '/app/pricing'; }} style={{ cursor: 'pointer', color: '#2563EB', fontSize: 13, fontWeight: 600, letterSpacing: '0.04em' }}>🔒 Unlock source — Investor plan →</span>
             ) : (
               <a href={externalUrl} target="_blank" rel="noopener noreferrer"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: BLD, textDecoration: 'none', letterSpacing: '0.06em' }}>
@@ -606,6 +606,8 @@ export default function OpportunityDetail() {
                   <a href={r.href} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: BL, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px' }}>
                     {r.value} ↗
                   </a>
+                ) : r.label === 'Source' && plan === 'free' ? (
+                  <span onClick={() => { window.location.href = '/app/pricing'; }} style={{ cursor: 'pointer', color: '#2563EB', fontSize: 13, fontWeight: 600, letterSpacing: '0.04em' }}>🔒 Unlock source — Investor plan →</span>
                 ) : (
                   <span style={{ fontSize: '13px', color: LTT1, fontWeight: 500, textAlign: 'right', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.value}</span>
                 )}
