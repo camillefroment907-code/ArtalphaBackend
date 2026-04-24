@@ -396,7 +396,7 @@ export default function Pricing() {
                 <div style={{ height: '1px', background: isHighlight ? 'rgba(255,255,255,0.1)' : 'var(--border)', marginBottom: '14px' }} />
 
                 {/* Features — flex: 1 fills space, pushing CTA to bottom */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, marginBottom: '20px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, marginBottom: '20px', ...(plan.key === 'free' ? { minHeight: '380px' } : {}) }}>
                   {plan.features.map((feature, i) => {
                     const isNeg = feature.startsWith('✗');
                     const label = isNeg ? feature.slice(1).trim() : feature;
@@ -497,7 +497,7 @@ export default function Pricing() {
           </div>
           <button
             onClick={() => navigate('/app/contact?plan=institutional')}
-            style={{ whiteSpace: 'nowrap' as const, padding: '12px 24px', borderRadius: '6px', background: 'var(--gold)', color: '#0A1628', border: 'none', fontSize: '13px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em' }}
+            style={{ whiteSpace: 'nowrap' as const, padding: '12px 24px', borderRadius: '6px', background: '#2563EB', color: 'white', border: 'none', fontSize: '13px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em' }}
           >
             Contact Sales →
           </button>
