@@ -814,10 +814,10 @@ export default function Explore() {
               <p style={{ fontSize: "13px", color: "var(--text-2)", marginBottom: "28px", lineHeight: 1.7, maxWidth: "380px" }}>
                 Our curated high-conviction picks are reserved for Starter and above. Upgrade to access Nautilus AI's top-rated opportunities.
               </p>
-              <button onClick={() => navigate("/app/pricing")} className="btn btn-navy" style={{ fontSize: "13px", padding: "12px 36px", marginBottom: "10px" }}>
-                Unlock Convictions →
+              <button onClick={() => navigate("/app/pricing")} style={{ fontSize: "13px", padding: "12px 36px", marginBottom: "10px", background: "#2563EB", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 600 }}>
+                Get Investor access — €19/mo →
               </button>
-              <div style={{ fontSize: "11px", color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>From €9/month · Cancel anytime</div>
+              <div style={{fontSize:12,color:'#999',marginTop:8}}>Founding price · Increases to €49 at launch</div>
             </div>
           ) : (
             <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "0 24px 60px" }}>
