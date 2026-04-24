@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { getToken } from '../../lib/auth';
+import { getToken, getUserPlan } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -234,6 +234,7 @@ export default function AuctionCalendar() {
   const [view, setView] = useState<'houses' | 'dates'>('houses');
   const [data, setData] = useState<CalendarData | null>(null);
   const [loading, setLoading] = useState(true);
+  const plan = getUserPlan();
 
   useEffect(() => {
     setLoading(true);
@@ -278,7 +279,7 @@ export default function AuctionCalendar() {
       {/* Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', padding: '0 32px' }}>
         {/* Day range */}
-        <div style={{ display: 'flex', gap: '4px' }}>
+        <div style={{ display: 'flex', gap: '4px', ...(plan === 'free' ? { pointerEvents: 'none' as const, opacity: 0.4 } : {}) }}>
           {DAY_OPTIONS.map(d => (
             <button
               key={d}
@@ -300,7 +301,7 @@ export default function AuctionCalendar() {
         </div>
 
         {/* View toggle */}
-        <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
+        <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto', ...(plan === 'free' ? { pointerEvents: 'none' as const, opacity: 0.4 } : {}) }}>
           {(['houses', 'dates'] as const).map(v => (
             <button
               key={v}
@@ -333,25 +334,49 @@ export default function AuctionCalendar() {
             No upcoming auctions found for this period.
           </div>
         ) : view === 'houses' ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
-            {data.by_house.map(entry => (
-              <HouseCard
-                key={entry.house}
-                entry={entry}
-                onLotClick={id => nav(`/app/explore?lot=${id}`)}
-              />
-            ))}
-          </div>
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+              {(plan === 'free' ? data.by_house.slice(0, 6) : data.by_house).map(entry => (
+                <HouseCard
+                  key={entry.house}
+                  entry={entry}
+                  onLotClick={id => nav(`/app/explore?lot=${id}`)}
+                />
+              ))}
+            </div>
+            {plan === 'free' && (
+              <div style={{ marginTop: '-40px' }}>
+                <div style={{ height: '80px', background: 'linear-gradient(to bottom, transparent, var(--bg))' }} />
+                <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8f8f6', borderRadius: 8 }}>
+                  <div style={{ fontSize: 13, letterSpacing: '0.15em', color: '#C6A85A', marginBottom: 8 }}>INVESTOR+ FEATURE</div>
+                  <div style={{ fontSize: 20, fontFamily: 'Georgia,serif', color: '#1A2A44', marginBottom: 16 }}>Full calendar is available from the Investor plan</div>
+                  <a href="/app/pricing" style={{ background: '#2563EB', color: '#fff', padding: '12px 28px', fontSize: 13, fontWeight: 600, textDecoration: 'none', borderRadius: 4 }}>Unlock full access →</a>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {data.by_date.map(entry => (
-              <DateRow
-                key={entry.date}
-                entry={entry}
-                onLotClick={id => nav(`/app/explore?lot=${id}`)}
-              />
-            ))}
-          </div>
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {(plan === 'free' ? data.by_date.slice(0, 6) : data.by_date).map(entry => (
+                <DateRow
+                  key={entry.date}
+                  entry={entry}
+                  onLotClick={id => nav(`/app/explore?lot=${id}`)}
+                />
+              ))}
+            </div>
+            {plan === 'free' && (
+              <div style={{ marginTop: '-40px' }}>
+                <div style={{ height: '80px', background: 'linear-gradient(to bottom, transparent, var(--bg))' }} />
+                <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8f8f6', borderRadius: 8 }}>
+                  <div style={{ fontSize: 13, letterSpacing: '0.15em', color: '#C6A85A', marginBottom: 8 }}>INVESTOR+ FEATURE</div>
+                  <div style={{ fontSize: 20, fontFamily: 'Georgia,serif', color: '#1A2A44', marginBottom: 16 }}>Full calendar is available from the Investor plan</div>
+                  <a href="/app/pricing" style={{ background: '#2563EB', color: '#fff', padding: '12px 28px', fontSize: 13, fontWeight: 600, textDecoration: 'none', borderRadius: 4 }}>Unlock full access →</a>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
