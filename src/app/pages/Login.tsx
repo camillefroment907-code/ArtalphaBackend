@@ -86,7 +86,7 @@ export default function Login() {
         plan: (res.plan ?? 'free') as any,
         token: res.access_token,
       });
-      navigate('/app/opportunities');
+      navigate('/app/explore');
     } catch (err: any) {
       setError(err.message || 'Login failed');
     } finally {
