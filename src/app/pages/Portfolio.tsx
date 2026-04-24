@@ -1331,7 +1331,7 @@ export default function Portfolio() {
                     ))}
                   </div>
                   <div style={{ textAlign: 'center', marginTop: '32px' }}>
-                    <Link to="/app/opportunities" style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600, color: 'var(--navy)', textDecoration: 'none', letterSpacing: '0.04em' }}
+                    <Link to="/app/explore" style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600, color: 'var(--navy)', textDecoration: 'none', letterSpacing: '0.04em' }}
                       onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
                       onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
                     >
