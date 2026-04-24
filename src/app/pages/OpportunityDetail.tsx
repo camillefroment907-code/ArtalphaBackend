@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { getPlanLimits, getToken } from '../../lib/auth';
+import { getPlanLimits, getToken, getUserPlan } from '../../lib/auth';
 import { AIAnalyst } from '../components/AIAnalyst';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
@@ -94,6 +94,7 @@ export default function OpportunityDetail() {
   const heroRef = useRef<HTMLDivElement>(null);
 
   const limits         = getPlanLimits();
+  const plan           = getUserPlan();
   const canSeeAnalysis = limits.hasProjections || limits.hasArtistCotation;
   const canSeeAI       = limits.hasAIVerdict;
   const visibleYears   = limits.projectionYears || [];
@@ -106,7 +107,6 @@ export default function OpportunityDetail() {
         `https://artalpha-backend-production.up.railway.app/api/memo/${lot.id}`,
         { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } }
       );
-      if (resp.status === 403) { alert('Investment memos are available from the Investor plan (€29/month).'); return; }
       if (!resp.ok) throw new Error('Failed');
       const data = await resp.json();
       setMemo(data);
@@ -475,10 +475,14 @@ export default function OpportunityDetail() {
 
           {/* External link */}
           <div>
-            <a href={externalUrl} target="_blank" rel="noopener noreferrer"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: BLD, textDecoration: 'none', letterSpacing: '0.06em' }}>
-              View on {sourceNames[source] || resolvedSource} ↗
-            </a>
+            {plan === 'free' ? (
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, letterSpacing: '0.06em' }}>Source locked</span>
+            ) : (
+              <a href={externalUrl} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: BLD, textDecoration: 'none', letterSpacing: '0.06em' }}>
+                View on {sourceNames[source] || resolvedSource} ↗
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -592,7 +596,7 @@ export default function OpportunityDetail() {
               { label: 'House',      value: lot.auction_house_name },
               { label: 'Closes',     value: auctionDateFmt },
               { label: 'Lot #',      value: lot.lot_number },
-              { label: 'Source',     value: sourceLabel, href: externalUrl },
+              { label: 'Source',     value: plan === 'free' ? 'Source locked' : sourceLabel, href: plan === 'free' ? undefined : externalUrl },
             ] as { label: string; value?: string | null; nav?: string; link?: boolean; href?: string }[]).filter(r => r.value).map(r => (
               <div key={r.label} style={dRow}>
                 <span style={{ fontSize: '13px', color: LTT2, minWidth: '80px', flexShrink: 0 }}>{r.label}</span>
@@ -737,7 +741,7 @@ export default function OpportunityDetail() {
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#EFF6FF', border: '1px solid #BFDBFE', color: BL, padding: '3px 8px', borderRadius: '3px' }}>INVESTOR+</span>
               </div>
               <button
-                onClick={memo ? () => setShowMemo(true) : generateMemo}
+                onClick={plan === 'free' ? () => { window.location.href = '/app/pricing'; } : (memo ? () => setShowMemo(true) : generateMemo)}
                 disabled={memoLoading}
                 onMouseEnter={e => { if (!memoLoading) (e.target as HTMLButtonElement).style.background = '#1A2332'; }}
                 onMouseLeave={e => { if (!memoLoading) (e.target as HTMLButtonElement).style.background = DK; }}
