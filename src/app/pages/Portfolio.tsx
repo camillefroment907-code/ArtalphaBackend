@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { getUser, getToken, logout, PLAN_LIMITS } from '../../lib/auth';
 import { getSubscription, cancelSubscription } from '../../lib/api';
 import { getUsageStatus, PLAN_LIMITS as USAGE_LIMITS } from '../../lib/analysisUsage';
+import { LegalDisclaimer } from '../components/LegalDisclaimer';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -2217,6 +2218,7 @@ export default function Portfolio() {
         )}
 
       </div>
+      <LegalDisclaimer />
     </div>
   );
 }

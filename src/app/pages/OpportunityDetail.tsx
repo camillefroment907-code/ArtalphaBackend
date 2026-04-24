@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { getPlanLimits, getToken, getUserPlan } from '../../lib/auth';
 import { AIAnalyst } from '../components/AIAnalyst';
+import { LegalDisclaimer } from '../components/LegalDisclaimer';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -931,6 +932,7 @@ export default function OpportunityDetail() {
         </div>
       )}
 
+      <LegalDisclaimer />
     </div>
   );
 }
