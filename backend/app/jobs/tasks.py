@@ -920,3 +920,20 @@ async def _generate_rationales_async(max_lots: int = 20):
 
     logger.info("rationale_generation_done", generated=generated)
     return generated
+
+
+@celery_app.task(name="app.jobs.tasks.sync_artsper_artist_data", bind=True)
+def sync_artsper_artist_data(self):
+    """
+    Weekly sync of Artsper primary market data into artsper_artist_snapshots.
+    Fetches up to 200k artworks from Algolia, aggregates per-artist stats,
+    upserts snapshots, and links to Artist records by normalized name.
+    """
+    try:
+        from app.jobs.artsper_enrichment_job import run_artsper_enrichment
+        summary = asyncio.run(run_artsper_enrichment())
+        logger.info("sync_artsper_artist_data_done", **summary)
+        return summary
+    except Exception as exc:
+        logger.error("sync_artsper_artist_data_failed", error=str(exc))
+        raise self.retry(exc=exc, countdown=600, max_retries=2)

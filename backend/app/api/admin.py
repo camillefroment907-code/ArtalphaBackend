@@ -444,6 +444,66 @@ async def trigger_wikidata_enrichment():
     return {"status": "started", "message": "Wikidata enrichment running in background (1000 artists)"}
 
 
+# ── Artsper enrichment ────────────────────────────────────────────────────────
+
+_artsper_enrich_status: Dict[str, Any] = {}
+
+
+@router.get("/artsper-enrichment/status", dependencies=[Depends(verify_admin)])
+async def artsper_enrichment_status() -> Dict[str, Any]:
+    """Return the status of the last / running Artsper enrichment job."""
+    return dict(_artsper_enrich_status) or {"status": "never_run"}
+
+
+@router.post("/artsper-enrichment/trigger", dependencies=[Depends(verify_admin)])
+async def trigger_artsper_enrichment(body: dict = None) -> Dict[str, Any]:
+    """
+    Trigger a full Artsper → artsper_artist_snapshots sync in the background.
+    Optional body: { "max_artworks": 200000 }
+
+    Progress and result available via GET /api/admin/artsper-enrichment/status
+    """
+    import asyncio as _asyncio
+    from app.jobs.artsper_enrichment_job import run_artsper_enrichment
+
+    if _artsper_enrich_status.get("running"):
+        return {
+            "status": "already_running",
+            "started_at": _artsper_enrich_status.get("started_at"),
+        }
+
+    max_artworks = int((body or {}).get("max_artworks", 200_000))
+
+    async def _run():
+        _artsper_enrich_status.update({
+            "running": True,
+            "started_at": datetime.utcnow().isoformat(),
+            "finished_at": None,
+            "summary": None,
+            "error": None,
+        })
+        try:
+            summary = await run_artsper_enrichment(max_artworks=max_artworks)
+            _artsper_enrich_status.update({
+                "running": False,
+                "finished_at": datetime.utcnow().isoformat(),
+                "summary": summary,
+            })
+        except Exception as exc:
+            _artsper_enrich_status.update({
+                "running": False,
+                "finished_at": datetime.utcnow().isoformat(),
+                "error": str(exc),
+            })
+
+    _asyncio.create_task(_run())
+    return {
+        "status": "started",
+        "max_artworks": max_artworks,
+        "message": "Artsper enrichment running. Monitor via GET /api/admin/artsper-enrichment/status",
+    }
+
+
 # ── Lot count stats ───────────────────────────────────────────────────────────
 
 @router.get("/stats", dependencies=[Depends(verify_admin)])

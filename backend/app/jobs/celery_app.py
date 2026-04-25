@@ -97,6 +97,12 @@ celery_app.conf.update(
             "schedule": crontab(minute="0", hour="10", day_of_month="1", month_of_year="12"),
             "options": {"queue": "default"},
         },
+        # Weekly Artsper primary market enrichment — Sunday 1am UTC
+        "sync-artsper-artist-data-weekly": {
+            "task": "app.jobs.tasks.sync_artsper_artist_data",
+            "schedule": crontab(minute="0", hour="1", day_of_week="0"),
+            "options": {"queue": "default"},
+        },
         # Quarterly outlook: first Monday of Jan/Apr/Jul/Oct
         "quarterly-outlook-q1": {
             "task": "app.jobs.email_scheduler.send_quarterly_outlooks",

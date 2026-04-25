@@ -785,3 +785,68 @@ class ScrapingRun(Base):
         Index("ix_scraping_runs_connector", "connector"),
         Index("ix_scraping_runs_started_at", "started_at"),
     )
+
+
+class ArtsperArtistSnapshot(Base):
+    """
+    Artist market snapshot aggregated from Artsper primary market data.
+    Covers 193k+ artworks across thousands of artists via Algolia.
+    Refreshed weekly — each sync appends a row to price_history for trend tracking.
+
+    This is Nautilus' primary market moat: primary price anchors, gallery
+    representation depth, medium distribution, and sell-through signals that
+    auction-only data cannot provide.
+    """
+    __tablename__ = "artsper_artist_snapshots"
+
+    id                    = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    artsper_artist_id     = Column(Integer, unique=True, nullable=False)
+    artist_name           = Column(String(500), nullable=False)
+    artist_name_normalized = Column(String(500), nullable=False)
+
+    # Primary market presence
+    total_works           = Column(Integer, default=0)    # all works indexed on Artsper
+    works_available       = Column(Integer, default=0)    # not sold
+    works_sold            = Column(Integer, default=0)    # sold / unavailable
+
+    # Price data (EUR)
+    price_min             = Column(Float, nullable=True)
+    price_max             = Column(Float, nullable=True)
+    price_avg             = Column(Float, nullable=True)
+    price_median          = Column(Float, nullable=True)
+    price_p25             = Column(Float, nullable=True)  # 25th percentile
+    price_p75             = Column(Float, nullable=True)  # 75th percentile
+
+    # Gallery representation
+    gallery_count         = Column(Integer, default=0)
+    gallery_names         = Column(JSON, default=list)    # ["Galerie Templon", ...]
+
+    # Work breakdown
+    categories            = Column(JSON, default=dict)    # {"Painting": 15, "Sculpture": 3}
+    mediums               = Column(JSON, default=dict)    # {"oil": 8, "acrylic": 4}
+
+    # Quality/popularity signals
+    has_staff_pick        = Column(Boolean, default=False)
+    is_top_seller         = Column(Boolean, default=False)
+
+    # Artsper artist page URL
+    artsper_url           = Column(String(1000), nullable=True)
+
+    # Link to our Artist record (nullable — matched by normalized name)
+    artist_id             = Column(UUID(as_uuid=True), ForeignKey("artists.id"), nullable=True)
+
+    # Historical snapshots — appended on every sync
+    # [{"date": "2026-04-25", "total_works": 10, "price_avg": 1500, "works_sold": 2}, ...]
+    price_history         = Column(JSON, default=list)
+
+    first_seen_at         = Column(DateTime, default=datetime.utcnow)
+    last_synced_at        = Column(DateTime, default=datetime.utcnow)
+    created_at            = Column(DateTime, default=datetime.utcnow)
+    updated_at            = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_artsper_snapshots_name_normalized", "artist_name_normalized"),
+        Index("ix_artsper_snapshots_artist_id", "artist_id"),
+        Index("ix_artsper_snapshots_price_avg", "price_avg"),
+        Index("ix_artsper_snapshots_total_works", "total_works"),
+    )
