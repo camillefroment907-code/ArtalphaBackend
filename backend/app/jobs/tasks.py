@@ -150,13 +150,23 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
     new_deals = 0
 
     async with AsyncSessionLocal() as session:
-        # 2. Bulk dedup — find all external_ids already in DB
-        # Use external_id IN (...) instead of tuple comparison to avoid PostgreSQL enum casting issues
-        candidate_eids = [lot.external_id for lot in raw_lots if lot.external_id]
+        # 2. Bulk dedup — find (source, external_id) pairs already in DB.
+        # Filter by BOTH source AND external_id to avoid cross-source false matches
+        # (e.g. Drouot lot "123" should not block Invaluable lot "123").
+        candidate_pairs = [
+            (lot.source.value if hasattr(lot.source, "value") else str(lot.source), lot.external_id)
+            for lot in raw_lots if lot.external_id
+        ]
+        candidate_eids = [eid for _, eid in candidate_pairs]
+        candidate_sources = list({src for src, _ in candidate_pairs})
         if candidate_eids:
+            from sqlalchemy import and_, or_
             existing_result = await session.execute(
                 select(Lot.source, Lot.external_id).where(
-                    Lot.external_id.in_(candidate_eids)
+                    and_(
+                        Lot.external_id.in_(candidate_eids),
+                        Lot.source.in_(candidate_sources),
+                    )
                 )
             )
             existing_pairs = {
@@ -202,7 +212,11 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
                         artist_result = await session.execute(
                             select(Artist).where(Artist.name_normalized == key)
                         )
-                        db_artist = artist_result.scalar_one_or_none()
+                        # Use .scalars().first() — guards against MultipleResultsFound
+                        # when duplicate artist rows share the same name_normalized
+                        # (titles like "Cavallo", "Les chevaux" detected as artist names
+                        # can create multiple rows across ingestion runs).
+                        db_artist = artist_result.scalars().first()
                         artist_cache[key] = db_artist
 
                     if not db_artist and artist_data:
