@@ -633,7 +633,7 @@ export default function OpportunityDetail() {
         {(() => {
           const currency = lot.currency || 'EUR';
           const sym = currency === 'USD' ? '$' : currency === 'GBP' ? '£' : '€';
-          const maxBid = lot.estimate_low ? Math.round(lot.estimate_low * 0.9) : null;
+          const maxBid = lot.estimate_high ? Math.round(lot.estimate_high * 1.28) : null;
           const score = lot.deal_score || 0;
           const timingSignal = score >= 80 ? 'Strong — bid now' : score >= 65 ? 'Good entry' : 'Wait for lower';
           const timingColor = score >= 80 ? GD : score >= 65 ? GOLD : RED;
