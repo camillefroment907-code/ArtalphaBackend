@@ -629,6 +629,69 @@ export default function OpportunityDetail() {
 
         </div>
 
+        {/* ── PRE-BID INTELLIGENCE ─────────────────────────────────────────────── */}
+        {(() => {
+          const currency = lot.currency || 'EUR';
+          const sym = currency === 'USD' ? '$' : currency === 'GBP' ? '£' : '€';
+          const maxBid = lot.estimate_low ? Math.round(lot.estimate_low * 0.9) : null;
+          const score = lot.deal_score || 0;
+          const timingSignal = score >= 80 ? 'Strong — bid now' : score >= 65 ? 'Good entry' : 'Wait for lower';
+          const timingColor = score >= 80 ? GD : score >= 65 ? GOLD : RED;
+          const bullets = [
+            upsidePct > 0 && `Fair value ${sym}${Math.round(fairVal).toLocaleString()} — current price is ${upsidePct.toFixed(0)}% below market estimate.`,
+            maxBid && `Recommended max bid: ${sym}${maxBid.toLocaleString()} to preserve upside margin.`,
+            (lot.due_diligence?.flags?.length || 0) > 0
+              ? `${lot.due_diligence.flags.length} due diligence flag${lot.due_diligence.flags.length > 1 ? 's' : ''} detected — review before bidding.`
+              : 'No provenance or compliance flags detected on this lot.',
+            lot.is_low_supply ? 'Low supply signal — fewer than 3 comparable works currently on market.' : null,
+          ].filter(Boolean) as string[];
+          const content = (
+            <div style={{ padding: '20px 24px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '16px' }}>PRE-BID INTELLIGENCE</div>
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', flexWrap: 'wrap' as const }}>
+                <div style={{ background: DK, borderRadius: '6px', padding: '10px 14px', flex: 1, minWidth: '120px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', marginBottom: '6px' }}>TIMING</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: timingColor }}>{timingSignal}</div>
+                </div>
+                {maxBid && (
+                  <div style={{ background: LT, border: `1px solid ${LTB}`, borderRadius: '6px', padding: '10px 14px', flex: 1, minWidth: '120px' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', marginBottom: '6px' }}>MAX BID</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: LTT1 }}>{sym}{maxBid.toLocaleString()}</div>
+                  </div>
+                )}
+                <div style={{ background: LT, border: `1px solid ${LTB}`, borderRadius: '6px', padding: '10px 14px', flex: 1, minWidth: '120px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', marginBottom: '6px' }}>FAIR VALUE</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: GL }}>{fmt(fairVal)}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px' }}>
+                {bullets.map((b, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                    <span style={{ color: GOLD, fontSize: '10px', marginTop: '2px', flexShrink: 0 }}>◆</span>
+                    <span style={{ fontSize: '12px', color: LTT2, lineHeight: 1.5 }}>{b}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+          return (
+            <div style={{ padding: '0 40px 32px' }}>
+              <div style={{ position: 'relative', background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden' }}>
+                {canSeeAnalysis ? content : (
+                  <>
+                    <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none' as const }}>{content}</div>
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+                      <span onClick={() => window.location.href = '/app/pricing'} style={{ cursor: 'pointer', background: '#1A2A44', color: '#C6A85A', fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', padding: '8px 18px', borderRadius: 3 }}>
+                        INVESTOR+ · UNLOCK →
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ── HOW TO BID ───────────────────────────────────────────────────────── */}
         {(() => {
           const targetEntry = lot.current_price;
