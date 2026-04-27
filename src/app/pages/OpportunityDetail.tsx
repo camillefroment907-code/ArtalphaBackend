@@ -545,7 +545,7 @@ export default function OpportunityDetail() {
                   title="Is this artwork truly worth buying?"
                   teaser="Unlock fair value analysis, upside potential, and 5-year price projections before you decide."
                   ctaText="Unlock Investment Analysis"
-                  ctaPrice="From €9/month"
+                  ctaPrice="Founding price — €19/mo"
                   planId="starter"
                   preview={
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>

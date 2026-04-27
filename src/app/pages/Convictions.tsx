@@ -431,7 +431,7 @@ export default function Convictions() {
                     cursor: 'pointer',
                   }}
                 >
-                  View plans — from €9/month
+                  Founding price — €19/mo
                 </button>
               </div>
             )}

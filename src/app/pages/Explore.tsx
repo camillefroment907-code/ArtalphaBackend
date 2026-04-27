@@ -1070,7 +1070,7 @@ export default function Explore() {
                             Get full access →
                           </button>
                           <div style={{ fontSize: "11px", color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>
-                            From €9/month · Cancel anytime · Instant access
+                            Founding price — €19/mo · Cancel anytime · Instant access
                           </div>
                         </div>
                       </div>

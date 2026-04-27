@@ -208,7 +208,7 @@ export default function Legal() {
               headers={['Plan', 'Monthly', 'Annual', 'Opportunities', 'AI Analyses/mo']}
               rows={[
                 ['Free', '€0', '—', '30', 'None'],
-                ['Collector', '€9', '€86.40', '100', 'None'],
+                ['Collector', 'Founding price — €19/mo', '€182.40', '100', 'None'],
                 ['Investor', '€29', '€278.40', 'Unlimited', '20'],
                 ['Family Office', '€99', '€950.40', 'Unlimited', '100'],
                 ['Institutional', 'Custom', 'Custom', 'Unlimited', '999'],
