@@ -237,7 +237,7 @@ export default function Portfolio() {
   const { i18n } = useTranslation();
   const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
   const user = getUser();
-  const plan = user?.email === 'camillefroment907@gmail.com' ? 'elite' : (user?.plan ?? 'free');
+  const plan = user?.email === 'camillefroment907@gmail.com' ? 'elite' : (user?.plan === 'institutional' ? 'elite' : (user?.plan ?? 'free'));
   const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
   const usageLimit = USAGE_LIMITS[plan] ?? 0;
   const usageStatus = getUsageStatus(plan);
@@ -317,8 +317,9 @@ export default function Portfolio() {
   const [cancelLoading, setCancelLoading] = useState(false);
 
   // ── Delete account ─────────────────────────────────────────
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteModalState, setDeleteModalState] = useState<null | 'loading' | 'confirm' | 'success'>(null);
+  const [deleteInfo, setDeleteInfo] = useState<{ billing_interval: string; subscription_end_date: string | null } | null>(null);
+  const [deleteError, setDeleteError] = useState('');
 
   // ── Notification prefs ─────────────────────────────────────
   const [notificationPrefs, setNotificationPrefs] = useState<Record<string, boolean>>({});
@@ -336,7 +337,8 @@ export default function Portfolio() {
     pro: 'Family Office', elite: 'Institutional',
   };
   const planLabel = PLAN_LABELS[plan] ?? plan;
-  const isFreePlan = plan === 'free' || plan === 'starter';
+  const hasAccess = ["investor", "pro", "elite", "institutional"].includes(plan);
+  const isFreePlan = !hasAccess || plan === 'starter';
   const billingInterval = sub?.billing_interval || 'monthly';
   const totalInvested = portfolioStats?.total_invested ?? 0;
   const totalValue = portfolioStats?.estimated_total_value ?? 0;
@@ -455,6 +457,7 @@ export default function Portfolio() {
   useEffect(() => {
     if (activeTab === 'watchlist') loadWatchlist();
     if (activeTab === 'artists') loadFavoriteArtists();
+    if (activeTab === 'alerts') loadAlertPrefs();
     if (activeTab === 'subscription' || activeTab === 'settings') loadInvoices();
     if (activeTab === 'risk' && !corrMatrix && portfolioItems.length >= 2) {
       const artistNames = [...new Set(portfolioItems.map(i => i.artist_name).filter(Boolean))] as string[];
@@ -640,16 +643,53 @@ export default function Portfolio() {
     }).catch(() => {});
   };
 
+  const ALERT_PREF_MAP: Record<string, string> = {
+    notify_exceptional_deals: 'exceptional_opportunity',
+    notify_price_alert: 'lot_below_market',
+    notify_new_auction: 'new_auction_house',
+    notify_new_lot_by_artist: 'new_lot_followed_artist',
+    notify_artist_momentum: 'artist_momentum_change',
+    notify_auction_reminder: 'auction_closing_24h',
+    notify_portfolio_value: 'portfolio_value_change',
+    notify_sell_opportunity: 'optimal_sell_window',
+    notify_weekly_brief: 'weekly_brief',
+    notify_monthly_report: 'monthly_report',
+    notify_email: 'email_notifications',
+  };
+
+  const loadAlertPrefs = async () => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const r = await fetch(`${BACKEND}/api/alerts/preferences`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!r.ok) return;
+      const data = await r.json();
+      const mapped: Record<string, boolean> = {};
+      for (const [frontendKey, backendKey] of Object.entries(ALERT_PREF_MAP)) {
+        mapped[frontendKey] = data[backendKey] !== false;
+      }
+      setNotificationPrefs(prev => ({ ...prev, ...mapped }));
+    } catch { /* silent */ }
+  };
+
   const toggleNotification = (key: string) => {
     setNotificationPrefs(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const saveNotificationPrefs = async () => {
+    const token = getToken();
+    if (!token) return;
     try {
-      await fetch(`${BACKEND}/api/auth/profile`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify(notificationPrefs),
+      const payload: Record<string, boolean> = {};
+      for (const [frontendKey, backendKey] of Object.entries(ALERT_PREF_MAP)) {
+        payload[backendKey] = notificationPrefs[frontendKey] !== false;
+      }
+      await fetch(`${BACKEND}/api/alerts/preferences`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
       });
       setSettingsSaved(true);
       setTimeout(() => setSettingsSaved(false), 3000);
@@ -700,16 +740,40 @@ export default function Portfolio() {
     } catch { /* silent */ }
   };
 
-  const handleDeleteAccount = async () => {
-    if (deleteConfirmText !== 'DELETE') return;
+  const openDeleteModal = async () => {
+    setDeleteModalState('loading');
+    setDeleteError('');
     try {
-      await fetch(`${BACKEND}/api/auth/delete-account`, {
+      const subR = await fetch(`${BACKEND}/api/billing/subscription`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const subData = await subR.json();
+      setDeleteInfo({
+        billing_interval: subData.billing_interval || 'free',
+        subscription_end_date: subData.current_period_end || null,
+      });
+    } catch {
+      setDeleteInfo({ billing_interval: 'free', subscription_end_date: null });
+    }
+    setDeleteModalState('confirm');
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteError('');
+    try {
+      const r = await fetch(`${BACKEND}/api/auth/delete-account`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${getToken()}` },
       });
-      localStorage.clear();
-      navigate('/');
-    } catch { /* silent */ }
+      if (!r.ok) throw new Error('Request failed');
+      setDeleteModalState('success');
+      setTimeout(() => {
+        localStorage.clear();
+        navigate('/');
+      }, 3000);
+    } catch {
+      setDeleteError('An error occurred. Please try again or contact privacy@get-nautilus.com');
+    }
   };
 
   // ── Settings ───────────────────────────────────────────────
@@ -755,7 +819,7 @@ export default function Portfolio() {
     if (opportunitiesSort === 'date_asc') return new Date(a.auctionDate || '9999').getTime() - new Date(b.auctionDate || '9999').getTime();
     return b.dealScore - a.dealScore; // default: deal_score
   });
-  const displayedLots = plan === 'free' ? sortedLots.slice(0, 6) : sortedLots.slice(0, 12);
+  const displayedLots = !hasAccess ? sortedLots.slice(0, 6) : sortedLots.slice(0, 12);
 
   // ══════════════════════════════════════════════════════════════════════════
   // RENDER
@@ -1663,7 +1727,7 @@ export default function Portfolio() {
               <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>Configure exactly when Nautilus contacts you — and how</p>
             </div>
 
-            {plan === 'free' && (
+            {!hasAccess && (
               <div style={{textAlign:'center',padding:'32px 24px',background:'#f8f8f6',borderRadius:8,marginBottom:24,border:'1px solid #e8e4dc'}}>
                 <div style={{fontSize:11,letterSpacing:'0.2em',color:'#C6A85A',marginBottom:8,fontWeight:700}}>INVESTOR+ FEATURE</div>
                 <div style={{fontSize:18,fontFamily:'Georgia,serif',color:'#1A2A44',marginBottom:8}}>Alerts are available from the Investor plan</div>
@@ -1671,7 +1735,7 @@ export default function Portfolio() {
               </div>
             )}
 
-            <div style={plan === 'free' ? {pointerEvents:'none' as const,opacity:0.5} : {}}>
+            <div style={!hasAccess ? {pointerEvents:'none' as const,opacity:0.5} : {}}>
             {[
               {
                 title: 'Market signals',
@@ -2011,7 +2075,7 @@ export default function Portfolio() {
                   <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Permanently delete all your data. This cannot be undone.</div>
                 </div>
                 <button
-                  onClick={() => setShowDeleteModal(true)}
+                  onClick={openDeleteModal}
                   style={{ padding: '8px 16px', background: 'var(--red)', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 700, color: 'white', cursor: 'pointer', whiteSpace: 'nowrap' }}
                 >
                   Delete account
@@ -2040,32 +2104,86 @@ export default function Portfolio() {
               </div>
             )}
 
-            {/* Delete modal */}
-            {showDeleteModal && (
+            {/* Delete account modal — 3 states: loading / confirm / success */}
+            {deleteModalState !== null && (
               <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,22,40,0.65)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-                <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '420px', width: '100%' }}>
-                  <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--red)', marginBottom: '12px' }}>Delete your account?</h3>
-                  <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '16px', lineHeight: 1.7 }}>
-                    This will permanently delete your account, collection, portfolio, and all data. This action cannot be undone.
-                  </p>
-                  <input
-                    placeholder='Type "DELETE" to confirm'
-                    value={deleteConfirmText}
-                    onChange={e => setDeleteConfirmText(e.target.value)}
-                    style={{ marginBottom: '16px', width: '100%', padding: '10px 12px', fontSize: '13px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }} style={{ flex: 1, padding: '11px', background: 'var(--navy)', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, color: 'white', cursor: 'pointer' }}>
-                      Keep account
-                    </button>
-                    <button
-                      onClick={handleDeleteAccount}
-                      disabled={deleteConfirmText !== 'DELETE'}
-                      style={{ flex: 1, padding: '11px', background: deleteConfirmText === 'DELETE' ? 'var(--red)' : 'var(--bg-hover)', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, color: deleteConfirmText === 'DELETE' ? 'white' : 'var(--text-3)', cursor: deleteConfirmText === 'DELETE' ? 'pointer' : 'not-allowed' }}
-                    >
-                      Delete forever
-                    </button>
-                  </div>
+                <div style={{ background: 'white', borderRadius: '12px', maxWidth: '480px', width: '100%', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
+
+                  {/* Loading */}
+                  {deleteModalState === 'loading' && (
+                    <div style={{ padding: '48px', textAlign: 'center' }}>
+                      <div style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#dc2626', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+                      <div style={{ fontSize: '14px', color: '#6b7280' }}>Loading account information…</div>
+                    </div>
+                  )}
+
+                  {/* Confirm */}
+                  {deleteModalState === 'confirm' && (
+                    <>
+                      <div style={{ height: '4px', background: '#dc2626' }} />
+                      <div style={{ padding: '32px' }}>
+                        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                          <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.15em', color: '#dc2626', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', marginBottom: '12px' }}>NAUTILUS</div>
+                          <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: '#1a2a44', margin: 0 }}>Delete your Nautilus account</h3>
+                        </div>
+
+                        <div style={{ fontSize: '13px', color: '#374151', lineHeight: 1.7, marginBottom: '20px' }}>
+                          {(!deleteInfo || deleteInfo.billing_interval === 'free') && (
+                            <>Your account and all personal data will be permanently anonymized immediately. You will be logged out and will no longer be able to access Nautilus.</>
+                          )}
+                          {deleteInfo?.billing_interval === 'monthly' && (
+                            <>Your Nautilus subscription will not be renewed. You will retain full access until{' '}
+                            <strong>{deleteInfo.subscription_end_date ? new Date(deleteInfo.subscription_end_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'the end of your billing period'}</strong>.
+                            {' '}After this date, your account will be permanently anonymized.</>
+                          )}
+                          {deleteInfo?.billing_interval === 'yearly' && (
+                            <>You are currently committed to an annual plan. Your subscription will not be renewed at the end of your commitment period ({deleteInfo.subscription_end_date ? <strong>{new Date(deleteInfo.subscription_end_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong> : 'end of period'}). You will retain full access until that date. No refund will be issued for the remaining period in accordance with our Terms of Service.</>
+                          )}
+                        </div>
+
+                        <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '14px 16px', marginBottom: '24px' }}>
+                          <div style={{ fontSize: '11px', color: '#6b7280', lineHeight: 1.7 }}>
+                            In accordance with the General Data Protection Regulation (GDPR), your personal data (name, email, phone) will be anonymized immediately upon confirmation. Anonymized transaction records will be retained for up to 7 years for legal and accounting compliance. You may request a copy of your data before deletion by contacting{' '}
+                            <a href="mailto:privacy@get-nautilus.com" style={{ color: '#6b7280' }}>privacy@get-nautilus.com</a>
+                          </div>
+                        </div>
+
+                        {deleteError && (
+                          <div style={{ fontSize: '12px', color: '#dc2626', marginBottom: '16px', padding: '10px 12px', background: '#fef2f2', borderRadius: '6px' }}>{deleteError}</div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                          <button
+                            onClick={() => { setDeleteModalState(null); setDeleteError(''); }}
+                            style={{ flex: 1, padding: '11px', background: 'white', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#374151', cursor: 'pointer' }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleDeleteAccount}
+                            style={{ flex: 1, padding: '11px', background: '#dc2626', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, color: 'white', cursor: 'pointer' }}
+                          >
+                            Confirm deletion
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Success */}
+                  {deleteModalState === 'success' && (
+                    <div style={{ padding: '48px', textAlign: 'center' }}>
+                      <div style={{ width: 48, height: 48, background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                          <path d="M5 13l4 4L19 7" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
+                      <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: '#1a2a44', marginBottom: '8px' }}>Your account has been scheduled for deletion.</h3>
+                      <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>Your personal data has been anonymized.</p>
+                      <p style={{ fontSize: '13px', color: '#9ca3af' }}>You will be logged out in 3 seconds.</p>
+                    </div>
+                  )}
+
                 </div>
               </div>
             )}
@@ -2212,6 +2330,16 @@ export default function Portfolio() {
                   ✓ Saved successfully
                 </span>
               )}
+            </div>
+
+            {/* Delete account */}
+            <div style={{ marginTop: '48px', textAlign: 'center' }}>
+              <button
+                onClick={openDeleteModal}
+                style={{ color: '#dc2626', background: 'none', border: 'none', fontSize: '13px', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                Delete my account
+              </button>
             </div>
           </div>
         )}
