@@ -894,6 +894,13 @@ export default function Explore() {
                 </div>
               )}
 
+              {/* Primary market label */}
+              {exploreTab === 'primary' && (
+                <div style={{ fontSize: '12px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', marginBottom: '16px' }}>
+                  Gallery & dealer offerings — fixed-price works available directly from galleries worldwide
+                </div>
+              )}
+
               {/* Loading */}
               {exploreTab !== 'for-you' && loading && <NautilusLoader />}
 
