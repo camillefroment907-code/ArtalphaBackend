@@ -884,8 +884,13 @@ export default function Explore() {
               )}
               {/* Count line */}
               {total > 0 && !loading && (
-                <div style={{ padding: '4px 0 8px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-                  {total.toLocaleString()} lots
+                <div style={{ padding: '4px 0 8px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                    {total.toLocaleString()} lots
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', marginTop: '4px' }}>
+                    Across Christie's, Sotheby's, Drouot, Heritage Auctions and 2+ auction houses
+                  </div>
                 </div>
               )}
 
@@ -914,7 +919,7 @@ export default function Explore() {
               {/* ─── FOR YOU TAB ────────────────────────────── */}
               {exploreTab === 'for-you' && (
                 <div style={{ padding: '8px 0' }}>
-                  {!isAdmin && userPlan === 'free' ? (
+                  {!isAdmin && !["investor", "pro", "elite", "institutional"].includes(userPlan) ? (
                     <div style={{textAlign:'center',padding:'64px 24px',background:'#f8f8f6',borderRadius:8,marginTop:32,border:'1px solid #e8e4dc'}}>
                       <div style={{fontSize:11,letterSpacing:'0.2em',color:'#C6A85A',marginBottom:12,fontWeight:700}}>INVESTOR+ FEATURE</div>
                       <div style={{fontSize:22,fontFamily:'Georgia,serif',color:'#1A2A44',marginBottom:12}}>Personalized recommendations require an Investor plan</div>

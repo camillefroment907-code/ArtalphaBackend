@@ -452,6 +452,7 @@ export default function Landing() {
             { icon: '⚡', text: '3 exceptional lots closing in 48h', highlight: true },
             { icon: '◆', text: `${dailyMembers().toLocaleString()} collectors on Nautilus`, highlight: false },
             { icon: '◎', text: `${(lotCount ?? dailyLots()).toLocaleString()} opportunities tracked live`, highlight: false },
+            { icon: '◈', text: '10+ auction houses', highlight: false },
           ].map(({ icon, text, highlight }) => (
             <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
               <span style={{ fontSize: '12px', color: highlight ? '#C6A85A' : 'rgba(255,255,255,0.4)' }}>{icon}</span>
