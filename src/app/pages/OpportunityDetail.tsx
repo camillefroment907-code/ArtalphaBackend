@@ -76,7 +76,7 @@ export default function OpportunityDetail() {
   const [memoLoading, setMemoLoading]     = useState(false);
   const [memo, setMemo]                   = useState<any>(null);
   const [showMemo, setShowMemo]           = useState(false);
-  const [comparables, setComparables]     = useState<any>(null);
+  const [comparables, setComparables]     = useState<any[]>([]);
   const [stickyVisible, setStickyVisible] = useState(false);
   const [isDailyDeal, setIsDailyDeal]     = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -90,6 +90,7 @@ export default function OpportunityDetail() {
 
   const limits         = getPlanLimits();
   const plan           = isDailyDeal ? 'investor' : getUserPlan();
+  const hasAccess      = isDailyDeal || ["investor", "pro", "elite", "institutional"].includes(plan);
   const canSeeAnalysis = isDailyDeal || limits.hasProjections || limits.hasArtistCotation;
   const canSeeAI       = isDailyDeal || limits.hasAIVerdict;
   const visibleYears   = isDailyDeal ? [5, 10, 20] : (limits.projectionYears || []);
@@ -121,7 +122,7 @@ export default function OpportunityDetail() {
       .catch(() => setLoading(false));
     fetch(`${BACKEND}/api/lots/${id}/comparables`, {
       headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
-    }).then(r => r.json()).then(setComparables).catch(() => {});
+    }).then(r => r.json()).then(data => setComparables(data.comparables || [])).catch(() => {});
   }, [id]);
 
   useEffect(() => {
@@ -253,7 +254,7 @@ export default function OpportunityDetail() {
     : null;
 
   // Comparables
-  const allComps: any[] = comparables?.comparables || [];
+  const allComps: any[] = comparables;
   const sameArtistComps = allComps.filter((c: any) =>
     c.artist_name_raw?.toLowerCase().trim() === (lot.artist_name_raw || '').toLowerCase().trim()
   );
@@ -434,11 +435,12 @@ export default function OpportunityDetail() {
               reasons.push("Limited supply — scarcity signal");
             if ((lot.real_cost?.breakeven_pct || 0) > 60)
               reasons.push(`Break-even at €${lot.real_cost?.breakeven_hammer} — needs only ${Math.round(lot.real_cost?.breakeven_pct)}% appreciation`);
-            const compsAvg = displayComps.length > 0
-              ? Math.round(displayComps.reduce((s: number, c: any) => s + (c.current_price || 0), 0) / displayComps.length)
+            const currencySymbol = (lot.currency === 'USD') ? '$' : (lot.currency === 'GBP') ? '£' : '€';
+            const compsAvg = comparables.length > 0
+              ? Math.round(comparables.reduce((s: number, c: any) => s + (c.current_price || 0), 0) / comparables.length)
               : null;
             if (compsAvg && compsAvg > lot.current_price)
-              reasons.push(`Comparable works average €${compsAvg} — ${Math.round((compsAvg / lot.current_price - 1) * 100)}% above this entry price`);
+              reasons.push(`Comparable works average ${currencySymbol}${compsAvg.toLocaleString()} — ${Math.round((compsAvg / lot.current_price - 1) * 100)}% above this entry price`);
             const isBuy = (lot.deal_score || 0) >= 65;
             const whyLabel = isBuy ? "WHY BUY" : "WHY PASS";
             const whyColor = isBuy ? "#C6A85A" : "#F87171";
@@ -470,7 +472,7 @@ export default function OpportunityDetail() {
 
           {/* External link */}
           <div>
-            {plan === 'free' ? (
+            {!hasAccess ? (
               <span onClick={() => { window.location.href = '/app/pricing'; }} style={{ cursor: 'pointer', color: '#2563EB', fontSize: 13, fontWeight: 600, letterSpacing: '0.04em' }}>🔒 Unlock source — Investor plan →</span>
             ) : (
               <a href={externalUrl} target="_blank" rel="noopener noreferrer"
@@ -591,7 +593,7 @@ export default function OpportunityDetail() {
               { label: 'House',      value: lot.auction_house_name },
               { label: 'Closes',     value: auctionDateFmt },
               { label: 'Lot #',      value: lot.lot_number },
-              { label: 'Source',     value: plan === 'free' ? 'Source locked' : sourceLabel, href: plan === 'free' ? undefined : externalUrl },
+              { label: 'Source',     value: !hasAccess ? 'Source locked' : sourceLabel, href: !hasAccess ? undefined : externalUrl },
             ] as { label: string; value?: string | null; nav?: string; link?: boolean; href?: string }[]).filter(r => r.value).map(r => (
               <div key={r.label} style={dRow}>
                 <span style={{ fontSize: '13px', color: LTT2, minWidth: '80px', flexShrink: 0 }}>{r.label}</span>
@@ -601,7 +603,7 @@ export default function OpportunityDetail() {
                   <a href={r.href} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: BL, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px' }}>
                     {r.value} ↗
                   </a>
-                ) : r.label === 'Source' && plan === 'free' ? (
+                ) : r.label === 'Source' && !hasAccess ? (
                   <span onClick={() => { window.location.href = '/app/pricing'; }} style={{ cursor: 'pointer', color: '#2563EB', fontSize: 13, fontWeight: 600, letterSpacing: '0.04em' }}>🔒 Unlock source — Investor plan →</span>
                 ) : (
                   <span style={{ fontSize: '13px', color: LTT1, fontWeight: 500, textAlign: 'right', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.value}</span>
@@ -802,7 +804,7 @@ export default function OpportunityDetail() {
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#EFF6FF', border: '1px solid #BFDBFE', color: BL, padding: '3px 8px', borderRadius: '3px' }}>INVESTOR+</span>
               </div>
               <button
-                onClick={plan === 'free' ? () => { window.location.href = '/app/pricing'; } : (memo ? () => setShowMemo(true) : generateMemo)}
+                onClick={!hasAccess ? () => { window.location.href = '/app/pricing'; } : (memo ? () => setShowMemo(true) : generateMemo)}
                 disabled={memoLoading}
                 onMouseEnter={e => { if (!memoLoading) (e.target as HTMLButtonElement).style.background = '#1A2332'; }}
                 onMouseLeave={e => { if (!memoLoading) (e.target as HTMLButtonElement).style.background = DK; }}
