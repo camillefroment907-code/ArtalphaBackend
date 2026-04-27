@@ -530,6 +530,7 @@ export default function Explore() {
         const resp = await fetch(url, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
+        if (!resp.ok) { setHasError(true); return; }
         const data = await resp.json();
         const items = Array.isArray(data) ? data : (data.items || data.lots || data.results || []);
         setLots(items.map(mapLot));

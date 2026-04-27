@@ -4,7 +4,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name?: string;
-  plan: 'free' | 'starter' | 'investor' | 'pro' | 'elite';
+  plan: 'free' | 'starter' | 'investor' | 'pro' | 'elite' | 'institutional';
   token: string;
 }
 
@@ -113,6 +113,23 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     hasFullArtistProfile: true,
     projectionYears: [5, 10, 20, 50],
   },
+  institutional: {
+    name: 'Institutional',
+    maxOpportunities: 9999,
+    maxWatchlist: 9999,
+    hasFullAnalysis: true,
+    hasAlerts: true,
+    hasPortfolio: true,
+    hasMarketData: true,
+    hasArtistCotation: true,
+    hasProjections: true,
+    hasProvenance: true,
+    hasAIVerdict: true,
+    hasMarketTiming: true,
+    hasComparables: true,
+    hasFullArtistProfile: true,
+    projectionYears: [5, 10, 20, 50],
+  },
 };
 
 export function getUser(): AuthUser | null {
@@ -154,15 +171,11 @@ export function getUserPlan(): string {
 }
 
 export function getPlanLimits(): PlanLimits {
-  const user = getUser();
-  if (user?.email === 'camillefroment907@gmail.com') return PLAN_LIMITS.elite;
   const plan = getUserPlan();
   return PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
 }
 
 export function getFreeLimit(): number {
-  const user = getUser();
-  if (user?.email === 'camillefroment907@gmail.com') return 9999;
   return getPlanLimits().maxOpportunities;
 }
 

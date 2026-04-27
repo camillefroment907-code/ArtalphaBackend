@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { tKey: 'nav.signalFeed',   label: 'Signal Feed', to: '/app/dashboard', dropdown: null },
   { tKey: 'nav.explorer',     label: '',            to: '/app/explore',   dropdown: 'explorer' },
   { tKey: 'nav.artists',      label: 'Artists',     to: '/app/artists',   dropdown: null },
+  { tKey: 'nav.emerging',     label: 'Emerging',    to: '/app/emerging',  dropdown: null },
   { tKey: 'nav.calendar',     label: 'Calendar',    to: '/app/calendar',  dropdown: null },
   { tKey: 'nav.intelligence', label: '',            to: '/app/agent',     dropdown: null },
   { tKey: 'nav.portfolio',    label: '',            to: '/app/portfolio',  dropdown: null },
@@ -34,7 +35,7 @@ const EXPLORER_ITEMS = [
 
 const PLAN_LABELS: Record<string, string> = {
   free: 'Free', starter: 'Collector', investor: 'Investor',
-  pro: 'Family Office', elite: 'Institutional', institutional: 'Institutional',
+  pro: 'Pro', elite: 'Elite', institutional: 'Institutional',
 };
 
 const ADMIN_EMAIL = 'camillefroment907@gmail.com';
@@ -73,7 +74,7 @@ export function Header() {
 
   const avatarRef = useRef<HTMLDivElement>(null);
 
-  const plan = user?.email === ADMIN_EMAIL ? 'elite' : getUserPlan();
+  const plan = getUserPlan();
   const planLabel = PLAN_LABELS[plan] ?? plan;
   const isAdmin = user?.email === ADMIN_EMAIL;
 
@@ -267,6 +268,7 @@ export function Header() {
                 );
               }
 
+              const isEmerging = item.to === '/app/emerging';
               return (
                 <Link
                   key={item.to}
@@ -296,7 +298,9 @@ export function Header() {
                     }
                   }}
                 >
-                  {item.label || t(item.tKey)}
+                  {isEmerging ? (
+                    <>{item.label} <span style={{ color: 'var(--gold)' }}>✦</span></>
+                  ) : (item.label || t(item.tKey))}
                   {isIntelligence && agentUnread > 0 && (
                     <span style={{
                       width: '6px', height: '6px', borderRadius: '50%',
