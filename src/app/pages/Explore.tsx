@@ -888,9 +888,11 @@ export default function Explore() {
                   <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
                     {total.toLocaleString()} lots
                   </div>
-                  <div style={{ fontSize: '12px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', marginTop: '4px' }}>
-                    Across Christie's, Sotheby's, Drouot, Heritage Auctions and 2+ auction houses
-                  </div>
+                  {(exploreTab === 'best' || exploreTab === 'auctions') && (
+                    <div style={{ fontSize: '11px', color: '#C9C5BC', fontFamily: 'var(--font-mono)', marginTop: '2px', letterSpacing: '0.03em', opacity: 0.7 }}>
+                      Across Christie's, Sotheby's, Drouot, Heritage Auctions and 2+ auction houses
+                    </div>
+                  )}
                 </div>
               )}
 
