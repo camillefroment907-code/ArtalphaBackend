@@ -447,7 +447,7 @@ export default function Landing() {
 
       {/* ── URGENCY STRIP ── */}
       <div style={{ background: 'var(--navy)', padding: '14px 0', overflow: 'hidden' }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 40px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '32px', flexWrap: 'wrap' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 40px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '32px', flexWrap: 'nowrap' }}>
           {[
             { icon: '⚡', text: '3 exceptional lots closing in 48h', highlight: true },
             { icon: '◆', text: `${dailyMembers().toLocaleString()} collectors on Nautilus`, highlight: false },
