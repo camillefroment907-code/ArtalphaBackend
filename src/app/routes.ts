@@ -32,6 +32,8 @@ const Convictions      = lazy(() => import('./pages/Convictions'));
 const MarketIndex      = lazy(() => import('./pages/MarketIndex'));
 const RoomVisualizer   = lazy(() => import('./pages/RoomVisualizer'));
 const AuctionCalendar  = lazy(() => import('./pages/AuctionCalendar'));
+const Emerging         = lazy(() => import('./pages/Emerging'));
+const VerifyPending    = lazy(() => import('./pages/VerifyPending'));
 const Legal                 = lazy(() => import('./pages/Legal'));
 const AdminHealth           = lazy(() => import('./pages/AdminHealth'));
 const AdminLaunch           = lazy(() => import('./pages/AdminLaunch'));
@@ -130,6 +132,8 @@ export const router = createBrowserRouter([
       { path: 'onboarding', Component: Onboarding },
       { path: 'visualizer', Component: RoomVisualizer },
       { path: 'calendar', Component: AuctionCalendar },
+      { path: 'emerging', Component: Emerging },
+      { path: 'verify-pending', Component: VerifyPending },
     ],
   },
   {
