@@ -255,6 +255,13 @@ async def list_lots(
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user_optional),
 ):
+    # Block authenticated but unverified users
+    if current_user and not current_user.is_verified:
+        raise HTTPException(
+            status_code=403,
+            detail="Please verify your email before accessing content.",
+        )
+
     # ── Plan enforcement ─────────────────────────────────────────────────────
     # Cap page_size to the caller's plan limit so API bypass is impossible.
     plan = await get_user_plan(current_user, db)

@@ -90,8 +90,16 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
             expires_delta=timedelta(hours=48),
         )
         verify_url = f"{settings.frontend_url}/app/verify-email?token={verify_token}"
-        asyncio.create_task(send_verification_email(user.email, verify_url))
-        print(f"[AUTH] Verification email task created for {user.email}")
+        print(f"[AUTH] email_config resend_key_set={bool(settings.resend_api_key)}, from={settings.transac_from_email}")
+
+        async def _send_verify():
+            try:
+                ok = await send_verification_email(user.email, verify_url)
+                print(f"[AUTH] verification_email sent={ok} to={user.email}")
+            except Exception as exc:
+                print(f"[AUTH] verification_email FAILED to={user.email} error={exc}")
+
+        asyncio.create_task(_send_verify())
     except Exception:
         pass
 
