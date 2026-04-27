@@ -10,11 +10,11 @@ from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import BgSessionLocal
-from app.models.db_models import User, Lot, UserPreference, Subscription, SubscriptionStatus
+from app.models.db_models import User, Lot, UserPreference, Subscription, SubscriptionStatus, UserAlertPreferences
 
 logger = logging.getLogger(__name__)
 
-FRONTEND_URL = "https://artalpha.io"
+FRONTEND_URL = "https://www.get-nautilus.com"
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -185,10 +185,8 @@ def _build_email_html(
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#FAFAF8;padding:40px 0;">
 <tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border:1px solid #E8E6E1;">
-  <tr><td style="padding:32px 40px;border-bottom:1px solid #E8E6E1;">
-    <span style="font-family:'Georgia',serif;font-size:20px;font-weight:600;color:#1A2A44;letter-spacing:0.05em;">
-      NAU<span style="color:#C6A85A">TILUS</span>
-    </span>
+  <tr><td style="background-color:#FFFFFF;padding:28px 40px 24px 40px;border-top:3px solid #C6A85A;">
+    <img src="https://www.get-nautilus.com/logo.png" alt="Nautilus" style="height:40px;display:block;">
     <span style="font-size:10px;color:#AAAAAA;font-family:Arial,sans-serif;
                  letter-spacing:0.12em;text-transform:uppercase;margin-left:16px;">
       Weekly Report &middot; {week_str}
@@ -257,16 +255,29 @@ async def send_weekly_report() -> dict:
         total_live, avg_score = stats_result.one()
         avg_score = float(avg_score or 0)
 
-        # All active users with alerts enabled
+        # All active users
         users_result = await db.execute(
             select(User)
             .where(User.is_active == True)
         )
         users: List[User] = users_result.scalars().all()
 
+        # Bulk-fetch alert preferences for dedup at send time
+        prefs_result = await db.execute(
+            select(UserAlertPreferences)
+            .where(UserAlertPreferences.user_id.in_([u.id for u in users]))
+        )
+        alert_prefs_map = {
+            str(p.user_id): p for p in prefs_result.scalars().all()
+        }
+
     sent = 0
     errors = 0
     for user in users:
+        pref = alert_prefs_map.get(str(user.id))
+        # Users without a prefs row keep default (all True) — don't skip them
+        if pref and (not pref.email_notifications or not pref.weekly_brief):
+            continue
         try:
             lang = "fr"  # default; could fetch from UserPreference
             html = _build_email_html(
