@@ -1,7 +1,7 @@
 """add_artsper_artist_snapshots
 
 Revision ID: d2e3f4a5b6c7
-Revises: c1e2f3a4b5d6
+Revises: e5f6a7b8c9d0
 Create Date: 2026-04-25 20:00:00.000000
 """
 from typing import Sequence, Union
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 revision: str = 'd2e3f4a5b6c7'
-down_revision: Union[str, None] = 'c1e2f3a4b5d6'
+down_revision: Union[str, None] = 'e5f6a7b8c9d0'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
