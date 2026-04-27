@@ -138,6 +138,12 @@ async def login(request: Request, body: UserLogin, db: AsyncSession = Depends(ge
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account disabled")
 
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=403,
+            detail="Please verify your email before logging in."
+        )
+
     plan = user.active_plan.value.lower()
     if user.email == "camillefroment907@gmail.com":
         plan = "institutional"

@@ -920,7 +920,6 @@ async def _handle_subscription_update(db: AsyncSession, stripe_sub: dict):
                 )
                 db.add(new_sub)
                 logger.info("New subscription created via webhook", user_id=user_id, plan=plan.value)
-            logger.info("New subscription created via webhook", user_id=user_id, plan=plan.value)
 
     # Send trial started email on first trialing event
     try:
