@@ -303,25 +303,65 @@ async def delete_account(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Permanently delete user account and all data."""
-    try:
-        import stripe as stripe_lib
-        stripe_lib.api_key = settings.stripe_secret_key
-        result = await db.execute(
-            select(Subscription).where(Subscription.user_id == current_user.id)
-        )
-        sub = result.scalar_one_or_none()
-        if sub and sub.stripe_subscription_id:
-            try:
-                stripe_lib.Subscription.cancel(sub.stripe_subscription_id)
-            except Exception:
-                pass
-    except Exception:
-        pass
+    """RGPD-compliant account deletion: anonymize user data, cancel Stripe subscription at period end."""
+    from datetime import datetime
 
+    billing_interval = "free"
+    subscription_end_date = None
+
+    # Step 1: Fetch subscription from DB
+    sub_result = await db.execute(
+        select(Subscription).where(Subscription.user_id == current_user.id)
+    )
+    sub = sub_result.scalar_one_or_none()
+
+    # Step 2: Handle Stripe — set cancel_at_period_end, never immediate cancel
+    if sub and sub.stripe_subscription_id:
+        try:
+            import stripe as stripe_lib
+            stripe_lib.api_key = settings.stripe_secret_key
+            stripe_sub = stripe_lib.Subscription.retrieve(sub.stripe_subscription_id)
+            billing_interval = sub.billing_interval or "monthly"
+            if stripe_sub.get("status") in ("active", "trialing"):
+                updated = stripe_lib.Subscription.modify(
+                    sub.stripe_subscription_id,
+                    cancel_at_period_end=True,
+                )
+                period_end_ts = updated.get("current_period_end")
+                if period_end_ts:
+                    subscription_end_date = datetime.utcfromtimestamp(period_end_ts).isoformat() + "Z"
+            sub.cancel_at_period_end = True
+            sub.updated_at = datetime.utcnow()
+        except Exception:
+            # Stripe unreachable — fall back to DB values
+            billing_interval = sub.billing_interval or "monthly"
+            if sub.current_period_end:
+                subscription_end_date = sub.current_period_end.isoformat() + "Z"
+    elif sub:
+        billing_interval = sub.billing_interval or "monthly"
+        if sub.current_period_end:
+            subscription_end_date = sub.current_period_end.isoformat() + "Z"
+
+    # Step 3: RGPD anonymization — never hard delete
+    anonymized_email = f"deleted_{current_user.id}@deleted.nautilus"
     await db.execute(
-        text("DELETE FROM users WHERE id = :uid"),
-        {"uid": str(current_user.id)}
+        text("""
+            UPDATE users SET
+                email        = :email,
+                full_name    = NULL,
+                hashed_password = 'DELETED',
+                phone        = NULL,
+                is_active    = FALSE,
+                updated_at   = now()
+            WHERE id = :uid
+        """),
+        {"email": anonymized_email, "uid": str(current_user.id)},
     )
     await db.commit()
-    return {"message": "Account deleted"}
+
+    return {
+        "success": True,
+        "billing_interval": billing_interval,
+        "subscription_end_date": subscription_end_date,
+        "message": "Account scheduled for deletion",
+    }
