@@ -49,6 +49,77 @@ async def get_artist(artist_id: str, db: AsyncSession = Depends(get_db)):
     return artist
 
 
+@artists_router.get("/{artist_id}/oracle")
+async def get_artist_oracle(artist_id: str, db: AsyncSession = Depends(get_db)):
+    """Nautilus Oracle — latest predictive signals for this artist. 404 if not yet computed."""
+    from app.models.db_models import ArtistSignal
+    result = await db.execute(
+        select(ArtistSignal).where(ArtistSignal.artist_id == artist_id)
+    )
+    signal = result.scalars().first()
+    if not signal:
+        raise HTTPException(status_code=404, detail="Oracle not yet computed for this artist")
+    return {
+        "artist_id": str(signal.artist_id),
+        "computed_at": signal.computed_at.isoformat() if signal.computed_at else None,
+        "oracle_score_6m": signal.oracle_score_6m,
+        "oracle_score_18m": signal.oracle_score_18m,
+        "oracle_signal": signal.oracle_signal,
+        "oracle_window": signal.oracle_window,
+        "oracle_target_upside": signal.oracle_target_upside,
+        "active_signals": signal.active_signals or [],
+        "oracle_narrative": signal.oracle_narrative,
+        "confidence": signal.confidence,
+        "vol_30d": signal.vol_30d,
+        "vol_90d": signal.vol_90d,
+        "price_growth_ratio": signal.price_growth_ratio,
+        "unsold_rate_90d": signal.unsold_rate_90d,
+        "repeat_buyer_detected": signal.repeat_buyer_detected,
+    }
+
+
+@artists_router.get("/by-name/{name}/oracle")
+async def get_artist_oracle_by_name(name: str, db: AsyncSession = Depends(get_db)):
+    """Nautilus Oracle by artist name — case-insensitive, strips spaces."""
+    from app.models.db_models import ArtistSignal
+    normalized = name.strip().lower().replace("  ", " ")
+    artist_result = await db.execute(
+        select(Artist).where(func.lower(Artist.name_normalized) == normalized)
+    )
+    artist = artist_result.scalars().first()
+    if not artist:
+        # fallback: try against lower(name)
+        artist_result = await db.execute(
+            select(Artist).where(func.lower(Artist.name) == normalized)
+        )
+        artist = artist_result.scalars().first()
+    if not artist:
+        raise HTTPException(status_code=404, detail="Artist not found")
+    signal_result = await db.execute(
+        select(ArtistSignal).where(ArtistSignal.artist_id == artist.id)
+    )
+    signal = signal_result.scalars().first()
+    if not signal:
+        raise HTTPException(status_code=404, detail="Oracle not yet computed for this artist")
+    return {
+        "artist_id": str(signal.artist_id),
+        "computed_at": signal.computed_at.isoformat() if signal.computed_at else None,
+        "oracle_score_6m": signal.oracle_score_6m,
+        "oracle_score_18m": signal.oracle_score_18m,
+        "oracle_signal": signal.oracle_signal,
+        "oracle_window": signal.oracle_window,
+        "oracle_target_upside": signal.oracle_target_upside,
+        "active_signals": signal.active_signals or [],
+        "oracle_narrative": signal.oracle_narrative,
+        "confidence": signal.confidence,
+        "vol_30d": signal.vol_30d,
+        "vol_90d": signal.vol_90d,
+        "price_growth_ratio": signal.price_growth_ratio,
+        "unsold_rate_90d": signal.unsold_rate_90d,
+        "repeat_buyer_detected": signal.repeat_buyer_detected,
+    }
+
+
 @artists_router.get("/{artist_id}/lots")
 async def get_artist_lots(
     artist_id: str,

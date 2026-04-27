@@ -20,6 +20,7 @@ from app.models.db_models import (
     User, ChatMessage, Lot, PortfolioItem,
     UserPreference, Subscription, SubscriptionStatus,
 )
+from app.services.web_intelligence import query_web_intelligence, needs_web_search
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 logger = structlog.get_logger(__name__)
@@ -437,6 +438,19 @@ async def send_message(
     if user_context:
         system += f"\n\n{user_context}"
     system_content = system + lot_context
+
+    # Inject real-time web intelligence when the question warrants it
+    if needs_web_search(body.message):
+        try:
+            web_data = await query_web_intelligence(body.message)
+            if web_data:
+                system_content = (
+                    f"REAL-TIME MARKET DATA (from web, as of today):\n{web_data}\n\n"
+                    + system_content
+                )
+                logger.info("larry.web_intelligence_injected", user_id=str(current_user.id))
+        except Exception as exc:
+            logger.warning("larry.web_intelligence_error", error=str(exc))
 
     # Fetch last 10 messages for conversation history
     history_result = await db.execute(

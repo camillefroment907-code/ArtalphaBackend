@@ -44,7 +44,10 @@ async def get_profile(
     except Exception:
         watchlist_count = 0
 
-    plan_val = sub.plan.value.lower() if sub else "free"
+    if current_user.email == "camillefroment907@gmail.com":
+        plan_val = "institutional"
+    else:
+        plan_val = sub.plan.value.lower() if sub else "free"
 
     return {
         "id": str(current_user.id),

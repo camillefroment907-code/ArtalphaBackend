@@ -193,6 +193,21 @@ def _historical_loop():
         _run(_fetch_historical_for_top_artists, "fetch_historical_top_artists")
 
 
+def _auction_closing_loop():
+    """Daily at 08:00 UTC — send closing alerts for watchlist lots closing in ~24h."""
+    import datetime as _dt
+    from app.services.alert_triggers import send_auction_closing_alerts
+    while True:
+        now = _utcnow()
+        target = now.replace(hour=8, minute=0, second=0, microsecond=0)
+        if now >= target:
+            target = target + _dt.timedelta(days=1)
+        wait = (target - now).total_seconds()
+        logger.info(f"[scheduler] auction_closing sleeping {wait/3600:.1f}h until 08:00 UTC")
+        time.sleep(wait)
+        _run(send_auction_closing_alerts, "auction_closing_alerts")
+
+
 def _keep_warm_loop():
     """Ping /health every 5 minutes to prevent Railway cold starts."""
     time.sleep(60)  # Wait 1 min after launch before first ping
@@ -216,6 +231,7 @@ def start_beat_in_background():
         threading.Thread(target=_weekly_report_loop,     daemon=True, name="sched-weekly-report"),
         threading.Thread(target=_score_validator_loop,   daemon=True, name="sched-score-validator"),
         threading.Thread(target=_historical_loop,         daemon=True, name="sched-historical"),
+        threading.Thread(target=_auction_closing_loop,    daemon=True, name="sched-auction-closing"),
         threading.Thread(target=_keep_warm_loop,          daemon=True, name="sched-keep-warm"),
     ]
     for t in threads:

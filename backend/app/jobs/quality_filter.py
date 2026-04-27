@@ -46,6 +46,7 @@ _GENERIC_CATS = {"other", "divers", "miscellaneous", "various", "unknown"}
 # Sources that already filter for art at the connector level (art-only categories,
 # keyword queries, or API parameters). Skip the category whitelist for these.
 BYPASS_CATEGORY_WHITELIST_SOURCES = {
+    "artsy",            # art-only platform — all listings are fine art
     "liveauctioneers",  # art category filter (f1=1) + art keyword queries
     "invaluable",       # art-specific platform
     "drouot",           # French fine art auction house

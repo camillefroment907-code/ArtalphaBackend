@@ -20,17 +20,17 @@ ADMIN_EMAIL = "camillefroment907@gmail.com"
 _BASE_CSS = """
     body { margin: 0; padding: 0; background-color: #F5F4F0; font-family: Georgia, 'Times New Roman', serif; }
     .wrapper { max-width: 600px; margin: 0 auto; background-color: #F5F4F0; padding: 40px 20px; }
-    .header { background-color: #1A2A44; padding: 28px 40px; text-align: left; }
-    .header-logo { color: #C6A85A; font-family: Georgia, serif; font-size: 20px; font-weight: normal; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; }
-    .header-tagline { color: rgba(198,168,90,0.6); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; margin-top: 4px; }
+    .header { background-color: #FFFFFF; padding: 20px 40px 16px 40px; text-align: left; border-top: 3px solid #C6A85A; }
+    .header-logo { color: #1A2A44; font-family: Georgia, serif; font-size: 20px; font-weight: normal; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; }
+    .header-tagline { color: #AAAAAA; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; margin-top: 4px; }
     .body { background-color: #FFFFFF; padding: 48px 40px; }
     .label { color: #C6A85A; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 16px; }
     h1 { color: #1A2A44; font-family: Georgia, serif; font-size: 28px; font-weight: normal; line-height: 1.3; margin: 0 0 24px 0; }
     h2 { color: #1A2A44; font-family: Georgia, serif; font-size: 20px; font-weight: normal; margin: 32px 0 12px 0; }
     p { color: #444444; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0; }
     .divider { border: none; border-top: 1px solid #E8E4DC; margin: 32px 0; }
-    .cta-button { display: inline-block; background-color: #1A2A44; color: #FFFFFF !important; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 14px; font-weight: 500; letter-spacing: 0.05em; text-decoration: none; padding: 14px 32px; border-radius: 4px; margin: 24px 0; }
-    .cta-gold { background-color: #C6A85A; color: #1A2A44 !important; }
+    .cta-button { display: inline-block; background-color: #2563EB; color: #FFFFFF !important; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 14px; font-weight: 500; letter-spacing: 0.05em; text-decoration: none; padding: 14px 32px; border-radius: 4px; margin: 24px 0; }
+    .cta-gold { background-color: #2563EB; color: #FFFFFF !important; }
     .score-badge { display: inline-block; background-color: #1A2A44; color: #C6A85A; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 13px; font-weight: 600; padding: 6px 16px; border-radius: 3px; letter-spacing: 0.05em; }
     .score-exceptional { background-color: #C6A85A; color: #1A2A44; }
     .lot-card { background-color: #F5F4F0; border-left: 3px solid #C6A85A; padding: 20px 24px; margin: 20px 0; }
@@ -62,20 +62,51 @@ def html_email(content: str, subject: str = "Nautilus", unsubscribe_url: str = "
   <style>{_BASE_CSS}</style>
 </head>
 <body>
-  <div class="wrapper">
-    <div class="header">
-      <div class="header-logo">Nautilus</div>
-      <div class="header-tagline">Art Market Intelligence</div>
-    </div>
-    <div class="body">
-      {content}
-    </div>
-    <div class="footer">
-      <p>Nautilus &middot; Art Market Intelligence<br>contact@get-nautilus.com</p>
-      <p><a href="{unsubscribe_url}">Unsubscribe</a> &middot; <a href="https://www.get-nautilus.com/legal/privacy">Privacy Policy</a></p>
-      <p class="disclaimer">Nautilus provides market intelligence for informational purposes only. This is not financial advice. Art investment carries risk of loss.</p>
-    </div>
-  </div>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F4F0;">
+  <tr>
+    <td align="center" style="padding:40px 20px;">
+      <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF;max-width:600px;">
+        <!-- HEADER -->
+        <tr>
+          <td style="background-color:#FFFFFF;padding:28px 40px 24px 40px;border-top:3px solid #C6A85A;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td valign="middle">
+                  <img src="https://www.get-nautilus.com/logo.png" alt="Nautilus" width="36" height="36"
+                    style="display:inline-block;vertical-align:middle;margin-right:10px;"/>
+                  <span style="display:inline-block;vertical-align:middle;">
+                    <span style="display:block;color:#0C1622;font-family:'Inter',Arial,sans-serif;font-size:17px;font-weight:600;letter-spacing:-0.01em;line-height:1.2;">Nautilus</span>
+                    <span style="display:block;color:#AAAAAA;font-family:'Inter',Arial,sans-serif;font-size:10px;font-weight:400;letter-spacing:0.04em;line-height:1.4;">Art Market Intelligence</span>
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <!-- HEADER DIVIDER -->
+        <tr>
+          <td style="background-color:#FFFFFF;padding:0 40px;">
+            <hr style="border:none;border-top:1px solid #E8E4DC;margin:0;"/>
+          </td>
+        </tr>
+        <!-- BODY -->
+        <tr>
+          <td class="body" style="padding:24px 40px 28px 40px;">
+            {content}
+          </td>
+        </tr>
+        <!-- FOOTER -->
+        <tr>
+          <td class="footer" style="padding:32px 40px;text-align:center;border-top:1px solid #E8E4DC;">
+            <p style="color:#AAAAAA;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;line-height:1.6;margin:0 0 4px;">Nautilus &middot; Art Market Intelligence &middot; <a href="https://www.get-nautilus.com" style="color:#AAAAAA;text-decoration:underline;">get-nautilus.com</a></p>
+            <p style="color:#AAAAAA;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;line-height:1.6;margin:0 0 4px;"><a href="{unsubscribe_url}" style="color:#AAAAAA;text-decoration:underline;">Unsubscribe</a> &middot; <a href="https://www.get-nautilus.com/legal/privacy" style="color:#AAAAAA;text-decoration:underline;">Privacy Policy</a></p>
+            <p class="disclaimer" style="color:#CCCCCC;font-size:10px;font-style:italic;margin:8px 0 0;">Not financial advice.</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
 </body>
 </html>"""
 

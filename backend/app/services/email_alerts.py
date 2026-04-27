@@ -1,21 +1,70 @@
 """
 Nautilus Recommendation & Alert Emails (19-30)
 """
+from typing import Optional
 from app.services.email_base import html_email, label, cta, lot_card, stat_row, divider, send_email, TRANSAC_FROM, ALERT_FROM
+
+
+async def _pref_ok(user_id: Optional[str], pref_field: str, db) -> bool:
+    """Returns False if the user has disabled this alert type (or email entirely)."""
+    if not user_id or not db:
+        return True
+    from sqlalchemy import select
+    from app.models.db_models import UserAlertPreferences
+    result = await db.execute(
+        select(UserAlertPreferences).where(UserAlertPreferences.user_id == user_id)
+    )
+    prefs = result.scalar_one_or_none()
+    if not prefs:
+        return True
+    if not prefs.email_notifications:
+        return False
+    return bool(getattr(prefs, pref_field, True))
 
 
 async def send_alert_exceptional_email(
     to_email: str, artist_name: str, score: int, auction_house: str,
     lot_title: str, sale_date: str, location: str, estimate_range: str,
-    upside_pct: int, lot_url: str, days_until_close: int
+    upside_pct: int, lot_url: str, days_until_close: int,
+    user_id: Optional[str] = None, db=None,
+    lot_image_url: Optional[str] = None,
 ) -> bool:
     """Email 19 — exceptional lot for followed artist (score >= 80)"""
+    if not await _pref_ok(user_id, "exceptional_opportunity", db): return False
+    image_block = (
+        f'<div style="padding:0 0 24px 0;">'
+        f'<a href="{lot_url}" style="display:block;">'
+        f'<img src="{lot_image_url}" alt="Artwork" '
+        f'style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;display:block;">'
+        f'</a>'
+        f'</div>'
+    ) if lot_image_url else ""
     content = f"""
 {label("EXCEPTIONAL OPPORTUNITY")}
 <h1>{artist_name} is going up for auction.</h1>
 <p>A work by <strong>{artist_name}</strong> has been identified by Nautilus with a conviction score of <strong>{score}/100</strong>. This is one of the strongest signals we've seen this week.</p>
-{lot_card(artist_name.upper(), lot_title, f"{auction_house} · {sale_date} · {location}", f"Est. {estimate_range}", f"+{upside_pct}% potential upside vs comparable sales", score)}
-{cta("View this opportunity", lot_url, gold=True)}
+{image_block}<table cellpadding="0" cellspacing="0" width="100%" style="margin:20px 0;">
+<tr><td style="background:#F5F4F0;border-left:3px solid #C6A85A;padding:20px 24px;border-radius:0 8px 8px 0;">
+  <div style="font-size:10px;color:#888;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:6px;">{artist_name.upper()}</div>
+  <div style="font-size:20px;font-family:Georgia,serif;color:#0C1622;margin-bottom:4px;">{lot_title}</div>
+  <div style="font-size:12px;color:#888;margin-bottom:16px;">{auction_house} · {sale_date} · {location}</div>
+  <hr style="border:none;border-top:1px solid #E8E4DC;margin:0 0 16px 0;">
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:10px;">
+    <tr>
+      <td>
+        <div style="font-size:10px;color:#888;letter-spacing:0.1em;text-transform:uppercase;">Estimation</div>
+        <div style="font-size:16px;font-weight:700;color:#0C1622;">{estimate_range}</div>
+      </td>
+      <td align="right">
+        <div style="font-size:10px;color:#888;letter-spacing:0.1em;text-transform:uppercase;">Score</div>
+        <div style="background:#C6A85A;color:#1A2A44;font-size:14px;font-weight:700;padding:4px 12px;border-radius:4px;display:inline-block;">{score}/100</div>
+      </td>
+    </tr>
+  </table>
+  <div style="font-size:13px;color:#2D7A4F;font-weight:500;">&#8593; +{upside_pct}% upside vs comparables</div>
+</td></tr>
+</table>
+<div style="text-align:center;">{cta("View this opportunity", lot_url, gold=True)}</div>
 <p style="color:#888888;font-size:13px;">This lot closes in {days_until_close} day(s). Conviction scores above 80 represent our highest confidence signals.</p>
 """
     return await send_email(to_email, f"ALERT — {artist_name} scoring {score}/100 at {auction_house}",
@@ -24,9 +73,11 @@ async def send_alert_exceptional_email(
 
 async def send_price_gap_alert_email(
     to_email: str, artist_name: str, gap_pct: int, score: int,
-    estimate: str, historical_avg: str, lot_url: str, sale_date: str
+    estimate: str, historical_avg: str, lot_url: str, sale_date: str,
+    user_id: Optional[str] = None, db=None,
 ) -> bool:
     """Email 20 — lot price significantly below historical median"""
+    if not await _pref_ok(user_id, "lot_below_market", db): return False
     comparison = f"""<div style="background:#F5F4F0;border-left:3px solid #C6A85A;padding:20px 24px;margin:20px 0;">
 <table width="100%" cellpadding="0" cellspacing="0">
 <tr><td style="font-size:12px;color:#888;padding-bottom:8px;">Current estimate</td><td style="font-size:16px;font-weight:600;color:#1A2A44;text-align:right;">{estimate}</td></tr>
@@ -48,9 +99,11 @@ async def send_price_gap_alert_email(
 
 async def send_watchlist_closing_email(
     to_email: str, lot_title: str, artist_name: str, auction_house: str,
-    estimate: str, score: int, closing_time: str, lot_url: str
+    estimate: str, score: int, closing_time: str, lot_url: str,
+    user_id: Optional[str] = None, db=None,
 ) -> bool:
     """Email 21 — watchlist lot closing in 48h"""
+    if not await _pref_ok(user_id, "auction_closing_24h", db): return False
     content = f"""
 {label("CLOSING SOON")}
 <h1>Last chance — lot on your watchlist.</h1>
@@ -64,9 +117,11 @@ async def send_watchlist_closing_email(
 
 async def send_artist_record_email(
     to_email: str, artist_name: str, hammer_price: str, auction_house: str,
-    pct_above_previous: int, previous_record: str, artist_page_url: str
+    pct_above_previous: int, previous_record: str, artist_page_url: str,
+    user_id: Optional[str] = None, db=None,
 ) -> bool:
     """Email 22 — artist in favorites sets new auction record"""
+    if not await _pref_ok(user_id, "artist_momentum_change", db): return False
     content = f"""
 {label("NEW RECORD")}
 <h1>{artist_name} reached a new high.</h1>
@@ -80,9 +135,11 @@ async def send_artist_record_email(
 
 
 async def send_weekly_momentum_email(
-    to_email: str, momentum_artists: list[dict], top_lots: list[dict]
+    to_email: str, momentum_artists: list[dict], top_lots: list[dict],
+    user_id: Optional[str] = None, db=None,
 ) -> bool:
     """Email 23 — weekly momentum signal, Monday 8am"""
+    if not await _pref_ok(user_id, "weekly_brief", db): return False
     artists_html = ""
     for a in momentum_artists[:5]:
         trend = "&#8593;" if a.get("momentum_pct", 0) > 0 else "&#8595;"
@@ -121,9 +178,11 @@ async def send_weekly_momentum_email(
 
 async def send_wishlist_match_email(
     to_email: str, name: str, wishlist_description: str, artist_name: str,
-    lot_title: str, auction_house: str, estimate: str, score: int, lot_url: str
+    lot_title: str, auction_house: str, estimate: str, score: int, lot_url: str,
+    user_id: Optional[str] = None, db=None,
 ) -> bool:
     """Email 24 — wishlist match found"""
+    if not await _pref_ok(user_id, "new_lot_followed_artist", db): return False
     first = (name or "").split()[0] or to_email.split("@")[0]
     content = f"""
 {label("WISHLIST MATCH")}
@@ -139,9 +198,11 @@ async def send_wishlist_match_email(
 
 async def send_record_proximity_email(
     to_email: str, artist_name: str, estimate_high: str, pct_from_record: int,
-    record_amount: str, auction_house: str, lot_url: str
+    record_amount: str, auction_house: str, lot_url: str,
+    user_id: Optional[str] = None, db=None,
 ) -> bool:
     """Email 25 — lot estimate within 20% of artist record"""
+    if not await _pref_ok(user_id, "artist_momentum_change", db): return False
     comparison = f"""<div style="background:#F5F4F0;border-left:3px solid #C6A85A;padding:20px 24px;margin:20px 0;">
 <table width="100%" cellpadding="0" cellspacing="0">
 <tr><td style="font-size:12px;color:#888;padding-bottom:8px;">Current estimate (high)</td><td style="font-size:16px;font-weight:600;color:#1A2A44;text-align:right;">{estimate_high}</td></tr>
@@ -163,9 +224,11 @@ async def send_record_proximity_email(
 
 async def send_buy_dip_email(
     to_email: str, artist_name: str, dip_pct: int, peak_period: str,
-    current_lots_count: int, artist_page_url: str
+    current_lots_count: int, artist_page_url: str,
+    user_id: Optional[str] = None, db=None,
 ) -> bool:
     """Email 26 — artist price down 15%+ in 6 months, fundamentals stable"""
+    if not await _pref_ok(user_id, "optimal_sell_window", db): return False
     content = f"""
 {label("MARKET SIGNAL")}
 <h1>{artist_name} prices are down {dip_pct}%.</h1>
@@ -181,9 +244,11 @@ async def send_buy_dip_email(
 async def send_geo_opportunity_email(
     to_email: str, regional_house: str, price_difference: int,
     major_artist: str, major_estimate: str, regional_artist: str,
-    regional_estimate: str, savings: str, lot_url: str
+    regional_estimate: str, savings: str, lot_url: str,
+    user_id: Optional[str] = None, db=None,
 ) -> bool:
     """Email 27 — geographic price opportunity"""
+    if not await _pref_ok(user_id, "lot_below_market", db): return False
     comparison = f"""<table width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;">
 <tr>
 <td width="48%" style="background:#F5F4F0;padding:20px;vertical-align:top;">
@@ -212,9 +277,11 @@ async def send_geo_opportunity_email(
 
 
 async def send_artist_gallery_upgrade_email(
-    to_email: str, artist_name: str, gallery_name: str, avg_appreciation: int, artist_page_url: str
+    to_email: str, artist_name: str, gallery_name: str, avg_appreciation: int, artist_page_url: str,
+    user_id: Optional[str] = None, db=None,
 ) -> bool:
     """Email 28 — artist signed to Tier 1 gallery"""
+    if not await _pref_ok(user_id, "artist_momentum_change", db): return False
     content = f"""
 {label("MARKET SIGNAL")}
 <h1>{artist_name} just gained institutional backing.</h1>
@@ -229,9 +296,11 @@ async def send_artist_gallery_upgrade_email(
 async def send_portfolio_artist_sale_email(
     to_email: str, artist_name: str, auction_house: str,
     lot_artist: str, lot_title: str, lot_details: str, lot_estimate: str, lot_score: int,
-    lot_url: str
+    lot_url: str,
+    user_id: Optional[str] = None, db=None,
 ) -> bool:
     """Email 29 — artist in user portfolio has new lot in upcoming auction"""
+    if not await _pref_ok(user_id, "portfolio_value_change", db): return False
     content = f"""
 {label("PORTFOLIO ALERT")}
 <h1>{artist_name} is going to auction.</h1>
@@ -246,9 +315,11 @@ async def send_portfolio_artist_sale_email(
 
 async def send_collection_completion_email(
     to_email: str, collection_theme: str, artist_name: str, lot_title: str,
-    lot_details: str, lot_estimate: str, lot_score: int, lot_url: str
+    lot_details: str, lot_estimate: str, lot_score: int, lot_url: str,
+    user_id: Optional[str] = None, db=None,
 ) -> bool:
     """Email 30 — collection completion recommendation"""
+    if not await _pref_ok(user_id, "new_lot_followed_artist", db): return False
     content = f"""
 {label("FOR YOUR COLLECTION")}
 <h1>This belongs in your collection.</h1>

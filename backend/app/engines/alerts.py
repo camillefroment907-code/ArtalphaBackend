@@ -146,17 +146,28 @@ async def send_deal_alert(
     # ── Email (Resend) ────────────────────────────────────────────────────────
     if channel in (AlertChannel.EMAIL, AlertChannel.BOTH):
         to_email = prefs.alert_email or user.email
+        est_low = lot.estimate_low or 0
+        est_high = lot.estimate_high or est_low
+        estimate_range = (
+            f"€{est_low:,.0f}–€{est_high:,.0f}" if est_low else "N/A"
+        )
+        days_until_close = (
+            max(0, (lot.auction_date - datetime.utcnow()).days)
+            if lot.auction_date else 0
+        )
         delivered = await send_deal_alert_email(
             to_email=to_email,
-            lot_title=lot.title or "Untitled",
             artist_name=lot.artist_name_raw or "Unknown Artist",
-            price=float(lot.current_price or lot.estimate_low or 0),
-            estimate=float(lot.estimate_high or lot.estimate_low or 0),
-            deal_score=int(lot.deal_score or 0),
-            upside_pct=float(lot.pct_below_low_estimate or 0),
+            score=int(lot.deal_score or 0),
+            auction_house=lot.auction_house_name or "",
+            lot_title=lot.title or "Untitled",
+            sale_date=lot.auction_date.strftime("%d %b %Y") if lot.auction_date else "",
+            location="",
+            estimate_range=estimate_range,
+            upside_pct=int(lot.pct_below_low_estimate or 0),
             lot_url=lot.url or "",
-            lot_id=str(lot.id),
-            lang=lang,
+            days_until_close=days_until_close,
+            user_id=str(user.id),
         )
         sent_alerts.append(Alert(
             user_id=user.id,

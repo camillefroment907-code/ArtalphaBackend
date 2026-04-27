@@ -148,6 +148,7 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
 
     processed = 0
     new_deals = 0
+    exceptional_lot_ids: list = []  # IDs of lots with score >= 80 for post-commit alerts
 
     async with AsyncSessionLocal() as session:
         # 2. Bulk dedup — find (source, external_id) pairs already in DB.
@@ -345,8 +346,9 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
                 # Two conflict targets:
                 # 1. uq_lots_source_external: same (source, external_id) — same connector, same lot
                 # 2. uq_lots_fingerprint: same content hash — cross-connector duplicate (e.g. Roseberys via artmarketapi AND direct)
+                _lot_uuid = _uuid_mod.uuid4()
                 stmt = pg_insert(Lot).values(
-                    id=_uuid_mod.uuid4(),
+                    id=_lot_uuid,
                     external_id=lot_obj.external_id,
                     source=lot_obj.source,
                     url=lot_obj.url,
@@ -389,6 +391,8 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
                     await session.execute(stmt)
                     if score_result.is_deal:
                         new_deals += 1
+                    if score_result.deal_score >= 80 and _lot_status != LotStatus.SOLD:
+                        exceptional_lot_ids.append(_lot_uuid)
                     processed += 1
 
                     # Batch commit every 100 lots — avoids single huge transaction
@@ -415,7 +419,15 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
         elapsed_s=round(elapsed, 2),
     )
 
-    # 7. Trigger alerts + AI agents directly (no Redis broker needed)
+    # 7. Exceptional opportunity alerts (score >= 80)
+    if exceptional_lot_ids:
+        try:
+            from app.services.alert_triggers import send_exceptional_opportunity_alerts
+            await send_exceptional_opportunity_alerts(exceptional_lot_ids)
+        except Exception as e:
+            logger.warning("exceptional_opportunity_alerts failed", error=str(e))
+
+    # Legacy deal alerts (score >= threshold, all users)
     if new_deals > 0:
         try:
             await _process_alerts_async()
@@ -525,7 +537,7 @@ async def _process_alerts_async():
     from app.models.db_models import Lot, LotStatus, User, UserPreference, Alert
     from app.engines.alerts import send_deal_alert
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-    from sqlalchemy import select, and_
+    from sqlalchemy import select, and_, func
     from sqlalchemy.orm import selectinload
 
     from app.database import engine, BgSessionLocal as AsyncSessionLocal
@@ -572,16 +584,30 @@ async def _process_alerts_async():
             artist_avg = lot.artist.avg_auction_price if lot.artist else None
 
             for user, prefs in users_prefs:
-                # Check if already alerted for this lot
-                existing_alert = await session.execute(
-                    select(Alert).where(
+                # Check 1 — lot already alerted for this user
+                dup_count = await session.execute(
+                    select(func.count()).select_from(Alert).where(
                         and_(
                             Alert.user_id == user.id,
                             Alert.lot_id == lot.id,
                         )
                     )
                 )
-                if existing_alert.scalar_one_or_none():
+                if dup_count.scalar() > 0:
+                    logger.debug("alert_skipped_duplicate", user_id=str(user.id), lot_id=str(lot.id))
+                    continue
+
+                # Check 2 — daily cap: max 2 alerts per user per 24h
+                daily_count = await session.execute(
+                    select(func.count()).select_from(Alert).where(
+                        and_(
+                            Alert.user_id == user.id,
+                            Alert.created_at > datetime.utcnow() - timedelta(hours=24),
+                        )
+                    )
+                )
+                if daily_count.scalar() >= 2:
+                    logger.debug("alert_throttled_daily", user_id=str(user.id))
                     continue
 
                 # Check user filters
@@ -811,7 +837,7 @@ async def _ingest_artsy_liveauctioneers_async():
     from app.database import BgSessionLocal as AsyncSessionLocal
 
     sources = {
-        "artsy":           ("app.connectors.artsy_connector",            "fetch_lots", 1000),
+        "artsy":           ("app.connectors.artsy_connector",            "fetch_lots", 3000),
         "liveauctioneers": ("app.connectors.liveauctioneers_connector",  "fetch_lots", 1000),
     }
 
@@ -951,3 +977,41 @@ def sync_artsper_artist_data(self):
     except Exception as exc:
         logger.error("sync_artsper_artist_data_failed", error=str(exc))
         raise self.retry(exc=exc, countdown=600, max_retries=2)
+
+
+@celery_app.task(name="app.jobs.tasks.compute_oracle_weekly", bind=True)
+def compute_oracle_weekly(self):
+    """
+    Nautilus Oracle — compute predictive signals for all artists
+    with >= 3 lots in the last 180 days. Runs every Sunday at 2am UTC.
+    """
+    try:
+        result = asyncio.run(_compute_oracle_weekly_async())
+        logger.info("compute_oracle_weekly_done", **result)
+        return result
+    except Exception as exc:
+        logger.error("compute_oracle_weekly_failed", error=str(exc))
+        raise self.retry(exc=exc, countdown=300)
+
+
+async def _compute_oracle_weekly_async():
+    from app.services.oracle_service import compute_oracle_for_all_artists
+    return await compute_oracle_for_all_artists(min_lots=3)
+
+
+@celery_app.task(name="app.jobs.tasks.sync_poush_artists", bind=True)
+def sync_poush_artists(self):
+    """Monthly sync of Poush Manifesto artists into artist_profiles."""
+    try:
+        result = asyncio.run(_sync_poush_async())
+        logger.info("sync_poush_done", imported=result)
+        return {"imported": result}
+    except Exception as exc:
+        logger.error("sync_poush_failed", error=str(exc))
+        raise self.retry(exc=exc, countdown=300)
+
+
+async def _sync_poush_async():
+    from app.connectors.poush_connector import sync_to_db
+    return await sync_to_db()
+>>>>>>> Stashed changes

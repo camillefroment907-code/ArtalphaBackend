@@ -5,6 +5,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 import sys, os
+from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -13,7 +14,14 @@ from app.config import get_settings
 
 settings = get_settings()
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url.replace("postgresql://", "postgresql+asyncpg://"))
+_url = settings.database_url.replace("postgresql://", "postgresql+asyncpg://")
+parsed = urlparse(_url)
+qs = parse_qs(parsed.query)
+qs.pop("sslmode", None)
+qs.pop("channel_binding", None)
+clean_query = urlencode({k: v[0] for k, v in qs.items()})
+_url = urlunparse(parsed._replace(query=clean_query))
+config.set_main_option("sqlalchemy.url", _url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -39,6 +47,7 @@ async def run_async_migrations() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args={"ssl": "require"},
     )
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

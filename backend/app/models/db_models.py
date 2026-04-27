@@ -763,6 +763,87 @@ class WaitlistEntry(Base):
     )
 
 
+class ArtistSignal(Base):
+    """
+    Nautilus Oracle — predictive signals for a given artist.
+    One row per artist; recomputed weekly via Celery.
+    """
+    __tablename__ = "artist_signals"
+
+    id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    artist_id       = Column(UUID(as_uuid=True), ForeignKey("artists.id", ondelete="CASCADE"), nullable=True)
+    computed_at     = Column(DateTime, default=datetime.utcnow)
+
+    # Market signals (from lots table)
+    vol_30d         = Column(Integer, nullable=True)
+    vol_90d         = Column(Integer, nullable=True)
+    vol_180d        = Column(Integer, nullable=True)
+    vol_growth_ratio  = Column(Float, nullable=True)   # vol_90d / vol_90d_prior
+    price_median_90d  = Column(Float, nullable=True)
+    price_median_180d = Column(Float, nullable=True)
+    price_growth_ratio = Column(Float, nullable=True)
+    unsold_rate_90d   = Column(Float, nullable=True)
+    buyer_concentration = Column(Float, nullable=True)  # 1 - (unique_buyers / total_lots)
+
+    # Institutional signals (manual/scraped)
+    museum_collection = Column(Boolean, default=False)
+    tier1_gallery     = Column(Boolean, default=False)
+    major_fair        = Column(Boolean, default=False)
+    major_prize       = Column(Boolean, default=False)
+
+    # Media signals
+    press_mentions_90d = Column(Integer, default=0)
+    press_velocity     = Column(Float, default=0.0)
+
+    # Cornering signals
+    repeat_buyer_detected = Column(Boolean, default=False)
+    repeat_buyer_count    = Column(Integer, default=0)
+    supply_compression    = Column(Float, default=0.0)
+
+    # Oracle output
+    oracle_score_6m       = Column(Float, nullable=True)
+    oracle_score_18m      = Column(Float, nullable=True)
+    oracle_signal         = Column(String(20), nullable=True)   # BUY_NOW / WATCH / HOLD / AVOID
+    oracle_window         = Column(String(50), nullable=True)
+    oracle_target_upside  = Column(String(20), nullable=True)
+    active_signals        = Column(JSON, default=list)
+    oracle_narrative      = Column(Text, nullable=True)
+    confidence            = Column(Float, nullable=True)
+
+    artist = relationship("Artist", foreign_keys=[artist_id])
+
+    __table_args__ = (
+        Index("idx_artist_signals_artist_id", "artist_id"),
+        Index("idx_artist_signals_computed_at", "computed_at"),
+    )
+
+
+class UserAlertPreferences(Base):
+    __tablename__ = "user_alert_preferences"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+    exceptional_opportunity = Column(Boolean, default=True)
+    lot_below_market = Column(Boolean, default=True)
+    new_auction_house = Column(Boolean, default=True)
+    new_lot_followed_artist = Column(Boolean, default=True)
+    artist_momentum_change = Column(Boolean, default=True)
+    auction_closing_24h = Column(Boolean, default=True)
+    portfolio_value_change = Column(Boolean, default=True)
+    optimal_sell_window = Column(Boolean, default=True)
+    weekly_brief = Column(Boolean, default=True)
+    monthly_report = Column(Boolean, default=True)
+    email_notifications = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", backref="alert_preferences")
+
+    __table_args__ = (
+        Index("ix_user_alert_prefs_user_id", "user_id"),
+    )
+
+
 class ScrapingRun(Base):
     """
     Pipeline run log — one row per connector per poll cycle.

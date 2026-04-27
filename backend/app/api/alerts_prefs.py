@@ -4,10 +4,11 @@ from sqlalchemy import select, desc, and_
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
 import math
+import uuid
 
 from app.database import get_db
-from app.models.db_models import Alert, User, UserPreference
-from app.models.schemas import AlertOut, PreferenceUpdate, PreferenceOut
+from app.models.db_models import Alert, User, UserPreference, UserAlertPreferences
+from app.models.schemas import AlertOut, PreferenceUpdate, PreferenceOut, AlertPreferencesOut, AlertPreferencesUpdate
 from app.api.auth_utils import get_current_user
 
 alerts_router = APIRouter(prefix="/alerts", tags=["alerts"])
@@ -81,6 +82,48 @@ async def get_preferences(
     prefs = result.scalar_one_or_none()
     if not prefs:
         raise HTTPException(status_code=404, detail="Preferences not found")
+    return prefs
+
+
+@alerts_router.get("/preferences", response_model=AlertPreferencesOut)
+async def get_alert_preferences(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(UserAlertPreferences).where(UserAlertPreferences.user_id == current_user.id)
+    )
+    prefs = result.scalar_one_or_none()
+    if not prefs:
+        # Auto-create with defaults on first access
+        prefs = UserAlertPreferences(id=uuid.uuid4(), user_id=current_user.id)
+        db.add(prefs)
+        await db.commit()
+        await db.refresh(prefs)
+    return prefs
+
+
+@alerts_router.put("/preferences", response_model=AlertPreferencesOut)
+async def update_alert_preferences(
+    body: AlertPreferencesUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(UserAlertPreferences).where(UserAlertPreferences.user_id == current_user.id)
+    )
+    prefs = result.scalar_one_or_none()
+    if not prefs:
+        prefs = UserAlertPreferences(id=uuid.uuid4(), user_id=current_user.id)
+        db.add(prefs)
+
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(prefs, field, value)
+
+    from datetime import datetime
+    prefs.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(prefs)
     return prefs
 
 

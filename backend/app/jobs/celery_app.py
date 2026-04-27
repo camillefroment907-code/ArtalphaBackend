@@ -115,11 +115,25 @@ celery_app.conf.update(
             "schedule": crontab(minute="0", hour="9", day_of_month="15", month_of_year="1"),
             "options": {"queue": "default"},
         },
+        # Sunday 2am UTC: Nautilus Oracle — predictive signals for all active artists
+        "oracle-weekly-sunday-2am": {
+            "task": "app.jobs.tasks.compute_oracle_weekly",
+            "schedule": crontab(minute="0", hour="2", day_of_week="0"),
+            "options": {"queue": "scoring"},
+        },
+        # 1st of month 3am UTC: Poush Manifesto artist sync
+        "poush-sync-monthly": {
+            "task": "app.jobs.tasks.sync_poush_artists",
+            "schedule": crontab(minute="0", hour="3", day_of_month="1"),
+            "options": {"queue": "default"},
+        },
     },
     task_routes={
         "app.jobs.tasks.poll_and_score_lots": {"queue": "default"},
         "app.jobs.tasks.rescore_live_lots": {"queue": "scoring"},
         "app.jobs.tasks.process_pending_alerts": {"queue": "alerts"},
         "app.jobs.tasks.daily_cleanup": {"queue": "maintenance"},
+        "app.jobs.tasks.compute_oracle_weekly": {"queue": "scoring"},
+        "app.jobs.tasks.sync_poush_artists": {"queue": "default"},
     },
 )

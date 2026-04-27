@@ -433,6 +433,27 @@ async def backfill_deal_scores(db: AsyncSession = Depends(get_db)):
     return {"updated": result.rowcount, "status": "ok"}
 
 
+# ── Poush artist sync ────────────────────────────────────────────────────────
+
+@router.post("/poush/sync", dependencies=[Depends(verify_admin)])
+async def trigger_poush_sync():
+    """Scrape Poush Manifesto artists and upsert into artist_profiles."""
+    from app.connectors.poush_connector import sync_to_db
+    count = await sync_to_db()
+    return {"status": "ok", "imported": count}
+
+
+# ── Artsper enrichment trigger ───────────────────────────────────────────────
+
+@router.post("/artsper-enrichment/trigger", dependencies=[Depends(verify_admin)])
+async def trigger_artsper_enrichment(max_artists: int = 50):
+    """Trigger Artsper artist enrichment pipeline (background task)."""
+    import asyncio
+    from app.jobs.artist_enrichment_job import run_artist_enrichment
+    asyncio.create_task(run_artist_enrichment(max_artists=max_artists))
+    return {"status": "started", "message": f"Artsper enrichment running in background (max {max_artists} artists)"}
+
+
 # ── Wikidata enrichment trigger ───────────────────────────────────────────────
 
 @router.post("/enrich-artists", dependencies=[Depends(verify_admin)])

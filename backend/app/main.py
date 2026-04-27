@@ -43,6 +43,7 @@ from app.api.recommendations import router as recommendations_router
 from app.api.blog import router as blog_router
 from app.api.feedback import router as feedback_router
 from app.api.analytics import router as analytics_router
+from app.api.emerging import router as emerging_router
 
 settings = get_settings()
 
@@ -197,11 +198,35 @@ app.include_router(recommendations_router,  prefix="/api")
 app.include_router(blog_router,             prefix="/api")
 app.include_router(feedback_router,         prefix="/api")
 app.include_router(analytics_router,       prefix="/api")
+app.include_router(emerging_router,        prefix="/api")
 
 
 @app.get("/")
 async def root():
     return {"name": "HONO API", "version": "5.0.0", "docs": "/docs", "status": "operational"}
+
+
+@app.get("/api/proxy/image")
+async def proxy_image(url: str):
+    import httpx
+    from fastapi.responses import Response
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Referer": "https://www.artsy.net/",
+        "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
+    }
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(
+                url, headers=headers,
+                follow_redirects=True, timeout=15
+            )
+        content_type = r.headers.get("content-type", "")
+        if r.status_code != 200 or not content_type.startswith("image/"):
+            return Response(status_code=404)
+        return Response(content=r.content, media_type=content_type)
+    except Exception:
+        return Response(status_code=404)
 
 
 @app.get("/health")

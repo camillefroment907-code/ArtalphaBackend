@@ -260,6 +260,39 @@ class PreferenceOut(BaseModel):
         from_attributes = True
 
 
+# ── Alert Preferences ─────────────────────────────────────────────────────────
+
+class AlertPreferencesOut(BaseModel):
+    exceptional_opportunity: bool
+    lot_below_market: bool
+    new_auction_house: bool
+    new_lot_followed_artist: bool
+    artist_momentum_change: bool
+    auction_closing_24h: bool
+    portfolio_value_change: bool
+    optimal_sell_window: bool
+    weekly_brief: bool
+    monthly_report: bool
+    email_notifications: bool
+
+    class Config:
+        from_attributes = True
+
+
+class AlertPreferencesUpdate(BaseModel):
+    exceptional_opportunity: Optional[bool] = None
+    lot_below_market: Optional[bool] = None
+    new_auction_house: Optional[bool] = None
+    new_lot_followed_artist: Optional[bool] = None
+    artist_momentum_change: Optional[bool] = None
+    auction_closing_24h: Optional[bool] = None
+    portfolio_value_change: Optional[bool] = None
+    optimal_sell_window: Optional[bool] = None
+    weekly_brief: Optional[bool] = None
+    monthly_report: Optional[bool] = None
+    email_notifications: Optional[bool] = None
+
+
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
 class DashboardStats(BaseModel):

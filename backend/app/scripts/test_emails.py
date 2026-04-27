@@ -65,18 +65,12 @@ async def run_all():
     # ── CATEGORY 2: TRIAL ─────────────────────────────────────────────────────
     from app.services.email_trial import (
         send_trial_started_email,
-        send_trial_j2_email,
-        send_trial_j4_email,
-        send_trial_j5_email,
         send_trial_ending_email,
         send_trial_expired_email,
     )
     results["5_trial_started"] = await send_trial_started_email(ADMIN, MOCK_USER, "May 1, 2026")
-    results["6_trial_j2"] = await send_trial_j2_email(ADMIN, MOCK_USER, 5)
-    results["7_trial_j4"] = await send_trial_j4_email(ADMIN, MOCK_USER, 3)
-    results["8_trial_j5"] = await send_trial_j5_email(ADMIN, MOCK_USER, 2)
-    results["9_trial_ending"] = await send_trial_ending_email(ADMIN, MOCK_USER, "May 1, 2026")
-    results["10_trial_expired"] = await send_trial_expired_email(ADMIN, MOCK_USER, 1, 5)
+    results["6_trial_ending"] = await send_trial_ending_email(ADMIN, MOCK_USER, "May 1, 2026")
+    results["7_trial_expired"] = await send_trial_expired_email(ADMIN, MOCK_USER, 1, 5)
 
     # ── CATEGORY 3: BILLING ───────────────────────────────────────────────────
     from app.services.email_billing import (
