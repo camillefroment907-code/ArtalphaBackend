@@ -293,7 +293,7 @@ export default function Pricing() {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', alignItems: 'stretch' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', alignItems: 'flex-start' }}>
           {PLANS.map(plan => {
             const isCurrentPlan = effectivePlan === plan.key;
             const isHighlight = plan.highlight;
@@ -347,24 +347,24 @@ export default function Pricing() {
                   {plan.name}
                 </div>
 
-                {/* Price + description — fixed height so CTA aligns across cards */}
-                <div style={{ minHeight: '80px' }}>
+                {/* Price + description — fixed height so CTA aligns across all cards */}
+                <div style={{ height: '120px', overflow: 'hidden' }}>
 
                 {/* Price block */}
                 {plan.key === 'institutional' ? (
-                  <div style={{ marginBottom: '12px', minHeight: '52px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div style={{ marginBottom: '12px' }}>
                     <div style={{ fontSize: '13px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>
                       CUSTOM PRICING
                     </div>
                   </div>
                 ) : plan.key === 'free' ? (
-                  <div style={{ marginBottom: '12px', minHeight: '52px' }}>
+                  <div style={{ marginBottom: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '36px', fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>€0</span>
                     </div>
                   </div>
                 ) : plan.key === 'investor' ? (
-                  <div style={{ marginBottom: '12px', minHeight: '52px' }}>
+                  <div style={{ marginBottom: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '36px', fontWeight: 700, color: 'white', lineHeight: 1 }}>
                         €{isAnnual ? '15.83' : '19'}
@@ -382,7 +382,7 @@ export default function Pricing() {
                     )}
                   </div>
                 ) : (
-                  <div style={{ marginBottom: '12px', minHeight: '52px' }}>
+                  <div style={{ marginBottom: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '36px', fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>
                         €{isAnnual && plan.annualMonthly ? plan.annualMonthly : plan.price}
@@ -398,7 +398,7 @@ export default function Pricing() {
                 )}
 
                 {/* Description */}
-                <p style={{ fontSize: '12px', lineHeight: 1.6, margin: '0 0 16px', color: isHighlight ? 'rgba(255,255,255,0.55)' : 'var(--text-3)' }}>
+                <p style={{ fontSize: '12px', lineHeight: 1.6, margin: '0 0 0', color: isHighlight ? 'rgba(255,255,255,0.55)' : 'var(--text-3)' }}>
                   {plan.description}
                 </p>
 
