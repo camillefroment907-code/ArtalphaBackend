@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Logo } from '../components/Logo';
 import { mockArtworks } from '../data/mockData';
@@ -215,13 +215,7 @@ export default function Landing() {
   const [weeklyStats, setWeeklyStats]       = useState<any>(null);
   const [tickerItems, setTickerItems]       = useState(SEED_TICKER);
   const [lotCount, setLotCount]             = useState<number | null>(null);
-  const [showExitPopup, setShowExitPopup]   = useState(false);
   const [showStickyCTA, setShowStickyCTA]   = useState(false);
-  const [exitEmail, setExitEmail]           = useState('');
-  const [exitSubmitted, setExitSubmitted]   = useState(false);
-  const exitShown                           = useRef(false);
-  const exitEmailRef                        = useRef(exitEmail);
-  exitEmailRef.current                      = exitEmail;
 
   useEffect(() => {
     // Public top lots for landing page preview (no auth required)
@@ -265,75 +259,13 @@ export default function Landing() {
     };
     window.addEventListener('scroll', onScroll, { passive: true });
 
-    // Exit intent — mouse leaves viewport from top
-    const onMouseLeave = (e: MouseEvent) => {
-      if (e.clientY < 20 && !exitShown.current && !exitEmailRef.current) {
-        exitShown.current = true;
-        setTimeout(() => setShowExitPopup(true), 200);
-      }
-    };
-    document.addEventListener('mouseleave', onMouseLeave);
-
     return () => {
       window.removeEventListener('scroll', onScroll);
-      document.removeEventListener('mouseleave', onMouseLeave);
     };
   }, []);
 
-  const handleExitSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!exitEmail.trim()) return;
-    fetch(`${BACKEND}/api/waitlist`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: exitEmail.trim(), source: 'exit_intent' }),
-    }).catch(() => {});
-    setExitSubmitted(true);
-    setTimeout(() => setShowExitPopup(false), 2500);
-  };
-
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
-
-      {/* ── Exit intent popup ── */}
-      {showExitPopup && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,22,40,0.6)', backdropFilter: 'blur(4px)' }}
-          onClick={e => { if (e.target === e.currentTarget) setShowExitPopup(false); }}
-        >
-          <div style={{ background: 'white', borderRadius: '16px', padding: '48px 44px', maxWidth: '460px', width: '90%', textAlign: 'center', boxShadow: '0 24px 80px rgba(10,22,40,0.25)', position: 'relative' }}>
-            <button onClick={() => setShowExitPopup(false)} style={{ position: 'absolute', top: '16px', right: '20px', background: 'none', border: 'none', fontSize: '18px', color: 'var(--text-3)', cursor: 'pointer', lineHeight: 1 }}>✕</button>
-            <div style={{ fontSize: '28px', marginBottom: '12px' }}>⚡</div>
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 700, color: 'var(--text)', marginBottom: '10px', lineHeight: 1.3 }}>
-              Wait — 3 exceptional lots<br />close in 48 hours.
-            </h2>
-            <p style={{ fontSize: '14px', color: 'var(--text-2)', marginBottom: '24px', lineHeight: 1.6 }}>
-              Leave your email and we'll send you today's best opportunities — score 80+ only. Free forever.
-            </p>
-            {!exitSubmitted ? (
-              <form onSubmit={handleExitSubmit} style={{ display: 'flex', gap: '8px' }}>
-                <input
-                  type="email"
-                  placeholder="your@email.com"
-                  value={exitEmail}
-                  onChange={e => setExitEmail(e.target.value)}
-                  required
-                  style={{ flex: 1, padding: '12px 16px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'var(--font-sans)' }}
-                />
-                <button type="submit" style={{ background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '8px', padding: '12px 20px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                  Send me deals
-                </button>
-              </form>
-            ) : (
-              <div style={{ padding: '16px', background: 'var(--bg-subtle)', borderRadius: '8px', color: 'var(--navy)', fontWeight: 600, fontSize: '14px' }}>
-                ✓ You'll receive today's exceptional lots shortly.
-              </div>
-            )}
-            <div style={{ marginTop: '12px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-              No spam. Unsubscribe anytime.
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── Sticky CTA bar (after 50% scroll) ── */}
       {showStickyCTA && (
