@@ -208,37 +208,14 @@ export default function Pricing() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
-      {/* Sticky header */}
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 10,
-        background: 'rgba(250,250,250,0.95)', backdropFilter: 'blur(8px)',
-        borderBottom: '1px solid var(--border)',
-        padding: '12px 32px', display: 'flex', alignItems: 'center', gap: '16px',
-      }}>
-        <button
-          onClick={() => navigate(-1)}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '13px', padding: '6px 0', transition: 'color 0.15s' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text)'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-3)'; }}
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 11L5 7l4-4"/>
-          </svg>
-          Back
-        </button>
-      </div>
-
       {/* Hero */}
-      <div style={{ textAlign: 'center', padding: '14px 24px 6px' }}>
-        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(20px, 2.5vw, 28px)', fontWeight: 600, color: 'var(--text)', marginBottom: '6px', lineHeight: 1.15 }}>
+      <div style={{ textAlign: 'center', padding: '20px 24px 6px' }}>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(20px, 2.5vw, 28px)', fontWeight: 600, color: 'var(--text)', marginBottom: '4px', lineHeight: 1.15 }}>
           Choose your level of access
         </h1>
-        <p style={{ fontSize: '13px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto 4px', lineHeight: 1.5 }}>
+        <p style={{ fontSize: '13px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto', lineHeight: 1.5 }}>
           From market discovery to full investment intelligence.
         </p>
-        <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
-          7-day free trial included · Cancel anytime
-        </div>
       </div>
 
       {/* Error banner */}
@@ -253,11 +230,6 @@ export default function Pricing() {
 
       {/* Plan cards — 4-column grid */}
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px 16px' }}>
-
-        {/* Urgency strip */}
-        <div style={{ textAlign: 'center', padding: '5px 16px', background: 'rgba(198,168,90,0.1)', borderRadius: 4, marginBottom: 8, fontSize: 11, color: '#1A2A44', letterSpacing: '0.06em' }}>
-          ⚡ Founding member pricing — limited spots before public launch
-        </div>
 
         {/* Annual toggle */}
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', marginBottom: '8px', background: 'var(--bg-subtle)', borderRadius: '24px', padding: '4px', width: 'fit-content', margin: '0 auto 8px' }}>
