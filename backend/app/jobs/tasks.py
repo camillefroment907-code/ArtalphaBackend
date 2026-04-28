@@ -858,11 +858,62 @@ async def _ingest_artsy_liveauctioneers_async():
 
     inserted = 0
     async with AsyncSessionLocal() as session:
+        # Pre-check: fetch all (source, external_id) pairs already in DB for these sources
+        # so we can skip lots that already exist without relying solely on ON CONFLICT.
+        candidate_pairs = [
+            (lot.source.value if hasattr(lot.source, "value") else str(lot.source), lot.external_id)
+            for lot in all_passed if lot.external_id
+        ]
+        candidate_eids    = [eid for _, eid in candidate_pairs]
+        candidate_sources = list({src for src, _ in candidate_pairs})
+        existing_pairs: set = set()
+        if candidate_eids:
+            existing_rows = await session.execute(
+                select(LotModel.source, LotModel.external_id).where(
+                    LotModel.external_id.in_(candidate_eids),
+                    LotModel.source.in_(candidate_sources),
+                )
+            )
+            existing_pairs = {
+                (row.source.value if hasattr(row.source, "value") else str(row.source), row.external_id)
+                for row in existing_rows.fetchall()
+            }
+
+        # Also pre-compute fingerprints for lots without external_id and check DB
+        # Use the SAME formula as the main pipeline: title|artist|est_low|est_high
+        def _make_fp(lot) -> str | None:
+            if not lot.title:
+                return None
+            raw = (
+                f"{(lot.title or '').lower().strip()}|"
+                f"{(lot.artist_name_raw or '').lower().strip()}|"
+                f"{round(lot.estimate_low or 0)}|"
+                f"{round(lot.estimate_high or 0)}"
+            )
+            return hashlib.md5(raw.encode()).hexdigest()
+
+        fps_to_check = [_make_fp(lot) for lot in all_passed if not lot.external_id]
+        fps_to_check = [fp for fp in fps_to_check if fp]
+        existing_fps: set = set()
+        if fps_to_check:
+            fp_rows = await session.execute(
+                select(LotModel.lot_fingerprint).where(
+                    LotModel.lot_fingerprint.in_(fps_to_check)
+                )
+            )
+            existing_fps = {row[0] for row in fp_rows.fetchall()}
+
         for lot in all_passed:
             try:
-                _fp = hashlib.md5(
-                    f"{(lot.title or '').lower()}|{round(lot.estimate_low or 0)}".encode()
-                ).hexdigest()
+                src_val = lot.source.value if hasattr(lot.source, "value") else str(lot.source)
+                _fp = _make_fp(lot)
+
+                # Skip if already in DB by (source, external_id) or by fingerprint
+                if lot.external_id and (src_val, lot.external_id) in existing_pairs:
+                    continue
+                if not lot.external_id and _fp and _fp in existing_fps:
+                    continue
+
                 stmt = pg_insert(LotModel).values(
                     id=_uuid.uuid4(),
                     external_id=lot.external_id,

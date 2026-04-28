@@ -217,25 +217,47 @@ async def dedup_lots(
     import traceback
 
     try:
-        # Single SQL: identify duplicates using ROW_NUMBER(), keep oldest, delete the rest
+        # Single SQL: identify duplicates using ROW_NUMBER().
+        # Keep the most complete lot (highest deal_score, then most recently scored).
+        # Two passes:
+        #   1. Deduplicate by content (title + artist + estimate) across all sources
+        #   2. Deduplicate by (source, external_id) — same connector, same lot ID
         dedup_sql = sa_text("""
+            WITH ranked AS (
+                SELECT
+                    id,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY
+                            lower(coalesce(title, '')),
+                            lower(coalesce(artist_name_raw, '')),
+                            round(coalesce(estimate_low, 0)::numeric),
+                            round(coalesce(estimate_high, 0)::numeric)
+                        ORDER BY
+                            coalesce(deal_score, 0) DESC,
+                            scored_at DESC NULLS LAST,
+                            created_at ASC
+                    ) AS rn
+                FROM lots
+                WHERE title IS NOT NULL
+            ),
+            ranked_ext AS (
+                SELECT
+                    id,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY source, external_id
+                        ORDER BY
+                            coalesce(deal_score, 0) DESC,
+                            scored_at DESC NULLS LAST,
+                            created_at ASC
+                    ) AS rn
+                FROM lots
+                WHERE external_id IS NOT NULL
+            )
             DELETE FROM lots
             WHERE id IN (
-                SELECT id FROM (
-                    SELECT
-                        id,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY
-                                lower(coalesce(title, '')),
-                                lower(coalesce(artist_name_raw, '')),
-                                round(coalesce(estimate_low, 0)::numeric),
-                                round(coalesce(estimate_high, 0)::numeric)
-                            ORDER BY created_at ASC
-                        ) AS rn
-                    FROM lots
-                    WHERE title IS NOT NULL
-                ) t
-                WHERE rn > 1
+                SELECT id FROM ranked       WHERE rn > 1
+                UNION
+                SELECT id FROM ranked_ext  WHERE rn > 1
             )
         """)
         result = await db.execute(dedup_sql)
