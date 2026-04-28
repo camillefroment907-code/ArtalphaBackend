@@ -27,7 +27,7 @@ export default function VerifyEmail() {
           user.is_verified = true;
           localStorage.setItem('artalpha_auth', JSON.stringify(user));
           setStatus('success');
-          setTimeout(() => navigate('/app/explore'), 2000);
+          setTimeout(() => navigate('/app/onboarding'), 2000);
         } else {
           setStatus('error');
         }
