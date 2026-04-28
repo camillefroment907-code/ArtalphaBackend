@@ -372,7 +372,7 @@ export default function Explore() {
   const [maxPrice, setMaxPrice]       = useState(0);
   const [category, setCategory]       = useState(searchParams.get('category') || '');
   const [sources, setSources]         = useState<string[]>([]);
-  const [sortBy, setSortBy]           = useState(searchParams.get('sort_by') || 'deal_score');
+  const [sortBy, setSortBy]           = useState(searchParams.get('sort_by') || 'created_at');
   const [sortDir, setSortDir]         = useState(searchParams.get('sort_dir') || 'desc');
 
   const resetFilters = () => {
