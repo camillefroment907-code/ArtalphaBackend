@@ -89,7 +89,7 @@ export default function VerifyEmailRequired() {
             disabled={loading || sent}
             style={{
               width: '100%', padding: '13px',
-              background: sent ? '#E8E4DC' : loading ? '#93a3b4' : '#1A2A44',
+              background: sent ? '#E8E4DC' : loading ? '#93a3b4' : '#2563EB',
               color: sent ? '#999' : '#fff',
               border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600,
               cursor: loading || sent ? 'not-allowed' : 'pointer',
