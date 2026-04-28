@@ -168,7 +168,7 @@ function mapLot(lot: any) {
     upside: upside > 0 ? `${upside}%` : "0%", score, dealScore: lot.deal_score || 0,
     imageUrl: lot.image_url || "", technique: lot.medium || lot.category || "",
     category: lot.category || "",
-    platform: lot.auction_house_name?.split("—")[0].trim() || lot.source || "",
+    platform: lot.auction_house_name?.split("—")?.[0]?.trim() || lot.source || "",
     rawPrice: price, auctionDate: lot.auction_date || "",
     upsidePercent: upside, source: lot.source || "",
   };
