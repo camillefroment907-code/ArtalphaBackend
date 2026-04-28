@@ -418,7 +418,7 @@ export default function Explore() {
 
   // Sync search from URL (e.g. navigating from header search bar)
   useEffect(() => {
-    if (searchFromUrl) setSearch(searchFromUrl);
+    setSearch(searchFromUrl);
   }, [searchFromUrl]);
 
   const [showTour, setShowTour] = useState(false);
@@ -620,6 +620,30 @@ export default function Explore() {
           ))}
         </div>
 
+        {/* CENTER: Search input */}
+        <div style={{ flex: '0 0 auto', margin: '0 12px' }}>
+          <input
+            type="text"
+            value={search}
+            placeholder="Search artist, title…"
+            onChange={e => {
+              const v = e.target.value;
+              setSearch(v);
+              setSearchParams(prev => {
+                const p = new URLSearchParams(prev);
+                if (v.trim()) p.set('search', v.trim()); else p.delete('search');
+                return p;
+              }, { replace: true });
+            }}
+            style={{
+              width: '200px', padding: '6px 12px',
+              border: '1px solid var(--border)', borderRadius: '6px',
+              fontSize: '12px', color: 'var(--text-1)', background: '#FAFAF8',
+              outline: 'none',
+            }}
+          />
+        </div>
+
         {/* RIGHT: Filters + View mode + LIVE */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
           {/* Filters button */}
@@ -754,7 +778,11 @@ export default function Explore() {
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Category</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                   {['Paintings', 'Prints', 'Drawings', 'Sculpture', 'Photography', 'Street Art', 'Jewelry', 'Watches', 'Furniture', 'Ceramics', 'Books', 'Asian Art', 'Maroquinerie'].map(cat => (
-                    <button key={cat} onClick={() => setCategory(category === cat ? '' : cat)}
+                    <button key={cat} onClick={() => {
+                      setCategory(category === cat ? '' : cat);
+                      setSearch('');
+                      setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete('search'); return p; }, { replace: true });
+                    }}
                       style={{ padding: '4px 8px', borderRadius: '20px', fontSize: '11px', cursor: 'pointer', background: category === cat ? 'var(--navy)' : 'transparent', color: category === cat ? 'white' : 'var(--text-2)', border: `1px solid ${category === cat ? 'var(--navy)' : 'var(--border)'}`, transition: 'all 0.12s', whiteSpace: 'nowrap' }}>
                       {cat}
                     </button>
