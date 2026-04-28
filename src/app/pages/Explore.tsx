@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { getUser, getUserPlan } from "../../lib/auth";
-import { WelcomeTour } from "../components/WelcomeTour";
+
 
 type ExploreTab = "best" | "auctions" | "primary" | "convictions" | "for-you";
 type ViewMode = "grid-large" | "grid" | "list";
@@ -431,15 +431,6 @@ export default function Explore() {
     setSearch(searchFromUrl);
   }, [searchFromUrl]);
 
-  const [showTour, setShowTour] = useState(false);
-  useEffect(() => {
-    const shouldShow = localStorage.getItem('nautilus_show_tour') === '1';
-    const alreadySeen = localStorage.getItem('nautilus_tour_seen') === 'true';
-    if (shouldShow || !alreadySeen) {
-      localStorage.removeItem('nautilus_show_tour');
-      setShowTour(true);
-    }
-  }, []);
 
   const user     = getUser();
   const isAdmin  = user?.email === "camillefroment907@gmail.com";
@@ -532,8 +523,8 @@ export default function Explore() {
         if (maxPrice > 0)    p.set('max_price', String(maxPrice));
         if (category)        p.set('category', CATEGORY_API_MAP[category] || category);
         if (sources.length)  p.set('sources', sources.join(','));
-        const effectiveSearch = [search.trim(), PROVENANCE_KEYWORD_MAP[provenance] || ''].filter(Boolean).join(' ').trim();
-        if (effectiveSearch) p.set('search', effectiveSearch);
+        if (search.trim())   p.set('search', search.trim());
+        if (provenance)      p.set('provenance', PROVENANCE_KEYWORD_MAP[provenance] || provenance);
         Object.entries(getDateParams(dateFilter)).forEach(([k, v]) => p.set(k, v));
 
         const url = exploreTab === 'primary'
@@ -566,11 +557,11 @@ export default function Explore() {
     const nextPage = currentPage + 1;
     setLoadingMore(true);
     try {
-      const _lmSearch = [search.trim(), PROVENANCE_KEYWORD_MAP[provenance] || ''].filter(Boolean).join(' ').trim();
       const p: Record<string, any> = {
         page: nextPage, page_size: 24,
         sort_by: sortBy, sort_dir: sortDir,
-        search: _lmSearch || undefined,
+        search: search.trim() || undefined,
+        provenance: provenance ? (PROVENANCE_KEYWORD_MAP[provenance] || provenance) : undefined,
         min_price: minPrice > 0 ? minPrice : undefined,
         max_price: maxPrice > 0 ? maxPrice : undefined,
         category: category ? (CATEGORY_API_MAP[category] || category) : undefined,
@@ -598,7 +589,6 @@ export default function Explore() {
         overflow: "hidden", background: "var(--bg)",
       }}
     >
-      {showTour && <WelcomeTour onClose={() => { setShowTour(false); localStorage.setItem('nautilus_tour_seen', 'true'); }} />}
       {/* ── Compact toolbar ── */}
       <div style={{
         display: 'flex', alignItems: 'center',
@@ -630,30 +620,6 @@ export default function Explore() {
               {label}
             </button>
           ))}
-        </div>
-
-        {/* CENTER: Search input */}
-        <div style={{ flex: '0 0 auto', margin: '0 12px' }}>
-          <input
-            type="text"
-            value={search}
-            placeholder="Search artist, title…"
-            onChange={e => {
-              const v = e.target.value;
-              setSearch(v);
-              setSearchParams(prev => {
-                const p = new URLSearchParams(prev);
-                if (v.trim()) p.set('search', v.trim()); else p.delete('search');
-                return p;
-              }, { replace: true });
-            }}
-            style={{
-              width: '200px', padding: '6px 12px',
-              border: '1px solid var(--border)', borderRadius: '6px',
-              fontSize: '12px', color: 'var(--text-1)', background: '#FAFAF8',
-              outline: 'none',
-            }}
-          />
         </div>
 
         {/* RIGHT: Filters + View mode + LIVE */}

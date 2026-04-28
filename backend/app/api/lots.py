@@ -239,6 +239,7 @@ async def list_lots(
     auction_house: Optional[str] = Query(None),
     artist: Optional[str] = None,
     search: Optional[str] = Query(None),
+    provenance: Optional[str] = Query(None),
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
     # Both naming conventions accepted (frontend sends auction_date_from)
@@ -272,7 +273,7 @@ async def list_lots(
         page_size = max_per_page
 
     # ── Cache lookup ─────────────────────────────────────────────────────────
-    cache_key = f"lots:{plan}:{sort_by}:{sort_dir}:{min_score}:{page}:{page_size}:{category or ''}:{search or ''}:{source or ''}:{sources or ''}:{min_price or 0}:{max_price or 0}:{auction_date_from or ''}:{auction_date_to or ''}"
+    cache_key = f"lots:{plan}:{sort_by}:{sort_dir}:{min_score}:{page}:{page_size}:{category or ''}:{search or ''}:{provenance or ''}:{source or ''}:{sources or ''}:{min_price or 0}:{max_price or 0}:{auction_date_from or ''}:{auction_date_to or ''}"
     cached = get_cached(cache_key, ttl=120)
     if cached:
         response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=120"
@@ -342,6 +343,14 @@ async def list_lots(
                 Lot.artist_name_raw.ilike(f"%{search}%"),
                 Lot.auction_house_name.ilike(f"%{search}%"),
                 Lot.category.ilike(f"%{search}%"),
+            )
+        )
+    if provenance:
+        filters.append(
+            or_(
+                Lot.artist_name_raw.ilike(f"%{provenance}%"),
+                Lot.medium.ilike(f"%{provenance}%"),
+                Lot.description.ilike(f"%{provenance}%"),
             )
         )
     if min_price is not None and min_price > 0:
