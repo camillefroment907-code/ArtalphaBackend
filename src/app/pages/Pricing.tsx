@@ -265,7 +265,7 @@ export default function Pricing() {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', alignItems: 'flex-start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', alignItems: 'stretch', height: 'calc(100vh - 220px)' }}>
           {PLANS.map(plan => {
             const isCurrentPlan = effectivePlan === plan.key;
             const isHighlight = plan.highlight;
@@ -286,6 +286,7 @@ export default function Pricing() {
                   display: 'flex',
                   flexDirection: 'column',
                   height: '100%',
+                  overflowY: 'auto',
                   transition: 'box-shadow 0.2s',
                 }}
               >
@@ -342,7 +343,7 @@ export default function Pricing() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '3px' }}>
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '36px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>
-                        €{isAnnual ? '15.83' : '19'}
+                        €19
                       </span>
                       <span style={{ fontSize: '13px', color: 'rgba(198,168,90,0.55)' }}>/mo</span>
                     </div>
