@@ -213,7 +213,7 @@ export default function Pricing() {
         <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(20px, 2.5vw, 28px)', fontWeight: 600, color: 'var(--text)', marginBottom: '4px', lineHeight: 1.15 }}>
           Choose your level of access
         </h1>
-        <p style={{ fontSize: '13px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto', lineHeight: 1.5 }}>
+        <p style={{ fontSize: '13px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto 18px', lineHeight: 1.5 }}>
           From market discovery to full investment intelligence.
         </p>
       </div>
@@ -232,7 +232,7 @@ export default function Pricing() {
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px 16px' }}>
 
         {/* Annual toggle */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', marginBottom: '8px', background: 'var(--bg-subtle)', borderRadius: '24px', padding: '4px', width: 'fit-content', margin: '0 auto 8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', background: 'var(--bg-subtle)', borderRadius: '24px', padding: '4px', width: 'fit-content', margin: '0 auto 24px' }}>
           <button
             onClick={() => setIsAnnual(false)}
             style={{
@@ -282,7 +282,7 @@ export default function Pricing() {
                     ? '2px solid var(--navy)'
                     : '1px solid var(--border)',
                   borderRadius: '12px',
-                  padding: '16px',
+                  padding: '24px',
                   display: 'flex',
                   flexDirection: 'column',
                   height: '100%',
