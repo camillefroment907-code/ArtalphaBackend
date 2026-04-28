@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { getUser } from "../../lib/auth";
+import { getUser, getUserPlan } from "../../lib/auth";
 import { WelcomeTour } from "../components/WelcomeTour";
 
 type ExploreTab = "best" | "auctions" | "primary" | "convictions" | "for-you";
@@ -433,12 +433,14 @@ export default function Explore() {
   const user     = getUser();
   const isAdmin  = user?.email === "camillefroment907@gmail.com";
 
-  const [userPlan, setUserPlan] = useState<string>("free");
+  const [userPlan, setUserPlan] = useState<string>(getUserPlan());
   const [planLoading, setPlanLoading] = useState(true);
 
   useEffect(() => {
     const token = getToken();
     if (!token) { setPlanLoading(false); return; }
+    const u = getUser();
+    if (u?.email === 'camillefroment907@gmail.com') { setUserPlan('pro'); setPlanLoading(false); return; }
     fetch(`${BACKEND}/api/billing/subscription`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => {

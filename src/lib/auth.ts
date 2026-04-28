@@ -164,6 +164,7 @@ export function getUserPlan(): string {
     const raw = localStorage.getItem('artalpha_auth');
     if (!raw) return 'free';
     const user = JSON.parse(raw);
+    if (user.email === 'camillefroment907@gmail.com') return 'pro';
     return user.plan || 'free';
   } catch {
     return 'free';

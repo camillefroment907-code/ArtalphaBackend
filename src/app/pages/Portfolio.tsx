@@ -237,7 +237,7 @@ export default function Portfolio() {
   const { i18n } = useTranslation();
   const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
   const user = getUser();
-  const plan = user?.email === 'camillefroment907@gmail.com' ? 'elite' : (user?.plan === 'institutional' ? 'elite' : (user?.plan ?? 'free'));
+  const plan = user?.email === 'camillefroment907@gmail.com' ? 'pro' : (user?.plan ?? 'free');
   const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
   const usageLimit = USAGE_LIMITS[plan] ?? 0;
   const usageStatus = getUsageStatus(plan);
@@ -334,7 +334,7 @@ export default function Portfolio() {
 
   const PLAN_LABELS: Record<string, string> = {
     free: 'Free', starter: 'Collector', investor: 'Investor',
-    pro: 'Family Office', elite: 'Institutional',
+    pro: 'Pro', elite: 'Elite', institutional: 'Institutional',
   };
   const planLabel = PLAN_LABELS[plan] ?? plan;
   const hasAccess = ["investor", "pro", "elite", "institutional"].includes(plan);
