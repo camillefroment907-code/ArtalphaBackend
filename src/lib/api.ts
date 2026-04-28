@@ -21,6 +21,7 @@ export interface LoginResponse {
   email: string;
   name?: string;
   plan?: "free" | "starter" | "investor" | "pro" | "elite";
+  is_verified?: boolean;
 }
 
 export async function loginApi(email: string, password: string): Promise<LoginResponse> {

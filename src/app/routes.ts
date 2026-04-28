@@ -41,8 +41,9 @@ const AdminRecommendations  = lazy(() => import('./pages/AdminRecommendations'))
 const Blog                  = lazy(() => import('./pages/Blog'));
 const BlogPost              = lazy(() => import('./pages/BlogPost'));
 const FeedbackPage          = lazy(() => import('./pages/FeedbackPage'));
-const ForgotPassword        = lazy(() => import('./pages/ForgotPassword'));
-const ResetPassword         = lazy(() => import('./pages/ResetPassword'));
+const ForgotPassword           = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword            = lazy(() => import('./pages/ResetPassword'));
+const VerifyEmailRequired      = lazy(() => import('./pages/VerifyEmailRequired'));
 
 export const router = createBrowserRouter([
   {
@@ -138,7 +139,8 @@ export const router = createBrowserRouter([
       { path: 'visualizer', Component: RoomVisualizer },
       { path: 'calendar', Component: AuctionCalendar },
       { path: 'emerging', Component: Emerging },
-      { path: 'verify-pending', Component: VerifyPending },
+      { path: 'verify-pending',        Component: VerifyPending        },
+      { path: 'verify-email-required', Component: VerifyEmailRequired  },
     ],
   },
   {

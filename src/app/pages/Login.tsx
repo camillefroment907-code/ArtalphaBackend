@@ -85,8 +85,13 @@ export default function Login() {
         name: res.name,
         plan: (res.plan ?? 'free') as any,
         token: res.access_token,
+        is_verified: res.is_verified ?? true,
       });
-      navigate('/app/explore');
+      if (res.is_verified === false) {
+        navigate('/app/verify-email-required');
+      } else {
+        navigate('/app/explore');
+      }
     } catch (err: any) {
       setError(err.message || 'Login failed');
     } finally {

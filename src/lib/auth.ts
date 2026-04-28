@@ -6,6 +6,7 @@ export interface AuthUser {
   name?: string;
   plan: 'free' | 'starter' | 'investor' | 'pro' | 'elite' | 'institutional';
   token: string;
+  is_verified?: boolean;
 }
 
 export interface PlanLimits {

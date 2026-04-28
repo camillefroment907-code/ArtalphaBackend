@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { PlanSync } from "@/components/layout/PlanSync";
 
 export const metadata: Metadata = {
   title: "ArtAlpha — AI Auction Deal Finder",
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body style={{ minHeight: "100vh", backgroundColor: "#0a0a0b", color: "#fafafa" }} className="antialiased">
+        <PlanSync />
         {children}
       </body>
     </html>

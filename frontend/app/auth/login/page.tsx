@@ -50,7 +50,7 @@ const VALUE_PROPS = [
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const setAuth = useAuthStore((s) => s.setAuth);
+  const { setAuth, setPlan } = useAuthStore();
   const redirect = searchParams.get("redirect") || "/dashboard";
 
   const [email, setEmail] = useState("");
@@ -77,6 +77,7 @@ function LoginForm() {
     try {
       const { data } = await authApi.login(email, password);
       setAuth({ id: data.user_id, email: data.email }, data.access_token);
+      if (data.plan) setPlan(data.plan as any);
       router.push(redirect);
     } catch (err: any) {
       setError(err.response?.data?.detail || "Email ou mot de passe incorrect");

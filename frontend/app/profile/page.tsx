@@ -12,10 +12,12 @@ import {
 const PLAN_COLORS: Record<string, string> = {
   free: "#71717a", starter: "#3b82f6",
   investor: "#d4a843", pro: "#a78bfa", elite: "#f59e0b",
+  expert: "#f59e0b", institutional: "#d4a843",
 };
 const PLAN_LABELS: Record<string, string> = {
   free: "Free", starter: "Starter",
   investor: "Investor", pro: "Pro", elite: "Elite",
+  expert: "Expert", institutional: "Institutional",
 };
 
 const CATEGORIES = ["Paintings", "Sculptures", "Drawings", "Prints", "Photography", "Asian Art", "Jewelry", "Furniture", "Books"];

@@ -10,7 +10,7 @@ import { useAuthStore } from "@/lib/store";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const setAuth = useAuthStore((s) => s.setAuth);
+  const { setAuth, setPlan } = useAuthStore();
 
   const [form, setForm] = useState({ email: "", password: "", full_name: "" });
   const [showPw, setShowPw] = useState(false);
@@ -33,6 +33,7 @@ export default function RegisterPage() {
     try {
       const { data } = await authApi.register(form.email, form.password, form.full_name || undefined);
       setAuth({ id: data.user_id, email: data.email }, data.access_token);
+      if (data.plan) setPlan(data.plan as any);
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.response?.data?.detail || "Registration failed");

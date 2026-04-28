@@ -8,7 +8,7 @@ interface User {
   full_name?: string;
 }
 
-type Plan = "free" | "pro" | "expert";
+type Plan = "free" | "starter" | "investor" | "pro" | "expert" | "institutional";
 
 interface AuthStore {
   user: User | null;

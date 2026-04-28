@@ -14,9 +14,10 @@ interface UsageData {
 export const PLAN_LIMITS: Record<string, number> = {
   free:     0,
   starter:  0,
-  investor: 20,
-  pro:      100,
-  elite:    999,
+  investor:      20,
+  pro:           100,
+  elite:         999,
+  institutional: 999,
 };
 
 function getCurrentMonth(): string {

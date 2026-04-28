@@ -235,6 +235,7 @@ export default function AuctionCalendar() {
   const [data, setData] = useState<CalendarData | null>(null);
   const [loading, setLoading] = useState(true);
   const plan = getUserPlan();
+  const hasAccess = ["investor", "pro", "elite", "institutional"].includes(plan);
 
   useEffect(() => {
     setLoading(true);
@@ -279,7 +280,7 @@ export default function AuctionCalendar() {
       {/* Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', padding: '0 32px' }}>
         {/* Day range */}
-        <div style={{ display: 'flex', gap: '4px', ...(plan === 'free' ? { pointerEvents: 'none' as const, opacity: 0.4 } : {}) }}>
+        <div style={{ display: 'flex', gap: '4px', ...(!hasAccess ? { pointerEvents: 'none' as const, opacity: 0.4 } : {}) }}>
           {DAY_OPTIONS.map(d => (
             <button
               key={d}
@@ -301,7 +302,7 @@ export default function AuctionCalendar() {
         </div>
 
         {/* View toggle */}
-        <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto', ...(plan === 'free' ? { pointerEvents: 'none' as const, opacity: 0.4 } : {}) }}>
+        <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto', ...(!hasAccess ? { pointerEvents: 'none' as const, opacity: 0.4 } : {}) }}>
           {(['houses', 'dates'] as const).map(v => (
             <button
               key={v}
@@ -336,7 +337,7 @@ export default function AuctionCalendar() {
         ) : view === 'houses' ? (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
-              {(plan === 'free' ? data.by_house.slice(0, 6) : data.by_house).map(entry => (
+              {(!hasAccess ? data.by_house.slice(0, 6) : data.by_house).map(entry => (
                 <HouseCard
                   key={entry.house}
                   entry={entry}
@@ -344,7 +345,7 @@ export default function AuctionCalendar() {
                 />
               ))}
             </div>
-            {plan === 'free' && (
+            {!hasAccess && (
               <div style={{ marginTop: '-40px' }}>
                 <div style={{ height: '80px', background: 'linear-gradient(to bottom, transparent, var(--bg))' }} />
                 <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8f8f6', borderRadius: 8 }}>
@@ -358,7 +359,7 @@ export default function AuctionCalendar() {
         ) : (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {(plan === 'free' ? data.by_date.slice(0, 6) : data.by_date).map(entry => (
+              {(!hasAccess ? data.by_date.slice(0, 6) : data.by_date).map(entry => (
                 <DateRow
                   key={entry.date}
                   entry={entry}
@@ -366,7 +367,7 @@ export default function AuctionCalendar() {
                 />
               ))}
             </div>
-            {plan === 'free' && (
+            {!hasAccess && (
               <div style={{ marginTop: '-40px' }}>
                 <div style={{ height: '80px', background: 'linear-gradient(to bottom, transparent, var(--bg))' }} />
                 <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8f8f6', borderRadius: 8 }}>

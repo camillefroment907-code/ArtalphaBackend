@@ -201,9 +201,28 @@ export const prefsApi = {
   update: (data: Partial<Preferences>) => api.patch<Preferences>("/api/preferences", data),
 };
 
+export interface OracleSignal {
+  artist_id: string;
+  computed_at: string;
+  oracle_score_6m: number;
+  oracle_score_18m: number;
+  oracle_signal: "BUY_NOW" | "WATCH" | "HOLD" | "AVOID";
+  oracle_window: string;
+  oracle_target_upside: string;
+  active_signals: string[];
+  oracle_narrative?: string;
+  confidence: number;
+  vol_30d?: number;
+  vol_90d?: number;
+  price_growth_ratio?: number;
+  unsold_rate_90d?: number;
+  repeat_buyer_detected?: boolean;
+}
+
 export const artistsApi = {
   list: (params?: Record<string, unknown>) => api.get<Artist[]>("/api/artists", { params }),
   get: (id: string) => api.get<Artist>(`/api/artists/${id}`),
+  oracle: (artistId: string) => api.get<OracleSignal>(`/api/artists/${artistId}/oracle`),
 };
 
 export const authApi = {
@@ -226,7 +245,7 @@ export interface BillingPlan {
 }
 
 export interface SubscriptionStatus {
-  plan: "free" | "pro" | "expert";
+  plan: "free" | "starter" | "investor" | "pro" | "expert" | "institutional";
   status: string;
   current_period_end: string | null;
 }

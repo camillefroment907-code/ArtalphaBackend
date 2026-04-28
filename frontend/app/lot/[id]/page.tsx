@@ -6,11 +6,12 @@ import {
   ArrowLeft, ExternalLink, Calendar, Building2, Tag,
   Ruler, Palette, Star, CheckCircle, Sparkles, TrendingUp,
 } from "lucide-react";
-import { lotsApi, type Lot } from "@/lib/api";
+import { lotsApi, artistsApi, type Lot, type OracleSignal } from "@/lib/api";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { WishlistButton } from "@/components/lots/WishlistButton";
 import { GalleryCard } from "@/components/lots/GalleryCard";
 import { useLanguageStore, formatPriceInCurrency } from "@/lib/useLanguage";
+import { useAuthStore } from "@/lib/store";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -226,6 +227,167 @@ function ComparablesPanel({ lotId }: { lotId: string }) {
   );
 }
 
+// ── NautilusOracle ───────────────────────────────────────────────────────────
+
+const SIGNAL_STYLES: Record<string, { bg: string; color: string; border: string }> = {
+  BUY_NOW: { bg: "var(--gold)",   color: "#080809", border: "var(--gold)" },
+  WATCH:   { bg: "var(--slate)",  color: "var(--text-primary)", border: "var(--gold-dim)" },
+  HOLD:    { bg: "var(--graphite)", color: "var(--text-secondary)", border: "var(--border)" },
+  AVOID:   { bg: "#3b0f0f",       color: "#f87171", border: "#7f1d1d" },
+};
+
+function OracleBar({ label, value }: { label: string; value: number }) {
+  const pct = Math.max(0, Math.min(100, value));
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+        <span style={{ fontSize: "10px", color: "var(--text-muted)", fontFamily: "'JetBrains Mono', monospace" }}>{label}</span>
+        <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--gold)", fontFamily: "'JetBrains Mono', monospace" }}>{pct.toFixed(0)}%</span>
+      </div>
+      <div style={{ height: "5px", background: "var(--slate)", borderRadius: "3px", overflow: "hidden", border: "1px solid var(--border)" }}>
+        <div style={{
+          height: "100%", width: `${pct}%`, borderRadius: "3px",
+          background: `linear-gradient(90deg, var(--gold-dim), var(--gold))`,
+          boxShadow: "0 0 6px var(--gold-glow)",
+          transition: "width 1s cubic-bezier(0.4,0,0.2,1)",
+        }} />
+      </div>
+    </div>
+  );
+}
+
+function NautilusOracle({ artistId }: { artistId: string }) {
+  const { plan } = useAuthStore();
+  const unlocked = plan !== "free";
+
+  const { data: oracle } = useSWR<OracleSignal>(
+    unlocked && artistId ? `oracle-${artistId}` : null,
+    () => artistsApi.oracle(artistId).then((r) => r.data).catch(() => null)
+  );
+
+  const signalStyle = oracle ? (SIGNAL_STYLES[oracle.oracle_signal] ?? SIGNAL_STYLES.HOLD) : null;
+
+  return (
+    <div style={{
+      background: "var(--graphite)", border: "1px solid var(--border-light)",
+      borderRadius: "6px", overflow: "hidden",
+      boxShadow: "0 0 24px rgba(201,168,76,0.04)",
+    }}>
+      {/* Header */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "14px 18px",
+        borderBottom: "1px solid var(--border)",
+        background: "linear-gradient(135deg, var(--slate) 0%, var(--graphite) 100%)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ fontSize: "13px", color: "var(--gold)" }}>⚡</span>
+          <span style={{ fontSize: "9px", fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)" }}>
+            Nautilus Oracle
+          </span>
+        </div>
+        {oracle && signalStyle && (
+          <span style={{
+            fontSize: "9px", fontWeight: 800, letterSpacing: "0.14em",
+            textTransform: "uppercase", padding: "3px 8px", borderRadius: "3px",
+            background: signalStyle.bg, color: signalStyle.color, border: `1px solid ${signalStyle.border}`,
+          }}>
+            {oracle.oracle_signal.replace("_", " ")}
+          </span>
+        )}
+      </div>
+
+      {/* Locked overlay */}
+      {!unlocked && (
+        <div style={{ padding: "28px 18px", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", textAlign: "center" }}>
+          <div style={{ fontSize: "20px", color: "var(--gold-dim)" }}>⚡</div>
+          <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "0.05em" }}>
+            Oracle Intelligence
+          </div>
+          <div style={{ fontSize: "10px", color: "var(--text-muted)", lineHeight: 1.5 }}>
+            Predictive price signals,<br />buy window & upside targets
+          </div>
+          <a href="/billing" style={{
+            marginTop: "4px", fontSize: "10px", fontWeight: 700, letterSpacing: "0.12em",
+            textTransform: "uppercase", textDecoration: "none",
+            color: "var(--gold)", border: "1px solid var(--gold-dim)",
+            padding: "6px 14px", borderRadius: "3px",
+          }}>
+            Pro · Unlock Oracle →
+          </a>
+        </div>
+      )}
+
+      {/* No data yet */}
+      {unlocked && !oracle && (
+        <div style={{ padding: "20px 18px" }}>
+          <div style={{ fontSize: "10px", color: "var(--text-muted)", textAlign: "center" }}>
+            Oracle en cours de calcul…
+          </div>
+        </div>
+      )}
+
+      {/* Oracle data */}
+      {unlocked && oracle && (
+        <div style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: "14px" }}>
+          {/* Progress bars */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <OracleBar label="6-month outlook" value={oracle.oracle_score_6m} />
+            <OracleBar label="18-month outlook" value={oracle.oracle_score_18m} />
+          </div>
+
+          {/* Active signals */}
+          {oracle.active_signals.length > 0 && (
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: "12px" }}>
+              <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "8px" }}>
+                Active Signals
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                {oracle.active_signals.map((sig, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "7px" }}>
+                    <span style={{ color: "var(--gold)", fontSize: "9px", marginTop: "1px", flexShrink: 0 }}>◆</span>
+                    <span style={{ fontSize: "11px", color: "var(--text-secondary)", lineHeight: 1.4 }}>{sig}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Narrative */}
+          {oracle.oracle_narrative && (
+            <p style={{
+              fontSize: "11px", color: "var(--text-secondary)", lineHeight: 1.6,
+              borderTop: "1px solid var(--border)", paddingTop: "12px",
+              fontStyle: "italic",
+            }}>
+              {oracle.oracle_narrative}
+            </p>
+          )}
+
+          {/* Verdict footer */}
+          <div style={{
+            borderTop: "1px solid var(--border)", paddingTop: "12px",
+            display: "flex", flexDirection: "column", gap: "4px",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ fontSize: "9px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Window</span>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "var(--text-primary)", fontWeight: 600 }}>{oracle.oracle_window}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ fontSize: "9px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Target upside</span>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "var(--gold)", fontWeight: 700 }}>{oracle.oracle_target_upside}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ fontSize: "9px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Confidence</span>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "var(--text-secondary)" }}>{(oracle.confidence * 100).toFixed(0)}%</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── ArtistPanel ──────────────────────────────────────────────────────────────
 
 function ArtistPanel({ lot }: { lot: Lot }) {
@@ -317,6 +479,37 @@ function ErrorState() {
 
 // ── LotPage ──────────────────────────────────────────────────────────────────
 
+function OracleBadge({ artistId }: { artistId: string }) {
+  const { plan } = useAuthStore();
+  const unlocked = plan !== "free";
+
+  const { data: oracle } = useSWR<OracleSignal>(
+    unlocked && artistId ? `oracle-${artistId}` : null,
+    () => artistsApi.oracle(artistId).then((r) => r.data).catch(() => null)
+  );
+
+  if (!oracle || !unlocked) return null;
+  if (oracle.oracle_signal !== "BUY_NOW" && oracle.oracle_signal !== "WATCH") return null;
+
+  const signalStyle = SIGNAL_STYLES[oracle.oracle_signal];
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px" }}>
+      <span style={{ fontSize: "11px", color: "var(--gold)" }}>⚡</span>
+      <span style={{
+        fontSize: "9px", fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase",
+        padding: "2px 7px", borderRadius: "3px",
+        background: signalStyle.bg, color: signalStyle.color, border: `1px solid ${signalStyle.border}`,
+      }}>
+        Oracle: {oracle.oracle_signal.replace("_", " ")}
+      </span>
+      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "var(--text-muted)" }}>
+        · {oracle.oracle_score_6m.toFixed(0)}% confidence · {oracle.oracle_target_upside} upside
+      </span>
+    </div>
+  );
+}
+
 export default function LotPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const { currency, locale } = useLanguageStore();
@@ -376,8 +569,11 @@ export default function LotPage({ params }: { params: { id: string } }) {
                   {/* Title block */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     {lot.artist_name_raw && (
-                      <div style={{ fontSize: "11px", fontWeight: 800, color: "var(--gold)", letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: "8px" }}>
-                        {lot.artist_name_raw}
+                      <div style={{ marginBottom: "8px" }}>
+                        <div style={{ fontSize: "11px", fontWeight: 800, color: "var(--gold)", letterSpacing: "0.16em", textTransform: "uppercase" }}>
+                          {lot.artist_name_raw}
+                        </div>
+                        {lot.artist?.id && <OracleBadge artistId={lot.artist.id} />}
                       </div>
                     )}
                     <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "26px", fontWeight: 600, color: "white", lineHeight: 1.3, marginBottom: "12px", maxWidth: "600px" }}>
@@ -611,6 +807,11 @@ export default function LotPage({ params }: { params: { id: string } }) {
 
                   {/* Artist info */}
                   <ArtistPanel lot={lot} />
+
+                  {/* Nautilus Oracle */}
+                  {lot.artist?.id && (
+                    <NautilusOracle artistId={lot.artist.id} />
+                  )}
                 </div>
               </div>
 

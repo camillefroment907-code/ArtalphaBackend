@@ -45,7 +45,7 @@ const ADMIN_ITEMS = [
 export function Sidebar() {
   const [expanded, setExpanded] = useState(false);
   const pathname = usePathname();
-  const { user, logout } = useAuthStore();
+  const { user, logout, plan } = useAuthStore();
   const router = useRouter();
   const isAdmin = user?.email === "camillefroment907@gmail.com";
 
@@ -195,7 +195,7 @@ export function Sidebar() {
       </nav>
 
       {/* Upgrade banner */}
-      {expanded && (!user || (user as any).plan === "free" || !(user as any).plan) && (
+      {expanded && (!user || plan === "free") && (
         <Link href="/pricing" style={{ textDecoration: "none" }}>
           <div style={{
             margin: "8px", padding: "10px",
@@ -240,7 +240,7 @@ export function Sidebar() {
                   {user?.email?.split("@")[0] || "Collector"}
                 </div>
                 <div style={{ fontSize: "10px", color: "#52525b" }}>
-                  {(user as any)?.plan || "Free"}
+                  {plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : "Free"}
                 </div>
               </div>
               <button

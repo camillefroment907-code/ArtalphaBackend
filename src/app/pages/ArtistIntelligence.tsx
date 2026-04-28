@@ -302,8 +302,10 @@ export default function ArtistIntelligence() {
   const [liquidityMap, setLiquidityMap] = useState<any>(null);
   const [calendarOverlay, setCalendarOverlay] = useState<any>(null);
   const [investmentGrade, setInvestmentGrade] = useState<any>(null);
+  const [oracle, setOracle] = useState(null);
   const [plan, setPlan] = useState(getUserPlan());
   useEffect(() => { setPlan(getUserPlan()); }, []);
+  const hasAccess = ["investor", "pro", "elite", "institutional"].includes(plan);
 
   // Must be before any early return — Rules of Hooks
   const auctionHouseStats = useMemo(() => {
@@ -401,6 +403,13 @@ export default function ArtistIntelligence() {
     })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.score != null) setInvestmentGrade(d); })
+      .catch(() => {});
+
+    fetch(`${BACKEND}/api/artists/by-name/${name}/oracle`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setOracle(d); })
       .catch(() => {});
   }, [artistName]);
 
@@ -772,6 +781,30 @@ export default function ArtistIntelligence() {
           </div>
         )}
 
+        {/* Oracle Analysis */}
+        {oracle !== null && hasAccess && (
+          <div style={{ marginBottom: '32px' }}>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 16px 0' }}>Oracle Analysis</h2>
+            <div style={{ background: 'var(--navy)', borderRadius: '10px', padding: '18px 22px' }}>
+              <div style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '14px' }}>
+                ◆ NAUTILUS ORACLE
+              </div>
+              {Object.entries(oracle as Record<string, unknown>).map(([key, value]) =>
+                typeof value === 'string' || typeof value === 'number' ? (
+                  <div key={key} style={{ marginBottom: '12px' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '3px' }}>
+                      {key.replace(/_/g, ' ')}
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.75 }}>
+                      {String(value)}
+                    </div>
+                  </div>
+                ) : null
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Price history chart */}
         {priceHistory && (
           <PriceChart
@@ -780,7 +813,7 @@ export default function ArtistIntelligence() {
           />
         )}
 
-        {plan === 'free' ? (
+        {!hasAccess ? (
           <div style={{textAlign:'center',padding:'64px 24px',background:'#f8f8f6',borderRadius:8,marginTop:32,border:'1px solid #e8e4dc'}}>
             <div style={{fontSize:11,letterSpacing:'0.2em',color:'#C6A85A',marginBottom:12,fontWeight:700}}>INVESTOR+ FEATURE</div>
             <div style={{fontSize:22,fontFamily:'Georgia,serif',color:'#1A2A44',marginBottom:12,fontWeight:600}}>Unlock full artist intelligence</div>

@@ -190,6 +190,7 @@ export default function ArtistDetail() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [wikiBio, setWikiBio] = useState<string | null>(null);
+  const [oracle, setOracle] = useState(null);
 
   useEffect(() => {
     if (!name) return;
@@ -217,6 +218,13 @@ export default function ArtistDetail() {
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
+
+    fetch(`${BACKEND}/api/artists/by-name/${encodeURIComponent(name)}/oracle`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setOracle(d); })
+      .catch(() => {});
   }, [name]);
 
   if (loading) {
@@ -258,6 +266,7 @@ export default function ArtistDetail() {
 
   const [plan, setPlan] = useState(getUserPlan());
   useEffect(() => { setPlan(getUserPlan()); }, []);
+  const hasFullAccess = ["investor", "pro", "elite", "institutional"].includes(plan);
   const showTrend = data.shows_prev_12m !== undefined && data.shows_prev_12m !== null;
   const trendUp = showTrend && data.shows_last_12m > (data.shows_prev_12m ?? 0);
 
@@ -357,37 +366,7 @@ export default function ArtistDetail() {
           )}
         </div>
 
-        {plan === 'free' ? (
-          <>
-            <div style={{ marginBottom: 40 }}>
-              {data.ai_brief ? (
-                <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
-                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>{data.ai_brief}</p>
-                </div>
-              ) : wikiBio ? (
-                <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
-                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0, display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{wikiBio}</p>
-                </div>
-              ) : data.biography ? (
-                <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
-                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>{data.biography.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')}</p>
-                </div>
-              ) : (
-                <div style={{ background: '#F5F3EE', border: '1px solid #E8E4DD', borderRadius: 8, padding: '16px 20px' }}>
-                  <p style={{ fontSize: 12, fontStyle: 'italic', color: '#9CA3AF', margin: 0, lineHeight: 1.6 }}>Market data available — artist biography coming soon.</p>
-                </div>
-              )}
-            </div>
-            <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8f8f6', borderRadius: 8, marginTop: 24 }}>
-              <div style={{ fontSize: 13, letterSpacing: '0.15em', color: '#C6A85A', marginBottom: 8 }}>INVESTOR+ FEATURE</div>
-              <div style={{ fontSize: 20, fontFamily: 'Georgia,serif', color: '#1A2A44', marginBottom: 16 }}>Full artist intelligence is available from the Investor plan</div>
-              <a href="/app/pricing" style={{ background: '#2563EB', color: '#fff', padding: '12px 28px', fontSize: 13, fontWeight: 600, textDecoration: 'none', borderRadius: 4 }}>Unlock full access →</a>
-            </div>
-          </>
-        ) : (
+        {hasFullAccess ? (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 40 }}>
           {/* LEFT COLUMN */}
           <div>
@@ -508,6 +487,29 @@ export default function ArtistDetail() {
                 </div>
               )}
             </div>
+
+            {oracle !== null && hasFullAccess && (
+              <div style={{ marginTop: 40 }}>
+                <SectionTitle>Oracle Analysis</SectionTitle>
+                <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 14 }}>
+                    ◆ NAUTILUS ORACLE
+                  </div>
+                  {Object.entries(oracle as Record<string, unknown>).map(([key, value]) =>
+                    typeof value === 'string' || typeof value === 'number' ? (
+                      <div key={key} style={{ marginBottom: 12 }}>
+                        <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 3 }}>
+                          {key.replace(/_/g, ' ')}
+                        </div>
+                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', lineHeight: 1.75 }}>
+                          {String(value)}
+                        </div>
+                      </div>
+                    ) : null
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* RIGHT COLUMN — INVESTMENT CONTEXT */}
@@ -576,6 +578,36 @@ export default function ArtistDetail() {
             </div>
           </div>
         </div>
+        ) : (
+          <>
+            <div style={{ marginBottom: 40 }}>
+              {data.ai_brief ? (
+                <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>{data.ai_brief}</p>
+                </div>
+              ) : wikiBio ? (
+                <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0, display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{wikiBio}</p>
+                </div>
+              ) : data.biography ? (
+                <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>{data.biography.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')}</p>
+                </div>
+              ) : (
+                <div style={{ background: '#F5F3EE', border: '1px solid #E8E4DD', borderRadius: 8, padding: '16px 20px' }}>
+                  <p style={{ fontSize: 12, fontStyle: 'italic', color: '#9CA3AF', margin: 0, lineHeight: 1.6 }}>Market data available — artist biography coming soon.</p>
+                </div>
+              )}
+            </div>
+            <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8f8f6', borderRadius: 8, marginTop: 24 }}>
+              <div style={{ fontSize: 13, letterSpacing: '0.15em', color: '#C6A85A', marginBottom: 8 }}>INVESTOR+ FEATURE</div>
+              <div style={{ fontSize: 20, fontFamily: 'Georgia,serif', color: '#1A2A44', marginBottom: 16 }}>Full artist intelligence is available from the Investor plan</div>
+              <a href="/app/pricing" style={{ background: '#2563EB', color: '#fff', padding: '12px 28px', fontSize: 13, fontWeight: 600, textDecoration: 'none', borderRadius: 4 }}>Unlock full access →</a>
+            </div>
+          </>
         )}
       </div>
     </div>
