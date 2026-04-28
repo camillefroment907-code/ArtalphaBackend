@@ -178,7 +178,7 @@ export default function Signup() {
         token: res.access_token,
       });
       localStorage.setItem('nautilus_show_tour', '1');
-      navigate('/app/onboarding');
+      navigate('/app/verify-email-required');
     } catch (err: any) {
       setError(err.message || 'Registration failed');
     } finally {
