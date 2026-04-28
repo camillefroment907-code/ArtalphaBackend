@@ -1152,6 +1152,7 @@ async def historical_ingest(body: dict = None) -> Dict[str, Any]:
 
 @router.post("/fill-post-auction")
 async def fill_post_auction(
+    limit: int = 100,
     db: AsyncSession = Depends(get_db),
     _: bool = Depends(verify_admin),
 ):
@@ -1164,8 +1165,11 @@ async def fill_post_auction(
       1. Exact: hammer_prices.lot_id == lots.id
       2. Fuzzy: artist name keyword + sale_date within ±7 days
 
+    Args:
+      limit: max lots to process per call (default 100). Call repeatedly to drain queue.
+
     Returns {total, matched, unmatched}.
     """
     from app.jobs.post_auction_fill import fill_post_auction_results
-    return await fill_post_auction_results(db)
+    return await fill_post_auction_results(db, limit=limit)
 

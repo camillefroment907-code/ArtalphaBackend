@@ -6,7 +6,7 @@ Matches past lots against the hammer_prices table and populates:
 """
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 import structlog
 
 from app.models.db_models import Lot, HammerPrice, ScorePerformance
@@ -14,17 +14,41 @@ from app.models.db_models import Lot, HammerPrice, ScorePerformance
 logger = structlog.get_logger()
 
 
-async def fill_post_auction_results(db: AsyncSession) -> dict:
+async def fill_post_auction_results(db: AsyncSession, limit: int = 100) -> dict:
     """
     Find past lots that have a ScorePerformance row but no hammer_price yet.
     Match against HammerPrice table — by lot_id first, then by
     (artist name similarity + sale_date within 7 days).
 
+    Args:
+        limit: max lots to process per call (default 100, keeps request under ~5s)
+
     Returns {"total": int, "matched": int, "unmatched": int}
     """
     now = datetime.utcnow()
 
-    # Lots: past auction date, no hammer_price, with a score_performance row
+    # Count total eligible (for reporting) — fast COUNT query
+    count_stmt = (
+        select(func.count(Lot.id))
+        .join(ScorePerformance, ScorePerformance.lot_id == Lot.id)
+        .where(
+            and_(
+                Lot.auction_date < now,
+                Lot.auction_date.isnot(None),
+                Lot.hammer_price.is_(None),
+                ScorePerformance.actual_hammer_price.is_(None),
+            )
+        )
+    )
+    total: int = (await db.execute(count_stmt)).scalar() or 0
+
+    if total == 0:
+        logger.info("post_auction_fill: no eligible lots found")
+        return {"total": 0, "matched": 0, "unmatched": 0}
+
+    logger.info("post_auction_fill: eligible lots", count=total, processing=min(limit, total))
+
+    # Fetch up to `limit` rows to process this run
     stmt = (
         select(Lot, ScorePerformance)
         .join(ScorePerformance, ScorePerformance.lot_id == Lot.id)
@@ -36,9 +60,9 @@ async def fill_post_auction_results(db: AsyncSession) -> dict:
                 ScorePerformance.actual_hammer_price.is_(None),
             )
         )
+        .limit(limit)
     )
     rows = (await db.execute(stmt)).all()
-    total = len(rows)
 
     if total == 0:
         logger.info("post_auction_fill: no eligible lots found")
