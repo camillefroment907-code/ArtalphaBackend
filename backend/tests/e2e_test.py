@@ -82,6 +82,41 @@ def test_register():
 
 results.append(run_test("01/10  REGISTER — new user created, token returned", test_register))
 
+# ── 1b. PRE-VERIFY TEST USER (setup step, not counted) ───────────────────────
+ADMIN_KEY = "hono-admin-2024"
+
+def _pre_verify():
+    # Try admin API endpoint first (no DATABASE_URL needed)
+    try:
+        r = requests.post(
+            f"{BASE_URL}/api/admin/verify-user",
+            json={"email": email},
+            headers={"X-Admin-Key": ADMIN_KEY},
+            timeout=10,
+        )
+        if r.status_code == 200:
+            print(f"  {GREEN}NOTE{RESET}  Test user pre-verified via admin API")
+            return
+    except Exception:
+        pass
+    # Fallback: psycopg2 if DATABASE_URL is set
+    db_url = os.environ.get("DATABASE_URL", "")
+    if db_url:
+        try:
+            import psycopg2
+            conn = psycopg2.connect(db_url)
+            cur = conn.cursor()
+            cur.execute("UPDATE users SET is_verified=true WHERE email=%s", (email,))
+            conn.commit()
+            conn.close()
+            print(f"  {GREEN}NOTE{RESET}  Test user pre-verified via DB")
+            return
+        except Exception as e:
+            print(f"  {YELLOW}NOTE{RESET}  psycopg2 fallback failed: {e}")
+    print(f"  {YELLOW}NOTE{RESET}  Could not pre-verify user — test 03 may fail")
+
+_pre_verify()
+
 # ── 2. LOGIN ──────────────────────────────────────────────────────────────────
 def test_login():
     global token
