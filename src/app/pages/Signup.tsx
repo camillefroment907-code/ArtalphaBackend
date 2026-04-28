@@ -22,14 +22,18 @@ const BADGE_META = [
 
 function RightPanel() {
   const [cards, setCards] = useState(FALLBACK_LOTS);
+  const [bgImage, setBgImage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API}/api/lots/public?limit=3&sort=deal_score&min_price=500`)
+    fetch(`${API}/api/lots/public?limit=2&sort=deal_score&min_price=500`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (!data) return;
         const items: any[] = Array.isArray(data) ? data : (data.items || data.lots || []);
         if (items.length < 1) return;
+        // Use second lot's image as background (first used for signal cards hero)
+        const secondUrl = items[1]?.image_url || items[0]?.image_url;
+        if (secondUrl) setBgImage(secondUrl);
         setCards(items.slice(0, 3).map((lot: any, i: number) => ({
           badge:       BADGE_META[i]?.badge       ?? '◆',
           badgeColor:  BADGE_META[i]?.badgeColor  ?? '#C6A85A',
@@ -45,8 +49,12 @@ function RightPanel() {
       .catch(() => {});
   }, []);
 
+  const panelBg = bgImage
+    ? `linear-gradient(rgba(10,22,40,0.65), rgba(10,22,40,0.65)), url(${bgImage})`
+    : undefined;
+
   return (
-    <div style={{ flex: '0 0 50%', background: '#0A1628', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '64px 56px' }}>
+    <div style={{ flex: '0 0 50%', background: '#0A1628', backgroundImage: panelBg, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '64px 56px' }}>
       <div style={{ position: 'absolute', inset: 0, opacity: 0.04, backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
       <div style={{ marginBottom: '20px', position: 'relative' }}>

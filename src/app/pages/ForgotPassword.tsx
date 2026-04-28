@@ -108,9 +108,10 @@ export default function ForgotPassword() {
       {/* Right panel — artwork */}
       <div style={{ flex: '0 0 42%', position: 'relative', overflow: 'hidden' }}>
         <img
-          src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg"
-          alt="Mona Lisa"
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }}
+          src="/forgot-artwork.jpg"
+          alt=""
+          aria-hidden="true"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
         />
       </div>
     </div>

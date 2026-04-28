@@ -45,15 +45,23 @@ function mapLotToCard(lot: any): SignalCard {
 function RightPanel() {
   const [cards, setCards] = useState<SignalCard[]>(FALLBACK_CARDS);
   const [lotCountLabel, setLotCountLabel] = useState('3,500+');
+  const [bgImage, setBgImage] = useState<string | null>(null);
 
   useEffect(() => {
+    fetch(`${API}/api/lots/public?limit=1&sort=deal_score`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const items: any[] = Array.isArray(data) ? data : (data?.items || []);
+        const url = items[0]?.image_url;
+        if (url) setBgImage(url);
+      })
+      .catch(() => {});
+
     fetch(`${API}/api/lots/public?limit=3&sort=deal_score`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         const items: any[] = Array.isArray(data) ? data : (data?.items || []);
-        if (items.length > 0) {
-          setCards(items.slice(0, 3).map(mapLotToCard));
-        }
+        if (items.length > 0) setCards(items.slice(0, 3).map(mapLotToCard));
       })
       .catch(() => {});
 
@@ -61,22 +69,17 @@ function RightPanel() {
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         const n = data?.total ?? data?.count ?? null;
-        if (n && n > 0) {
-          setLotCountLabel(n >= 1000 ? `${Math.floor(n / 100) / 10}K+` : `${n}+`);
-        }
+        if (n && n > 0) setLotCountLabel(n >= 1000 ? `${Math.floor(n / 100) / 10}K+` : `${n}+`);
       })
       .catch(() => {});
   }, []);
 
+  const panelBg = bgImage
+    ? `linear-gradient(rgba(10,22,40,0.65), rgba(10,22,40,0.65)), url(${bgImage})`
+    : undefined;
+
   return (
-    <div style={{ flex: '0 0 50%', background: '#0A1628', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '64px 56px' }}>
-      {/* Artwork background */}
-      <img
-        src="/forgot-artwork.jpg"
-        alt=""
-        aria-hidden="true"
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.15, pointerEvents: 'none' }}
-      />
+    <div style={{ flex: '0 0 50%', background: '#0A1628', backgroundImage: panelBg, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '64px 56px' }}>
       {/* Grid overlay */}
       <div style={{ position: 'absolute', inset: 0, opacity: 0.04, backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
