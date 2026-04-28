@@ -45,6 +45,7 @@ from app.api.feedback import router as feedback_router
 from app.api.analytics import router as analytics_router
 from app.api.emerging import router as emerging_router, emerging_artists_router
 from app.api.admin_scoring import router as admin_scoring_router
+from app.api.tracking import router as tracking_router
 
 settings = get_settings()
 
@@ -193,6 +194,7 @@ app.include_router(analytics_router,       prefix="/api")
 app.include_router(emerging_router,         prefix="/api")
 app.include_router(emerging_artists_router, prefix="/api")
 app.include_router(admin_scoring_router,    prefix="/api")
+app.include_router(tracking_router,         prefix="/api")
 
 
 @app.get("/")

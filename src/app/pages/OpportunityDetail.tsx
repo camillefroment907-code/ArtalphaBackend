@@ -207,6 +207,7 @@ export default function OpportunityDetail() {
   const NON_ART    = ['vehicule', 'voiture', 'moto', 'electromenager', 'cuisine', 'ixina'];
   const isValidUrl = rawUrl && rawUrl.startsWith('http') && !NON_ART.some((w: string) => rawUrl.toLowerCase().includes(w));
   const externalUrl = isValidUrl ? rawUrl : (sourceSearch[source] || `https://www.google.com/search?q=${artistEnc}+${source}`);
+  const trackUrl   = lot.id ? `${BACKEND}/api/track/${lot.id}` : externalUrl;
 
   const auctionDateFmt = lot.auction_date
     ? new Date(lot.auction_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -475,7 +476,7 @@ export default function OpportunityDetail() {
             {!hasAccess ? (
               <span onClick={() => { window.location.href = '/app/pricing'; }} style={{ cursor: 'pointer', color: '#2563EB', fontSize: 13, fontWeight: 600, letterSpacing: '0.04em' }}>🔒 Unlock source — Investor plan →</span>
             ) : (
-              <a href={externalUrl} target="_blank" rel="noopener noreferrer"
+              <a href={trackUrl} target="_blank" rel="noopener noreferrer"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: BLD, textDecoration: 'none', letterSpacing: '0.06em' }}>
                 View on {sourceNames[source] || resolvedSource} ↗
               </a>
@@ -593,7 +594,7 @@ export default function OpportunityDetail() {
               { label: 'House',      value: lot.auction_house_name },
               { label: 'Closes',     value: auctionDateFmt },
               { label: 'Lot #',      value: lot.lot_number },
-              { label: 'Source',     value: !hasAccess ? 'Source locked' : sourceLabel, href: !hasAccess ? undefined : externalUrl },
+              { label: 'Source',     value: !hasAccess ? 'Source locked' : sourceLabel, href: !hasAccess ? undefined : trackUrl },
             ] as { label: string; value?: string | null; nav?: string; link?: boolean; href?: string }[]).filter(r => r.value).map(r => (
               <div key={r.label} style={dRow}>
                 <span style={{ fontSize: '13px', color: LTT2, minWidth: '80px', flexShrink: 0 }}>{r.label}</span>
