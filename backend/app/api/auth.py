@@ -17,7 +17,7 @@ from app.database import get_db
 from app.models.db_models import User, UserPreference, AlertChannel, Subscription
 from app.models.schemas import UserRegister, UserLogin, TokenResponse, UserOut
 from app.api.auth_utils import hash_password, verify_password, create_access_token, get_current_user
-from app.services.email_service import send_welcome_email, send_verification_email
+from app.services.email_service import send_welcome_email, send_verification_email, send_password_reset_email
 
 settings = get_settings()
 
@@ -110,6 +110,56 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
         email=user.email,
         plan="free",
     )
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
+
+
+@router.post("/forgot-password")
+@limiter.limit("5/minute")
+async def forgot_password(request: Request, body: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Send a password-reset link. Always returns 200 to prevent email enumeration."""
+    result = await db.execute(select(User).where(User.email == body.email.lower().strip()))
+    user = result.scalar_one_or_none()
+
+    if user and user.is_active:
+        reset_token = create_access_token(
+            {"sub": str(user.id), "purpose": "reset_password"},
+            expires_delta=timedelta(hours=1),
+        )
+        reset_url = f"{settings.frontend_url}/reset-password?token={reset_token}"
+        asyncio.create_task(send_password_reset_email(user.email, reset_url))
+
+    return {"message": "If this email is registered, you'll receive a reset link shortly."}
+
+
+@router.post("/reset-password")
+async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Consume a reset token and set a new password."""
+    try:
+        payload = jose_jwt.decode(body.token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        if payload.get("purpose") != "reset_password":
+            raise ValueError("wrong purpose")
+        user_id = payload.get("sub")
+    except Exception:
+        raise HTTPException(400, "Invalid or expired reset link. Please request a new one.")
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user or not user.is_active:
+        raise HTTPException(400, "Invalid reset link.")
+
+    if len(body.password) < 8:
+        raise HTTPException(400, "Password must be at least 8 characters.")
+
+    user.hashed_password = hash_password(body.password)
+    await db.commit()
+    return {"message": "Password updated successfully."}
 
 
 @router.get("/verify-email")
