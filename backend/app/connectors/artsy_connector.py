@@ -650,3 +650,208 @@ async def fetch_emerging_artists(limit: int = 500) -> list[dict]:
 
     logger.info("artsy_emerging_fetched", count=len(results))
     return results
+
+
+# ── Historical sales ──────────────────────────────────────────────────────────
+
+_HISTORICAL_QUERY = """
+query FetchHistoricalSales($cursor: String) {
+  salesConnection(
+    live: false
+    published: true
+    sort: END_AT_DESC
+    first: 50
+    after: $cursor
+  ) {
+    pageInfo { hasNextPage endCursor }
+    edges {
+      node {
+        internalID
+        name
+        endAt
+        saleArtworksConnection(first: 50) {
+          edges {
+            node {
+              artwork {
+                title
+                medium
+                category
+                image { url }
+                artist { name }
+              }
+              lotLabel
+              estimate { low high display currencyCode }
+              highEstimate { amount currencyCode }
+              lowEstimate { amount currencyCode }
+              openingBid { amount currencyCode }
+              currentBid { amount currencyCode }
+              hammerPrice { amount currencyCode }
+              hammerPriceWithBuyersPremium { amount currencyCode }
+              soldStatus
+            }
+          }
+        }
+        partner { name }
+      }
+    }
+  }
+}
+"""
+
+_USD_TO_EUR = 1.08  # fixed conversion rate
+
+
+async def fetch_historical_sales(max_pages: int = 50) -> List[dict]:
+    """
+    Fetch closed Artsy auction results and return hammer price records.
+    Only lots where hammerPrice is not null (actually sold) are included.
+    Returns list of dicts matching the HammerPrice DB model columns.
+    Paginates up to max_pages (default 50) × 50 sales = 2 500 sales.
+    """
+    records: List[dict] = []
+    cursor = None
+    page_num = 0
+
+    try:
+        async with httpx.AsyncClient(
+            timeout=25,
+            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
+        ) as client:
+            while page_num < max_pages:
+                if page_num > 0:
+                    await asyncio.sleep(0.5)
+
+                resp = await client.post(
+                    _GRAPHQL_URL,
+                    json={"query": _HISTORICAL_QUERY, "variables": {"cursor": cursor}},
+                    timeout=20,
+                )
+                if resp.status_code == 429:
+                    logger.warning("artsy_hist_rate_limited", page=page_num)
+                    await asyncio.sleep(30)
+                    continue
+                if resp.status_code != 200:
+                    logger.warning("artsy_hist_graphql_failed", status=resp.status_code)
+                    break
+
+                data = resp.json()
+                if data.get("errors"):
+                    logger.warning("artsy_hist_graphql_errors", errors=data["errors"][:2])
+                    break
+
+                connection = data.get("data", {}).get("salesConnection", {})
+                edges = connection.get("edges", [])
+                page_info = connection.get("pageInfo", {})
+
+                if not edges:
+                    break
+
+                for sale_edge in edges:
+                    sale = sale_edge.get("node") or {}
+                    sale_id = sale.get("internalID", "")
+                    sale_name = (sale.get("name") or "Artsy").strip()
+                    end_at = sale.get("endAt")
+                    partner = sale.get("partner") or {}
+                    auction_house = (partner.get("name") or sale_name).strip()
+
+                    sale_date = None
+                    if end_at:
+                        try:
+                            sale_date = datetime.fromisoformat(str(end_at)[:19])
+                        except Exception:
+                            pass
+
+                    artworks_conn = sale.get("saleArtworksConnection") or {}
+                    for lot_edge in (artworks_conn.get("edges") or []):
+                        node = lot_edge.get("node") or {}
+
+                        # Only keep actually sold lots
+                        hammer_raw = node.get("hammerPrice") or {}
+                        hammer_amt = hammer_raw.get("amount")
+                        if hammer_amt is None:
+                            continue
+                        try:
+                            hammer_price = float(hammer_amt)
+                        except (TypeError, ValueError):
+                            continue
+                        if hammer_price <= 0:
+                            continue
+
+                        hammer_currency = (hammer_raw.get("currencyCode") or "USD").upper()
+
+                        # Artwork fields
+                        artwork = node.get("artwork") or {}
+                        title = (artwork.get("title") or "").strip()
+                        artist_info = artwork.get("artist") or {}
+                        artist_name = (artist_info.get("name") or "").strip()
+                        if not artist_name or not title:
+                            continue
+
+                        medium = artwork.get("medium") or artwork.get("category")
+                        image = artwork.get("image") or {}
+                        image_url = image.get("url")
+
+                        lot_label = (node.get("lotLabel") or "").strip()
+
+                        # Estimates
+                        low_raw = node.get("lowEstimate") or {}
+                        high_raw = node.get("highEstimate") or {}
+                        est_low = _f(low_raw.get("amount")) if low_raw else None
+                        est_high = _f(high_raw.get("amount")) if high_raw else None
+
+                        # Fallback to estimate envelope
+                        if est_low is None or est_high is None:
+                            est_env = node.get("estimate") or {}
+                            if est_low is None:
+                                est_low = _f(est_env.get("low"))
+                            if est_high is None:
+                                est_high = _f(est_env.get("high"))
+
+                        # EUR normalisation
+                        if hammer_currency == "EUR":
+                            hammer_price_eur = hammer_price
+                        elif hammer_currency in ("USD", "US$", "$"):
+                            hammer_price_eur = round(hammer_price / _USD_TO_EUR, 2)
+                        elif hammer_currency == "GBP":
+                            hammer_price_eur = round(hammer_price * 1.17, 2)
+                        else:
+                            hammer_price_eur = round(hammer_price / _USD_TO_EUR, 2)
+
+                        premium_ratio = None
+                        if est_low and est_low > 0:
+                            premium_ratio = round(hammer_price / est_low, 4)
+
+                        # Deterministic external_id for upsert
+                        safe_label = (lot_label or "x").replace("/", "-")
+                        external_id = f"artsy-hist-{sale_id}-{safe_label}"
+
+                        records.append({
+                            "external_id": external_id,
+                            "artist_name": artist_name[:500],
+                            "artwork_title": title[:1000],
+                            "medium": str(medium)[:300] if medium else None,
+                            "sale_date": sale_date,
+                            "hammer_price": hammer_price,
+                            "currency": hammer_currency,
+                            "hammer_price_eur": hammer_price_eur,
+                            "auction_house": auction_house[:300],
+                            "estimate_low": est_low,
+                            "estimate_high": est_high,
+                            "premium_ratio": premium_ratio,
+                            "source": "artsy",
+                            "image_url": str(image_url)[:1000] if image_url else None,
+                            "lot_number": lot_label[:100] if lot_label else None,
+                        })
+
+                page_num += 1
+                if not page_info.get("hasNextPage"):
+                    break
+                cursor = page_info.get("endCursor")
+                if not cursor:
+                    break
+
+    except Exception as e:
+        logger.warning("artsy_hist_fetch_failed", error=str(e))
+
+    logger.info("artsy_hist_fetched", count=len(records), pages=page_num)
+    return records

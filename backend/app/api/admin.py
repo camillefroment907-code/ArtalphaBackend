@@ -1173,3 +1173,115 @@ async def fill_post_auction(
     from app.jobs.post_auction_fill import fill_post_auction_results
     return await fill_post_auction_results(db, limit=limit)
 
+
+# ── Artsy historical sales scraper ────────────────────────────────────────────
+
+_artsy_hist_status: Dict[str, Any] = {
+    "running": False,
+    "started_at": None,
+    "finished_at": None,
+    "fetched": 0,
+    "stored": 0,
+    "skipped": 0,
+    "error": None,
+}
+
+
+@router.get("/fetch-artsy-historical/status", dependencies=[Depends(verify_admin)])
+async def artsy_historical_status() -> Dict[str, Any]:
+    """Return status of the last / running Artsy historical ingest."""
+    return dict(_artsy_hist_status)
+
+
+@router.post("/fetch-artsy-historical", dependencies=[Depends(verify_admin)])
+async def fetch_artsy_historical(body: dict = None) -> Dict[str, Any]:
+    """
+    Scrape closed Artsy auction results into hammer_prices table.
+    Only lots where hammerPrice != null are stored.
+    body: { "max_pages": 50 }  (default 50 → up to 2 500 sales)
+    Returns immediately; poll GET /api/admin/fetch-artsy-historical/status for progress.
+    """
+    import asyncio as _asyncio
+    import uuid as _uuid
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+    from app.models.db_models import HammerPrice
+
+    if _artsy_hist_status.get("running"):
+        return {
+            "status": "already_running",
+            "started_at": _artsy_hist_status.get("started_at"),
+        }
+
+    max_pages = int((body or {}).get("max_pages", 50))
+
+    async def _run():
+        _artsy_hist_status.update({
+            "running": True,
+            "started_at": datetime.utcnow().isoformat(),
+            "finished_at": None,
+            "fetched": 0,
+            "stored": 0,
+            "skipped": 0,
+            "error": None,
+        })
+        try:
+            from app.connectors.artsy_connector import fetch_historical_sales
+            from app.database import BgSessionLocal
+
+            records = await fetch_historical_sales(max_pages=max_pages)
+            _artsy_hist_status["fetched"] = len(records)
+
+            stored = 0
+            skipped = 0
+            async with BgSessionLocal() as db:
+                for rec in records:
+                    try:
+                        stmt = (
+                            pg_insert(HammerPrice)
+                            .values(
+                                id=_uuid.uuid4(),
+                                external_id=rec["external_id"],
+                                artist_name=rec["artist_name"],
+                                artwork_title=rec.get("artwork_title"),
+                                medium=rec.get("medium"),
+                                sale_date=rec.get("sale_date"),
+                                hammer_price=rec.get("hammer_price"),
+                                currency=rec.get("currency", "USD"),
+                                hammer_price_eur=rec.get("hammer_price_eur"),
+                                auction_house=rec.get("auction_house"),
+                                estimate_low=rec.get("estimate_low"),
+                                estimate_high=rec.get("estimate_high"),
+                                premium_ratio=rec.get("premium_ratio"),
+                                source=rec.get("source", "artsy"),
+                                image_url=rec.get("image_url"),
+                                lot_number=rec.get("lot_number"),
+                                created_at=datetime.utcnow(),
+                            )
+                            .on_conflict_do_nothing(index_elements=["external_id"])
+                        )
+                        result = await db.execute(stmt)
+                        if result.rowcount == 0:
+                            skipped += 1
+                        else:
+                            stored += 1
+                    except Exception as row_err:
+                        _log.warning(f"artsy_hist row error: {row_err}")
+                        skipped += 1
+
+                await db.commit()
+
+            _artsy_hist_status.update({"stored": stored, "skipped": skipped})
+
+        except Exception as e:
+            _log.error(f"fetch_artsy_historical FAILED: {e}", exc_info=True)
+            _artsy_hist_status["error"] = str(e)
+        finally:
+            _artsy_hist_status["running"] = False
+            _artsy_hist_status["finished_at"] = datetime.utcnow().isoformat()
+
+    _asyncio.create_task(_run())
+    return {
+        "status": "started",
+        "max_pages": max_pages,
+        "message": "Artsy historical ingest running. Poll GET /api/admin/fetch-artsy-historical/status.",
+    }
