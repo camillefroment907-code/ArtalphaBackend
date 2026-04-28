@@ -49,11 +49,11 @@ export async function googleAuthApi(credential: string): Promise<LoginResponse &
   return res.json();
 }
 
-export async function registerApi(email: string, password: string, name?: string): Promise<LoginResponse> {
+export async function registerApi(email: string, password: string, name?: string, marketing_consent = false): Promise<LoginResponse> {
   const res = await fetch(`${API}/api/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, name }),
+    body: JSON.stringify({ email, password, full_name: name, marketing_consent }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

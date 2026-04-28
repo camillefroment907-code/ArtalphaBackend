@@ -103,21 +103,40 @@ export default function Signup() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [tosAccepted, setTosAccepted] = useState(false);
+  const [newsletterConsent, setNewsletterConsent] = useState(false);
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   useSEO({ title: 'Get Access · Nautilus', noindex: true });
 
   async function handleRegister() {
     setError('');
+    setNameError('');
+    setEmailError('');
+
+    let valid = true;
+    if (!name.trim()) {
+      setNameError('Full name is required');
+      valid = false;
+    }
+    if (!EMAIL_RE.test(email.trim())) {
+      setEmailError('Please enter a valid email address');
+      valid = false;
+    }
+    if (!valid) return;
+
     if (password !== confirmPassword) {
       setError("Passwords don't match");
       return;
     }
     setLoading(true);
     try {
-      const res = await registerApi(email, password, name);
+      const res = await registerApi(email.trim(), password, name.trim(), newsletterConsent);
       setUser({
         id: res.user_id,
         email: res.email,
@@ -171,7 +190,8 @@ export default function Signup() {
               <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '4px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
                 Full name
               </label>
-              <input type="text" className="input" value={name} onChange={e => setName(e.target.value)} placeholder="John Smith" autoComplete="name" />
+              <input type="text" className="input" value={name} onChange={e => { setName(e.target.value); if (nameError) setNameError(''); }} placeholder="John Smith" autoComplete="name" style={nameError ? { borderColor: 'var(--red)' } : {}} />
+              {nameError && <div style={{ marginTop: '4px', fontSize: '12px', color: 'var(--red)' }}>{nameError}</div>}
             </div>
 
             {/* Email */}
@@ -179,7 +199,8 @@ export default function Signup() {
               <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '4px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
                 Email
               </label>
-              <input type="email" className="input" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" autoComplete="email" />
+              <input type="email" className="input" value={email} onChange={e => { setEmail(e.target.value); if (emailError) setEmailError(''); }} placeholder="your@email.com" autoComplete="email" style={emailError ? { borderColor: 'var(--red)' } : {}} />
+              {emailError && <div style={{ marginTop: '4px', fontSize: '12px', color: 'var(--red)' }}>{emailError}</div>}
             </div>
 
             {/* Password */}
@@ -244,6 +265,8 @@ export default function Signup() {
               <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
+                  checked={newsletterConsent}
+                  onChange={e => setNewsletterConsent(e.target.checked)}
                   style={{ marginTop: '3px', flexShrink: 0, accentColor: '#2563EB', width: '14px', height: '14px' }}
                 />
                 <span style={{ fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.5 }}>
