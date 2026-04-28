@@ -42,6 +42,15 @@ const PLATFORM_API: Record<string, string> = {
 };
 
 // Maps sidebar pill labels to exact DB category values
+const PROVENANCE_KEYWORD_MAP: Record<string, string> = {
+  'African Art':          'african',
+  'Brazilian Art':        'brazil',
+  'Asian Art':            'asian',
+  'Nordic Art':           'nordic',
+  'Latin American Art':   'latin',
+  'Middle Eastern Art':   'iranian arabic',
+};
+
 const CATEGORY_API_MAP: Record<string, string> = {
   'Paintings': 'Paintings',
   'Prints': 'Prints & Multiples',
@@ -372,19 +381,20 @@ export default function Explore() {
   const [minPrice, setMinPrice]       = useState(0);
   const [maxPrice, setMaxPrice]       = useState(0);
   const [category, setCategory]       = useState(searchParams.get('category') || '');
+  const [provenance, setProvenance]   = useState('');
   const [sources, setSources]         = useState<string[]>([]);
   const [sortBy, setSortBy]           = useState(searchParams.get('sort_by') || 'created_at');
   const [sortDir, setSortDir]         = useState(searchParams.get('sort_dir') || 'desc');
 
   const resetFilters = () => {
     setMinScore(0); setMaxScore(0); setMinPrice(0); setMaxPrice(0);
-    setCategory(''); setSources([]);
+    setCategory(''); setProvenance(''); setSources([]);
     setSearch(''); setDateFilter('all');
     setSortBy('deal_score'); setSortDir('desc');
     setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete('search'); return p; });
   };
 
-  const hasActiveFilters = minScore > 0 || minPrice > 0 || maxPrice > 0 || category !== '' || sources.length > 0 || dateFilter !== 'all';
+  const hasActiveFilters = minScore > 0 || minPrice > 0 || maxPrice > 0 || category !== '' || provenance !== '' || sources.length > 0 || dateFilter !== 'all';
 
   // Sync filter state → URL
   useEffect(() => {
@@ -522,7 +532,8 @@ export default function Explore() {
         if (maxPrice > 0)    p.set('max_price', String(maxPrice));
         if (category)        p.set('category', CATEGORY_API_MAP[category] || category);
         if (sources.length)  p.set('sources', sources.join(','));
-        if (search.trim())   p.set('search', search.trim());
+        const effectiveSearch = [search.trim(), PROVENANCE_KEYWORD_MAP[provenance] || ''].filter(Boolean).join(' ').trim();
+        if (effectiveSearch) p.set('search', effectiveSearch);
         Object.entries(getDateParams(dateFilter)).forEach(([k, v]) => p.set(k, v));
 
         const url = exploreTab === 'primary'
@@ -548,17 +559,18 @@ export default function Explore() {
     }, 300);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exploreTab, refreshKey, minScore, maxScore, minPrice, maxPrice, category, sources, search, sortBy, sortDir, dateFilter]);
+  }, [exploreTab, refreshKey, minScore, maxScore, minPrice, maxPrice, category, provenance, sources, search, sortBy, sortDir, dateFilter]);
 
   const loadMore = async () => {
     if (loadingMore || currentPage >= totalPages) return;
     const nextPage = currentPage + 1;
     setLoadingMore(true);
     try {
+      const _lmSearch = [search.trim(), PROVENANCE_KEYWORD_MAP[provenance] || ''].filter(Boolean).join(' ').trim();
       const p: Record<string, any> = {
         page: nextPage, page_size: 24,
         sort_by: sortBy, sort_dir: sortDir,
-        search: search || undefined,
+        search: _lmSearch || undefined,
         min_price: minPrice > 0 ? minPrice : undefined,
         max_price: maxPrice > 0 ? maxPrice : undefined,
         category: category ? (CATEGORY_API_MAP[category] || category) : undefined,
@@ -791,6 +803,20 @@ export default function Explore() {
               </div>
               <div style={{ borderBottom: '1px solid #E8E4DD', margin: '12px 0' }} />
 
+              {/* 4 — PROVENANCE */}
+              <div style={{ marginBottom: '6px' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Provenance</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                  {Object.keys(PROVENANCE_KEYWORD_MAP).map(p => (
+                    <button key={p} onClick={() => setProvenance(provenance === p ? '' : p)}
+                      style={{ padding: '4px 8px', borderRadius: '20px', fontSize: '11px', cursor: 'pointer', background: provenance === p ? 'var(--navy)' : 'transparent', color: provenance === p ? 'white' : 'var(--text-2)', border: `1px solid ${provenance === p ? 'var(--navy)' : 'var(--border)'}`, transition: 'all 0.12s', whiteSpace: 'nowrap' }}>
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ borderBottom: '1px solid #E8E4DD', margin: '12px 0' }} />
+
               {/* 5 — AUCTION DATE */}
               <div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Auction Date</div>
@@ -891,6 +917,11 @@ export default function Explore() {
                   {category && (
                     <button onClick={() => setCategory('')} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px 3px 10px', fontSize: '11px', borderRadius: '20px', border: '1px solid var(--navy)', background: 'rgba(26,42,68,0.07)', color: 'var(--navy)', cursor: 'pointer', fontWeight: 600 }}>
                       {category} <span style={{ opacity: 0.6, fontSize: '12px' }}>×</span>
+                    </button>
+                  )}
+                  {provenance && (
+                    <button onClick={() => setProvenance('')} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px 3px 10px', fontSize: '11px', borderRadius: '20px', border: '1px solid var(--navy)', background: 'rgba(26,42,68,0.07)', color: 'var(--navy)', cursor: 'pointer', fontWeight: 600 }}>
+                      {provenance} <span style={{ opacity: 0.6, fontSize: '12px' }}>×</span>
                     </button>
                   )}
                   {dateFilter !== 'all' && (
