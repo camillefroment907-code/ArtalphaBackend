@@ -229,11 +229,11 @@ export default function Pricing() {
       </div>
 
       {/* Hero */}
-      <div style={{ textAlign: 'center', padding: '24px 24px 12px' }}>
-        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(22px, 3vw, 34px)', fontWeight: 600, color: 'var(--text)', marginBottom: '8px', lineHeight: 1.15 }}>
+      <div style={{ textAlign: 'center', padding: '14px 24px 6px' }}>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(20px, 2.5vw, 28px)', fontWeight: 600, color: 'var(--text)', marginBottom: '6px', lineHeight: 1.15 }}>
           Choose your level of access
         </h1>
-        <p style={{ fontSize: '14px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto 6px', lineHeight: 1.6 }}>
+        <p style={{ fontSize: '13px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto 4px', lineHeight: 1.5 }}>
           From market discovery to full investment intelligence.
         </p>
         <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
@@ -252,15 +252,15 @@ export default function Pricing() {
       )}
 
       {/* Plan cards — 4-column grid */}
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px 24px' }}>
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px 16px' }}>
 
         {/* Urgency strip */}
-        <div style={{ textAlign: 'center', padding: '8px 20px', background: 'rgba(198,168,90,0.1)', borderRadius: 4, marginBottom: 10, fontSize: 12, color: '#1A2A44', letterSpacing: '0.06em' }}>
+        <div style={{ textAlign: 'center', padding: '5px 16px', background: 'rgba(198,168,90,0.1)', borderRadius: 4, marginBottom: 8, fontSize: 11, color: '#1A2A44', letterSpacing: '0.06em' }}>
           ⚡ Founding member pricing — limited spots before public launch
         </div>
 
         {/* Annual toggle */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', marginBottom: '12px', background: 'var(--bg-subtle)', borderRadius: '24px', padding: '4px', width: 'fit-content', margin: '0 auto 12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', marginBottom: '8px', background: 'var(--bg-subtle)', borderRadius: '24px', padding: '4px', width: 'fit-content', margin: '0 auto 8px' }}>
           <button
             onClick={() => setIsAnnual(false)}
             style={{
@@ -318,7 +318,7 @@ export default function Pricing() {
                 }}
               >
                 {/* Founding badge row — same height for all cards */}
-                <div style={{ height: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '6px' }}>
+                <div style={{ height: '18px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '4px' }}>
                   {plan.badge && (
                     <span style={{
                       fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em',
@@ -334,7 +334,7 @@ export default function Pricing() {
                 </div>
 
                 {/* Current plan badge row — same height for all cards */}
-                <div style={{ height: '18px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '8px' }}>
+                <div style={{ height: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '6px' }}>
                   {isCurrentPlan && (
                     <div style={{ background: 'var(--electric)', color: 'white', fontSize: '9px', fontWeight: 700, padding: '3px 12px', borderRadius: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
                       YOUR CURRENT PLAN
@@ -348,7 +348,7 @@ export default function Pricing() {
                 </div>
 
                 {/* Price + description — fixed height so CTA aligns across all cards */}
-                <div style={{ height: '100px', overflow: 'hidden' }}>
+                <div style={{ height: '88px', overflow: 'hidden' }}>
 
                 {/* Price block */}
                 {plan.key === 'institutional' ? (
@@ -405,68 +405,61 @@ export default function Pricing() {
                 </div>{/* end price+description wrapper */}
 
                 {/* CTA — above feature list */}
-                <div style={{ marginTop: '12px', marginBottom: '12px' }}>
+                <div style={{ marginTop: '10px', marginBottom: '10px' }}>
                   {plan.key === 'free' ? (
                     <button
                       disabled
                       style={{
-                        width: '100%', padding: '11px', borderRadius: '6px',
+                        width: '100%', height: '48px', borderRadius: '6px',
                         background: 'var(--bg-subtle)', border: '1px solid var(--border)',
                         color: 'var(--text-3)', fontSize: '12px', fontWeight: 700,
                         cursor: 'not-allowed', letterSpacing: '0.06em', textTransform: 'uppercase' as const,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
                       {plan.cta}
                     </button>
                   ) : isCurrentPlan ? (
-                    <div style={{ width: '100%', padding: '11px', borderRadius: '6px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', color: 'var(--electric)', fontSize: '12px', fontWeight: 700, textAlign: 'center', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
+                    <div style={{ width: '100%', height: '48px', borderRadius: '6px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', color: 'var(--electric)', fontSize: '12px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' as const, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       ✓ Current plan
                     </div>
                   ) : plan.key === 'investor' ? (
-                    <>
-                      <button
-                        onClick={() => handleSelect(plan)}
-                        disabled={loading === plan.key}
-                        style={{
-                          width: '100%', padding: '13px', borderRadius: '6px',
-                          background: '#2563EB', color: 'white', border: 'none',
-                          fontSize: '13px', fontWeight: 700,
-                          cursor: loading === plan.key ? 'not-allowed' : 'pointer',
-                          letterSpacing: '0.04em',
-                          opacity: loading === plan.key ? 0.7 : 1,
-                        }}
-                      >
-                        {loading === plan.key ? 'Loading...' : plan.cta}
-                      </button>
-                      <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '8px', textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
-                        Renews automatically · Cancel anytime
-                      </div>
-                    </>
+                    <button
+                      onClick={() => handleSelect(plan)}
+                      disabled={loading === plan.key}
+                      style={{
+                        width: '100%', height: '48px', borderRadius: '6px',
+                        background: '#2563EB', color: 'white', border: 'none',
+                        fontSize: '13px', fontWeight: 700,
+                        cursor: loading === plan.key ? 'not-allowed' : 'pointer',
+                        letterSpacing: '0.04em',
+                        opacity: loading === plan.key ? 0.7 : 1,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >
+                      {loading === plan.key ? 'Loading...' : plan.cta}
+                    </button>
                   ) : (
-                    <>
-                      <button
-                        onClick={() => handleSelect(plan)}
-                        disabled={loading === plan.key}
-                        style={{
-                          width: '100%', padding: '11px', borderRadius: '6px',
-                          background: '#2563EB', color: 'white', border: 'none',
-                          fontSize: '12px', fontWeight: 700,
-                          cursor: loading === plan.key ? 'not-allowed' : 'pointer',
-                          letterSpacing: '0.06em', textTransform: 'uppercase' as const,
-                          opacity: loading === plan.key ? 0.7 : 1,
-                        }}
-                      >
-                        {loading === plan.key ? 'Loading...' : plan.cta}
-                      </button>
-                      <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '8px', lineHeight: 1.5, textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
-                        Renews automatically · Cancel anytime
-                      </div>
-                    </>
+                    <button
+                      onClick={() => handleSelect(plan)}
+                      disabled={loading === plan.key}
+                      style={{
+                        width: '100%', height: '48px', borderRadius: '6px',
+                        background: '#2563EB', color: 'white', border: 'none',
+                        fontSize: '12px', fontWeight: 700,
+                        cursor: loading === plan.key ? 'not-allowed' : 'pointer',
+                        letterSpacing: '0.06em', textTransform: 'uppercase' as const,
+                        opacity: loading === plan.key ? 0.7 : 1,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >
+                      {loading === plan.key ? 'Loading...' : plan.cta}
+                    </button>
                   )}
                 </div>
 
                 {/* Divider */}
-                <div style={{ height: '1px', background: isHighlight ? 'rgba(255,255,255,0.1)' : 'var(--border)', marginBottom: '14px' }} />
+                <div style={{ height: '1px', background: isHighlight ? 'rgba(255,255,255,0.1)' : 'var(--border)', marginBottom: '10px' }} />
 
                 {/* Features */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: 1 }}>
