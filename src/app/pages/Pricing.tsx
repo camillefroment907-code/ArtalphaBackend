@@ -48,8 +48,8 @@ const PLANS: Plan[] = [
     price: 19,
     annualPrice: 190,
     annualMonthly: 15.83,
-    badge: 'FOUNDING PRICE · LIMITED SPOTS',
-    priceSubtext: 'Increases to €49/mo at public launch',
+    badge: 'FOUNDING MEMBER',
+    priceSubtext: 'Limited to 100 spots · Price locked for life · Rises to €49 after launch',
     description: 'For active collectors & investors.',
     highlight: true,
     cta: 'Get founding access →',
@@ -318,11 +318,18 @@ export default function Pricing() {
                 }}
               >
                 {/* Founding badge row — same height for all cards */}
-                <div style={{ height: '22px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '8px' }}>
+                <div style={{ height: '26px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '8px' }}>
                   {plan.badge && (
-                    <div style={{ fontSize: '9px', color: '#C6A85A', letterSpacing: '0.1em', textTransform: 'uppercase' as const, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
-                      ⚡ {plan.badge}
-                    </div>
+                    <span style={{
+                      fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em',
+                      textTransform: 'uppercase' as const, fontFamily: 'var(--font-mono)',
+                      color: '#C6A85A',
+                      background: 'rgba(198,168,90,0.15)',
+                      border: '1px solid rgba(198,168,90,0.4)',
+                      padding: '3px 10px', borderRadius: '4px',
+                    }}>
+                      {plan.badge}
+                    </span>
                   )}
                 </div>
 
