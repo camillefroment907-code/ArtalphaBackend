@@ -111,7 +111,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, loader: () => redirect('/app/dashboard') },
       { path: 'waitlist', loader: () => redirect('/app/signup') },
-      { path: 'dashboard', Component: SignalFeed },
+      { path: 'dashboard', Component: Dashboard },
       { path: 'explore', Component: Explore },
       { path: 'login', Component: Login },
       { path: 'signup', Component: Signup },
