@@ -25,15 +25,16 @@ function RightPanel() {
   const [bgImage, setBgImage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API}/api/lots/public?limit=2&sort=deal_score&min_price=500`)
+    fetch(`${API}/api/lots/public?limit=5&sort=deal_score`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (!data) return;
         const items: any[] = Array.isArray(data) ? data : (data.items || data.lots || []);
         if (items.length < 1) return;
-        // Use second lot's image as background (first used for signal cards hero)
-        const secondUrl = items[1]?.image_url || items[0]?.image_url;
-        if (secondUrl) setBgImage(secondUrl);
+        // Second lot with non-null image_url → background; fall back to first
+        const withImg = items.filter((l: any) => !!l.image_url);
+        const bgLot = withImg[1] || withImg[0];
+        if (bgLot) setBgImage(bgLot.image_url);
         setCards(items.slice(0, 3).map((lot: any, i: number) => ({
           badge:       BADGE_META[i]?.badge       ?? '◆',
           badgeColor:  BADGE_META[i]?.badgeColor  ?? '#C6A85A',
@@ -50,7 +51,7 @@ function RightPanel() {
   }, []);
 
   const panelBg = bgImage
-    ? `linear-gradient(rgba(10,22,40,0.65), rgba(10,22,40,0.65)), url(${bgImage})`
+    ? `linear-gradient(rgba(10,22,40,0.45), rgba(10,22,40,0.45)), url(${bgImage})`
     : undefined;
 
   return (
@@ -63,10 +64,10 @@ function RightPanel() {
 
       {/* Hero text */}
       <div style={{ marginBottom: '24px', position: 'relative' }}>
-        <h2 style={{ color: '#FFFFFF', fontFamily: 'Georgia,serif', fontSize: 28, fontWeight: 'normal', lineHeight: 1.2, margin: '0 0 8px' }}>
+        <h2 style={{ color: '#FFFFFF', fontFamily: 'Georgia,serif', fontSize: 28, fontWeight: 'normal', lineHeight: 1.2, margin: '0 0 8px', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
           The market has a gap.<br />You're about to see it.
         </h2>
-        <p style={{ color: 'rgba(198,168,90,0.7)', fontSize: 13, margin: 0, fontFamily: 'Arial,sans-serif' }}>
+        <p style={{ color: 'rgba(198,168,90,0.7)', fontSize: 13, margin: 0, fontFamily: 'Arial,sans-serif', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
           Real opportunities. Right now.
         </p>
       </div>

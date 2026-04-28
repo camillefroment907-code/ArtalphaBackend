@@ -42,26 +42,32 @@ function mapLotToCard(lot: any): SignalCard {
   return { badge, badgeColor, artist, detail, detailColor };
 }
 
+type FeaturedLot = { artist: string; title: string; upside: number | null; score: number };
+
 function RightPanel() {
   const [cards, setCards] = useState<SignalCard[]>(FALLBACK_CARDS);
   const [lotCountLabel, setLotCountLabel] = useState('3,500+');
   const [bgImage, setBgImage] = useState<string | null>(null);
+  const [featured, setFeatured] = useState<FeaturedLot | null>(null);
 
   useEffect(() => {
-    fetch(`${API}/api/lots/public?limit=1&sort=deal_score`)
+    fetch(`${API}/api/lots/public?limit=5&sort=deal_score`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         const items: any[] = Array.isArray(data) ? data : (data?.items || []);
-        const url = items[0]?.image_url;
-        if (url) setBgImage(url);
-      })
-      .catch(() => {});
-
-    fetch(`${API}/api/lots/public?limit=3&sort=deal_score`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        const items: any[] = Array.isArray(data) ? data : (data?.items || []);
-        if (items.length > 0) setCards(items.slice(0, 3).map(mapLotToCard));
+        if (!items.length) return;
+        // First lot with a non-null image_url → background + featured card
+        const withImg = items.find((l: any) => !!l.image_url);
+        if (withImg) {
+          setBgImage(withImg.image_url);
+          setFeatured({
+            artist: withImg.artist?.name || withImg.artist_name_raw || 'Unknown',
+            title: withImg.title || '',
+            upside: withImg.pct_below_low_estimate ?? null,
+            score: Math.round(withImg.deal_score || 0),
+          });
+        }
+        setCards(items.slice(0, 3).map(mapLotToCard));
       })
       .catch(() => {});
 
@@ -75,7 +81,7 @@ function RightPanel() {
   }, []);
 
   const panelBg = bgImage
-    ? `linear-gradient(rgba(10,22,40,0.65), rgba(10,22,40,0.65)), url(${bgImage})`
+    ? `linear-gradient(rgba(10,22,40,0.55), rgba(10,22,40,0.55)), url(${bgImage})`
     : undefined;
 
   return (
@@ -111,8 +117,23 @@ function RightPanel() {
         ))}
       </div>
 
+      {/* Featured lot card */}
+      {featured && (
+        <div style={{ marginTop: '12px', background: 'rgba(198,168,90,0.08)', border: '1px solid rgba(198,168,90,0.25)', borderRadius: '8px', padding: '14px 16px', position: 'relative' }}>
+          <div style={{ fontSize: '10px', color: 'rgba(198,168,90,0.6)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '6px' }}>◆ TOP OPPORTUNITY NOW</div>
+          <div style={{ fontSize: '13px', color: 'white', fontWeight: 700, marginBottom: '2px' }}>{featured.artist}</div>
+          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{featured.title}</div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            {featured.upside !== null && featured.upside > 0 && (
+              <span style={{ fontSize: '12px', color: '#C6A85A', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>+{Math.round(featured.upside)}% upside</span>
+            )}
+            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>Score: {featured.score}/100</span>
+          </div>
+        </div>
+      )}
+
       {/* Stats strip */}
-      <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 16, flexWrap: 'wrap', position: 'relative' }}>
+      <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 16, flexWrap: 'wrap', position: 'relative' }}>
         {[`${lotCountLabel} lots scored`, 'Avg +31% upside on 80+', '6 exceptional lots today'].map(s => (
           <span key={s} style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: 'Arial,sans-serif' }}>{s}</span>
         ))}
