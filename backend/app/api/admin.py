@@ -53,6 +53,24 @@ def verify_admin(
     raise HTTPException(status_code=403, detail="Admin access denied")
 
 
+@router.post("/verify-user", dependencies=[Depends(verify_admin)])
+async def verify_user_email(
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    """Mark a user as email-verified by address. Used by e2e tests."""
+    email = (body.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="email required")
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail=f"User not found: {email}")
+    user.is_verified = True
+    await db.commit()
+    return {"ok": True, "email": email}
+
+
 @router.get("/stats")
 async def admin_stats(
     db: AsyncSession = Depends(get_db),
