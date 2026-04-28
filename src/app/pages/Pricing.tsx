@@ -229,11 +229,11 @@ export default function Pricing() {
       </div>
 
       {/* Hero */}
-      <div style={{ textAlign: 'center', padding: '64px 24px 48px' }}>
-        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 600, color: 'var(--text)', marginBottom: '12px', lineHeight: 1.15 }}>
+      <div style={{ textAlign: 'center', padding: '24px 24px 12px' }}>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(22px, 3vw, 34px)', fontWeight: 600, color: 'var(--text)', marginBottom: '8px', lineHeight: 1.15 }}>
           Choose your level of access
         </h1>
-        <p style={{ fontSize: '15px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto 8px', lineHeight: 1.7 }}>
+        <p style={{ fontSize: '14px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto 6px', lineHeight: 1.6 }}>
           From market discovery to full investment intelligence.
         </p>
         <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
@@ -252,15 +252,15 @@ export default function Pricing() {
       )}
 
       {/* Plan cards — 4-column grid */}
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px 64px' }}>
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px 24px' }}>
 
         {/* Urgency strip */}
-        <div style={{ textAlign: 'center', padding: '10px 20px', background: 'rgba(198,168,90,0.1)', borderRadius: 4, marginBottom: 24, fontSize: 12, color: '#1A2A44', letterSpacing: '0.06em' }}>
+        <div style={{ textAlign: 'center', padding: '8px 20px', background: 'rgba(198,168,90,0.1)', borderRadius: 4, marginBottom: 10, fontSize: 12, color: '#1A2A44', letterSpacing: '0.06em' }}>
           ⚡ Founding member pricing — limited spots before public launch
         </div>
 
         {/* Annual toggle */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', marginBottom: '28px', background: 'var(--bg-subtle)', borderRadius: '24px', padding: '4px', width: 'fit-content', margin: '0 auto 28px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', marginBottom: '12px', background: 'var(--bg-subtle)', borderRadius: '24px', padding: '4px', width: 'fit-content', margin: '0 auto 12px' }}>
           <button
             onClick={() => setIsAnnual(false)}
             style={{
@@ -310,7 +310,7 @@ export default function Pricing() {
                     ? '2px solid var(--navy)'
                     : '1px solid var(--border)',
                   borderRadius: '12px',
-                  padding: '24px 20px',
+                  padding: '16px',
                   display: 'flex',
                   flexDirection: 'column',
                   height: '100%',
@@ -318,7 +318,7 @@ export default function Pricing() {
                 }}
               >
                 {/* Founding badge row — same height for all cards */}
-                <div style={{ height: '26px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '8px' }}>
+                <div style={{ height: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '6px' }}>
                   {plan.badge && (
                     <span style={{
                       fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em',
@@ -334,7 +334,7 @@ export default function Pricing() {
                 </div>
 
                 {/* Current plan badge row — same height for all cards */}
-                <div style={{ height: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '12px' }}>
+                <div style={{ height: '18px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '8px' }}>
                   {isCurrentPlan && (
                     <div style={{ background: 'var(--electric)', color: 'white', fontSize: '9px', fontWeight: 700, padding: '3px 12px', borderRadius: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
                       YOUR CURRENT PLAN
@@ -343,12 +343,12 @@ export default function Pricing() {
                 </div>
 
                 {/* Plan name */}
-                <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', fontFamily: 'var(--font-mono)', color: isHighlight ? 'rgba(255,255,255,0.5)' : 'var(--text-3)', textTransform: 'uppercase' as const, marginBottom: '12px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', fontFamily: 'var(--font-mono)', color: isHighlight ? 'rgba(255,255,255,0.5)' : 'var(--text-3)', textTransform: 'uppercase' as const, marginBottom: '8px' }}>
                   {plan.name}
                 </div>
 
                 {/* Price + description — fixed height so CTA aligns across all cards */}
-                <div style={{ height: '120px', overflow: 'hidden' }}>
+                <div style={{ height: '100px', overflow: 'hidden' }}>
 
                 {/* Price block */}
                 {plan.key === 'institutional' ? (
@@ -405,7 +405,7 @@ export default function Pricing() {
                 </div>{/* end price+description wrapper */}
 
                 {/* CTA — above feature list */}
-                <div style={{ marginTop: '24px', marginBottom: '24px' }}>
+                <div style={{ marginTop: '12px', marginBottom: '12px' }}>
                   {plan.key === 'free' ? (
                     <button
                       disabled
@@ -469,16 +469,16 @@ export default function Pricing() {
                 <div style={{ height: '1px', background: isHighlight ? 'rgba(255,255,255,0.1)' : 'var(--border)', marginBottom: '14px' }} />
 
                 {/* Features */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: 1 }}>
                   {plan.features.map((feature, i) => {
                     const isNeg = feature.startsWith('✗');
                     const label = isNeg ? feature.slice(1).trim() : feature;
                     return (
-                      <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                        <span style={{ color: isNeg ? '#F87171' : (isHighlight ? 'var(--gold)' : 'var(--electric)'), fontSize: '10px', marginTop: '3px', flexShrink: 0 }}>
+                      <div key={i} style={{ display: 'flex', gap: '7px', alignItems: 'flex-start' }}>
+                        <span style={{ color: isNeg ? '#F87171' : (isHighlight ? 'var(--gold)' : 'var(--electric)'), fontSize: '9px', marginTop: '2px', flexShrink: 0 }}>
                           {isNeg ? '✗' : '✓'}
                         </span>
-                        <span style={{ fontSize: '12px', lineHeight: 1.5, color: isNeg ? (isHighlight ? 'rgba(255,255,255,0.35)' : 'var(--text-3)') : (isHighlight ? 'rgba(255,255,255,0.75)' : 'var(--text-2)') }}>
+                        <span style={{ fontSize: '11px', lineHeight: 1.45, color: isNeg ? (isHighlight ? 'rgba(255,255,255,0.35)' : 'var(--text-3)') : (isHighlight ? 'rgba(255,255,255,0.75)' : 'var(--text-2)') }}>
                           {label}
                         </span>
                       </div>
