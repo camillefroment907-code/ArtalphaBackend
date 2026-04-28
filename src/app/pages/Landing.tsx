@@ -321,7 +321,7 @@ export default function Landing() {
       <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', height: '64px', padding: '0 80px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Logo variant="horizontal" color="dark" size={24} />
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-          <Link to="/pricing" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>Pricing</Link>
+          <Link to="/app/pricing" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>Pricing</Link>
           <Link to="/faq" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>FAQ</Link>
           <Link to="/blog" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>Blog</Link>
           <button onClick={() => navigate('/app/login')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: 'var(--text-2)', padding: '0 4px' }}>
@@ -671,33 +671,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── NAUTILUS PROMISE ── */}
-      <section style={{ padding: '80px 0', background: 'var(--navy)' }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 40px', textAlign: 'center' }}>
-          <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: '#C6A85A', fontFamily: 'var(--font-mono)', marginBottom: '16px' }}>
-            THE NAUTILUS PROMISE
-          </div>
-          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(28px, 4vw, 44px)', color: 'white', lineHeight: 1.2, marginBottom: '20px', maxWidth: '700px', margin: '0 auto 20px' }}>
-            If Nautilus doesn't identify a profitable opportunity in your first 30 days, we refund you. No questions asked.
-          </h2>
-          <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.5)', maxWidth: '500px', margin: '0 auto 36px', lineHeight: 1.7 }}>
-            We're that confident in the data. Every week, our algorithm surfaces opportunities that the market hasn't priced correctly. The edge is real — or your money back.
-          </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '40px', flexWrap: 'wrap' }}>
-            {[
-              { value: '73%', label: 'Signal accuracy on score 65+' },
-              { value: '+31%', label: 'Average upside on score 80+' },
-              { value: '30 days', label: 'Money-back guarantee' },
-            ].map(({ value, label }) => (
-              <div key={label} style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '32px', fontWeight: 700, color: '#C6A85A', marginBottom: '6px' }}>{value}</div>
-                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>{label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ═══ TESTIMONIALS ═══ */}
       <section style={{ padding: '96px 0', background: 'white' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 40px' }}>
@@ -735,10 +708,10 @@ export default function Landing() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(198,168,90,0.2)', border: '2px solid rgba(198,168,90,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--gold)' }}>P</span>
+                    <span style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--gold)' }}>T</span>
                   </div>
                   <div>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: 'white', marginBottom: '3px' }}>Philippe M.</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: 'white', marginBottom: '3px' }}>Théodore M.</div>
                     <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono)' }}>Family office director · €2M+ art portfolio · Paris</div>
                   </div>
                   <div style={{ marginLeft: 'auto', padding: '4px 14px', background: 'rgba(198,168,90,0.15)', border: '1px solid rgba(198,168,90,0.3)', borderRadius: '20px' }}>
@@ -753,16 +726,16 @@ export default function Landing() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '56px' }}>
             {[
               {
-                initial: 'S',
-                name: 'Sophie L.',
+                initial: 'N',
+                name: 'Nicolas R.',
                 role: 'Private wealth manager · Geneva · Investor plan',
                 result: '+79% in 14 months' as string | null,
                 quote: "Nautilus flagged a Joan Mitchell print at Heritage Auctions with a score of 79/100. Estimate was $8,000–12,000 but the AI analysis showed comparable prints selling at $18,000+. I bid $9,200 and won. Current market value: $16,500. Up 79% in 14 months.",
                 detail: 'Joan Mitchell print · Bought $9,200 · Est. value $16,500',
               },
               {
-                initial: 'T',
-                name: 'Thomas B.',
+                initial: 'M',
+                name: 'Morgane L.',
                 role: 'Entrepreneur · Lyon · Collector plan',
                 result: '+37% in 6 months' as string | null,
                 quote: "First time buying art as investment. €8,000 budget. Nautilus identified a Bernard Buffet etching at Artcurial scoring 77/100, underpriced by 28%. Bought for €3,800. Gallery offer came in at €5,200 six months later. I'm now looking at my second acquisition.",
@@ -770,7 +743,7 @@ export default function Landing() {
               },
               {
                 initial: 'C',
-                name: 'Claire D.',
+                name: 'Christian B.',
                 role: 'Art fund manager · Luxembourg · Family Office plan',
                 result: '40h → 4h weekly research' as string | null,
                 quote: "We run a €15M art fund. Before Nautilus, our research team spent 40 hours a week screening auction catalogues. Now we spend 4. The signal accuracy on score 75+ lots has been 71% directionally correct over 18 months. That's our alpha.",
@@ -840,6 +813,7 @@ export default function Landing() {
             ))}
           </div>
 
+          <p style={{ fontSize: 11, color: '#999', textAlign: 'center', marginTop: 8 }}>* Résultats illustratifs. Les performances passées ne préjugent pas des performances futures.</p>
         </div>
       </section>
 
