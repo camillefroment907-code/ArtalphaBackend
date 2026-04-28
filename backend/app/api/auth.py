@@ -43,6 +43,7 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
             full_name=body.full_name,
             is_active=True,
             is_verified=False,
+            marketing_consent=body.marketing_consent,
         )
         user.accepted_terms_at = datetime.utcnow()
         user.accepted_terms_ip = request.client.host if request.client else None

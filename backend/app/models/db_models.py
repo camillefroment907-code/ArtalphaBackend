@@ -90,6 +90,7 @@ class User(Base):
     accepted_terms_at = Column(DateTime, nullable=True)
     accepted_terms_ip = Column(String(45), nullable=True)
     accepted_terms_version = Column(String(10), nullable=True)
+    marketing_consent = Column(Boolean, default=False)
 
     preferences = relationship("UserPreference", back_populates="user", uselist=False)
     alerts = relationship("Alert", back_populates="user")

@@ -51,6 +51,7 @@ class UserRegister(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8)
     full_name: Optional[str] = None
+    marketing_consent: bool = False
 
 
 class UserLogin(BaseModel):
