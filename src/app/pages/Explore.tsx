@@ -1111,6 +1111,14 @@ export default function Explore() {
                       <button onClick={loadMore} disabled={loadingMore} className="btn btn-ghost" style={{ fontSize: "12px", padding: "10px 32px" }}>{loadingMore ? "Loading…" : "Load more"}</button>
                     </div>
                   )}
+
+                  {provenance && total < 50 && (
+                    <div style={{textAlign:'center',padding:'32px',color:'#999',fontSize:13}}>
+                      <span style={{background:'#f0f0ee',padding:'6px 14px',borderRadius:20,fontSize:12}}>
+                        🌍 More {provenance} results coming soon — we're enriching our database
+                      </span>
+                    </div>
+                  )}
                 </>
               )}
             </div>
