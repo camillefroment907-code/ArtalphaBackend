@@ -8,21 +8,10 @@ import { GoogleSignInButton } from '../components/GoogleSignInButton';
 
 const API = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
-const FALLBACK_LOTS = [
-  { badge: '◆ STRONG BUY',  badgeColor: '#C6A85A',               artist: 'Pierre Soulages', detail: '−28% vs estimate', detailColor: '#2563EB' },
-  { badge: '⚡ NEW SIGNAL',  badgeColor: 'rgba(255,255,255,0.7)', artist: 'Zao Wou-Ki',      detail: 'Score: 87/100',    detailColor: 'rgba(255,255,255,0.5)' },
-  { badge: '◎ LIVE AUCTION', badgeColor: 'rgba(255,255,255,0.7)', artist: 'Drouot · Closes in 14h', detail: '+€32K upside', detailColor: '#C6A85A' },
-];
-
-const BADGE_META = [
-  { badge: '◆ STRONG BUY',  badgeColor: '#C6A85A',               detailColor: '#2563EB' },
-  { badge: '⚡ NEW SIGNAL',  badgeColor: 'rgba(255,255,255,0.7)', detailColor: 'rgba(255,255,255,0.5)' },
-  { badge: '◎ LIVE AUCTION', badgeColor: 'rgba(255,255,255,0.7)', detailColor: '#C6A85A' },
-];
-
 function RightPanel() {
-  const [cards, setCards] = useState(FALLBACK_LOTS);
   const [bgImage, setBgImage] = useState<string | null>(null);
+  const [featured, setFeatured] = useState<{ artist: string; title: string; score: number; upside: number | null } | null>(null);
+  const [lotCount, setLotCount] = useState('—');
 
   useEffect(() => {
     fetch(`${API}/api/lots/public?limit=5&sort=deal_score`)
@@ -30,76 +19,111 @@ function RightPanel() {
       .then(data => {
         if (!data) return;
         const items: any[] = Array.isArray(data) ? data : (data.items || data.lots || []);
-        if (items.length < 1) return;
-        // Second lot with non-null image_url → background; fall back to first
+        if (!items.length) return;
         const withImg = items.filter((l: any) => !!l.image_url);
         const bgLot = withImg[1] || withImg[0];
         if (bgLot) setBgImage(bgLot.image_url);
-        setCards(items.slice(0, 3).map((lot: any, i: number) => ({
-          badge:       BADGE_META[i]?.badge       ?? '◆',
-          badgeColor:  BADGE_META[i]?.badgeColor  ?? '#C6A85A',
-          artist:      lot.artist_name_raw || lot.title || 'Unknown',
-          detail:      lot.deal_score
-            ? `Score: ${Math.round(lot.deal_score)}/100`
-            : lot.pct_below_low_estimate
-              ? `−${Math.abs(lot.pct_below_low_estimate).toFixed(0)}% vs estimate`
-              : '—',
-          detailColor: BADGE_META[i]?.detailColor ?? '#C6A85A',
-        })));
+        const featLot = withImg[0] || items[0];
+        if (featLot) setFeatured({
+          artist: featLot.artist?.name || featLot.artist_name_raw || 'Unknown',
+          title: featLot.title || '',
+          score: Math.round(featLot.deal_score || 0),
+          upside: featLot.pct_below_low_estimate ?? null,
+        });
+      })
+      .catch(() => {});
+
+    fetch(`${API}/api/lots/count`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const n = data?.total ?? data?.count ?? null;
+        if (n && n > 0) setLotCount(n >= 1000 ? `${Math.floor(n / 100) / 10}K+` : `${n}`);
       })
       .catch(() => {});
   }, []);
 
   const panelBg = bgImage
-    ? `linear-gradient(rgba(10,22,40,0.45), rgba(10,22,40,0.45)), url(${bgImage})`
-    : undefined;
+    ? `linear-gradient(rgba(10,22,40,0.6), rgba(10,22,40,0.6)), url(${bgImage})`
+    : 'linear-gradient(135deg, #0A1628 0%, #0f2040 100%)';
+
+  const FEATURES = [
+    { icon: '◆', color: '#C6A85A', label: `${lotCount} lots analyzed`, sub: 'Daily, across 14 auction houses' },
+    { icon: '⚡', color: '#60a5fa', label: 'AI deal score on every lot', sub: 'Trained on 10 years of sales data' },
+    { icon: '●', color: '#22c55e', label: 'Real-time alerts at score ≥ 80', sub: 'Never miss an exceptional opportunity' },
+  ];
 
   return (
-    <div style={{ flex: '0 0 50%', background: '#0A1628', backgroundImage: panelBg, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '64px 56px' }}>
-      <div style={{ position: 'absolute', inset: 0, opacity: 0.04, backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+    <div style={{ flex: '0 0 50%', background: '#0A1628', backgroundImage: panelBg, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 52px' }}>
+      {/* Vignette */}
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.45) 100%)', pointerEvents: 'none' }} />
 
-      <div style={{ marginBottom: '20px', position: 'relative' }}>
-        <Logo variant="symbol" color="white" size={40} />
-      </div>
+      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 0 }}>
 
-      {/* Hero text */}
-      <div style={{ marginBottom: '24px', position: 'relative' }}>
-        <h2 style={{ color: '#FFFFFF', fontFamily: 'Georgia,serif', fontSize: 28, fontWeight: 'normal', lineHeight: 1.2, margin: '0 0 8px', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-          The market has a gap.<br />You're about to see it.
-        </h2>
-        <p style={{ color: 'rgba(198,168,90,0.7)', fontSize: 13, margin: 0, fontFamily: 'Arial,sans-serif', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-          Real opportunities. Right now.
-        </p>
-      </div>
-
-      <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.08)', marginBottom: '20px', position: 'relative' }} />
-
-      <div style={{ position: 'relative' }}>
-        {cards.map((card, i) => (
-          <div key={i} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '14px 16px', marginBottom: i < 2 ? '10px' : 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: card.badgeColor, letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', marginBottom: '4px' }}>{card.badge}</div>
-              <div style={{ fontSize: '13px', color: 'white', fontWeight: 500 }}>{card.artist}</div>
-            </div>
-            <div style={{ fontSize: '12px', color: card.detailColor, fontFamily: 'var(--font-mono)', fontWeight: 600, textAlign: 'right' }}>{card.detail}</div>
+        {/* Logo + badge */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+          <Logo variant="symbol" color="white" size={36} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 20, padding: '4px 10px' }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />
+            <span style={{ fontSize: 9, color: 'rgba(34,197,94,0.9)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>MARKET LIVE</span>
           </div>
-        ))}
-      </div>
+        </div>
 
-      {/* Stats strip */}
-      <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 16, flexWrap: 'wrap', position: 'relative' }}>
-        {['3,500+ lots scored', 'Avg +31% upside on 80+', '6 exceptional lots today'].map(s => (
-          <span key={s} style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: 'Arial,sans-serif' }}>{s}</span>
-        ))}
-      </div>
+        {/* Headline */}
+        <h2 style={{ color: '#fff', fontFamily: 'Georgia,serif', fontSize: 30, fontWeight: 'normal', lineHeight: 1.2, margin: '0 0 8px', textShadow: '0 2px 12px rgba(0,0,0,0.8)' }}>
+          Art Intelligence.<br />Finally.
+        </h2>
+        <p style={{ color: 'rgba(198,168,90,0.85)', fontSize: 13, margin: '0 0 28px', textShadow: '0 1px 6px rgba(0,0,0,0.7)' }}>
+          See the opportunities the market misses.
+        </p>
 
-      <div style={{ position: 'absolute', bottom: '20px', left: '56px', right: '56px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#C6A85A', animation: 'pulseDot 2s infinite' }} />
-          <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>
-            Updated 3 min ago · Live market scanning
+        {/* Feature rows */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+          {FEATURES.map((f, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 14,
+              background: 'rgba(0,0,0,0.38)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderLeft: `3px solid ${f.color}`,
+              borderRadius: '0 8px 8px 0',
+              padding: '12px 14px',
+            }}>
+              <div style={{ fontSize: 14, color: f.color, fontFamily: 'var(--font-mono)', flexShrink: 0 }}>{f.icon}</div>
+              <div>
+                <div style={{ fontSize: 13, color: '#fff', fontWeight: 600 }}>{f.label}</div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>{f.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Live opportunity spotlight */}
+        {featured && (
+          <div style={{ background: 'rgba(198,168,90,0.07)', border: '1px solid rgba(198,168,90,0.2)', borderRadius: 10, padding: '12px 16px', marginBottom: 20 }}>
+            <div style={{ fontSize: 9, color: 'rgba(198,168,90,0.55)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 7 }}>◆ Live opportunity detected</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, color: '#fff', fontWeight: 700 }}>{featured.artist}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 170, marginTop: 2 }}>{featured.title}</div>
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
+                {featured.upside !== null && featured.upside > 0
+                  ? <div style={{ fontSize: 15, color: '#C6A85A', fontFamily: 'var(--font-mono)', fontWeight: 800 }}>+{Math.round(featured.upside)}%</div>
+                  : null}
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)' }}>Score {featured.score}/100</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bottom */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#C6A85A', animation: 'pulseDot 2s infinite' }} />
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>
+            Scanning live · 14 auction houses
           </span>
         </div>
+
       </div>
     </div>
   );

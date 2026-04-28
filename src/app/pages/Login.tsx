@@ -46,7 +46,7 @@ type FeaturedLot = { artist: string; title: string; upside: number | null; score
 
 function RightPanel() {
   const [cards, setCards] = useState<SignalCard[]>(FALLBACK_CARDS);
-  const [lotCountLabel, setLotCountLabel] = useState('3,500+');
+  const [lotCountLabel, setLotCountLabel] = useState('—');
   const [bgImage, setBgImage] = useState<string | null>(null);
   const [featured, setFeatured] = useState<FeaturedLot | null>(null);
 
@@ -56,7 +56,6 @@ function RightPanel() {
       .then(data => {
         const items: any[] = Array.isArray(data) ? data : (data?.items || []);
         if (!items.length) return;
-        // First lot with a non-null image_url → background + featured card
         const withImg = items.find((l: any) => !!l.image_url);
         if (withImg) {
           setBgImage(withImg.image_url);
@@ -75,75 +74,99 @@ function RightPanel() {
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         const n = data?.total ?? data?.count ?? null;
-        if (n && n > 0) setLotCountLabel(n >= 1000 ? `${Math.floor(n / 100) / 10}K+` : `${n}+`);
+        if (n && n > 0) setLotCountLabel(n >= 1000 ? `${Math.floor(n / 100) / 10}K+` : `${n}`);
       })
       .catch(() => {});
   }, []);
 
   const panelBg = bgImage
-    ? `linear-gradient(rgba(10,22,40,0.55), rgba(10,22,40,0.55)), url(${bgImage})`
-    : undefined;
+    ? `linear-gradient(rgba(10,22,40,0.58), rgba(10,22,40,0.58)), url(${bgImage})`
+    : 'linear-gradient(135deg, #0A1628 0%, #0f2040 100%)';
 
   return (
-    <div style={{ flex: '0 0 50%', background: '#0A1628', backgroundImage: panelBg, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '64px 56px' }}>
-      {/* Grid overlay */}
-      <div style={{ position: 'absolute', inset: 0, opacity: 0.04, backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+    <div style={{ flex: '0 0 50%', background: '#0A1628', backgroundImage: panelBg, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 52px' }}>
+      {/* Vignette edges */}
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%)', pointerEvents: 'none' }} />
 
-      <div style={{ marginBottom: '24px', position: 'relative' }}>
-        <Logo variant="symbol" color="white" size={40} />
-      </div>
+      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 0 }}>
 
-      {/* Hero text */}
-      <div style={{ marginBottom: '28px', position: 'relative' }}>
-        <h2 style={{ color: '#FFFFFF', fontFamily: 'Georgia,serif', fontSize: 28, fontWeight: 'normal', lineHeight: 1.2, margin: '0 0 8px' }}>
+        {/* Live badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
+          <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 0 3px rgba(34,197,94,0.2)' }} />
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase' }}>Live · Market Intelligence</span>
+        </div>
+
+        {/* Headline */}
+        <h2 style={{ color: '#fff', fontFamily: 'Georgia,serif', fontSize: 30, fontWeight: 'normal', lineHeight: 1.2, margin: '0 0 6px', textShadow: '0 2px 12px rgba(0,0,0,0.7)' }}>
           Welcome back.<br />The market didn't wait.
         </h2>
-        <p style={{ color: 'rgba(198,168,90,0.7)', fontSize: 13, margin: 0, fontFamily: 'Arial,sans-serif' }}>
-          New opportunities since your last visit.
+        <p style={{ color: 'rgba(198,168,90,0.85)', fontSize: 13, margin: '0 0 24px', textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>
+          New signals detected since your last visit.
         </p>
-      </div>
 
-      <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.08)', marginBottom: '24px', position: 'relative' }} />
-
-      <div style={{ position: 'relative' }}>
-        {cards.map((card, i) => (
-          <div key={i} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '14px 16px', marginBottom: i < 2 ? '10px' : 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: card.badgeColor, letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', marginBottom: '4px' }}>{card.badge}</div>
-              <div style={{ fontSize: '13px', color: 'white', fontWeight: 500 }}>{card.artist}</div>
+        {/* Stats row */}
+        <div style={{ display: 'flex', borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', marginBottom: 20, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(12px)' }}>
+          {[
+            { value: lotCountLabel, label: 'lots analyzed', color: '#fff' },
+            { value: '+31%', label: 'avg upside', color: '#C6A85A' },
+            { value: '6', label: 'signals today', color: '#60a5fa' },
+          ].map((s, i) => (
+            <div key={i} style={{ flex: 1, padding: '12px 8px', textAlign: 'center', borderRight: i < 2 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: s.color, fontFamily: 'var(--font-mono)', lineHeight: 1 }}>{s.value}</div>
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4 }}>{s.label}</div>
             </div>
-            <div style={{ fontSize: '12px', color: card.detailColor, fontFamily: 'var(--font-mono)', fontWeight: 600, textAlign: 'right' }}>{card.detail}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Featured lot card */}
-      {featured && (
-        <div style={{ marginTop: '12px', background: 'rgba(198,168,90,0.08)', border: '1px solid rgba(198,168,90,0.25)', borderRadius: '8px', padding: '14px 16px', position: 'relative' }}>
-          <div style={{ fontSize: '10px', color: 'rgba(198,168,90,0.6)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '6px' }}>◆ TOP OPPORTUNITY NOW</div>
-          <div style={{ fontSize: '13px', color: 'white', fontWeight: 700, marginBottom: '2px' }}>{featured.artist}</div>
-          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{featured.title}</div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            {featured.upside !== null && featured.upside > 0 && (
-              <span style={{ fontSize: '12px', color: '#C6A85A', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>+{Math.round(featured.upside)}% upside</span>
-            )}
-            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>Score: {featured.score}/100</span>
-          </div>
+          ))}
         </div>
-      )}
 
-      {/* Stats strip */}
-      <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 16, flexWrap: 'wrap', position: 'relative' }}>
-        {[`${lotCountLabel} lots scored`, 'Avg +31% upside on 80+', '6 exceptional lots today'].map(s => (
-          <span key={s} style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: 'Arial,sans-serif' }}>{s}</span>
-        ))}
-      </div>
+        {/* Signal cards */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: featured ? 12 : 20 }}>
+          {cards.map((card, i) => (
+            <div key={i} style={{
+              background: 'rgba(0,0,0,0.4)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255,255,255,0.09)',
+              borderLeft: `3px solid ${card.badgeColor}`,
+              borderRadius: '0 8px 8px 0',
+              padding: '11px 14px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: card.badgeColor, letterSpacing: '0.14em', fontFamily: 'var(--font-mono)', marginBottom: 3 }}>{card.badge}</div>
+                <div style={{ fontSize: 13, color: '#fff', fontWeight: 600 }}>{card.artist}</div>
+              </div>
+              <div style={{ fontSize: 11, color: card.detailColor, fontFamily: 'var(--font-mono)', fontWeight: 700, background: 'rgba(255,255,255,0.06)', padding: '3px 9px', borderRadius: 5, whiteSpace: 'nowrap' }}>
+                {card.detail}
+              </div>
+            </div>
+          ))}
+        </div>
 
-      <div style={{ position: 'absolute', bottom: '20px', left: '56px', right: '56px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#C6A85A', animation: 'pulseDot 2s infinite' }} />
-          <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>
-            Updated 3 min ago · Live market scanning
+        {/* Featured lot spotlight */}
+        {featured && (
+          <div style={{ background: 'rgba(198,168,90,0.07)', border: '1px solid rgba(198,168,90,0.22)', borderRadius: 10, padding: '12px 16px', marginBottom: 20 }}>
+            <div style={{ fontSize: 9, color: 'rgba(198,168,90,0.55)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 7 }}>◆ Top opportunity now</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, color: '#fff', fontWeight: 700 }}>{featured.artist}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px', marginTop: 2 }}>{featured.title}</div>
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
+                {featured.upside !== null && featured.upside > 0 && (
+                  <div style={{ fontSize: 14, color: '#C6A85A', fontFamily: 'var(--font-mono)', fontWeight: 800 }}>+{Math.round(featured.upside)}%</div>
+                )}
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)' }}>Score {featured.score}/100</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bottom live indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#C6A85A', animation: 'pulseDot 2s infinite' }} />
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>
+            Updated 3 min ago · 14 auction houses monitored
           </span>
         </div>
       </div>
