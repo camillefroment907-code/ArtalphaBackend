@@ -157,9 +157,9 @@ export default function Login() {
 
             {/* Forgot password */}
             <div style={{ textAlign: 'right', marginBottom: '16px' }}>
-              <a href="/forgot-password" style={{ fontSize: '12px', color: 'var(--text-3)', textDecoration: 'none' }}>
+              <Link to="/forgot-password" style={{ fontSize: '12px', color: 'var(--text-3)', textDecoration: 'none' }}>
                 Forgot password?
-              </a>
+              </Link>
             </div>
 
             {/* Submit */}

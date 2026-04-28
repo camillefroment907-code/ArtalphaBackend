@@ -41,6 +41,8 @@ const AdminRecommendations  = lazy(() => import('./pages/AdminRecommendations'))
 const Blog                  = lazy(() => import('./pages/Blog'));
 const BlogPost              = lazy(() => import('./pages/BlogPost'));
 const FeedbackPage          = lazy(() => import('./pages/FeedbackPage'));
+const ForgotPassword        = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword         = lazy(() => import('./pages/ResetPassword'));
 
 export const router = createBrowserRouter([
   {
@@ -64,6 +66,9 @@ export const router = createBrowserRouter([
   { path: '/blog/:slug', Component: BlogPost },
   // Feedback
   { path: '/feedback', Component: FeedbackPage },
+  // Password reset flow (outside /app/ — no auth chrome needed)
+  { path: '/forgot-password', Component: ForgotPassword },
+  { path: '/reset-password',  Component: ResetPassword  },
   // Admin dashboards — only camillefroment907@gmail.com
   {
     path: '/nx-ctrl',
