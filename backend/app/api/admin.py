@@ -210,55 +210,69 @@ async def dedup_lots(
     _: bool = Depends(verify_admin),
 ) -> Dict[str, Any]:
     """
-    Remove duplicate lots — keep oldest per unique (title, artist, estimate_low, estimate_high).
-    Uses a pure SQL CTE to identify and delete duplicates in one round-trip.
+    Remove duplicate lots — keep the most scored per (title, artist, estimate).
+    Cleans dependent tables (score_performance, hammer_prices, user_signals) first
+    to avoid FK violations, then deletes the duplicate lots in one CTE round-trip.
     """
     from sqlalchemy import text as sa_text
     import traceback
 
     try:
-        # Single SQL: identify duplicates using ROW_NUMBER().
-        # Keep the most complete lot (highest deal_score, then most recently scored).
-        # Two passes:
-        #   1. Deduplicate by content (title + artist + estimate) across all sources
-        #   2. Deduplicate by (source, external_id) — same connector, same lot ID
+        # Multi-step CTE:
+        # 1. to_delete  — identify duplicate lot IDs (keep highest deal_score, then newest scored_at)
+        # 2. del_score  — delete score_performance rows referencing those lots (no ON DELETE)
+        # 3. del_hammer — delete hammer_prices rows referencing those lots (no ON DELETE)
+        # 4. del_signal — nullify user_signals (SET NULL would need ALTER; easier to delete)
+        # 5. Final DELETE from lots
         dedup_sql = sa_text("""
-            WITH ranked AS (
-                SELECT
-                    id,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY
-                            lower(coalesce(title, '')),
-                            lower(coalesce(artist_name_raw, '')),
-                            round(coalesce(estimate_low, 0)::numeric),
-                            round(coalesce(estimate_high, 0)::numeric)
-                        ORDER BY
-                            coalesce(deal_score, 0) DESC,
-                            scored_at DESC NULLS LAST,
-                            created_at ASC
-                    ) AS rn
-                FROM lots
-                WHERE title IS NOT NULL
+            WITH to_delete AS (
+                SELECT id FROM (
+                    -- Pass 1: content duplicates across all sources
+                    SELECT
+                        id,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY
+                                lower(coalesce(title, '')),
+                                lower(coalesce(artist_name_raw, '')),
+                                round(coalesce(estimate_low,  0)::numeric),
+                                round(coalesce(estimate_high, 0)::numeric)
+                            ORDER BY
+                                coalesce(deal_score, 0) DESC,
+                                scored_at             DESC NULLS LAST,
+                                created_at            ASC
+                        ) AS rn
+                    FROM lots
+                    WHERE title IS NOT NULL
+                    UNION ALL
+                    -- Pass 2: same connector + same external_id
+                    SELECT
+                        id,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY source, external_id
+                            ORDER BY
+                                coalesce(deal_score, 0) DESC,
+                                scored_at             DESC NULLS LAST,
+                                created_at            ASC
+                        ) AS rn
+                    FROM lots
+                    WHERE external_id IS NOT NULL
+                ) t
+                WHERE rn > 1
             ),
-            ranked_ext AS (
-                SELECT
-                    id,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY source, external_id
-                        ORDER BY
-                            coalesce(deal_score, 0) DESC,
-                            scored_at DESC NULLS LAST,
-                            created_at ASC
-                    ) AS rn
-                FROM lots
-                WHERE external_id IS NOT NULL
+            del_score AS (
+                DELETE FROM score_performance
+                WHERE lot_id IN (SELECT id FROM to_delete)
+            ),
+            del_hammer AS (
+                DELETE FROM hammer_prices
+                WHERE lot_id IN (SELECT id FROM to_delete)
+            ),
+            del_signals AS (
+                DELETE FROM user_signals
+                WHERE lot_id IN (SELECT id FROM to_delete)
             )
             DELETE FROM lots
-            WHERE id IN (
-                SELECT id FROM ranked       WHERE rn > 1
-                UNION
-                SELECT id FROM ranked_ext  WHERE rn > 1
-            )
+            WHERE id IN (SELECT id FROM to_delete)
         """)
         result = await db.execute(dedup_sql)
         deleted = result.rowcount
