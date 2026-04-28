@@ -44,6 +44,7 @@ const FeedbackPage          = lazy(() => import('./pages/FeedbackPage'));
 const ForgotPassword           = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword            = lazy(() => import('./pages/ResetPassword'));
 const VerifyEmailRequired      = lazy(() => import('./pages/VerifyEmailRequired'));
+const VerifyEmail              = lazy(() => import('./pages/VerifyEmail'));
 
 export const router = createBrowserRouter([
   {
@@ -141,6 +142,7 @@ export const router = createBrowserRouter([
       { path: 'emerging', Component: Emerging },
       { path: 'verify-pending',        Component: VerifyPending        },
       { path: 'verify-email-required', Component: VerifyEmailRequired  },
+      { path: 'verify-email',          Component: VerifyEmail          },
     ],
   },
   {
