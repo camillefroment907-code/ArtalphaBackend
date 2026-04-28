@@ -90,7 +90,7 @@ export default function ForgotPassword() {
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                style={{ width: '100%', padding: '13px', background: loading ? '#93a3b4' : '#1A2A44', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', letterSpacing: '0.03em' }}
+                style={{ width: '100%', padding: '13px', background: loading ? '#93a3b4' : '#2563EB', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', letterSpacing: '0.03em' }}
               >
                 {loading ? 'Sending…' : 'Send reset link'}
               </button>
@@ -105,16 +105,13 @@ export default function ForgotPassword() {
         </div>
       </div>
 
-      {/* Right panel */}
-      <div style={{ flex: '0 0 42%', background: '#0A1628', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '64px 56px' }}>
-        <div style={{ position: 'absolute', inset: 0, opacity: 0.04, backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '40px 40px', pointerEvents: 'none' }} />
-        <Logo variant="symbol" color="white" size={40} />
-        <h2 style={{ color: '#fff', fontFamily: 'Georgia,serif', fontSize: 26, fontWeight: 'normal', lineHeight: 1.3, margin: '28px 0 12px' }}>
-          Your account,<br />secured.
-        </h2>
-        <p style={{ color: 'rgba(198,168,90,0.8)', fontSize: 13, lineHeight: 1.6, margin: 0 }}>
-          Reset links expire after 1 hour and can only be used once.
-        </p>
+      {/* Right panel — artwork */}
+      <div style={{ flex: '0 0 42%', position: 'relative', overflow: 'hidden' }}>
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg"
+          alt="Mona Lisa"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }}
+        />
       </div>
     </div>
   );
