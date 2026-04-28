@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Logo } from '../components/Logo';
 import { loginApi } from '../../lib/api';
@@ -6,15 +6,78 @@ import { setUser } from '../../lib/auth';
 import { useSEO } from '../../lib/useSEO';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 
-const SIGNAL_CARDS = [
+const API = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
+
+const FALLBACK_CARDS = [
   { badge: '◆ STRONG BUY', badgeColor: '#C6A85A', artist: 'Pierre Soulages', detail: '−28% vs estimate', detailColor: '#2563EB' },
   { badge: '⚡ NEW SIGNAL', badgeColor: 'rgba(255,255,255,0.7)', artist: 'Zao Wou-Ki', detail: 'Deal score: 87/100', detailColor: 'rgba(255,255,255,0.5)' },
   { badge: '◎ LIVE AUCTION', badgeColor: 'rgba(255,255,255,0.7)', artist: 'Drouot · Closes in 14h', detail: '+€32K upside', detailColor: '#2563EB' },
 ];
 
+type SignalCard = { badge: string; badgeColor: string; artist: string; detail: string; detailColor: string };
+
+function mapLotToCard(lot: any): SignalCard {
+  const artist = lot.artist?.name || lot.artist_name_raw || 'Unknown artist';
+  const score = Math.round(lot.deal_score || 0);
+  const upside = lot.pct_below_low_estimate;
+
+  let badge = '◎ LIVE AUCTION';
+  let badgeColor = 'rgba(255,255,255,0.7)';
+  let detail = `Deal score: ${score}/100`;
+  let detailColor = 'rgba(255,255,255,0.5)';
+
+  if (score >= 80) {
+    badge = '◆ STRONG BUY';
+    badgeColor = '#C6A85A';
+    detailColor = '#2563EB';
+  } else if (score >= 70) {
+    badge = '⚡ NEW SIGNAL';
+  }
+
+  if (upside && upside > 0) {
+    detail = `−${Math.round(upside)}% vs estimate`;
+    detailColor = '#2563EB';
+  }
+
+  return { badge, badgeColor, artist, detail, detailColor };
+}
+
 function RightPanel() {
+  const [cards, setCards] = useState<SignalCard[]>(FALLBACK_CARDS);
+  const [lotCountLabel, setLotCountLabel] = useState('3,500+');
+
+  useEffect(() => {
+    fetch(`${API}/api/lots/public?limit=3&sort=deal_score`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const items: any[] = Array.isArray(data) ? data : (data?.items || []);
+        if (items.length > 0) {
+          setCards(items.slice(0, 3).map(mapLotToCard));
+        }
+      })
+      .catch(() => {});
+
+    fetch(`${API}/api/lots/count`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const n = data?.total ?? data?.count ?? null;
+        if (n && n > 0) {
+          setLotCountLabel(n >= 1000 ? `${Math.floor(n / 100) / 10}K+` : `${n}+`);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <div style={{ flex: '0 0 50%', background: '#0A1628', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '64px 56px' }}>
+      {/* Artwork background */}
+      <img
+        src="/forgot-artwork.jpg"
+        alt=""
+        aria-hidden="true"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.15, pointerEvents: 'none' }}
+      />
+      {/* Grid overlay */}
       <div style={{ position: 'absolute', inset: 0, opacity: 0.04, backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
       <div style={{ marginBottom: '24px', position: 'relative' }}>
@@ -34,7 +97,7 @@ function RightPanel() {
       <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.08)', marginBottom: '24px', position: 'relative' }} />
 
       <div style={{ position: 'relative' }}>
-        {SIGNAL_CARDS.map((card, i) => (
+        {cards.map((card, i) => (
           <div key={i} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '14px 16px', marginBottom: i < 2 ? '10px' : 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ fontSize: '10px', fontWeight: 700, color: card.badgeColor, letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', marginBottom: '4px' }}>{card.badge}</div>
@@ -47,7 +110,7 @@ function RightPanel() {
 
       {/* Stats strip */}
       <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 16, flexWrap: 'wrap', position: 'relative' }}>
-        {['3,500+ lots scored', 'Avg +31% upside on 80+', '6 exceptional lots today'].map(s => (
+        {[`${lotCountLabel} lots scored`, 'Avg +31% upside on 80+', '6 exceptional lots today'].map(s => (
           <span key={s} style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: 'Arial,sans-serif' }}>{s}</span>
         ))}
       </div>
