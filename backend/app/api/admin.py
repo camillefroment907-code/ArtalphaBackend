@@ -1285,3 +1285,147 @@ async def fetch_artsy_historical(body: dict = None) -> Dict[str, Any]:
         "max_pages": max_pages,
         "message": "Artsy historical ingest running. Poll GET /api/admin/fetch-artsy-historical/status.",
     }
+
+
+# ── Artsy artist nationality enrichment ─────────────────────────────────────
+
+_ARTSY_NATIONALITY_GQL = """
+query NationalitySearch($name: String!) {
+  searchConnection(query: $name, entities: [ARTIST], first: 1) {
+    edges {
+      node {
+        ... on Artist {
+          nationality
+        }
+      }
+    }
+  }
+}
+"""
+
+_nationality_status: Dict[str, Any] = {
+    "running": False,
+    "started_at": None,
+    "finished_at": None,
+    "processed": 0,
+    "enriched": 0,
+    "error": None,
+}
+
+
+@router.get("/enrich-artist-nationality/status", dependencies=[Depends(verify_admin)])
+async def artist_nationality_status() -> Dict[str, Any]:
+    return dict(_nationality_status)
+
+
+@router.post("/enrich-artist-nationality", dependencies=[Depends(verify_admin)])
+async def enrich_artist_nationality(body: dict = None) -> Dict[str, Any]:
+    """
+    For each unique artist_name_raw in lots where artist_nationality is NULL,
+    query Artsy GraphQL to get nationality and write it back to lots.artist_nationality.
+    Processes up to 50 artists per call.
+    """
+    import asyncio as _asyncio
+
+    max_artists: int = int((body or {}).get("max_artists", 50))
+
+    if _nationality_status.get("running"):
+        return {"status": "already_running", "started_at": _nationality_status.get("started_at")}
+
+    _nationality_status.update({
+        "running": True,
+        "started_at": datetime.utcnow().isoformat(),
+        "finished_at": None,
+        "processed": 0,
+        "enriched": 0,
+        "error": None,
+    })
+
+    async def _run() -> None:
+        try:
+            import httpx
+            from sqlalchemy import text
+            from app.database import BgSessionLocal
+
+            # Fetch distinct artist names that still need nationality
+            async with BgSessionLocal() as db:
+                rows = (await db.execute(
+                    text("""
+                        SELECT DISTINCT artist_name_raw
+                        FROM lots
+                        WHERE artist_name_raw IS NOT NULL
+                          AND (artist_nationality IS NULL OR artist_nationality = '')
+                        LIMIT :lim
+                    """),
+                    {"lim": max_artists},
+                )).fetchall()
+            names = [r[0] for r in rows if r[0]]
+
+            _nationality_status["processed"] = len(names)
+            enriched = 0
+
+            async with httpx.AsyncClient(timeout=15) as client:
+                for name in names:
+                    try:
+                        resp = await client.post(
+                            "https://metaphysics-production.artsy.net/v2",
+                            json={"query": _ARTSY_NATIONALITY_GQL, "variables": {"name": name}},
+                            headers={"Content-Type": "application/json"},
+                        )
+                        if not resp.is_success:
+                            continue
+                        data = resp.json()
+                        edges = (
+                            data.get("data", {})
+                            .get("searchConnection", {})
+                            .get("edges", [])
+                        )
+                        if not edges:
+                            continue
+                        nationality = edges[0].get("node", {}).get("nationality") or ""
+                        if not nationality:
+                            continue
+
+                        # Write back to every lot with this artist name
+                        async with BgSessionLocal() as db:
+                            await db.execute(
+                                text("""
+                                    UPDATE lots
+                                    SET artist_nationality = :nat
+                                    WHERE artist_name_raw = :name
+                                      AND (artist_nationality IS NULL OR artist_nationality = '')
+                                """),
+                                {"nat": nationality, "name": name},
+                            )
+                            # Also update artists table if linked
+                            await db.execute(
+                                text("""
+                                    UPDATE artists a
+                                    SET nationality = :nat
+                                    FROM lots l
+                                    WHERE l.artist_id = a.id
+                                      AND l.artist_name_raw = :name
+                                      AND (a.nationality IS NULL OR a.nationality = '')
+                                """),
+                                {"nat": nationality, "name": name},
+                            )
+                            await db.commit()
+                        enriched += 1
+                        _nationality_status["enriched"] = enriched
+
+                    except Exception as artist_err:
+                        _log.warning(f"nationality enrichment failed for {name!r}: {artist_err}")
+
+        except Exception as e:
+            _log.error(f"enrich_artist_nationality FAILED: {e}", exc_info=True)
+            _nationality_status["error"] = str(e)
+        finally:
+            _nationality_status["running"] = False
+            _nationality_status["finished_at"] = datetime.utcnow().isoformat()
+
+    _asyncio.create_task(_run())
+    return {
+        "status": "started",
+        "max_artists": max_artists,
+        "message": "Nationality enrichment running. Poll GET /api/admin/enrich-artist-nationality/status.",
+    }

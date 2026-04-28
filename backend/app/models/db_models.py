@@ -198,6 +198,7 @@ class Lot(Base):
     # Artist — no index=True here, index declared below
     artist_id = Column(UUID(as_uuid=True), ForeignKey("artists.id"), nullable=True)
     artist_name_raw = Column(String(500), nullable=True)
+    artist_nationality = Column(String(100), nullable=True)
 
     # Pricing
     estimate_low = Column(Float, nullable=True)
