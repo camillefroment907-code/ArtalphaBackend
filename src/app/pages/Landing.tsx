@@ -451,6 +451,64 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── FOUNDING MEMBER ── */}
+      <section style={{ background: '#0A1628', padding: '80px 24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        {/* Grid texture */}
+        <div style={{ position: 'absolute', inset: 0, opacity: 0.03, backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '40px 40px', pointerEvents: 'none' }} />
+
+        <div style={{ position: 'relative', maxWidth: '560px', margin: '0 auto' }}>
+          {/* Badge */}
+          <div style={{ display: 'inline-block', marginBottom: '24px' }}>
+            <span style={{
+              fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em',
+              textTransform: 'uppercase' as const, fontFamily: 'var(--font-mono)',
+              color: '#C6A85A',
+              background: 'rgba(198,168,90,0.15)',
+              border: '1px solid rgba(198,168,90,0.4)',
+              padding: '4px 14px', borderRadius: '4px',
+            }}>
+              Founding Investor
+            </span>
+          </div>
+
+          {/* Title */}
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 600, color: 'white', lineHeight: 1.2, margin: '0 0 16px' }}>
+            Join the first 100 members
+          </h2>
+
+          {/* Subtitle */}
+          <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.7, margin: '0 0 36px' }}>
+            Get Investor access at <span style={{ color: 'white', fontWeight: 600 }}>€19/mo</span> — locked for life.<br />
+            Rises to €49 after launch.
+          </p>
+
+          {/* Gold divider */}
+          <div style={{ width: '40px', height: '2px', background: '#C6A85A', margin: '0 auto 36px' }} />
+
+          {/* CTA */}
+          <a
+            href="/app/pricing"
+            style={{
+              display: 'inline-block',
+              background: '#2563EB', color: 'white',
+              padding: '14px 36px', borderRadius: '8px',
+              fontSize: '14px', fontWeight: 700, textDecoration: 'none',
+              letterSpacing: '0.04em', boxShadow: '0 4px 20px rgba(37,99,235,0.4)',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 8px 28px rgba(37,99,235,0.55)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'none'; (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 4px 20px rgba(37,99,235,0.4)'; }}
+          >
+            Get founding access →
+          </a>
+
+          {/* Fine print */}
+          <div style={{ marginTop: '14px', fontSize: '11px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>
+            Limited to 100 spots · Cancel anytime
+          </div>
+        </div>
+      </section>
+
       {/* ── TODAY'S SIGNALS ── */}
       <section style={{ padding: '80px 120px', background: 'var(--bg-subtle)', overflow: 'hidden' }}>
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
