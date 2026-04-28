@@ -1149,3 +1149,23 @@ async def historical_ingest(body: dict = None) -> Dict[str, Any]:
         "message": "Historical ingest running in background. Monitor via GET /api/admin/historical-ingest/status.",
     }
 
+
+@router.post("/fill-post-auction")
+async def fill_post_auction(
+    db: AsyncSession = Depends(get_db),
+    _: bool = Depends(verify_admin),
+):
+    """
+    Match past lots against hammer_prices table and populate:
+      - lots.hammer_price
+      - score_performance.actual_hammer_price / actual_upside / prediction_correct
+
+    Matching strategy:
+      1. Exact: hammer_prices.lot_id == lots.id
+      2. Fuzzy: artist name keyword + sale_date within ±7 days
+
+    Returns {total, matched, unmatched}.
+    """
+    from app.jobs.post_auction_fill import fill_post_auction_results
+    return await fill_post_auction_results(db)
+
