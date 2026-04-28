@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { getUser, getUserPlan } from "../../lib/auth";
+import { WelcomeTour } from '../components/WelcomeTour';
 
 
 type ExploreTab = "best" | "auctions" | "primary" | "convictions" | "for-you";
@@ -359,6 +360,8 @@ export default function Explore() {
   const [recos, setRecos]           = useState<any[]>([]);
   const [recoLoading, setRecoLoading] = useState(false);
   const [recoDone, setRecoDone]     = useState(false);
+
+  const [showTour, setShowTour] = useState(localStorage.getItem('nautilus_show_tour') === '1');
 
   // Opportunities state
   const [lots, setLots]             = useState<MappedLot[]>([]);
@@ -1125,6 +1128,7 @@ export default function Explore() {
           )}
         </main>
       </div>
+      {showTour && <WelcomeTour onClose={() => { localStorage.removeItem('nautilus_show_tour'); setShowTour(false); }} />}
     </div>
   );
 }
