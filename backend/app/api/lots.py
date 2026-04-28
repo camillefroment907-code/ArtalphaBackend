@@ -10,7 +10,12 @@ import asyncio
 import json
 import re
 
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
 from app.utils.cache import get_cached, set_cached
+
+limiter = Limiter(key_func=get_remote_address)
 from app.utils.real_cost import compute_real_cost
 from app.utils.estimation_bias import get_estimation_bias
 from app.utils.cycle_stage import get_cycle_stage
@@ -611,7 +616,8 @@ async def get_top_deals(
 
 
 @router.get("/count")
-async def get_lot_count(db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def get_lot_count(request: Request, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(func.count(Lot.id)))
     return {"total": result.scalar() or 0}
 
@@ -1331,7 +1337,9 @@ async def get_auction_calendar(
 # ── Public endpoint (no auth) — MUST be before /{lot_id} to avoid route shadowing ──────────────
 
 @router.get("/public")
+@limiter.limit("20/minute")
 async def get_public_lots(
+    request: Request,
     limit: int = Query(default=3, le=6),
     sort: str = Query(default="deal_score"),
     db: AsyncSession = Depends(get_db),

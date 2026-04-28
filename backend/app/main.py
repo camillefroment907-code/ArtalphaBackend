@@ -155,18 +155,9 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        settings.frontend_url,
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:3000",
-        "https://artalpha-figma.vercel.app",
-        "https://nautilus-app.vercel.app",
         "https://get-nautilus.com",
         "https://www.get-nautilus.com",
     ],
-    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
