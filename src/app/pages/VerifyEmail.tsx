@@ -20,12 +20,12 @@ export default function VerifyEmail() {
       setStatus('error');
       return;
     }
-    fetch(`${API}/api/auth/verify-email?token=${encodeURIComponent(token)}`)
+    fetch(`${API}/api/auth/verify-email?token=${encodeURIComponent(token)}`, { redirect: 'manual' })
       .then(res => {
-        if (res.ok || res.redirected) {
-          // Mark verified in localStorage if the user is already stored
-          const user = getUser();
-          if (user) setUser({ ...user, is_verified: true });
+        if (res.status === 200 || res.status === 302 || res.type === 'opaqueredirect') {
+          const user = JSON.parse(localStorage.getItem('artalpha_auth') || '{}');
+          user.is_verified = true;
+          localStorage.setItem('artalpha_auth', JSON.stringify(user));
           setStatus('success');
           setTimeout(() => navigate('/app/explore'), 2000);
         } else {
