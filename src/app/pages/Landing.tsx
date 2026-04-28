@@ -25,29 +25,57 @@ const MOCK_LOTS = [
   { artist: 'DAVID DRISKELL', title: 'Echoes', price: '€500', score: 79, upside: '+50%' },
 ];
 
-function NautilusMockup() {
+function NautilusMockup({ lots = [] }: { lots: any[] }) {
   const [activeCard, setActiveCard] = useState(0);
-  const [showScore, setShowScore] = useState(false);
-  const [showBrief, setShowBrief] = useState(false);
-  const [tick, setTick] = useState(0);
+  const [showScore, setShowScore]   = useState(false);
+  const [showBrief, setShowBrief]   = useState(false);
+  const [fade, setFade]             = useState(true);
 
+  const items = lots.length > 0 ? lots : MOCK_LOTS;
+
+  const getArtist = (l: any) => (l.artist_name_raw ?? l.artist ?? '').toUpperCase();
+  const getTitle  = (l: any) => l.title ?? '';
+  const getPrice  = (l: any) => {
+    if (l.estimate_low != null) {
+      const v = l.estimate_low;
+      return v >= 1000 ? `€${Math.round(v / 1000)}K` : `€${Math.round(v)}`;
+    }
+    return l.price ?? '—';
+  };
+  const getScore  = (l: any) => l.deal_score ?? l.score ?? 0;
+  const getUpside = (l: any) => {
+    if (l.pct_below_low_estimate != null) return `+${Math.round(l.pct_below_low_estimate)}%`;
+    return l.upside ?? '';
+  };
+  const getImage  = (l: any) => l.image_url ?? null;
+
+  // Initial reveal
   useEffect(() => {
-    const timers = [
-      setTimeout(() => setShowScore(true), 600),
-      setTimeout(() => setShowBrief(true), 1200),
-      setTimeout(() => setActiveCard(1), 2200),
-      setTimeout(() => setActiveCard(2), 3800),
-      setTimeout(() => {
-        setActiveCard(0);
-        setShowScore(false);
-        setShowBrief(false);
-        setTick(t => t + 1);
-      }, 5400),
-    ];
-    return () => timers.forEach(clearTimeout);
-  }, [tick]);
+    const t1 = setTimeout(() => setShowScore(true), 600);
+    const t2 = setTimeout(() => setShowBrief(true), 1200);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
 
-  const lot = MOCK_LOTS[activeCard];
+  // Auto-rotate every 2.5s with 300ms fade transition
+  useEffect(() => {
+    if (items.length <= 1) return;
+    const interval = setInterval(() => {
+      setFade(false);
+      setTimeout(() => {
+        setActiveCard(i => (i + 1) % items.length);
+        setFade(true);
+      }, 300);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [items.length]);
+
+  const currentItem = items[activeCard] ?? items[0];
+  const artist = getArtist(currentItem);
+  const title  = getTitle(currentItem);
+  const price  = getPrice(currentItem);
+  const score  = getScore(currentItem);
+  const upside = getUpside(currentItem);
+  const imgSrc = getImage(currentItem);
   const gradients = [
     'linear-gradient(135deg, #E8E4DC 0%, #D4C9B5 100%)',
     'linear-gradient(135deg, #E8D8DC 0%, #C9B5BC 100%)',
@@ -80,9 +108,9 @@ function NautilusMockup() {
           </svg>
           <span style={{ fontFamily: "-apple-system, 'Inter', 'Helvetica Neue', Arial, sans-serif", fontSize: '12px', fontWeight: 700, color: 'var(--navy)', letterSpacing: '-0.02em' }}>Nautilus</span>
         </div>
-        {['Dashboard', 'Explorer', 'Portfolio'].map((item, i) => (
-          <span key={item} style={{ fontSize: '11px', color: i === 1 ? 'var(--navy)' : 'var(--text-3)', fontWeight: i === 1 ? 700 : 400, borderBottom: i === 1 ? '2px solid var(--navy)' : 'none', paddingBottom: '2px' }}>
-            {item}
+        {['Dashboard', 'Explorer', 'Portfolio'].map((navItem, i) => (
+          <span key={navItem} style={{ fontSize: '11px', color: i === 1 ? 'var(--navy)' : 'var(--text-3)', fontWeight: i === 1 ? 700 : 400, borderBottom: i === 1 ? '2px solid var(--navy)' : 'none', paddingBottom: '2px' }}>
+            {navItem}
           </span>
         ))}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -104,23 +132,31 @@ function NautilusMockup() {
       <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: '1fr 140px', gap: '12px' }}>
 
         {/* Active lot card */}
-        <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', transition: 'all 0.4s ease', boxShadow: '0 4px 16px rgba(10,22,40,0.08)' }}>
-          <div style={{ height: '120px', background: gradients[activeCard], position: 'relative', transition: 'background 0.4s ease', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: '32px', opacity: 0.3 }}>◎</span>
+        <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(10,22,40,0.08)' }}>
+          <div style={{ height: '120px', position: 'relative', overflow: 'hidden', background: 'var(--bg-subtle)' }}>
+            {imgSrc ? (
+              <img src={imgSrc} alt={title}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', opacity: fade ? 1 : 0, transition: 'opacity 0.3s ease' }}
+              />
+            ) : (
+              <div style={{ width: '100%', height: '100%', background: gradients[activeCard % 3], display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: fade ? 1 : 0, transition: 'opacity 0.3s ease' }}>
+                <span style={{ fontSize: '32px', opacity: 0.3 }}>◎</span>
+              </div>
+            )}
             <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(10,22,40,0.85)', padding: '3px 7px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: 'white', opacity: showScore ? 1 : 0, transition: 'opacity 0.3s ease' }}>
-              {lot.score}/100
+              {score}/100
             </div>
             <div style={{ position: 'absolute', top: '8px', left: '8px', background: '#C6A85A', padding: '2px 6px', borderRadius: '3px', fontSize: '8px', fontWeight: 700, color: 'white', fontFamily: 'var(--font-mono)', opacity: showScore ? 1 : 0, transition: 'opacity 0.3s ease 0.1s' }}>
               EXCEPTIONAL
             </div>
           </div>
-          <div style={{ padding: '10px 12px' }}>
-            <div style={{ fontSize: '8px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>{lot.artist}</div>
-            <div style={{ fontFamily: 'Georgia, serif', fontSize: '12px', color: 'var(--text)', marginBottom: '8px' }}>{lot.title}</div>
+          <div style={{ padding: '10px 12px', opacity: fade ? 1 : 0, transition: 'opacity 0.3s ease' }}>
+            <div style={{ fontSize: '8px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{artist}</div>
+            <div style={{ fontFamily: 'Georgia, serif', fontSize: '12px', color: 'var(--text)', marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{lot.price}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{price}</span>
               <span style={{ fontSize: '9px', fontWeight: 700, color: '#2563EB', background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', padding: '2px 6px', borderRadius: '3px', fontFamily: 'var(--font-mono)', opacity: showScore ? 1 : 0, transition: 'opacity 0.3s ease 0.2s' }}>
-                {lot.upside}
+                {upside}
               </span>
             </div>
           </div>
@@ -130,18 +166,18 @@ function NautilusMockup() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ background: 'var(--navy)', borderRadius: '8px', padding: '10px', opacity: showScore ? 1 : 0, transition: 'opacity 0.4s ease' }}>
             <div style={{ fontSize: '8px', fontWeight: 700, color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '6px' }}>CONVICTION</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: 'white', lineHeight: 1 }}>{lot.score}</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: 'white', lineHeight: 1, opacity: fade ? 1 : 0, transition: 'opacity 0.3s ease' }}>{score}</div>
             <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>/100</div>
             <div style={{ height: '3px', background: 'rgba(255,255,255,0.15)', borderRadius: '2px' }}>
-              <div style={{ height: '100%', borderRadius: '2px', background: '#C6A85A', width: `${lot.score}%`, transition: 'width 0.6s ease' }} />
+              <div style={{ height: '100%', borderRadius: '2px', background: '#C6A85A', width: `${score}%`, transition: 'width 0.6s ease' }} />
             </div>
           </div>
-          {MOCK_LOTS.map((l, i) => (
+          {items.slice(0, 3).map((l, i) => (
             <div key={i} style={{ background: i === activeCard ? 'var(--bg-subtle)' : 'white', border: `1px solid ${i === activeCard ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '6px', padding: '6px 8px', transition: 'all 0.3s ease' }}>
-              <div style={{ fontSize: '8px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginBottom: '2px' }}>{l.artist.split(' ').slice(-1)[0]}</div>
+              <div style={{ fontSize: '8px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getArtist(l).split(' ').slice(-1)[0]}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: 'var(--text)' }}>{l.score}/100</span>
-                <span style={{ fontSize: '8px', color: '#2563EB', fontWeight: 700 }}>{l.upside}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: 'var(--text)' }}>{getScore(l)}/100</span>
+                <span style={{ fontSize: '8px', color: '#2563EB', fontWeight: 700 }}>{getUpside(l)}</span>
               </div>
             </div>
           ))}
@@ -154,16 +190,14 @@ function NautilusMockup() {
           <span style={{ fontSize: '10px', fontWeight: 700, color: 'white' }}>◆ AI Analysis</span>
           <span style={{ fontSize: '8px', color: '#34D399', fontFamily: 'var(--font-mono)', background: 'rgba(52,211,153,0.15)', padding: '1px 5px', borderRadius: '2px' }}>LIVE</span>
         </div>
-        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.65)', lineHeight: 1.6 }}>
-          {activeCard === 0 && 'Chagall lithograph priced 62% below estimate. High liquidity artist with strong secondary market momentum.'}
-          {activeCard === 1 && 'Miró with exceptional institutional demand. Price 44% below comparable sales. Strong conviction signal.'}
-          {activeCard === 2 && 'Driskell gaining institutional recognition. Priced 50% below recent auction results. Buy window open.'}
+        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, opacity: fade ? 1 : 0, transition: 'opacity 0.3s ease' }}>
+          {artist ? `${artist.split(' ').slice(-1)[0]} scored ${score}/100 — priced ${upside} below estimate. Strong conviction signal.` : 'Analysing current market conditions...'}
         </div>
       </div>
 
       {/* Progress bar */}
       <div style={{ height: '2px', background: 'var(--bg-subtle)' }}>
-        <div style={{ height: '100%', background: '#C6A85A', animation: 'mockupProgress 5.4s linear infinite', transformOrigin: 'left' }} />
+        <div style={{ height: '100%', background: '#C6A85A', animation: 'mockupProgress 2.5s linear infinite', transformOrigin: 'left' }} />
       </div>
       <style>{`@keyframes mockupProgress { from { width: 0% } to { width: 100% } }`}</style>
     </div>
@@ -427,7 +461,7 @@ export default function Landing() {
 
         {/* Right — animated product mockup */}
         <div style={{ position: 'relative', animation: 'fadeIn 0.6s ease 0.3s both' }}>
-          <NautilusMockup />
+          <NautilusMockup lots={topLots} />
 
           {/* Floating badge — top right */}
           <div style={{ position: 'absolute', top: '-16px', right: '-20px', background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 14px', boxShadow: '0 8px 32px rgba(10,22,40,0.12)', textAlign: 'center', minWidth: '110px' }}>
