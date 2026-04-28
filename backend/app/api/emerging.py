@@ -1,14 +1,16 @@
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
+from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models.db_models import ArtistProfile
+from app.models.db_models import ArtistProfile, EmergingArtist
 from app.api.auth_utils import decode_token
 
 router = APIRouter(prefix="/emerging", tags=["emerging"])
+emerging_artists_router = APIRouter(prefix="/emerging-artists", tags=["emerging"])
 _bearer = HTTPBearer(auto_error=False)
 
 FREE_LIMIT = 3
@@ -81,3 +83,102 @@ async def get_emerging_artists(
         "blur_remaining": False,
         "total_available": len(items),
     }
+
+
+# ── GET /api/emerging-artists — sourced from Artsy gallery pipeline ──
+
+@emerging_artists_router.get("")
+async def get_artsy_emerging_artists(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    min_momentum: float = Query(0.0, ge=0),
+    nationality: Optional[str] = Query(None),
+    creds: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = _plan_from_credentials(creds)
+    is_free = plan not in ("investor", "pro", "elite", "institutional")
+
+    q = select(EmergingArtist).order_by(EmergingArtist.momentum_score.desc())
+    if min_momentum > 0:
+        q = q.where(EmergingArtist.momentum_score >= min_momentum)
+    if nationality:
+        q = q.where(EmergingArtist.nationality.ilike(f"%{nationality}%"))
+
+    result = await db.execute(q.offset((page - 1) * page_size).limit(page_size))
+    artists = result.scalars().all()
+
+    total_q = await db.execute(select(EmergingArtist))
+    total = len(total_q.scalars().all())
+
+    items = [
+        {
+            "id": str(a.id),
+            "artist_name": a.artist_name,
+            "nationality": a.nationality,
+            "birth_year": a.birth_year,
+            "gallery_name": a.gallery_name,
+            "avg_price": a.avg_price,
+            "lot_count": a.lot_count,
+            "momentum_score": a.momentum_score,
+            "last_seen_at": a.last_seen_at.isoformat() if a.last_seen_at else None,
+        }
+        for a in artists
+    ]
+
+    if is_free:
+        return {"artists": items[:3], "page": page, "page_size": page_size,
+                "total": total, "blur_remaining": len(items) > 3}
+
+    return {"artists": items, "page": page, "page_size": page_size,
+            "total": total, "blur_remaining": False}
+
+
+@emerging_artists_router.post("/sync")
+async def sync_emerging_artists(
+    creds: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin-only: pull fresh data from Artsy and upsert into emerging_artists."""
+    plan = _plan_from_credentials(creds)
+    if plan not in ("pro", "elite", "institutional"):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    from app.connectors.artsy_connector import fetch_emerging_artists
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+    records = await fetch_emerging_artists()
+    if not records:
+        return {"synced": 0}
+
+    now = datetime.utcnow()
+    synced = 0
+    for rec in records:
+        stmt = pg_insert(EmergingArtist).values(
+            id=__import__('uuid').uuid4(),
+            artist_name=rec["artist_name"],
+            nationality=rec.get("nationality"),
+            birth_year=rec.get("birth_year"),
+            gallery_name=rec.get("gallery_name"),
+            avg_price=rec.get("avg_price"),
+            lot_count=rec.get("lot_count", 1),
+            last_seen_at=now,
+            momentum_score=50.0,
+            created_at=now,
+            updated_at=now,
+        ).on_conflict_do_update(
+            constraint="uq_emerging_artist_name",
+            set_={
+                "gallery_name": rec.get("gallery_name"),
+                "avg_price": rec.get("avg_price"),
+                "lot_count": rec.get("lot_count", 1),
+                "last_seen_at": now,
+                "updated_at": now,
+            }
+        )
+        await db.execute(stmt)
+        synced += 1
+
+    await db.commit()
+    return {"synced": synced}

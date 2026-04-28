@@ -489,3 +489,135 @@ async def fetch_primary_lots(limit: int = 10000) -> List[LotNormalized]:
 
     logger.info("artsy_primary_fetched", count=len(lots), pages=pages_fetched)
     return lots
+
+
+_EMERGING_QUERY = """
+query FetchEmergingArtists {
+  artworksConnection(
+    forSale: true
+    atAuction: false
+    priceRange: "100-50000"
+    sort: "-published_at"
+    first: 50
+  ) {
+    edges {
+      node {
+        title
+        medium
+        category
+        image { url }
+        artist { name href nationality birthday }
+        partner { name type }
+        listPrice {
+          ... on Money { amount currencyCode }
+          ... on PriceRange {
+            minPrice { amount currencyCode }
+            maxPrice { amount currencyCode }
+          }
+        }
+        saleMessage
+      }
+    }
+  }
+}
+"""
+
+
+async def fetch_emerging_artists(limit: int = 500) -> list[dict]:
+    """
+    Fetch gallery works from Artsy and filter for emerging artists:
+    - partner.type == "Gallery"
+    - price < 10,000
+    - artist.birthday >= 1980
+    Returns aggregated dicts ready to upsert into emerging_artists table.
+    """
+    aggregated: dict[str, dict] = {}  # keyed by artist name (normalized)
+
+    try:
+        async with httpx.AsyncClient(
+            timeout=20,
+            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
+        ) as client:
+            resp = await client.post(
+                _GRAPHQL_URL,
+                json={"query": _EMERGING_QUERY},
+                timeout=15,
+            )
+            if resp.status_code != 200:
+                logger.warning("artsy_emerging_failed", status=resp.status_code)
+                return []
+
+            data = resp.json()
+            edges = (
+                data.get("data", {})
+                .get("artworksConnection", {})
+                .get("edges", [])
+            )
+
+            for edge in edges:
+                node = edge.get("node") or {}
+
+                # ── Filter: gallery only ──────────────────────────
+                partner = node.get("partner") or {}
+                if (partner.get("type") or "").lower() != "gallery":
+                    continue
+
+                # ── Filter: artist born >= 1980 ───────────────────
+                artist = node.get("artist") or {}
+                artist_name = (artist.get("name") or "").strip()
+                if not artist_name:
+                    continue
+
+                birthday_raw = artist.get("birthday") or ""
+                birth_year = None
+                m = re.search(r"\b(19\d{2}|20\d{2})\b", str(birthday_raw))
+                if m:
+                    birth_year = int(m.group(1))
+                if birth_year is None or birth_year < 1980:
+                    continue
+
+                # ── Filter: price < 10,000 ────────────────────────
+                price = None
+                list_price = node.get("listPrice") or {}
+                lp_type = list_price.get("__typename", "")
+                if lp_type == "Money":
+                    price = _parse_display_price(str(list_price.get("amount") or ""))
+                elif lp_type == "PriceRange":
+                    price = _parse_display_price(
+                        str((list_price.get("minPrice") or {}).get("amount") or "")
+                    )
+                if not price:
+                    price = _parse_display_price(node.get("saleMessage") or "")
+                if not price or price >= 10000:
+                    continue
+
+                # ── Aggregate by artist ───────────────────────────
+                gallery_name = (partner.get("name") or "").strip()
+                key = artist_name.lower()
+                if key not in aggregated:
+                    aggregated[key] = {
+                        "artist_name": artist_name,
+                        "nationality": (artist.get("nationality") or "").strip() or None,
+                        "birth_year": birth_year,
+                        "gallery_name": gallery_name,
+                        "prices": [],
+                        "lot_count": 0,
+                    }
+                aggregated[key]["prices"].append(price)
+                aggregated[key]["lot_count"] += 1
+
+                if len(aggregated) >= limit:
+                    break
+
+    except Exception as e:
+        logger.warning("artsy_emerging_fetch_failed", error=str(e))
+        return []
+
+    results = []
+    for rec in aggregated.values():
+        prices = rec.pop("prices")
+        rec["avg_price"] = round(sum(prices) / len(prices), 2) if prices else None
+        results.append(rec)
+
+    logger.info("artsy_emerging_fetched", count=len(results))
+    return results

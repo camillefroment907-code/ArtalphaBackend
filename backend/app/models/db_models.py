@@ -931,3 +931,26 @@ class ArtsperArtistSnapshot(Base):
         Index("ix_artsper_snapshots_price_avg", "price_avg"),
         Index("ix_artsper_snapshots_total_works", "total_works"),
     )
+
+
+class EmergingArtist(Base):
+    """Emerging artists sourced from Artsy gallery listings."""
+    __tablename__ = "emerging_artists"
+
+    id             = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    artist_name    = Column(String(500), nullable=False)
+    nationality    = Column(String(100), nullable=True)
+    birth_year     = Column(Integer, nullable=True)
+    gallery_name   = Column(String(500), nullable=True)
+    avg_price      = Column(Float, nullable=True)
+    lot_count      = Column(Integer, default=1)
+    last_seen_at   = Column(DateTime, default=datetime.utcnow)
+    momentum_score = Column(Float, default=50.0)
+    created_at     = Column(DateTime, default=datetime.utcnow)
+    updated_at     = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("artist_name", name="uq_emerging_artist_name"),
+        Index("ix_emerging_artists_momentum", "momentum_score"),
+        Index("ix_emerging_artists_birth_year", "birth_year"),
+    )
