@@ -50,7 +50,7 @@ const PLANS: Plan[] = [
     annualMonthly: 15.83,
     badge: 'FOUNDING MEMBER',
     priceSubtext: 'Limited to 100 spots · Price locked for life · Rises to €49 after launch',
-    description: 'For active collectors & investors.',
+    description: '',
     highlight: true,
     cta: 'Get founding access →',
     features: [
@@ -336,22 +336,24 @@ export default function Pricing() {
                     </div>
                   </div>
                 ) : plan.key === 'investor' ? (
-                  <div style={{ marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '36px', fontWeight: 700, color: 'white', lineHeight: 1 }}>
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.28)', textDecoration: 'line-through', fontFamily: 'var(--font-mono)', marginBottom: '1px', letterSpacing: '0.04em' }}>
+                      €49/mo
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '3px' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '36px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>
                         €{isAnnual ? '15.83' : '19'}
                       </span>
-                      <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>/mo</span>
+                      <span style={{ fontSize: '13px', color: 'rgba(198,168,90,0.55)' }}>/mo</span>
                     </div>
-                    {isAnnual ? (
-                      <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
+                    {isAnnual && (
+                      <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', marginBottom: '2px' }}>
                         €190/year · save €{annualSavings}/year
                       </div>
-                    ) : (
-                      <div style={{ fontSize: '10px', color: '#C6A85A', letterSpacing: '0.07em', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
-                        {plan.priceSubtext}
-                      </div>
                     )}
+                    <div style={{ fontSize: '11px', fontStyle: 'italic', color: 'rgba(198,168,90,0.75)', lineHeight: 1.3 }}>
+                      Founding price · locked for life
+                    </div>
                   </div>
                 ) : (
                   <div style={{ marginBottom: '12px' }}>
@@ -370,14 +372,19 @@ export default function Pricing() {
                 )}
 
                 {/* Description */}
-                <p style={{ fontSize: '12px', lineHeight: 1.6, margin: '0 0 0', color: isHighlight ? 'rgba(255,255,255,0.55)' : 'var(--text-3)' }}>
-                  {plan.description}
-                </p>
+                {plan.key !== 'investor' && (
+                  <p style={{ fontSize: '12px', lineHeight: 1.6, margin: '0 0 0', color: isHighlight ? 'rgba(255,255,255,0.55)' : 'var(--text-3)' }}>
+                    {plan.description}
+                  </p>
+                )}
 
                 </div>{/* end price+description wrapper */}
 
                 {/* CTA — above feature list */}
-                <div style={{ marginTop: '10px', marginBottom: '10px' }}>
+                <div style={plan.key === 'investor' && !isCurrentPlan
+                  ? { marginTop: '0', marginBottom: '10px', borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: '10px' }
+                  : { marginTop: '10px', marginBottom: '10px' }
+                }>
                   {plan.key === 'free' ? (
                     <button
                       disabled
@@ -396,21 +403,26 @@ export default function Pricing() {
                       ✓ Current plan
                     </div>
                   ) : plan.key === 'investor' ? (
-                    <button
-                      onClick={() => handleSelect(plan)}
-                      disabled={loading === plan.key}
-                      style={{
-                        width: '100%', height: '48px', borderRadius: '6px',
-                        background: '#2563EB', color: 'white', border: 'none',
-                        fontSize: '13px', fontWeight: 700,
-                        cursor: loading === plan.key ? 'not-allowed' : 'pointer',
-                        letterSpacing: '0.04em',
-                        opacity: loading === plan.key ? 0.7 : 1,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}
-                    >
-                      {loading === plan.key ? 'Loading...' : plan.cta}
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleSelect(plan)}
+                        disabled={loading === plan.key}
+                        style={{
+                          width: '100%', height: '48px', borderRadius: '6px',
+                          background: '#2563EB', color: 'white', border: 'none',
+                          fontSize: '13px', fontWeight: 700,
+                          cursor: loading === plan.key ? 'not-allowed' : 'pointer',
+                          letterSpacing: '0.04em',
+                          opacity: loading === plan.key ? 0.7 : 1,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                      >
+                        {loading === plan.key ? 'Loading...' : plan.cta}
+                      </button>
+                      <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '6px', textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
+                        Limited to 100 spots · Rises to €49 after launch
+                      </div>
+                    </>
                   ) : (
                     <button
                       onClick={() => handleSelect(plan)}
