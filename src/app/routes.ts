@@ -45,6 +45,7 @@ const ForgotPassword           = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword            = lazy(() => import('./pages/ResetPassword'));
 const VerifyEmailRequired      = lazy(() => import('./pages/VerifyEmailRequired'));
 const VerifyEmail              = lazy(() => import('./pages/VerifyEmail'));
+const Partners                 = lazy(() => import('./pages/Partners'));
 
 export const router = createBrowserRouter([
   {
@@ -91,6 +92,10 @@ export const router = createBrowserRouter([
   {
     path: '/about',
     Component: About,
+  },
+  {
+    path: '/partners',
+    Component: Partners,
   },
   {
     path: '/contact',
