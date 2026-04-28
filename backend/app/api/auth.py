@@ -197,12 +197,6 @@ async def login(request: Request, body: UserLogin, db: AsyncSession = Depends(ge
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account disabled")
 
-    if not user.is_verified:
-        raise HTTPException(
-            status_code=403,
-            detail="Please verify your email before logging in."
-        )
-
     plan = user.active_plan.value.lower()
     if user.email == "camillefroment907@gmail.com":
         plan = "institutional"
@@ -212,7 +206,27 @@ async def login(request: Request, body: UserLogin, db: AsyncSession = Depends(ge
         user_id=str(user.id),
         email=user.email,
         plan=plan,
+        is_verified=user.is_verified,
     )
+
+
+@router.post("/resend-verification")
+@limiter.limit("3/minute")
+async def resend_verification(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    """Re-send the email verification link for the logged-in user."""
+    if current_user.is_verified:
+        return {"message": "Email already verified."}
+
+    verify_token = create_access_token(
+        {"sub": str(current_user.id), "purpose": "verify_email"},
+        expires_delta=timedelta(hours=48),
+    )
+    verify_url = f"{settings.frontend_url}/app/verify-email?token={verify_token}"
+    asyncio.create_task(send_verification_email(current_user.email, verify_url))
+    return {"message": "Verification email sent."}
 
 
 @router.get("/me", response_model=UserOut)

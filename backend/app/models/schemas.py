@@ -65,6 +65,7 @@ class TokenResponse(BaseModel):
     user_id: str
     email: str
     is_new_user: bool = False
+    is_verified: bool = True
     plan: str = "free"
 
 
