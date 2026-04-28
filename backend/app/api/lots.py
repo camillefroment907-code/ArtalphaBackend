@@ -1359,9 +1359,9 @@ async def get_public_lots(
             Lot.title.isnot(None),
         ))
         .order_by(order_col)
-        .limit(limit * 2)
+        .limit(min(limit, 3) * 2)
     )
-    lots = result.scalars().all()[:limit]
+    lots = result.scalars().all()[:min(limit, 3)]
     return {
         "lots": [
             {
