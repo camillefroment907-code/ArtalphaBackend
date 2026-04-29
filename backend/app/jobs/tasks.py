@@ -1065,4 +1065,3 @@ def sync_poush_artists(self):
 async def _sync_poush_async():
     from app.connectors.poush_connector import sync_to_db
     return await sync_to_db()
->>>>>>> Stashed changes
