@@ -89,44 +89,54 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
     if not skip_purge:
         # 0. Purge UPCOMING lots whose auction_date is more than 1 day past.
         #    SOLD lots (historical data) are kept — never purged here.
+        #    Must delete FK dependents (score_performance, hammer_prices, user_signals) first.
         async with AsyncSessionLocal() as _cleanup_session:
-            from sqlalchemy import delete
-            from app.models.db_models import Lot as _Lot
+            from sqlalchemy import text as _text
+
+            async def _purge_by_sql(where_clause: str, params: dict) -> int:
+                """Delete lots matching where_clause, cleaning FK deps first via CTE."""
+                result = await _cleanup_session.execute(_text(f"""
+                    WITH to_del AS (
+                        SELECT id FROM lots WHERE {where_clause}
+                    ),
+                    del_score AS (
+                        DELETE FROM score_performance WHERE lot_id IN (SELECT id FROM to_del)
+                    ),
+                    del_hammer AS (
+                        DELETE FROM hammer_prices WHERE lot_id IN (SELECT id FROM to_del)
+                    ),
+                    del_signals AS (
+                        DELETE FROM user_signals WHERE lot_id IN (SELECT id FROM to_del)
+                    )
+                    DELETE FROM lots WHERE id IN (SELECT id FROM to_del)
+                """), params)
+                await _cleanup_session.commit()
+                return result.rowcount
+
             expired_cutoff = datetime.utcnow() - timedelta(days=1)
-            del_result = await _cleanup_session.execute(
-                delete(_Lot).where(
-                    _Lot.auction_date.isnot(None),
-                    _Lot.auction_date < expired_cutoff,
-                    _Lot.status == LotStatus.UPCOMING,  # never purge historical sold lots
-                )
+            expired_count = await _purge_by_sql(
+                "auction_date IS NOT NULL AND auction_date < :cutoff AND status = 'upcoming'",
+                {"cutoff": expired_cutoff},
             )
-            await _cleanup_session.commit()
-            expired_count = del_result.rowcount
             if expired_count:
                 logger.info("Purged expired lots", count=expired_count)
 
             # Purge UPCOMING lots with no auction_date older than 3 days
-            # (Artsy primary market lots accumulate indefinitely with no date)
             no_date_cutoff = datetime.utcnow() - timedelta(days=3)
-            no_date_result = await _cleanup_session.execute(
-                delete(_Lot).where(
-                    _Lot.auction_date.is_(None),
-                    _Lot.created_at < no_date_cutoff,
-                    _Lot.status == LotStatus.UPCOMING,
-                )
+            no_date_count = await _purge_by_sql(
+                "auction_date IS NULL AND created_at < :cutoff AND status = 'upcoming'",
+                {"cutoff": no_date_cutoff},
             )
-            await _cleanup_session.commit()
-            if no_date_result.rowcount:
-                logger.info("Purged no-date lots", count=no_date_result.rowcount)
+            if no_date_count:
+                logger.info("Purged no-date lots", count=no_date_count)
 
             # Purge Drouot lots with countdown timer titles (legacy bad data)
-            from sqlalchemy import text as _text
-            bad_title = await _cleanup_session.execute(
-                delete(_Lot).where(_Lot.title.op("~")(r"^\d+h\s*\d+m\s*\d+s"))
+            bad_title_count = await _purge_by_sql(
+                r"title ~ '^\d+h\s*\d+m\s*\d+s'",
+                {},
             )
-            await _cleanup_session.commit()
-            if bad_title.rowcount:
-                logger.info("Purged countdown-title lots", count=bad_title.rowcount)
+            if bad_title_count:
+                logger.info("Purged countdown-title lots", count=bad_title_count)
 
     # 1. Fetch lots from all sources (parallel)
     raw_lots = await fetch_all_lots(lots_per_source=lots_per_source)
