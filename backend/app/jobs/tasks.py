@@ -115,7 +115,7 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
 
             expired_cutoff = datetime.utcnow() - timedelta(days=1)
             expired_count = await _purge_by_sql(
-                "auction_date IS NOT NULL AND auction_date < :cutoff AND status = 'upcoming'",
+                "auction_date IS NOT NULL AND auction_date < :cutoff AND status = 'UPCOMING'",
                 {"cutoff": expired_cutoff},
             )
             if expired_count:
@@ -124,7 +124,7 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
             # Purge UPCOMING lots with no auction_date older than 3 days
             no_date_cutoff = datetime.utcnow() - timedelta(days=3)
             no_date_count = await _purge_by_sql(
-                "auction_date IS NULL AND created_at < :cutoff AND status = 'upcoming'",
+                "auction_date IS NULL AND created_at < :cutoff AND status = 'UPCOMING'",
                 {"cutoff": no_date_cutoff},
             )
             if no_date_count:
