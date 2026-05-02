@@ -91,6 +91,7 @@ class User(Base):
     accepted_terms_ip = Column(String(45), nullable=True)
     accepted_terms_version = Column(String(10), nullable=True)
     marketing_consent = Column(Boolean, default=False)
+    onboarding_completed = Column(Boolean, default=False, nullable=False)
 
     preferences = relationship("UserPreference", back_populates="user", uselist=False)
     alerts = relationship("Alert", back_populates="user")
@@ -131,6 +132,9 @@ class UserPreference(Base):
     max_lot_budget_eur = Column(Float, nullable=True)
     preferred_periods = Column(ARRAY(String), default=list)
     preferred_regions = Column(ARRAY(String), default=list)
+    preferred_market_type = Column(ARRAY(String), nullable=True)
+    preferred_career_stages = Column(ARRAY(String), nullable=True)
+    strategy_preset = Column(String(50), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

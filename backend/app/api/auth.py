@@ -110,6 +110,7 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
         user_id=str(user.id),
         email=user.email,
         plan="free",
+        onboarding_completed=user.onboarding_completed,
     )
 
 
@@ -321,6 +322,7 @@ async def google_auth(request: Request, body: GoogleAuthRequest, db: AsyncSessio
         email=user.email,
         is_new_user=is_new,
         plan=plan,
+        onboarding_completed=user.onboarding_completed,
     )
 
 
@@ -369,6 +371,16 @@ async def update_profile(
 
     await db.commit()
     return {"message": "Profile updated", "email": current_user.email}
+
+
+@router.post("/complete-onboarding")
+async def complete_onboarding(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    current_user.onboarding_completed = True
+    await db.commit()
+    return {"onboarding_completed": True}
 
 
 @router.delete("/delete-account")

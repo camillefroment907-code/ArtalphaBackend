@@ -67,6 +67,7 @@ class TokenResponse(BaseModel):
     is_new_user: bool = False
     is_verified: bool = True
     plan: str = "free"
+    onboarding_completed: bool = False
 
 
 class UserOut(BaseModel):
@@ -234,6 +235,11 @@ class AlertOut(BaseModel):
 
 # ── Preferences ───────────────────────────────────────────────────────────────
 
+_VALID_MARKET_TYPES = {"auction", "gallery", "both"}
+_VALID_CAREER_STAGES = {"emerging", "mid_career", "established", "blue_chip"}
+_VALID_STRATEGY_PRESETS = {"high_conviction", "short_term_flips", "undervalued_blue_chip", "emerging_artists"}
+
+
 class PreferenceUpdate(BaseModel):
     favorite_artists: Optional[List[str]] = None
     categories: Optional[List[str]] = None
@@ -244,6 +250,27 @@ class PreferenceUpdate(BaseModel):
     alert_email: Optional[str] = None
     auction_houses: Optional[List[str]] = None
     is_alerts_enabled: Optional[bool] = None
+    preferred_market_type: Optional[List[str]] = None
+    preferred_career_stages: Optional[List[str]] = None
+    strategy_preset: Optional[str] = None
+
+    @validator("preferred_market_type", each_item=True, pre=True)
+    def validate_market_type(cls, v):
+        if v not in _VALID_MARKET_TYPES:
+            raise ValueError(f"preferred_market_type must be one of {_VALID_MARKET_TYPES}")
+        return v
+
+    @validator("preferred_career_stages", each_item=True, pre=True)
+    def validate_career_stages(cls, v):
+        if v not in _VALID_CAREER_STAGES:
+            raise ValueError(f"preferred_career_stages must be one of {_VALID_CAREER_STAGES}")
+        return v
+
+    @validator("strategy_preset", pre=True)
+    def validate_strategy_preset(cls, v):
+        if v is not None and v not in _VALID_STRATEGY_PRESETS:
+            raise ValueError(f"strategy_preset must be one of {_VALID_STRATEGY_PRESETS}")
+        return v
 
 
 class PreferenceOut(BaseModel):
@@ -257,6 +284,9 @@ class PreferenceOut(BaseModel):
     alert_email: Optional[str]
     auction_houses: List[str]
     is_alerts_enabled: bool
+    preferred_market_type: Optional[List[str]] = None
+    preferred_career_stages: Optional[List[str]] = None
+    strategy_preset: Optional[str] = None
 
     class Config:
         from_attributes = True
