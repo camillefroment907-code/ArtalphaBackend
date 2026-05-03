@@ -146,6 +146,9 @@ class ScoreBreakdown(BaseModel):
     pct_below_market_avg: Optional[float]
     rationale: List[str] = []
     ai_insight: Optional[str] = None
+    # Oracle signal component (Sprint C)
+    oracle_score_6m: Optional[float] = None
+    oracle_boost: Optional[float] = None     # points added/subtracted by oracle
 
 
 class LotOut(BaseModel):

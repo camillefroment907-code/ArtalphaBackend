@@ -48,6 +48,10 @@ class ScoringInput:
     house_reputation: float
     weights: Optional[Dict[str, float]] = None
     status: Optional[str] = None
+    # Oracle signal (Sprint C) — from ArtistSignal.oracle_score_6m
+    oracle_score_6m: Optional[float] = None
+    oracle_signal: Optional[str] = None     # BUY_NOW / WATCH / HOLD / AVOID
+    oracle_narrative: Optional[str] = None
 
 
 @dataclass
@@ -201,13 +205,16 @@ def generate_ai_insight(
     pct_below_market: Optional[float],
     deal_score: float,
 ) -> str:
-    """Generate a one-paragraph NLG deal insight."""
+    """Generate a one-paragraph NLG deal insight. Oracle-narrative aware."""
     artist = inp.artist_data
     lot = inp.lot
     name = lot.artist_name_raw or "Ce lot"
     parts: List[str] = []
 
-    if deal_score >= 85:
+    # Lead with oracle narrative when available — it's richer than the template
+    if inp.oracle_narrative:
+        parts.append(inp.oracle_narrative)
+    elif deal_score >= 85:
         parts.append(f"{name} représente une opportunité d'acquisition exceptionnelle.")
     elif deal_score >= 75:
         parts.append(f"{name} constitue une opportunité d'achat intéressante selon nos indicateurs.")
@@ -365,6 +372,19 @@ def compute_deal_score(inp: ScoringInput) -> ScoringResult:
 
     deal_score = float(np.clip(raw_score, 0, 100))
 
+    # ── Oracle boost (Sprint C) ───────────────────────────────────────────────
+    # oracle_score_6m is 0-100; 50 = neutral. Applies ±8 pts at extremes.
+    oracle_boost: Optional[float] = None
+    if inp.oracle_score_6m is not None:
+        oracle_boost = round((inp.oracle_score_6m - 50) * 0.16, 2)
+        deal_score = float(np.clip(deal_score + oracle_boost, 0, 100))
+        logger.debug(
+            "Oracle boost applied",
+            signal=inp.oracle_signal,
+            score_6m=inp.oracle_score_6m,
+            boost=oracle_boost,
+        )
+
     is_upcoming = status_mult == 0.3
     if is_upcoming and deal_score >= 65:
         deal_score = min(deal_score, 72.0)
@@ -385,6 +405,8 @@ def compute_deal_score(inp: ScoringInput) -> ScoringResult:
         pct_below_market_avg=round(pct_below_market, 2) if pct_below_market is not None else None,
         rationale=rationale,
         ai_insight=ai_insight,
+        oracle_score_6m=inp.oracle_score_6m,
+        oracle_boost=oracle_boost,
     )
 
     logger.debug(

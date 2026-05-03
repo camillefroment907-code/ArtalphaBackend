@@ -254,11 +254,46 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
                         artist_cache[key] = db_artist
 
                 # 5. Score the lot
+                # Sprint C: enrich artist_data with ArtsperArtistSnapshot avg price
+                # and pull oracle signal when artist already exists in DB
+                ingest_oracle_score_6m = None
+                ingest_oracle_signal = None
+                ingest_oracle_narrative = None
+                if artist_name and db_artist:
+                    name_norm = artist_name.lower().strip()
+                    from app.models.db_models import ArtsperArtistSnapshot, ArtistSignal
+                    artsper_res = await session.execute(
+                        select(ArtsperArtistSnapshot)
+                        .where(ArtsperArtistSnapshot.artist_name_normalized == name_norm)
+                        .limit(1)
+                    )
+                    artsper = artsper_res.scalar_one_or_none()
+                    if artsper and artsper.price_avg and artsper.price_avg > 0:
+                        if not artist_data.get("avg_price") or (artsper.total_works or 0) > 10:
+                            artist_data["avg_price"] = artsper.price_avg
+                            artist_data["confidence"] = min(
+                                (artist_data.get("confidence") or 0.5) + 0.10, 1.0
+                            )
+                    sig_res = await session.execute(
+                        select(ArtistSignal)
+                        .where(ArtistSignal.artist_id == db_artist.id)
+                        .order_by(ArtistSignal.computed_at.desc())
+                        .limit(1)
+                    )
+                    sig = sig_res.scalar_one_or_none()
+                    if sig and sig.oracle_score_6m is not None:
+                        ingest_oracle_score_6m = sig.oracle_score_6m
+                        ingest_oracle_signal = sig.oracle_signal
+                        ingest_oracle_narrative = sig.oracle_narrative
+
                 house_rep = get_house_reputation(lot_data.source)
                 scoring_input = ScoringInput(
                     lot=lot_data,
                     artist_data=artist_data,
                     house_reputation=house_rep,
+                    oracle_score_6m=ingest_oracle_score_6m,
+                    oracle_signal=ingest_oracle_signal,
+                    oracle_narrative=ingest_oracle_narrative,
                 )
                 score_result = compute_deal_score(scoring_input)
 
@@ -461,10 +496,10 @@ def rescore_live_lots(self):
 
 
 async def _rescore_live_async():
-    from app.models.db_models import Lot, LotStatus, Artist
+    from app.models.db_models import Lot, LotStatus, Artist, ArtsperArtistSnapshot, ArtistSignal
     from app.engines.scoring import compute_deal_score, ScoringInput
     from app.connectors.aggregator import get_house_reputation
-    from sqlalchemy import select, or_
+    from sqlalchemy import select, or_, func
     from sqlalchemy.orm import selectinload
 
     from app.database import BgSessionLocal as AsyncSessionLocal
@@ -497,7 +532,46 @@ async def _rescore_live_async():
                         "popularity": a.popularity_score,
                         "sell_through": a.sell_through_rate,
                         "volatility": a.price_volatility,
+                        "trend": a.trend.value if a.trend else "stable",
                     }
+
+                # ── Sprint C: enrich with ArtsperArtistSnapshot avg price ─────
+                artist_name_raw = lot.artist_name_raw or (lot.artist.name if lot.artist else None)
+                oracle_score_6m = None
+                oracle_signal = None
+                oracle_narrative = None
+
+                if artist_name_raw:
+                    name_norm = artist_name_raw.lower().strip()
+
+                    # ArtsperArtistSnapshot — primary market price anchor
+                    artsper_res = await session.execute(
+                        select(ArtsperArtistSnapshot)
+                        .where(ArtsperArtistSnapshot.artist_name_normalized == name_norm)
+                        .limit(1)
+                    )
+                    artsper = artsper_res.scalar_one_or_none()
+                    if artsper and artsper.price_avg and artsper.price_avg > 0:
+                        # Use Artsper avg when: no auction avg, or Artsper has more data points
+                        if not artist_data.get("avg_price") or (artsper.total_works or 0) > 10:
+                            artist_data["avg_price"] = artsper.price_avg
+                            artist_data["confidence"] = min(
+                                (artist_data.get("confidence") or 0.5) + 0.10, 1.0
+                            )
+
+                # ── Sprint C: pull ArtistSignal oracle data ───────────────────
+                if lot.artist_id:
+                    sig_res = await session.execute(
+                        select(ArtistSignal)
+                        .where(ArtistSignal.artist_id == lot.artist_id)
+                        .order_by(ArtistSignal.computed_at.desc())
+                        .limit(1)
+                    )
+                    sig = sig_res.scalar_one_or_none()
+                    if sig and sig.oracle_score_6m is not None:
+                        oracle_score_6m = sig.oracle_score_6m
+                        oracle_signal = sig.oracle_signal
+                        oracle_narrative = sig.oracle_narrative
 
                 from app.models.schemas import LotNormalized, AuctionHouseEnum
                 lot_normalized = LotNormalized(
@@ -516,6 +590,9 @@ async def _rescore_live_async():
                     lot=lot_normalized,
                     artist_data=artist_data,
                     house_reputation=house_rep,
+                    oracle_score_6m=oracle_score_6m,
+                    oracle_signal=oracle_signal,
+                    oracle_narrative=oracle_narrative,
                 )
                 score_result = compute_deal_score(scoring_input)
 
