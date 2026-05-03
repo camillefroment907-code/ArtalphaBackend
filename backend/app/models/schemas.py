@@ -22,6 +22,7 @@ class AuctionHouseEnum(str, Enum):
     ARTSY = "artsy"
     CATAWIKI = "catawiki"
     ARTCURIAL = "artcurial"
+    AUCTIONET = "auctionet"
     OTHER = "other"
 
 

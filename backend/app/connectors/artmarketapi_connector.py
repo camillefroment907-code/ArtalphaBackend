@@ -253,7 +253,6 @@ class ArtMarketAPIConnector:
     """Fetches upcoming and recently sold lots from ArtMarket API."""
 
     async def fetch_lots(self, limit: int = 5000) -> List[LotNormalized]:
-        return []  # temporarily disabled — rate limited
         api_key = os.getenv("ART_MARKET_API_KEY")
         if not api_key:
             logger.warning("ART_MARKET_API_KEY not set — skipping ArtMarket API")

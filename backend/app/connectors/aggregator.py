@@ -124,6 +124,21 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     except Exception as e:
         logger.warning("Artsy connector skipped", error=str(e))
 
+    # --- Auctionet — 300+ European auction houses, public API, no key needed ---
+    try:
+        from app.connectors.auctionet_connector import fetch_lots as auctionet_fetch
+        auctionet_lots = await _with_timeout(auctionet_fetch(lots_per_source), timeout=120, name="auctionet")
+        added = 0
+        for lot in auctionet_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("Auctionet: fetched", count=added)
+    except Exception as e:
+        logger.warning("Auctionet connector skipped", error=str(e))
+
     # --- ArtMarket API — Christie's, Sotheby's, Bonhams, Phillips via aggregator (1800s timeout) ---
     try:
         from app.connectors.artmarketapi_connector import ArtMarketAPIConnector
