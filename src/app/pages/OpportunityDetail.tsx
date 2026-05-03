@@ -176,7 +176,7 @@ export default function OpportunityDetail() {
   const upsidePct = upside > 0 ? upside : (fairVal > price ? ((fairVal - price) / price) * 100 : 0);
   // Use API projections when available, fallback to CAGR calc
   const _projMap: Record<number, { projected_value_eur: number; gain_pct: number }> = {};
-  if (lot.projection?.years) {
+  if (Array.isArray(lot.projection?.years)) {
     for (const p of lot.projection.years) _projMap[p.years] = p;
   }
   const projCagr = lot.projection?.cagr_pct || 7;
