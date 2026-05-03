@@ -96,7 +96,10 @@ def parse_dimensions(dimensions_str: str) -> dict:
     return {"width_cm": None, "height_cm": None}
 
 from app.database import get_db, AsyncSessionLocal
-from app.models.db_models import Lot, Artist, LotStatus, AuctionHouse, MarketType
+from app.models.db_models import (
+    Lot, Artist, LotStatus, AuctionHouse, MarketType,
+    ArtistSignal, ArtistProfile, HammerPrice,
+)
 from app.models.schemas import LotOut, LotListResponse, TopDeal, DashboardStats
 from app.api.auth_utils import get_current_user_optional, get_current_user
 from app.models.db_models import User, Subscription
@@ -1404,6 +1407,81 @@ async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
     lot_dict["cycle_stage"] = await get_cycle_stage(lot.artist_name_raw, db)
     lot_dict["consignment_alert"] = await get_consignment_alert(lot.artist_name_raw, str(lot.id), db)
     lot_dict["provenance_risk"] = await get_provenance_risk(lot, db)
+
+    # ── Oracle signal (ArtistSignal) ──────────────────────────────────────────
+    lot_dict["oracle"] = None
+    if lot.artist_id:
+        sig_result = await db.execute(
+            select(ArtistSignal)
+            .where(ArtistSignal.artist_id == lot.artist_id)
+            .order_by(ArtistSignal.computed_at.desc())
+            .limit(1)
+        )
+        sig = sig_result.scalar_one_or_none()
+        if sig and sig.oracle_signal:
+            lot_dict["oracle"] = {
+                "signal":         sig.oracle_signal,       # BUY_NOW / WATCH / HOLD / AVOID
+                "score_6m":       sig.oracle_score_6m,
+                "score_18m":      sig.oracle_score_18m,
+                "target_upside":  sig.oracle_target_upside,
+                "narrative":      sig.oracle_narrative,
+                "active_signals": sig.active_signals or [],
+                "confidence":     sig.confidence,
+                "computed_at":    sig.computed_at.isoformat() if sig.computed_at else None,
+            }
+
+    # ── Artist profile (investment tier, institutional presence) ──────────────
+    lot_dict["artist_profile"] = None
+    if lot.artist_name_raw:
+        artist_name_clean = lot.artist_name_raw.strip()
+        prof_result = await db.execute(
+            select(ArtistProfile)
+            .where(func.lower(ArtistProfile.name) == artist_name_clean.lower())
+            .limit(1)
+        )
+        profile = prof_result.scalar_one_or_none()
+        if not profile:
+            prof_result = await db.execute(
+                select(ArtistProfile)
+                .where(ArtistProfile.name.ilike(f"%{artist_name_clean}%"))
+                .limit(1)
+            )
+            profile = prof_result.scalar_one_or_none()
+        if profile:
+            lot_dict["artist_profile"] = {
+                "investment_tier":          profile.investment_tier,        # blue_chip / mid_career / emerging
+                "institutional_score":      profile.institutional_score,    # 0-100
+                "gallery_tier_avg":         profile.gallery_tier_avg,
+                "gallery_count":            profile.gallery_count,
+                "top_gallery_name":         profile.top_gallery_name,
+                "public_collections_count": profile.public_collections_count,
+                "shows_last_12m":           profile.shows_last_12m,
+                "shows_prev_12m":           profile.shows_prev_12m,
+                "momentum_score":           profile.momentum_score,
+                "is_pre_auction":           profile.is_pre_auction,
+                "artsy_url":                profile.artsy_url,
+            }
+
+    # ── Bundled projection (3 / 5 / 10 years) — no separate API call needed ──
+    lot_dict["projection"] = None
+    if hammer:
+        from app.engines.projections import project_value
+        proj = project_value(
+            purchase_price_eur=float(hammer),
+            artist_name=lot.artist_name_raw,
+            liquidity_score=lot.artist.liquidity_score if lot.artist else 50.0,
+            popularity_score=lot.artist.popularity_score if lot.artist else 50.0,
+            trend=lot.artist.trend.value if lot.artist and lot.artist.trend else "stable",
+            years=[3, 5, 10],
+        )
+        lot_dict["projection"] = {
+            "artist_tier":            proj["artist_tier"],
+            "cagr_pct":               proj["base_cagr_pct"],
+            "recommended_hold_years": proj["recommended_hold_years"],
+            "sell_recommendation":    proj["sell_recommendation"],
+            "years":                  proj["projections"],
+        }
+
     return lot_dict
 
 
@@ -1412,7 +1490,11 @@ async def get_comparables(
     lot_id: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """Find comparable lots — same artist or same category + similar price range."""
+    """
+    Find comparable lots.
+    Priority: hammer_prices (historical realized sales) → active lot listings.
+    Historical data gives the real market signal; active listings are a fallback.
+    """
     cache_key = f"comparables:{lot_id}"
     cached = get_cached(cache_key, ttl=3600)
     if cached:
@@ -1423,28 +1505,67 @@ async def get_comparables(
     if not lot:
         raise HTTPException(404, "Lot not found")
 
-    comparables = []
+    ref_price = lot.current_price or lot.estimate_low or 0
+    hammer_comps: list = []
+    live_comps: list = []
 
-    # Strategy 1 — Same artist, different lot
+    # ── Strategy 1: Historical hammer prices — same artist ────────────────────
     if lot.artist_name_raw:
-        same_artist = await db.execute(
-            select(Lot)
+        hp_result = await db.execute(
+            select(HammerPrice)
             .where(
                 and_(
-                    Lot.artist_name_raw.ilike(f"%{lot.artist_name_raw}%"),
-                    Lot.id != lot.id,
-                    Lot.estimate_low.isnot(None),
+                    HammerPrice.artist_name.ilike(f"%{lot.artist_name_raw}%"),
+                    HammerPrice.hammer_price.isnot(None),
                 )
             )
-            .order_by(Lot.deal_score.desc().nullslast())
-            .limit(6)
+            .order_by(HammerPrice.sale_date.desc().nullslast())
+            .limit(8)
         )
-        comparables.extend(same_artist.scalars().all())
+        hammer_comps = hp_result.scalars().all()
 
-    # Strategy 2 — Same category + similar price range
-    if len(comparables) < 3 and lot.category:
-        ref_price = lot.current_price or lot.estimate_low or 0
-        if ref_price > 0:
+    # ── Strategy 2: Historical hammer prices — same medium + price range ──────
+    if len(hammer_comps) < 3 and ref_price > 0:
+        price_min = ref_price * 0.3
+        price_max = ref_price * 3.0
+        medium_filter = lot.medium or lot.category or ""
+        if medium_filter:
+            hp_result2 = await db.execute(
+                select(HammerPrice)
+                .where(
+                    and_(
+                        HammerPrice.medium.ilike(f"%{medium_filter}%"),
+                        HammerPrice.id.notin_([h.id for h in hammer_comps]),
+                        HammerPrice.hammer_price.isnot(None),
+                        or_(
+                            and_(HammerPrice.hammer_price_eur >= price_min, HammerPrice.hammer_price_eur <= price_max),
+                            and_(HammerPrice.hammer_price >= price_min, HammerPrice.hammer_price <= price_max),
+                        ),
+                    )
+                )
+                .order_by(HammerPrice.sale_date.desc().nullslast())
+                .limit(8 - len(hammer_comps))
+            )
+            hammer_comps.extend(hp_result2.scalars().all())
+
+    # ── Strategy 3: Active lot listings (fallback when no historical data) ────
+    if len(hammer_comps) < 3:
+        if lot.artist_name_raw:
+            same_artist = await db.execute(
+                select(Lot)
+                .where(
+                    and_(
+                        Lot.artist_name_raw.ilike(f"%{lot.artist_name_raw}%"),
+                        Lot.id != lot.id,
+                        Lot.estimate_low.isnot(None),
+                    )
+                )
+                .order_by(Lot.deal_score.desc().nullslast())
+                .limit(6)
+            )
+            live_comps.extend(same_artist.scalars().all())
+
+        if len(live_comps) < 3 and lot.category and ref_price > 0:
             price_min = ref_price * 0.4
             price_max = ref_price * 2.5
             similar = await db.execute(
@@ -1453,7 +1574,7 @@ async def get_comparables(
                     and_(
                         Lot.category.ilike(f"%{lot.category}%"),
                         Lot.id != lot.id,
-                        Lot.id.notin_([c.id for c in comparables]),
+                        Lot.id.notin_([c.id for c in live_comps]),
                         or_(
                             and_(Lot.current_price >= price_min, Lot.current_price <= price_max),
                             and_(Lot.estimate_low >= price_min, Lot.estimate_low <= price_max),
@@ -1462,36 +1583,71 @@ async def get_comparables(
                     )
                 )
                 .order_by(Lot.deal_score.desc())
-                .limit(6 - len(comparables))
+                .limit(6 - len(live_comps))
             )
-            comparables.extend(similar.scalars().all())
+            live_comps.extend(similar.scalars().all())
 
-    ref_price = lot.current_price or lot.estimate_low or 0
+    # ── Serialize ─────────────────────────────────────────────────────────────
+    def _hammer_to_dict(hp: HammerPrice) -> dict:
+        price_eur = hp.hammer_price_eur or hp.hammer_price
+        return {
+            "id":                     str(hp.id),
+            "title":                  hp.artwork_title or "Untitled",
+            "artist_name_raw":        hp.artist_name,
+            "current_price":          price_eur,
+            "hammer_price":           price_eur,
+            "estimate_low":           hp.estimate_low,
+            "estimate_high":          hp.estimate_high,
+            "premium_ratio":          hp.premium_ratio,
+            "deal_score":             None,
+            "pct_below_low_estimate": None,
+            "image_url":              hp.image_url,
+            "auction_house_name":     hp.auction_house,
+            "auction_date":           hp.sale_date.isoformat() if hp.sale_date else None,
+            "source":                 hp.source,
+            "currency":               "EUR" if hp.hammer_price_eur else (hp.currency or "EUR"),
+            "medium":                 hp.medium,
+            "real_cost":              None,
+            "is_historical":          True,   # realized sale — not a listing
+        }
+
+    use_hammer = bool(hammer_comps)
+    serialized = (
+        [_hammer_to_dict(h) for h in hammer_comps[:6]]
+        if use_hammer
+        else [lot_to_list_dict(c) for c in live_comps[:6]]
+    )
+
+    # ── Market analysis ───────────────────────────────────────────────────────
     comp_prices = [
-        c.current_price or c.estimate_low
-        for c in comparables
-        if (c.current_price or c.estimate_low)
+        c.get("current_price") or c.get("estimate_low")
+        for c in serialized
+        if c.get("current_price") or c.get("estimate_low")
     ]
     market_avg = sum(comp_prices) / len(comp_prices) if comp_prices else 0
+    sorted_prices = sorted(comp_prices)
+    median_price = sorted_prices[len(sorted_prices) // 2] if sorted_prices else None
     price_gap_pct = ((market_avg - ref_price) / ref_price * 100) if ref_price and market_avg else 0
 
     response = {
         "lot_id": lot_id,
         "reference": {
-            "title": lot.title,
+            "title":  lot.title,
             "artist": lot.artist_name_raw,
-            "price": ref_price,
-            "score": lot.deal_score,
+            "price":  ref_price,
+            "score":  lot.deal_score,
         },
-        "comparables": [lot_to_list_dict(c) for c in comparables[:6]],
+        "comparables":  serialized,
+        "data_source":  "historical_sales" if use_hammer else "active_listings",
         "market_analysis": {
-            "comparable_count": len(comparables),
-            "market_avg_price": round(market_avg) if market_avg else None,
-            "price_gap_pct": round(price_gap_pct, 1),
+            "comparable_count":    len(serialized),
+            "market_avg_price":    round(market_avg) if market_avg else None,
+            "market_median_price": round(median_price) if median_price else None,
+            "price_gap_pct":       round(price_gap_pct, 1),
             "verdict": (
                 "Significantly underpriced" if price_gap_pct > 30
-                else "Underpriced" if price_gap_pct > 10
-                else "Fairly priced" if price_gap_pct > -10
+                else "Underpriced"          if price_gap_pct > 10
+                else "Fairly priced"        if price_gap_pct > -10
                 else "Above market"
             ),
             "verdict_color": (
@@ -1500,7 +1656,8 @@ async def get_comparables(
                 else "#64748B" if price_gap_pct > -10
                 else "#EF4444"
             ),
-        }
+            "data_quality": "historical_sales" if use_hammer else "active_listings",
+        },
     }
 
     set_cached(cache_key, response)
