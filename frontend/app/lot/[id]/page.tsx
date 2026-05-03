@@ -1,823 +1,891 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import {
-  ArrowLeft, ExternalLink, Calendar, Building2, Tag,
-  Ruler, Palette, Star, CheckCircle, Sparkles, TrendingUp,
+  ArrowLeft, ExternalLink, Bell, CheckCircle, Sparkles, Info,
+  ChevronRight, Download, FileText, Clock, AlertCircle, AlertTriangle,
+  Bookmark, Share2, TrendingUp, TrendingDown, Minus,
 } from "lucide-react";
+import {
+  ResponsiveContainer, ComposedChart, XAxis, YAxis, CartesianGrid,
+  Scatter, ReferenceLine, Tooltip,
+} from "recharts";
 import { lotsApi, artistsApi, type Lot, type OracleSignal } from "@/lib/api";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { TopBar } from "@/components/layout/TopBar";
 import { WishlistButton } from "@/components/lots/WishlistButton";
 import { GalleryCard } from "@/components/lots/GalleryCard";
+import { TabsNav } from "@/components/lot/TabsNav";
+import { ComparablesTab } from "@/components/lot/ComparablesTab";
+import { AnalysisTab } from "@/components/lot/AnalysisTab";
+import { ProvenanceTab } from "@/components/lot/ProvenanceTab";
+import { DocumentsTab } from "@/components/lot/DocumentsTab";
 import { useLanguageStore, formatPriceInCurrency } from "@/lib/useLanguage";
 import { useAuthStore } from "@/lib/store";
+import { computeFairValue, getConfidenceLabel } from "@/lib/lotHelpers";
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const SUCCESS = "#16A34A";
+const DANGER  = "#DC2626";
+const WARNING = "#EA580C";
+const NAVY    = "#1A2A44";
+const GOLD    = "#C6A85A";
+const BORDER  = "#E5E7EB";
 
-function fmtPrice(v?: number | null, currency = "EUR", locale = "fr-FR"): string {
-  if (v == null) return "—";
-  return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 0 }).format(v);
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function formatDate(d?: string): string {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function project(price: number, years: number): number {
-  return Math.round(price * Math.pow(1.08, years));
+function formatDateShort(d?: string): string {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
 
-function formatDate(date?: string): string {
-  if (!date) return "—";
-  return new Date(date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+function getLabel(score: number): string {
+  if (score >= 90) return "FIRE";
+  if (score >= 80) return "STRONG BUY";
+  if (score >= 70) return "BUY";
+  if (score >= 50) return "WATCH";
+  return "HOLD";
 }
 
-// ── ScoreGauge ───────────────────────────────────────────────────────────────
+function getScoreColor(score: number): string {
+  if (score >= 80) return SUCCESS;
+  if (score >= 70) return SUCCESS;
+  if (score >= 50) return WARNING;
+  return "#9CA3AF";
+}
 
+function pillarColor(v: number): string {
+  if (v >= 70) return SUCCESS;
+  if (v >= 50) return WARNING;
+  return DANGER;
+}
+
+function fmtShort(v: number): string {
+  if (v >= 1_000_000) return `€${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `€${Math.round(v / 1_000)}K`;
+  return `€${v}`;
+}
+
+// ── ScoreGauge ────────────────────────────────────────────────────────────────
 function ScoreGauge({ score }: { score: number }) {
-  const radius = 52;
-  const circumference = 2 * Math.PI * radius;
-  const clampedScore = Math.max(0, Math.min(100, score));
-  const offset = circumference - (clampedScore / 100) * circumference;
-
-  const color =
-    clampedScore >= 90 ? "#ef4444" :
-    clampedScore >= 80 ? "#f97316" :
-    clampedScore >= 70 ? "#22c55e" :
-    clampedScore >= 50 ? "#eab308" : "#9a9aa3";
-
-  const label =
-    clampedScore >= 90 ? "FIRE" :
-    clampedScore >= 80 ? "HOT" :
-    clampedScore >= 70 ? "DEAL" :
-    clampedScore >= 50 ? "WATCH" : "—";
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
-      <div style={{ position: "relative", width: "140px", height: "140px" }}>
-        <svg width="140" height="140" style={{ transform: "rotate(-90deg)" }}>
-          <circle
-            cx="70" cy="70" r={radius}
-            fill="none"
-            stroke="var(--border)"
-            strokeWidth="8"
-          />
-          <circle
-            cx="70" cy="70" r={radius}
-            fill="none"
-            stroke={color}
-            strokeWidth="8"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            style={{ transition: "stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1)", filter: `drop-shadow(0 0 8px ${color}40)` }}
-          />
-        </svg>
-        <div style={{
-          position: "absolute", inset: 0,
-          display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center",
-        }}>
-          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "32px", fontWeight: 700, color, lineHeight: 1 }}>
-            {Math.round(clampedScore)}
-          </div>
-          <div style={{ fontSize: "9px", fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color, marginTop: "4px" }}>
-            {label}
-          </div>
-        </div>
-      </div>
-      <div style={{ fontSize: "11px", color: "var(--text-muted)", textAlign: "center" }}>
-        Deal Score / 100
-      </div>
-    </div>
-  );
-}
-
-// ── ProjectionBar ────────────────────────────────────────────────────────────
-
-function ProjectionBar({ price, currency, locale }: { price: number; currency: string; locale: string }) {
-  const now   = price;
-  const y5    = project(price, 5);
-  const y10   = project(price, 10);
-  const y20   = project(price, 20);
-  const max   = y20;
-
-  const bars = [
-    { label: "NOW",  value: now,  years: 0 },
-    { label: "5 YR", value: y5,   years: 5 },
-    { label: "10 YR", value: y10, years: 10 },
-    { label: "20 YR", value: y20, years: 20 },
-  ];
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-        <TrendingUp size={12} style={{ color: "var(--gold)" }} />
-        <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--gold)" }}>
-          ROI Projection (8% CAGR)
-        </span>
-      </div>
-      {bars.map(({ label, value }) => {
-        const pct = (value / max) * 100;
-        const multiple = value / now;
-        return (
-          <div key={label}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
-              <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", color: "var(--text-muted)", fontFamily: "'JetBrains Mono', monospace" }}>{label}</span>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: "var(--text-primary)", fontWeight: 600 }}>
-                  {formatPriceInCurrency(value, currency, locale)}
-                </span>
-                {multiple > 1 && (
-                  <span style={{ fontFamily: "monospace", fontSize: "10px", color: "var(--green)", background: "rgba(34,197,94,0.1)", padding: "1px 5px", borderRadius: "3px", border: "1px solid rgba(34,197,94,0.2)" }}>
-                    ×{multiple.toFixed(1)}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div style={{ height: "4px", background: "var(--border)", borderRadius: "2px", overflow: "hidden" }}>
-              <div style={{
-                height: "100%", width: `${pct}%`, borderRadius: "2px",
-                background: `linear-gradient(90deg, var(--gold-dim), var(--gold))`,
-                transition: "width 0.8s cubic-bezier(0.4,0,0.2,1)",
-              }} />
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── RelatedLots ──────────────────────────────────────────────────────────────
-
-function RelatedLots({ lotId }: { lotId: string }) {
-  const { data: similar } = useSWR<Lot[]>(
-    `similar-${lotId}`,
-    () => lotsApi.similar(lotId).then((r) => r.data)
-  );
-
-  if (!similar || similar.length === 0) return null;
-
-  return (
-    <div style={{ marginTop: "40px", paddingTop: "32px", borderTop: "1px solid var(--border)" }}>
-      <div style={{ marginBottom: "20px" }}>
-        <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-muted)" }}>
-          Opportunités Similaires
-        </span>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
-        {similar.slice(0, 4).map((lot, i) => (
-          <GalleryCard key={lot.id} lot={lot} index={i} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── ComparablesPanel ─────────────────────────────────────────────────────────
-
-function ComparablesPanel({ lotId }: { lotId: string }) {
-  const { data: comparables } = useSWR<Lot[]>(
-    `comparables-${lotId}`,
-    () => lotsApi.comparables(lotId).then((r) => r.data)
-  );
-
-  if (!comparables || comparables.length === 0) return null;
-
-  return (
-    <div style={{ background: "var(--graphite)", border: "1px solid var(--border)", borderRadius: "6px", padding: "20px" }}>
-      <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "16px" }}>
-        Ventes Comparables
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-        {comparables.slice(0, 4).map((lot) => (
-          <Link key={lot.id} href={`/lot/${lot.id}`} style={{ textDecoration: "none" }}>
-            <div style={{
-              display: "flex", alignItems: "center", gap: "10px",
-              padding: "10px", borderRadius: "4px",
-              border: "1px solid var(--border)",
-              background: "var(--slate)",
-              transition: "border-color 0.15s ease",
-            }}>
-              <div style={{ width: "44px", height: "44px", borderRadius: "3px", overflow: "hidden", background: "var(--border)", flexShrink: 0, position: "relative" }}>
-                {lot.image_url && (
-                  <img src={lot.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                )}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: "12px", color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {lot.title}
-                </div>
-                <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "2px" }}>{formatDate(lot.auction_date)}</div>
-              </div>
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: "var(--text-primary)", fontWeight: 600 }}>
-                  {fmtPrice(lot.current_price, lot.currency)}
-                </div>
-                {lot.deal_score != null && (
-                  <div style={{ fontFamily: "monospace", fontSize: "10px", color: lot.deal_score >= 80 ? "var(--green)" : "var(--text-muted)", marginTop: "2px" }}>
-                    {lot.deal_score.toFixed(0)}/100
-                  </div>
-                )}
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── NautilusOracle ───────────────────────────────────────────────────────────
-
-const SIGNAL_STYLES: Record<string, { bg: string; color: string; border: string }> = {
-  BUY_NOW: { bg: "var(--gold)",   color: "#080809", border: "var(--gold)" },
-  WATCH:   { bg: "var(--slate)",  color: "var(--text-primary)", border: "var(--gold-dim)" },
-  HOLD:    { bg: "var(--graphite)", color: "var(--text-secondary)", border: "var(--border)" },
-  AVOID:   { bg: "#3b0f0f",       color: "#f87171", border: "#7f1d1d" },
-};
-
-function OracleBar({ label, value }: { label: string; value: number }) {
-  const pct = Math.max(0, Math.min(100, value));
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
-        <span style={{ fontSize: "10px", color: "var(--text-muted)", fontFamily: "'JetBrains Mono', monospace" }}>{label}</span>
-        <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--gold)", fontFamily: "'JetBrains Mono', monospace" }}>{pct.toFixed(0)}%</span>
-      </div>
-      <div style={{ height: "5px", background: "var(--slate)", borderRadius: "3px", overflow: "hidden", border: "1px solid var(--border)" }}>
-        <div style={{
-          height: "100%", width: `${pct}%`, borderRadius: "3px",
-          background: `linear-gradient(90deg, var(--gold-dim), var(--gold))`,
-          boxShadow: "0 0 6px var(--gold-glow)",
-          transition: "width 1s cubic-bezier(0.4,0,0.2,1)",
-        }} />
-      </div>
-    </div>
-  );
-}
-
-function NautilusOracle({ artistId }: { artistId: string }) {
-  const { plan } = useAuthStore();
-  const unlocked = plan !== "free";
-
-  const { data: oracle } = useSWR<OracleSignal>(
-    unlocked && artistId ? `oracle-${artistId}` : null,
-    () => artistsApi.oracle(artistId).then((r) => r.data).catch(() => null)
-  );
-
-  const signalStyle = oracle ? (SIGNAL_STYLES[oracle.oracle_signal] ?? SIGNAL_STYLES.HOLD) : null;
+  const R = 44, SIZE = 120, C = SIZE / 2;
+  const circ = 2 * Math.PI * R;
+  const pct = Math.max(0, Math.min(100, score));
+  const offset = circ - (pct / 100) * circ;
+  const color = getScoreColor(pct);
 
   return (
     <div style={{
-      background: "var(--graphite)", border: "1px solid var(--border-light)",
-      borderRadius: "6px", overflow: "hidden",
-      boxShadow: "0 0 24px rgba(201,168,76,0.04)",
+      background: "var(--white)", border: `1px solid ${BORDER}`,
+      borderRadius: "8px", padding: "16px 20px",
+      display: "flex", flexDirection: "column", alignItems: "center", gap: "4px",
     }}>
-      {/* Header */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "14px 18px",
-        borderBottom: "1px solid var(--border)",
-        background: "linear-gradient(135deg, var(--slate) 0%, var(--graphite) 100%)",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={{ fontSize: "13px", color: "var(--gold)" }}>⚡</span>
-          <span style={{ fontSize: "9px", fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)" }}>
-            Nautilus Oracle
-          </span>
+      <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.14em", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "4px" }}>
+        OPPORTUNITY SCORE
+        <Info size={9} style={{ display: "inline", marginLeft: "3px", verticalAlign: "middle", opacity: 0.5 }} />
+      </div>
+      <div style={{ position: "relative", width: SIZE, height: SIZE }}>
+        <svg width={SIZE} height={SIZE} style={{ transform: "rotate(-90deg)" }}>
+          <circle cx={C} cy={C} r={R} fill="none" stroke={BORDER} strokeWidth="7" />
+          <circle cx={C} cy={C} r={R} fill="none" stroke={color} strokeWidth="7" strokeLinecap="round"
+            strokeDasharray={circ} strokeDashoffset={offset}
+            style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)" }}
+          />
+        </svg>
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "26px", fontWeight: 700, color, lineHeight: 1 }}>{Math.round(pct)}</span>
+          <span style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "1px" }}>/100</span>
         </div>
-        {oracle && signalStyle && (
-          <span style={{
-            fontSize: "9px", fontWeight: 800, letterSpacing: "0.14em",
-            textTransform: "uppercase", padding: "3px 8px", borderRadius: "3px",
-            background: signalStyle.bg, color: signalStyle.color, border: `1px solid ${signalStyle.border}`,
-          }}>
-            {oracle.oracle_signal.replace("_", " ")}
-          </span>
+      </div>
+      <div style={{ fontSize: "11px", fontWeight: 700, color, letterSpacing: "0.08em" }}>{getLabel(pct)}</div>
+      <div style={{ display: "flex", gap: "4px", marginTop: "4px" }}>
+        <button style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "var(--text-muted)", borderRadius: "3px" }}><Bookmark size={13} /></button>
+        <button style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "var(--text-muted)", borderRadius: "3px" }}><Share2 size={13} /></button>
+      </div>
+    </div>
+  );
+}
+
+// ── CountdownTimer ────────────────────────────────────────────────────────────
+function CountdownTimer({ hours, style: s }: { hours: number; style?: React.CSSProperties }) {
+  const [rem, setRem] = useState(Math.round(hours * 3600));
+
+  useEffect(() => {
+    if (rem <= 0) return;
+    const id = setInterval(() => setRem(r => Math.max(0, r - 1)), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  if (rem <= 0) return <span style={s}>Sale ended</span>;
+  const h = Math.floor(rem / 3600);
+  const m = Math.floor((rem % 3600) / 60);
+  const sec = rem % 60;
+  const urgent = rem < 7200;
+  return (
+    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: urgent ? DANGER : WARNING, ...s }}>
+      {h > 0 ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m ${String(sec).padStart(2, "0")}s`}
+    </span>
+  );
+}
+
+// ── KPIStrip ──────────────────────────────────────────────────────────────────
+function KPIStrip({ lot, fmt }: { lot: Lot; fmt: (v?: number | null) => string }) {
+  const fairValue = computeFairValue(lot);
+  const conf = lot.score_breakdown?.confidence_score;
+  const confLabel = conf != null ? getConfidenceLabel(conf).split(" ")[0] : "—";
+  const confColor = conf != null ? (conf >= 80 ? SUCCESS : conf >= 60 ? "#CA8A04" : DANGER) : "var(--text-muted)";
+  const approxComps = conf != null ? Math.round(conf / 5) : null;
+
+  return (
+    <div style={{ display: "flex", background: "var(--white)", borderBottom: `1px solid ${BORDER}` }}>
+      {/* Current price */}
+      <div style={{ flex: 1, padding: "14px 20px", borderRight: `1px solid ${BORDER}` }}>
+        <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "4px" }}>Current price</div>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 700, color: NAVY }}>{fmt(lot.current_price)}</div>
+        {lot.auction_date && <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "3px" }}>Last bid ({formatDate(lot.auction_date)})</div>}
+      </div>
+
+      {/* Estimate */}
+      <div style={{ flex: 1, padding: "14px 20px", borderRight: `1px solid ${BORDER}` }}>
+        <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "4px" }}>Estimate</div>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 700, color: NAVY, lineHeight: 1.3 }}>
+          {fmt(lot.estimate_low)} –<br />{fmt(lot.estimate_high)}
+        </div>
+      </div>
+
+      {/* Fair value */}
+      <div style={{ flex: 1, padding: "14px 20px", borderRight: `1px solid ${BORDER}` }}>
+        <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "4px" }}>Fair value (AI)</div>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 700, color: NAVY }}>{fairValue != null ? fmt(fairValue) : "—"}</div>
+        {lot.pct_below_low_estimate != null && lot.pct_below_low_estimate > 0 && (
+          <div style={{ fontSize: "10px", color: SUCCESS, marginTop: "3px", fontWeight: 600 }}>Upside +{lot.pct_below_low_estimate.toFixed(0)}%</div>
         )}
       </div>
 
-      {/* Locked overlay */}
-      {!unlocked && (
-        <div style={{ padding: "28px 18px", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", textAlign: "center" }}>
-          <div style={{ fontSize: "20px", color: "var(--gold-dim)" }}>⚡</div>
-          <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "0.05em" }}>
-            Oracle Intelligence
-          </div>
-          <div style={{ fontSize: "10px", color: "var(--text-muted)", lineHeight: 1.5 }}>
-            Predictive price signals,<br />buy window & upside targets
-          </div>
-          <a href="/billing" style={{
-            marginTop: "4px", fontSize: "10px", fontWeight: 700, letterSpacing: "0.12em",
-            textTransform: "uppercase", textDecoration: "none",
-            color: "var(--gold)", border: "1px solid var(--gold-dim)",
-            padding: "6px 14px", borderRadius: "3px",
-          }}>
-            Pro · Unlock Oracle →
-          </a>
+      {/* Confidence */}
+      <div style={{ flex: 1, padding: "14px 20px", borderRight: `1px solid ${BORDER}` }}>
+        <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "4px" }}>
+          Confidence
+          <Info size={9} style={{ display: "inline", marginLeft: "3px", verticalAlign: "middle", opacity: 0.5, cursor: "help" }} />
         </div>
-      )}
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 700, color: confColor }}>{confLabel}</div>
+        {approxComps != null && <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "3px" }}>Based on {approxComps} comps</div>}
+      </div>
 
-      {/* No data yet */}
-      {unlocked && !oracle && (
-        <div style={{ padding: "20px 18px" }}>
-          <div style={{ fontSize: "10px", color: "var(--text-muted)", textAlign: "center" }}>
-            Oracle en cours de calcul…
-          </div>
+      {/* Time remaining */}
+      <div style={{ flex: 1, padding: "14px 20px" }}>
+        <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "4px" }}>Time remaining</div>
+        <div style={{ fontSize: "15px" }}>
+          {lot.time_left_hours != null && lot.time_left_hours > 0
+            ? <CountdownTimer hours={lot.time_left_hours} />
+            : <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 700, color: "#9CA3AF" }}>—</span>
+          }
         </div>
-      )}
-
-      {/* Oracle data */}
-      {unlocked && oracle && (
-        <div style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: "14px" }}>
-          {/* Progress bars */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            <OracleBar label="6-month outlook" value={oracle.oracle_score_6m} />
-            <OracleBar label="18-month outlook" value={oracle.oracle_score_18m} />
+        {lot.auction_date && (
+          <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "3px" }}>
+            Closes {new Date(lot.auction_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
           </div>
-
-          {/* Active signals */}
-          {oracle.active_signals.length > 0 && (
-            <div style={{ borderTop: "1px solid var(--border)", paddingTop: "12px" }}>
-              <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "8px" }}>
-                Active Signals
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                {oracle.active_signals.map((sig, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "7px" }}>
-                    <span style={{ color: "var(--gold)", fontSize: "9px", marginTop: "1px", flexShrink: 0 }}>◆</span>
-                    <span style={{ fontSize: "11px", color: "var(--text-secondary)", lineHeight: 1.4 }}>{sig}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Narrative */}
-          {oracle.oracle_narrative && (
-            <p style={{
-              fontSize: "11px", color: "var(--text-secondary)", lineHeight: 1.6,
-              borderTop: "1px solid var(--border)", paddingTop: "12px",
-              fontStyle: "italic",
-            }}>
-              {oracle.oracle_narrative}
-            </p>
-          )}
-
-          {/* Verdict footer */}
-          <div style={{
-            borderTop: "1px solid var(--border)", paddingTop: "12px",
-            display: "flex", flexDirection: "column", gap: "4px",
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontSize: "9px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Window</span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "var(--text-primary)", fontWeight: 600 }}>{oracle.oracle_window}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontSize: "9px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Target upside</span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "var(--gold)", fontWeight: 700 }}>{oracle.oracle_target_upside}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontSize: "9px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Confidence</span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "var(--text-secondary)" }}>{(oracle.confidence * 100).toFixed(0)}%</span>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
 
-// ── ArtistPanel ──────────────────────────────────────────────────────────────
+// ── PriceChart ────────────────────────────────────────────────────────────────
+function PriceChart({ comparables, lot, fmt }: { comparables: Lot[]; lot: Lot; fmt: (v?: number | null) => string }) {
+  const fairValue = computeFairValue(lot);
 
-function ArtistPanel({ lot }: { lot: Lot }) {
-  const artist = lot.artist;
-  if (!artist) return null;
+  const points = comparables
+    .filter(c => c.auction_date && c.current_price && c.current_price > 0)
+    .map(c => {
+      const d = new Date(c.auction_date!);
+      return { year: d.getFullYear() + d.getMonth() / 12, price: c.current_price!, isCurrent: false, name: c.title };
+    })
+    .sort((a, b) => a.year - b.year);
 
-  const stats = [
-    { label: "Prix Moyen",  value: fmtPrice(artist.avg_auction_price) },
-    { label: "Tendance",    value: artist.trend === "up" ? "↑ Hausse" : artist.trend === "down" ? "↓ Baisse" : "→ Stable" },
-    { label: "Liquidité",   value: `${artist.liquidity_score.toFixed(0)}/100` },
-    { label: "Taux Vente",  value: `${(artist.sell_through_rate * 100).toFixed(0)}%` },
-    { label: "Lots Vendus", value: artist.total_lots_sold.toLocaleString() },
-    { label: "Popularité",  value: `${artist.popularity_score.toFixed(0)}/100` },
-  ];
+  if (lot.auction_date && lot.current_price && lot.current_price > 0) {
+    const d = new Date(lot.auction_date);
+    points.push({ year: d.getFullYear() + d.getMonth() / 12 + 0.01, price: lot.current_price, isCurrent: true, name: lot.title });
+  }
+
+  const allP = [...points.map(p => p.price)];
+  if (lot.estimate_high) allP.push(lot.estimate_high);
+  if (fairValue) allP.push(fairValue);
+  const maxP = allP.length > 0 ? Math.max(...allP) * 1.2 : 100_000;
+  const minYear = points.length > 0 ? Math.floor(Math.min(...points.map(p => p.year))) : new Date().getFullYear() - 4;
+  const maxYear = points.length > 0 ? Math.ceil(Math.max(...points.map(p => p.year))) + 1 : new Date().getFullYear() + 1;
+
+  const CustomDot = (props: any) => {
+    const { cx, cy, payload } = props;
+    if (!cx || !cy) return null;
+    if (payload.isCurrent) return <circle cx={cx} cy={cy} r={7} fill={GOLD} stroke="white" strokeWidth={2} />;
+    return <circle cx={cx} cy={cy} r={5} fill="#9CA3AF" stroke="white" strokeWidth={1.5} opacity={0.8} />;
+  };
+
+  if (points.length === 0) {
+    return (
+      <div style={{ height: "200px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "12px" }}>
+        No comparable price data to display yet.
+      </div>
+    );
+  }
 
   return (
-    <div style={{ background: "var(--graphite)", border: "1px solid var(--border)", borderRadius: "6px", padding: "20px" }}>
-      <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "16px" }}>
-        Profil Artiste
-      </div>
-
-      <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "16px" }}>
-        <div style={{ width: "44px", height: "44px", borderRadius: "4px", background: "var(--slate)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          {artist.portrait_url ? (
-            <img src={artist.portrait_url} alt={artist.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "4px" }} />
-          ) : (
-            <span style={{ fontFamily: "serif", fontSize: "20px", color: "var(--border-light)" }}>{artist.name[0]}</span>
-          )}
-        </div>
-        <div>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "16px", color: "var(--text-primary)", marginBottom: "4px" }}>{artist.name}</div>
-          <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-            {[artist.nationality, artist.movement, artist.birth_year ? `b. ${artist.birth_year}` : null].filter(Boolean).join(" · ")}
-          </div>
-          {artist.wikipedia_url && (
-            <a href={artist.wikipedia_url} target="_blank" rel="noopener noreferrer"
-              style={{ fontSize: "10px", color: "var(--gold)", textDecoration: "none", marginTop: "4px", display: "inline-block" }}>
-              Wikipedia ↗
-            </a>
-          )}
-        </div>
-      </div>
-
-      {artist.biography_fr && (
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1.6, borderTop: "1px solid var(--border)", paddingTop: "12px", marginBottom: "16px" }}>
-          {artist.biography_fr}
-        </p>
-      )}
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-        {stats.map(({ label, value }) => (
-          <div key={label} style={{ padding: "10px 12px", background: "var(--slate)", border: "1px solid var(--border)", borderRadius: "4px" }}>
-            <div style={{ fontSize: "9px", color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>{label}</div>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", color: "var(--text-primary)", fontWeight: 600 }}>{value}</div>
+    <div>
+      {/* Legend */}
+      <div style={{ display: "flex", gap: "16px", marginBottom: "10px", flexWrap: "wrap" }}>
+        {[
+          { color: "#9CA3AF", label: "Auction results", dot: true },
+          { color: "#2563EB", label: "Estimate range", dot: false },
+          { color: WARNING,   label: "Fair value (AI)", dot: false },
+          { color: GOLD,      label: "Current price",  dot: true },
+        ].map(({ color, label, dot }) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "10px", color: "var(--text-muted)" }}>
+            {dot
+              ? <svg width="10" height="10"><circle cx="5" cy="5" r="4" fill={color} /></svg>
+              : <svg width="22" height="10"><line x1="0" y1="5" x2="22" y2="5" stroke={color} strokeWidth="2" strokeDasharray="4,2" /></svg>
+            }
+            {label}
           </div>
         ))}
       </div>
+
+      <ResponsiveContainer width="100%" height={200}>
+        <ComposedChart data={points} margin={{ top: 8, right: 70, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={BORDER} vertical={false} />
+          <XAxis
+            dataKey="year" type="number"
+            domain={[minYear, maxYear]}
+            tickCount={maxYear - minYear + 1}
+            tickFormatter={v => String(Math.floor(v))}
+            tick={{ fontSize: 10, fill: "#9CA3AF" }}
+            axisLine={false} tickLine={false}
+          />
+          <YAxis
+            domain={[0, maxP]} tickFormatter={fmtShort}
+            tick={{ fontSize: 10, fill: "#9CA3AF" }}
+            axisLine={false} tickLine={false} width={40}
+          />
+          <Tooltip
+            contentStyle={{ background: NAVY, border: "none", borderRadius: "4px", fontSize: "11px", color: "white", padding: "8px 12px" }}
+            formatter={(v: unknown) => [fmt(v as number), ""]}
+            labelFormatter={v => String(Math.floor(Number(v)))}
+          />
+          {lot.estimate_low != null && (
+            <ReferenceLine y={lot.estimate_low} stroke="#2563EB" strokeDasharray="5 3" strokeWidth={1.5}
+              label={{ value: `Est. low ${fmtShort(lot.estimate_low)}`, position: "right", fontSize: 9, fill: "#2563EB", dy: -4 }} />
+          )}
+          {lot.estimate_high != null && (
+            <ReferenceLine y={lot.estimate_high} stroke="#2563EB" strokeDasharray="5 3" strokeWidth={1.5} opacity={0.65}
+              label={{ value: `Est. high ${fmtShort(lot.estimate_high)}`, position: "right", fontSize: 9, fill: "#2563EB", dy: -4 }} />
+          )}
+          {fairValue != null && (
+            <ReferenceLine y={fairValue} stroke={WARNING} strokeDasharray="5 3" strokeWidth={2}
+              label={{ value: `Fair value (AI) ${fmtShort(fairValue)}`, position: "right", fontSize: 9, fill: WARNING, dy: -4 }} />
+          )}
+          {lot.current_price != null && (
+            <ReferenceLine y={lot.current_price} stroke={GOLD} strokeDasharray="3 6" strokeWidth={1} opacity={0.5}
+              label={{ value: `Current ${fmtShort(lot.current_price)}`, position: "right", fontSize: 9, fill: GOLD, dy: -4 }} />
+          )}
+          <Scatter dataKey="price" shape={<CustomDot />} isAnimationActive={false} />
+        </ComposedChart>
+      </ResponsiveContainer>
+
+      {lot.pct_below_low_estimate != null && lot.pct_below_low_estimate > 0 && (
+        <div style={{ marginTop: "8px", padding: "8px 12px", background: "rgba(37,99,235,0.04)", border: "1px solid rgba(37,99,235,0.14)", borderRadius: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+          <Info size={12} style={{ color: "#2563EB", flexShrink: 0 }} />
+          <span style={{ fontSize: "11px", color: "#2563EB" }}>
+            AI fair value is <strong>+{lot.pct_below_low_estimate.toFixed(0)}%</strong> above the current price.
+            <Info size={10} style={{ display: "inline", marginLeft: "4px", verticalAlign: "middle", opacity: 0.5, cursor: "help" }} />
+          </span>
+        </div>
+      )}
     </div>
   );
 }
 
-// ── LoadingState ─────────────────────────────────────────────────────────────
+// ── ScoreBreakdownPanel ───────────────────────────────────────────────────────
+const PILLARS = [
+  { key: "below_estimate_score"   as const, label: "Valuation" },
+  { key: "below_market_score"     as const, label: "Market Momentum" },
+  { key: "liquidity_score"        as const, label: "Liquidity" },
+  { key: "house_reputation_score" as const, label: "Quality & Provenance" },
+  { key: "confidence_score"       as const, label: "Strategic Context" },
+];
 
-function LoadingState() {
+function ScoreBreakdownPanel({ lot }: { lot: Lot }) {
+  const sb = lot.score_breakdown;
+  const score = lot.deal_score ?? 0;
+  const color = getScoreColor(score);
+  const label = getLabel(score);
+
   return (
-    <div style={{ padding: "40px 32px" }}>
-      <div style={{ height: "280px", background: "var(--graphite)", borderRadius: "6px", marginBottom: "24px", animation: "pulse 1.5s infinite" }} />
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "24px" }}>
-        <div style={{ height: "400px", background: "var(--graphite)", borderRadius: "6px", animation: "pulse 1.5s infinite" }} />
-        <div style={{ height: "400px", background: "var(--graphite)", borderRadius: "6px", animation: "pulse 1.5s infinite" }} />
+    <div style={{ background: "var(--white)", border: `1px solid ${BORDER}`, borderRadius: "6px", padding: "20px" }}>
+      <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "16px" }}>
+        Score breakdown
+      </div>
+
+      {sb && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "13px", marginBottom: "16px" }}>
+          {PILLARS.map(({ key, label: pl }) => {
+            const v = sb[key];
+            if (v == null) return null;
+            const pc = pillarColor(v);
+            return (
+              <div key={key}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "5px" }}>
+                  <span style={{ fontSize: "12px", color: "var(--navy)", fontWeight: 500 }}>{pl}</span>
+                  <span style={{ fontFamily: "monospace", fontSize: "11px", color: "var(--text-muted)" }}>
+                    <span style={{ color: NAVY, fontWeight: 700 }}>{v.toFixed(0)}</span> /100
+                  </span>
+                </div>
+                <div style={{ height: "6px", background: BORDER, borderRadius: "3px", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${Math.max(0, Math.min(100, v))}%`, background: pc, borderRadius: "3px", transition: "width 0.8s ease" }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{ paddingTop: "14px", borderTop: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: "13px", fontWeight: 700, color: NAVY }}>Total Score</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "20px", fontWeight: 700, color: NAVY }}>
+            {score.toFixed(0)}<span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 400 }}>/100</span>
+          </span>
+          <span style={{ fontSize: "11px", fontWeight: 800, color, letterSpacing: "0.06em" }}>{label}</span>
+        </div>
+      </div>
+      <button style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: GOLD, background: "none", border: "none", cursor: "pointer", padding: 0, fontWeight: 600 }}>
+        How we score <ChevronRight size={12} />
+      </button>
+    </div>
+  );
+}
+
+// ── ComparablesMiniTable ──────────────────────────────────────────────────────
+function ComparablesMiniTable({ comparables, lot, fmt, onViewAll }: {
+  comparables: Lot[];
+  lot: Lot;
+  fmt: (v?: number | null) => string;
+  onViewAll: () => void;
+}) {
+  const rows = comparables.filter(c => c.current_price && c.current_price > 0).slice(0, 5);
+  const prices = comparables.map(c => c.current_price).filter((p): p is number => p != null && p > 0);
+  const avg = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : null;
+  const avgDiff = avg != null && lot.current_price && lot.current_price > 0
+    ? ((avg - lot.current_price) / lot.current_price) * 100 : null;
+
+  return (
+    <div>
+      <div style={{ fontSize: "13px", fontWeight: 700, color: NAVY, marginBottom: "12px" }}>
+        Recent comparable sales ({comparables.length})
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 55px 60px", gap: 0, marginBottom: "4px" }}>
+        {["Artwork", "Sale", "Date", "vs. lot"].map(h => (
+          <div key={h} style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", textAlign: h === "vs. lot" ? "right" : "left" }}>{h}</div>
+        ))}
+      </div>
+      {rows.map((c, i) => {
+        const diff = lot.current_price && lot.current_price > 0 && c.current_price
+          ? ((c.current_price - lot.current_price) / lot.current_price) * 100 : null;
+        return (
+          <Link key={c.id} href={`/lot/${c.id}`} style={{ textDecoration: "none", display: "block" }}>
+            <div
+              style={{ display: "grid", gridTemplateColumns: "1fr 80px 55px 60px", gap: 0, padding: "6px 0", borderTop: `1px solid ${BORDER}` }}
+              onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = "#F9FAFB")}
+              onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = "transparent")}
+            >
+              <div style={{ fontSize: "11px", color: NAVY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: "8px" }}>{c.title}</div>
+              <div style={{ fontSize: "10px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.auction_house_name?.split("—")[0].trim().slice(0, 16)}</div>
+              <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>{formatDateShort(c.auction_date)}</div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontFamily: "monospace", fontSize: "10px", fontWeight: 600, color: diff != null ? (diff > 0 ? SUCCESS : DANGER) : "var(--text-muted)" }}>
+                  {fmt(c.current_price)}
+                </div>
+                {diff != null && <div style={{ fontSize: "9px", color: diff > 0 ? SUCCESS : DANGER, fontWeight: 600 }}>{diff > 0 ? "+" : ""}{Math.round(diff)}%</div>}
+              </div>
+            </div>
+          </Link>
+        );
+      })}
+      {avg != null && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 55px 60px", gap: 0, padding: "7px 0", borderTop: `1px solid ${BORDER}` }}>
+          <div style={{ fontSize: "11px", fontWeight: 700, color: NAVY }}>Average</div>
+          <div /><div />
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontFamily: "monospace", fontSize: "11px", fontWeight: 700, color: NAVY }}>{fmt(avg)}</div>
+            {avgDiff != null && <div style={{ fontSize: "9px", color: avgDiff > 0 ? SUCCESS : DANGER, fontWeight: 600 }}>{avgDiff > 0 ? "+" : ""}{Math.round(avgDiff)}%</div>}
+          </div>
+        </div>
+      )}
+      <button onClick={onViewAll} style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "8px", fontSize: "11px", color: GOLD, fontWeight: 600, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+        View all {comparables.length} comparables <ChevronRight size={12} />
+      </button>
+    </div>
+  );
+}
+
+// ── FullSpecs ─────────────────────────────────────────────────────────────────
+function FullSpecs({ lot, fmt }: { lot: Lot; fmt: (v?: number | null) => string }) {
+  const artwork = [
+    { label: "Medium",     value: lot.medium },
+    { label: "Dimensions", value: lot.dimensions },
+    { label: "Category",   value: lot.category },
+    { label: "Edition",    value: null },
+    { label: "Signature",  value: null },
+    { label: "Condition",  value: null },
+    { label: "Provenance", value: null },
+    { label: "Exhibited",  value: null },
+    { label: "Literature", value: null },
+  ];
+  const auction = [
+    { label: "Auction house", value: lot.auction_house_name?.split("—")[0].trim() },
+    { label: "Sale",          value: lot.auction_sale_title },
+    { label: "Sale date",     value: formatDate(lot.auction_date) },
+    { label: "Lot",           value: lot.lot_number },
+    { label: "Category",      value: lot.category },
+    { label: "Estimate",      value: lot.estimate_low != null ? `${fmt(lot.estimate_low)} – ${fmt(lot.estimate_high)}` : null },
+    { label: "Starting bid",  value: null },
+  ];
+
+  const Row = ({ label, value }: { label: string; value?: string | null }) => (
+    <div style={{ display: "flex", gap: "8px", padding: "4px 0", borderBottom: `1px solid ${BORDER}` }}>
+      <div style={{ fontSize: "9px", color: "var(--text-muted)", width: "76px", flexShrink: 0, paddingTop: "1px" }}>{label}</div>
+      <div style={{ fontSize: "10px", color: value ? NAVY : "#D1D5DB", fontWeight: value ? 500 : 400 }}>{value || "—"}</div>
+    </div>
+  );
+
+  return (
+    <div>
+      <div style={{ fontSize: "13px", fontWeight: 700, color: NAVY, marginBottom: "12px" }}>Full specifications</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+        <div>
+          <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "6px" }}>Artwork</div>
+          {artwork.map(f => <Row key={f.label} label={f.label} value={f.value} />)}
+        </div>
+        <div>
+          <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "6px" }}>Auction</div>
+          {auction.map(f => <Row key={f.label} label={f.label} value={f.value} />)}
+        </div>
+      </div>
+      {lot.url && (
+        <a href={lot.url} target="_blank" rel="noopener noreferrer"
+          style={{ display: "inline-flex", alignItems: "center", gap: "4px", marginTop: "10px", fontSize: "11px", color: GOLD, fontWeight: 600, textDecoration: "none" }}>
+          View lot catalogue on {lot.auction_house_name?.split("—")[0].trim() || "source"}
+          <ExternalLink size={11} />
+        </a>
+      )}
+    </div>
+  );
+}
+
+// ── DocsSection ───────────────────────────────────────────────────────────────
+function DocsSection({ lot }: { lot: Lot }) {
+  const docs = [
+    { label: "Catalogue (PDF)", sub: "Available" },
+    { label: "Condition report", sub: "Available" },
+    { label: "Provenance documents", sub: "Available" },
+    { label: "Certificate of authenticity", sub: "Available" },
+  ];
+  return (
+    <div>
+      <div style={{ fontSize: "13px", fontWeight: 700, color: NAVY, marginBottom: "12px" }}>Documents</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+        {docs.map(d => (
+          <div key={d.label} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 0", borderBottom: `1px solid ${BORDER}` }}>
+            <FileText size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "11px", color: NAVY, fontWeight: 500 }}>{d.label}</div>
+              <div style={{ fontSize: "9px", color: "var(--text-muted)" }}>{d.sub}</div>
+            </div>
+            {lot.url && (
+              <a href={lot.url} target="_blank" rel="noopener noreferrer">
+                <Download size={11} style={{ color: "var(--text-muted)" }} />
+              </a>
+            )}
+          </div>
+        ))}
+      </div>
+      <button style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "8px", fontSize: "11px", color: GOLD, fontWeight: 600, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+        View all documents <ChevronRight size={12} />
+      </button>
+    </div>
+  );
+}
+
+// ── AiInsightsSection ─────────────────────────────────────────────────────────
+function AiInsightsSection({ lot }: { lot: Lot }) {
+  const bullets = lot.rationale?.slice(0, 4) || [];
+  const insight = lot.ai_insight;
+  if (bullets.length === 0 && !insight) return null;
+
+  const items = bullets.length > 0
+    ? bullets
+    : insight ? [insight.slice(0, 100) + "..."] : [];
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "12px" }}>
+        <Sparkles size={13} style={{ color: GOLD }} />
+        <div style={{ fontSize: "13px", fontWeight: 700, color: NAVY }}>AI Insights</div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        {items.map((b, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "7px" }}>
+            <CheckCircle size={12} style={{ color: SUCCESS, flexShrink: 0, marginTop: "1px" }} />
+            <span style={{ fontSize: "11px", color: "var(--text-muted)", lineHeight: 1.5 }}>{b}</span>
+          </div>
+        ))}
+      </div>
+      <button style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "8px", fontSize: "11px", color: GOLD, fontWeight: 600, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+        View full analysis <ChevronRight size={12} />
+      </button>
+    </div>
+  );
+}
+
+// ── Risk Flags ────────────────────────────────────────────────────────────────
+interface RiskFlag { icon: "clock" | "alert" | "triangle"; title: string; detail: string }
+
+function deriveRisks(lot: Lot): RiskFlag[] {
+  const flags: RiskFlag[] = [];
+  const sb = lot.score_breakdown;
+  if (sb) {
+    if (sb.liquidity_score < 70)
+      flags.push({ icon: "clock", title: sb.liquidity_score < 50 ? "Low liquidity" : "Medium liquidity", detail: "Limited bidding depth in recent sales" });
+    if (sb.house_reputation_score < 70)
+      flags.push({ icon: "alert", title: "Estimate upper range close", detail: "Price may face resistance" });
+    if (sb.below_market_score < 60)
+      flags.push({ icon: "triangle", title: "Market volatility", detail: "Short-term volatility possible" });
+  }
+  if (lot.estimate_high && lot.current_price && lot.current_price > lot.estimate_high * 0.88)
+    flags.push({ icon: "alert", title: "Near estimate ceiling", detail: "Current price approaching upper estimate" });
+  return flags.slice(0, 3);
+}
+
+function RiskIcon({ t }: { t: RiskFlag["icon"] }) {
+  if (t === "clock") return <Clock size={12} style={{ color: WARNING }} />;
+  if (t === "alert") return <AlertCircle size={12} style={{ color: WARNING }} />;
+  return <AlertTriangle size={12} style={{ color: "#9CA3AF" }} />;
+}
+
+// ── Right Panel ───────────────────────────────────────────────────────────────
+function RightPanel({ lot, lotId }: { lot: Lot; lotId: string }) {
+  const score = lot.deal_score ?? 0;
+  const upside = lot.pct_below_low_estimate;
+  const risks = deriveRisks(lot);
+  const color = getScoreColor(score);
+
+  return (
+    <div style={{
+      width: "272px", flexShrink: 0, background: NAVY,
+      position: "sticky", top: "52px", height: "calc(100vh - 52px)",
+      overflowY: "auto", display: "flex", flexDirection: "column",
+    }}>
+      {/* Recommended action */}
+      <div style={{ padding: "20px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+        <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.38)", marginBottom: "6px" }}>
+          RECOMMENDED ACTION
+        </div>
+        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "22px", fontWeight: 700, color, marginBottom: "6px" }}>
+          {getLabel(score)}
+        </div>
+        <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.55)", lineHeight: 1.55, marginBottom: "12px" }}>
+          This lot is significantly undervalued vs. recent comparable sales.
+        </p>
+        {upside != null && upside > 0 && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+            <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>Upside potential</span>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "18px", fontWeight: 700, color: GOLD }}>+{upside.toFixed(0)}%</span>
+          </div>
+        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
+          {lot.url && (
+            <a href={lot.url} target="_blank" rel="noopener noreferrer" style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+              padding: "10px 16px", borderRadius: "6px", background: GOLD, color: "#FFFFFF",
+              fontSize: "12px", fontWeight: 700, textDecoration: "none", letterSpacing: "0.02em",
+            }}>
+              View on {lot.auction_house_name?.split("—")[0].trim() || "source"} <ExternalLink size={12} />
+            </a>
+          )}
+          <WishlistButton lotId={lotId} size="md" />
+          <button style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+            padding: "9px 16px", borderRadius: "6px",
+            border: "1px solid rgba(255,255,255,0.15)", background: "transparent",
+            color: "rgba(255,255,255,0.75)", fontSize: "11px", cursor: "pointer",
+          }}>
+            <Bell size={12} /> Set price alert
+          </button>
+        </div>
+      </div>
+
+      {/* Countdown */}
+      {lot.time_left_hours != null && lot.time_left_hours > 0 && (
+        <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
+            <Clock size={11} style={{ color: DANGER }} />
+            <span style={{ fontSize: "11px", fontWeight: 700, color: DANGER }}>
+              Sale ends in <CountdownTimer hours={lot.time_left_hours} style={{ fontSize: "11px" }} />
+            </span>
+          </div>
+          <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.38)", marginTop: "2px" }}>
+            Increased bidding activity expected near closing.
+          </div>
+        </div>
+      )}
+
+      {/* Risk flags */}
+      {risks.length > 0 && (
+        <div style={{ padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: "10px" }}>
+            <span style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.65)" }}>Key risk flags</span>
+            <Info size={10} style={{ color: "rgba(255,255,255,0.28)" }} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
+            {risks.map((r, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                <div style={{ marginTop: "1px", flexShrink: 0 }}><RiskIcon t={r.icon} /></div>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 600, color: "rgba(255,255,255,0.72)" }}>{r.title}</div>
+                  <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.38)", marginTop: "1px" }}>{r.detail}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "rgba(255,255,255,0.4)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+            View full risk analysis <ChevronRight size={11} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── RelatedLots ───────────────────────────────────────────────────────────────
+function RelatedLots({ lotId }: { lotId: string }) {
+  const { data: similar } = useSWR<Lot[]>(`similar-${lotId}`, () => lotsApi.similar(lotId).then(r => r.data));
+  if (!similar || similar.length === 0) return null;
+  return (
+    <div style={{ marginTop: "40px", paddingTop: "32px", borderTop: `1px solid ${BORDER}` }}>
+      <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "20px" }}>
+        Similar Opportunities
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "16px" }}>
+        {similar.slice(0, 4).map((lot, i) => <GalleryCard key={lot.id} lot={lot} index={i} />)}
       </div>
     </div>
   );
 }
 
-// ── ErrorState ───────────────────────────────────────────────────────────────
+// ── Loading / Error ───────────────────────────────────────────────────────────
+function LoadingState() {
+  return (
+    <div style={{ flex: 1, display: "flex" }}>
+      <div style={{ flex: 1, padding: "32px" }}>
+        <div style={{ height: "260px", background: "#F3F4F6", borderRadius: "6px", marginBottom: "12px", animation: "pulse 1.5s infinite" }} />
+        <div style={{ height: "48px", background: "#F3F4F6", borderRadius: "6px", marginBottom: "12px", animation: "pulse 1.5s infinite" }} />
+        <div style={{ height: "36px", background: "#F3F4F6", borderRadius: "6px", marginBottom: "24px", animation: "pulse 1.5s infinite" }} />
+        <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: "20px" }}>
+          <div style={{ height: "320px", background: "#F3F4F6", borderRadius: "6px", animation: "pulse 1.5s infinite" }} />
+          <div style={{ height: "320px", background: "#F3F4F6", borderRadius: "6px", animation: "pulse 1.5s infinite" }} />
+        </div>
+      </div>
+      <div style={{ width: "272px", background: "#E5E7EB", animation: "pulse 1.5s infinite" }} />
+    </div>
+  );
+}
 
 function ErrorState() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 32px" }}>
-      <span style={{ fontFamily: "serif", fontSize: "64px", color: "var(--border)", marginBottom: "16px" }}>◇</span>
-      <div style={{ color: "var(--text-muted)", marginBottom: "20px" }}>Lot introuvable</div>
-      <Link href="/dashboard" className="btn-ghost" style={{ fontSize: "12px" }}>
-        ← Retour au feed
-      </Link>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px" }}>
+      <span style={{ fontFamily: "serif", fontSize: "64px", color: BORDER, marginBottom: "16px" }}>◇</span>
+      <div style={{ color: "var(--text-muted)", marginBottom: "20px" }}>Lot not found</div>
+      <Link href="/dashboard" className="btn-ghost" style={{ fontSize: "12px" }}>← Back to opportunities</Link>
     </div>
   );
 }
 
-// ── LotPage ──────────────────────────────────────────────────────────────────
-
-function OracleBadge({ artistId }: { artistId: string }) {
-  const { plan } = useAuthStore();
-  const unlocked = plan !== "free";
-
-  const { data: oracle } = useSWR<OracleSignal>(
-    unlocked && artistId ? `oracle-${artistId}` : null,
-    () => artistsApi.oracle(artistId).then((r) => r.data).catch(() => null)
-  );
-
-  if (!oracle || !unlocked) return null;
-  if (oracle.oracle_signal !== "BUY_NOW" && oracle.oracle_signal !== "WATCH") return null;
-
-  const signalStyle = SIGNAL_STYLES[oracle.oracle_signal];
-
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px" }}>
-      <span style={{ fontSize: "11px", color: "var(--gold)" }}>⚡</span>
-      <span style={{
-        fontSize: "9px", fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase",
-        padding: "2px 7px", borderRadius: "3px",
-        background: signalStyle.bg, color: signalStyle.color, border: `1px solid ${signalStyle.border}`,
-      }}>
-        Oracle: {oracle.oracle_signal.replace("_", " ")}
-      </span>
-      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: "var(--text-muted)" }}>
-        · {oracle.oracle_score_6m.toFixed(0)}% confidence · {oracle.oracle_target_upside} upside
-      </span>
-    </div>
-  );
-}
-
+// ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function LotPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const { currency, locale } = useLanguageStore();
+  const [activeTab, setActiveTab] = useState("overview");
 
   const { data: lot, isLoading, error } = useSWR<Lot>(
     id ? `lot-${id}` : null,
-    () => lotsApi.get(id).then((r) => r.data)
+    () => lotsApi.get(id).then(r => r.data)
+  );
+
+  const { data: comparables = [] } = useSWR<Lot[]>(
+    id ? `comparables-${id}` : null,
+    () => lotsApi.comparables(id).then(r => r.data)
   );
 
   const fmt = (v?: number | null) => v != null ? formatPriceInCurrency(v, currency, locale) : "—";
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--obsidian)" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--cream)" }}>
       <Sidebar />
-      <div style={{ flex: 1, marginLeft: "52px", minWidth: 0, overflowX: "hidden" }}>
-        {isLoading ? (
-          <LoadingState />
-        ) : error || !lot ? (
-          <ErrorState />
-        ) : (
-          <div>
-            {/* ── HERO ──────────────────────────────────────────── */}
-            <div style={{ position: "relative", height: "320px", overflow: "hidden", background: "var(--carbon)" }}>
-              {/* Blurred background */}
-              {lot.image_url && (
-                <div style={{
-                  position: "absolute", inset: 0,
-                  backgroundImage: `url(${lot.image_url})`,
-                  backgroundSize: "cover", backgroundPosition: "center",
-                  filter: "blur(32px) brightness(0.25)",
-                  transform: "scale(1.1)",
-                }} />
-              )}
+      <div style={{ flex: 1, marginLeft: "52px", minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <TopBar title="Lot Detail" />
 
-              {/* Dark overlays */}
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, var(--obsidian) 0%, rgba(8,8,9,0.5) 60%, transparent 100%)" }} />
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(8,8,9,0.7) 0%, transparent 60%)" }} />
+        {isLoading ? <LoadingState /> : error || !lot ? <ErrorState /> : (
+          <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
 
-              {/* Content over hero */}
-              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "flex-end", padding: "0 32px 32px" }}>
-                <div style={{ display: "flex", gap: "28px", alignItems: "flex-end", width: "100%" }}>
-                  {/* Artwork thumbnail */}
-                  {lot.image_url && (
-                    <div style={{
-                      width: "120px", height: "160px", flexShrink: 0,
-                      borderRadius: "4px", overflow: "hidden",
-                      border: "1px solid var(--border-light)",
-                      boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
-                    }}>
-                      <img src={lot.image_url} alt={lot.title}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                      />
-                    </div>
-                  )}
+            {/* ── SCROLLABLE MAIN ─────────────────────────────── */}
+            <div style={{ flex: 1, minWidth: 0, overflowY: "auto" }}>
 
-                  {/* Title block */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {lot.artist_name_raw && (
-                      <div style={{ marginBottom: "8px" }}>
-                        <div style={{ fontSize: "11px", fontWeight: 800, color: "var(--gold)", letterSpacing: "0.16em", textTransform: "uppercase" }}>
-                          {lot.artist_name_raw}
-                        </div>
-                        {lot.artist?.id && <OracleBadge artistId={lot.artist.id} />}
-                      </div>
-                    )}
-                    <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "26px", fontWeight: 600, color: "white", lineHeight: 1.3, marginBottom: "12px", maxWidth: "600px" }}>
-                      {lot.title}
-                    </h1>
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                      {lot.category && (
-                        <span style={{ fontSize: "10px", color: "var(--text-muted)", background: "var(--slate)", padding: "3px 8px", borderRadius: "3px", border: "1px solid var(--border)" }}>
-                          {lot.category}
-                        </span>
-                      )}
-                      {lot.auction_house_name && (
-                        <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
-                          {lot.auction_house_name.split("—")[0].trim()}
-                        </span>
-                      )}
-                      {lot.auction_date && (
-                        <span style={{ fontFamily: "monospace", fontSize: "11px", color: "var(--text-muted)" }}>
-                          {formatDate(lot.auction_date)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Price + actions */}
-                  <div style={{ flexShrink: 0, textAlign: "right" }}>
-                    {(lot.current_price || lot.estimate_low) && (
-                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "28px", fontWeight: 700, color: "white", lineHeight: 1, marginBottom: "4px" }}>
-                        {fmt(lot.current_price || lot.estimate_low)}
-                      </div>
-                    )}
-                    {lot.pct_below_low_estimate != null && Math.abs(lot.pct_below_low_estimate) > 5 && (
-                      <div style={{ fontFamily: "monospace", fontSize: "13px", color: "var(--green)", marginBottom: "12px" }}>
-                        -{lot.pct_below_low_estimate.toFixed(0)}% sous estimation
-                      </div>
-                    )}
-                    <WishlistButton lotId={id} size="md" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Back button */}
-              <div style={{ position: "absolute", top: "20px", left: "32px" }}>
-                <Link href="/dashboard" className="btn-ghost" style={{ fontSize: "11px" }}>
-                  <ArrowLeft size={12} />
-                  Retour
+              {/* Back nav */}
+              <div style={{ padding: "10px 32px 0", background: "var(--white)" }}>
+                <Link href="/dashboard" style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12px", color: "var(--text-muted)", textDecoration: "none" }}>
+                  <ArrowLeft size={12} /> Back to Opportunities
                 </Link>
               </div>
-            </div>
 
-            {/* ── CONTENT ───────────────────────────────────────── */}
-            <div style={{ padding: "28px 32px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "24px", alignItems: "start" }}>
+              {/* ── HEADER ──────────────────────────────────────── */}
+              <div style={{ background: "var(--white)", borderBottom: `1px solid ${BORDER}`, padding: "16px 32px 22px" }}>
+                <div style={{ display: "flex", gap: "24px", alignItems: "flex-start" }}>
 
-                {/* LEFT COLUMN */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-
-                  {/* Pricing detail */}
-                  <div style={{ background: "var(--graphite)", border: "1px solid var(--border)", borderRadius: "6px", padding: "20px" }}>
-                    <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "16px" }}>
-                      Pricing
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "16px" }}>
-                      {lot.current_price != null && lot.current_price > 0 &&
-                        (!lot.estimate_low || Math.abs(lot.current_price - lot.estimate_low) > 50) && (
-                        <div>
-                          <div style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>Prix actuel</div>
-                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "22px", fontWeight: 700, color: "var(--text-primary)" }}>
-                            {fmt(lot.current_price)}
-                          </div>
-                        </div>
-                      )}
-                      {lot.estimate_low != null && lot.estimate_low > 0 && (
-                        <div>
-                          <div style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>Estimation</div>
-                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "22px", fontWeight: 700, color: "var(--text-primary)" }}>
-                            {fmt(lot.estimate_low)}
-                            {lot.estimate_high != null && lot.estimate_high > lot.estimate_low && (
-                              <span style={{ fontSize: "16px", color: "var(--text-secondary)" }}>
-                                {" "}– {fmt(lot.estimate_high)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      {lot.pct_below_low_estimate != null && Math.abs(lot.pct_below_low_estimate) > 5 && (
-                        <div>
-                          <div style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>vs Estimation basse</div>
-                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "22px", fontWeight: 700, color: lot.pct_below_low_estimate > 0 ? "var(--green)" : "var(--red)" }}>
-                            {lot.pct_below_low_estimate > 0 ? "-" : "+"}{Math.abs(lot.pct_below_low_estimate).toFixed(0)}%
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* ROI Projection */}
-                    {(lot.current_price || lot.estimate_low) && (
-                      <div style={{ marginTop: "20px", paddingTop: "20px", borderTop: "1px solid var(--border)" }}>
-                        <ProjectionBar
-                          price={lot.current_price || lot.estimate_low || 0}
-                          currency={currency}
-                          locale={locale}
-                        />
+                  {/* Artwork image */}
+                  {lot.image_url && (
+                    <div style={{ position: "relative", width: "190px", height: "228px", flexShrink: 0, borderRadius: "6px", overflow: "hidden", border: `1px solid ${BORDER}`, background: "#F3F4F6" }}>
+                      <img src={lot.image_url} alt={lot.title} style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                      <div style={{ position: "absolute", bottom: "8px", left: "8px", right: "8px", display: "flex", justifyContent: "center" }}>
+                        <button style={{ fontSize: "10px", padding: "4px 10px", background: "rgba(0,0,0,0.5)", color: "white", border: "none", borderRadius: "3px", cursor: "pointer" }}>
+                          View full size
+                        </button>
                       </div>
-                    )}
-                  </div>
-
-                  {/* AI Insight */}
-                  {lot.ai_insight && (
-                    <div style={{ background: "var(--graphite)", border: "1px solid var(--border)", borderRadius: "6px", padding: "20px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                        <Sparkles size={13} style={{ color: "var(--gold)" }} />
-                        <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--gold)" }}>
-                          Analyse ArtAlpha
-                        </span>
-                      </div>
-                      <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.7 }}>{lot.ai_insight}</p>
-                      {lot.rationale && lot.rationale.length > 0 && (
-                        <div style={{ marginTop: "14px", paddingTop: "14px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "8px" }}>
-                          {lot.rationale.map((r, i) => (
-                            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
-                              <CheckCircle size={12} style={{ color: "var(--green)", marginTop: "2px", flexShrink: 0 }} />
-                              <span style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1.5 }}>{r}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   )}
 
-                  {/* Description */}
-                  {lot.description && (
-                    <div style={{ background: "var(--graphite)", border: "1px solid var(--border)", borderRadius: "6px", padding: "20px" }}>
-                      <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "12px" }}>
-                        Description
-                      </div>
-                      <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.7 }}>{lot.description}</p>
-                    </div>
-                  )}
-
-                  {/* Lot details */}
-                  <div style={{ background: "var(--graphite)", border: "1px solid var(--border)", borderRadius: "6px", padding: "20px" }}>
-                    <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "16px" }}>
-                      Détails du Lot
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                      {[
-                        { icon: Tag,       label: "N° de lot",   value: lot.lot_number },
-                        { icon: Palette,   label: "Technique",   value: lot.medium },
-                        { icon: Ruler,     label: "Dimensions",  value: lot.dimensions },
-                        { icon: Calendar,  label: "Date de vente", value: formatDate(lot.auction_date) },
-                        { icon: Building2, label: "Maison",      value: lot.auction_house_name },
-                        { icon: Star,      label: "Titre vente", value: lot.auction_sale_title },
-                      ].filter((item) => item.value).map(({ icon: Icon, label, value }) => (
-                        <div key={label} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-                          <Icon size={13} style={{ color: "var(--text-muted)", marginTop: "2px", flexShrink: 0 }} />
-                          <div>
-                            <div style={{ fontSize: "9px", color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "3px" }}>{label}</div>
-                            <div style={{ fontSize: "13px", color: "var(--text-primary)" }}>{value}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Source note */}
-                    <div style={{ marginTop: "16px", padding: "12px", background: "var(--slate)", border: "1px solid var(--border)", borderRadius: "4px", borderLeft: "2px solid var(--gold-dim)" }}>
-                      <p style={{ fontSize: "11px", color: "var(--gold)", fontWeight: 600 }}>
-                        Source : {lot.auction_house_name || String(lot.source)}
-                        {lot.status === "upcoming" && " · Vente à venir"}
-                      </p>
-                      <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px" }}>
-                        Données agrégées automatiquement. Le lien vous amène sur la plateforme source.
-                      </p>
-                    </div>
-
-                    {/* View on source */}
-                    {lot.url && (
-                      <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid var(--border)" }}>
-                        <a
-                          href={lot.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn-gold"
-                          style={{ textDecoration: "none" }}
-                        >
-                          <ExternalLink size={13} />
-                          Voir sur {lot.auction_house_name?.split("—")[0].trim() || String(lot.source)}
-                        </a>
-                        <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "8px" }}>
-                          Ouvre la plateforme source dans un nouvel onglet
-                        </p>
+                  {/* Title + auction info */}
+                  <div style={{ flex: 1, minWidth: 0, paddingTop: "2px" }}>
+                    {lot.artist_name_raw && (
+                      <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "24px", fontWeight: 700, color: NAVY, marginBottom: "3px", lineHeight: 1.2 }}>
+                        {lot.artist_name_raw}
+                      </h1>
+                    )}
+                    <div style={{ fontSize: "15px", color: "var(--text-muted)", marginBottom: "5px" }}>{lot.title}</div>
+                    {(lot.category || lot.medium || lot.dimensions) && (
+                      <div style={{ fontSize: "12px", color: "#9CA3AF", marginBottom: "18px" }}>
+                        {[lot.category, lot.medium, lot.dimensions].filter(Boolean).join(" · ")}
                       </div>
                     )}
+
+                    {/* Auction info row */}
+                    <div style={{ display: "flex", gap: "0", flexWrap: "nowrap" }}>
+                      {lot.auction_house_name && (
+                        <div style={{ paddingRight: "24px", borderRight: `1px solid ${BORDER}` }}>
+                          <div style={{ fontSize: "13px", fontWeight: 700, color: NAVY }}>{lot.auction_house_name.split("—")[0].trim()}</div>
+                          {lot.auction_sale_title && <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{lot.auction_sale_title}</div>}
+                        </div>
+                      )}
+                      {lot.auction_date && (
+                        <div style={{ padding: "0 24px", borderRight: lot.lot_number ? `1px solid ${BORDER}` : "none" }}>
+                          <div style={{ fontSize: "9px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "2px" }}>Sale date</div>
+                          <div style={{ fontSize: "13px", fontWeight: 600, color: NAVY }}>{formatDate(lot.auction_date)}</div>
+                        </div>
+                      )}
+                      {lot.lot_number && (
+                        <div style={{ paddingLeft: "24px" }}>
+                          <div style={{ fontSize: "9px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "2px" }}>Lot</div>
+                          <div style={{ fontSize: "13px", fontWeight: 600, color: NAVY }}>{lot.lot_number}</div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-
-                  {/* Comparables */}
-                  <ComparablesPanel lotId={id} />
-                </div>
-
-                {/* RIGHT COLUMN */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
 
                   {/* Score gauge */}
-                  {lot.deal_score != null && (
-                    <div style={{ background: "var(--graphite)", border: "1px solid var(--border)", borderRadius: "6px", padding: "24px", display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" }}>
-                      <ScoreGauge score={lot.deal_score} />
-
-                      {lot.score_breakdown && (
-                        <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "8px", borderTop: "1px solid var(--border)", paddingTop: "16px" }}>
-                          {[
-                            { label: "Sous estimation",  value: lot.score_breakdown.below_estimate_score },
-                            { label: "Sous marché",      value: lot.score_breakdown.below_market_score },
-                            { label: "Liquidité",        value: lot.score_breakdown.liquidity_score },
-                            { label: "Maison de vente",  value: lot.score_breakdown.house_reputation_score },
-                            { label: "Confiance",        value: lot.score_breakdown.confidence_score },
-                          ].map(({ label, value }) => value != null ? (
-                            <div key={label}>
-                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                                <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>{label}</span>
-                                <span style={{ fontFamily: "monospace", fontSize: "10px", color: "var(--text-secondary)" }}>{value.toFixed(0)}</span>
-                              </div>
-                              <div style={{ height: "3px", background: "var(--border)", borderRadius: "2px", overflow: "hidden" }}>
-                                <div style={{ height: "100%", width: `${Math.max(0, Math.min(100, value))}%`, background: "var(--gold)", borderRadius: "2px" }} />
-                              </div>
-                            </div>
-                          ) : null)}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Artist info */}
-                  <ArtistPanel lot={lot} />
-
-                  {/* Nautilus Oracle */}
-                  {lot.artist?.id && (
-                    <NautilusOracle artistId={lot.artist.id} />
-                  )}
+                  {lot.deal_score != null && <div style={{ flexShrink: 0 }}><ScoreGauge score={lot.deal_score} /></div>}
                 </div>
               </div>
 
-              {/* Related lots */}
-              <RelatedLots lotId={id} />
+              {/* ── KPI STRIP ───────────────────────────────────── */}
+              <KPIStrip lot={lot} fmt={fmt} />
+
+              {/* ── TABS ────────────────────────────────────────── */}
+              <TabsNav
+                activeTab={activeTab}
+                onChange={setActiveTab}
+                tabs={[
+                  { id: "overview",      label: "Overview" },
+                  { id: "comparables",   label: "Comparables", count: comparables.length || null },
+                  { id: "price-history", label: "Price History", disabled: true },
+                  { id: "analysis",      label: "Analysis" },
+                  { id: "provenance",    label: "Provenance" },
+                  { id: "documents",     label: "Documents" },
+                ]}
+              />
+
+              {/* ── TAB CONTENT ─────────────────────────────────── */}
+              <div style={{ padding: "24px 32px" }}>
+
+                {activeTab === "comparables" && (
+                  <ComparablesTab lotId={id} currentPrice={lot.current_price} currency={currency} locale={locale} />
+                )}
+                {activeTab === "price-history" && (
+                  <div style={{ background: "var(--white)", border: `1px solid ${BORDER}`, borderRadius: "6px", padding: "64px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    Price history chart — coming in Sprint C.
+                  </div>
+                )}
+                {activeTab === "analysis" && <AnalysisTab lot={lot} />}
+                {activeTab === "provenance" && <ProvenanceTab lot={lot} />}
+                {activeTab === "documents" && <DocumentsTab lot={lot} />}
+
+                {/* ── OVERVIEW TAB ──────────────────────────────── */}
+                {activeTab === "overview" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+                    {/* Row 1: Price chart + Score breakdown */}
+                    <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: "20px", alignItems: "start" }}>
+                      <div style={{ background: "var(--white)", border: `1px solid ${BORDER}`, borderRadius: "6px", padding: "20px" }}>
+                        <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "14px" }}>
+                          Price vs. Fair Value
+                        </div>
+                        <PriceChart comparables={comparables} lot={lot} fmt={fmt} />
+                      </div>
+                      <ScoreBreakdownPanel lot={lot} />
+                    </div>
+
+                    {/* Row 2: 4-column bottom grid */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px", alignItems: "start" }}>
+                      <div style={{ background: "var(--white)", border: `1px solid ${BORDER}`, borderRadius: "6px", padding: "16px" }}>
+                        <ComparablesMiniTable
+                          comparables={comparables} lot={lot} fmt={fmt}
+                          onViewAll={() => setActiveTab("comparables")}
+                        />
+                      </div>
+                      <div style={{ background: "var(--white)", border: `1px solid ${BORDER}`, borderRadius: "6px", padding: "16px" }}>
+                        <FullSpecs lot={lot} fmt={fmt} />
+                      </div>
+                      <div style={{ background: "var(--white)", border: `1px solid ${BORDER}`, borderRadius: "6px", padding: "16px" }}>
+                        <DocsSection lot={lot} />
+                      </div>
+                      <div style={{ background: "var(--white)", border: `1px solid ${BORDER}`, borderRadius: "6px", padding: "16px" }}>
+                        <AiInsightsSection lot={lot} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Related lots — always show */}
+                <RelatedLots lotId={id} />
+              </div>
             </div>
+
+            {/* ── RIGHT STICKY PANEL ──────────────────────────── */}
+            <RightPanel lot={lot} lotId={id} />
           </div>
         )}
       </div>
