@@ -174,7 +174,16 @@ export default function OpportunityDetail() {
   const fairVal   = estHigh || price * 1.2;
   const upside    = Number(lot.pct_below_low_estimate || 0);
   const upsidePct = upside > 0 ? upside : (fairVal > price ? ((fairVal - price) / price) * 100 : 0);
-  const proj      = (years: number) => Math.round(price * Math.pow(1.07, years));
+  // Use API projections when available, fallback to CAGR calc
+  const _projMap: Record<number, { projected_value_eur: number; gain_pct: number }> = {};
+  if (lot.projection?.years) {
+    for (const p of lot.projection.years) _projMap[p.years] = p;
+  }
+  const projCagr = lot.projection?.cagr_pct || 7;
+  const proj      = (years: number): number =>
+    _projMap[years]?.projected_value_eur ?? Math.round(price * Math.pow(1 + projCagr / 100, years));
+  const projGainPct = (years: number): number =>
+    _projMap[years]?.gain_pct ?? (price > 0 ? ((proj(years) - price) / price) * 100 : 0);
 
   const isUpcoming = lot.status === 'upcoming' || lot.status === 'preview' ||
     (lot.auction_date && new Date(lot.auction_date) > new Date() && !lot.status);
@@ -324,12 +333,12 @@ export default function OpportunityDetail() {
     ? Math.round(comparables.reduce((s: number, c: any) => s + (c.current_price || 0), 0) / comparables.length)
     : 0;
 
-  // Score pillars
+  // Score pillars — real data from artist + lot
   const scorePillars = [
-    { label: 'Pricing',   value: Math.min(100, Math.max(0, Math.round((lot.pct_below_low_estimate || 0) * 1.2))) },
-    { label: 'Liquidity', value: (lot.due_diligence?.flags?.length || 0) === 0 ? 75 : 35 },
-    { label: 'Momentum',  value: lot.deal_score || 0 },
-    { label: 'Rarity',    value: lot.is_low_supply ? 80 : 40 },
+    { label: 'Pricing',    value: Math.min(100, Math.max(0, Math.round((lot.pct_below_low_estimate || 0) * 1.2))) },
+    { label: 'Liquidity',  value: Math.min(100, Math.round(lot.artist?.liquidity_score ?? 50)) },
+    { label: 'Momentum',   value: lot.artist?.trend === 'up' ? 80 : lot.artist?.trend === 'down' ? 20 : Math.round(lot.deal_score || 50) },
+    { label: 'Sell-thru',  value: lot.artist?.sell_through_rate != null ? Math.min(100, Math.round(lot.artist.sell_through_rate * 100)) : 50 },
   ];
 
   return (
@@ -422,6 +431,11 @@ export default function OpportunityDetail() {
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>SIGNAL</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: verdict.dk, lineHeight: 1 }}>{verdict.icon} {verdict.label}</div>
               <div style={{ fontSize: '9px', color: '#6B7280', marginTop: '5px', lineHeight: 1.4 }}>{verdict.sub}</div>
+              {lot.oracle?.signal && (
+                <div style={{ marginTop: '7px', fontFamily: 'var(--font-mono)', fontSize: '8px', color: lot.oracle.signal === 'BUY_NOW' ? '#4ADE80' : lot.oracle.signal === 'AVOID' ? '#F87171' : '#FCD34D', fontWeight: 700, letterSpacing: '0.08em' }}>
+                  ◆ ORACLE: {lot.oracle.signal === 'BUY_NOW' ? 'BUY NOW' : lot.oracle.signal}
+                </div>
+              )}
             </div>
 
             {/* SCORE */}
@@ -482,10 +496,12 @@ export default function OpportunityDetail() {
               reasons.push("Top 5% conviction score this month");
             if ((lot.deal_score || 0) < 45)
               reasons.push("Low conviction — fees may exceed upside");
-            if ((lot.due_diligence?.flags?.length || 0) > 0)
+            if ((provRisk?.flags?.length || 0) > 0)
               reasons.push("Due diligence flags detected — verify before bidding");
-            if (lot.is_low_supply)
-              reasons.push("Limited supply — scarcity signal");
+            if (lot.oracle?.signal === 'BUY_NOW')
+              reasons.push(`Oracle signal: BUY NOW — ${lot.oracle.narrative || 'strong conviction'}`);
+            if (lot.oracle?.signal === 'AVOID')
+              reasons.push(`Oracle signal: AVOID — ${lot.oracle.narrative || 'below conviction threshold'}`);
             if ((lot.real_cost?.breakeven_pct || 0) > 60)
               reasons.push(`Break-even at €${lot.real_cost?.breakeven_hammer} — needs only ${Math.round(lot.real_cost?.breakeven_pct)}% appreciation`);
             const currencySymbol = (lot.currency === 'USD') ? '$' : (lot.currency === 'GBP') ? '£' : '€';
@@ -725,10 +741,10 @@ export default function OpportunityDetail() {
               const bullets = [
                 upsidePct > 0 && `Fair value ${sym}${Math.round(fairVal).toLocaleString()} — current price is ${upsidePct.toFixed(0)}% below market estimate.`,
                 maxBid && `Recommended max bid: ${sym}${maxBid.toLocaleString()} to preserve upside margin.`,
-                (lot.due_diligence?.flags?.length || 0) > 0
-                  ? `${lot.due_diligence.flags.length} due diligence flag${lot.due_diligence.flags.length > 1 ? 's' : ''} detected — review before bidding.`
+                (provRisk?.flags?.length || 0) > 0
+                  ? `${provRisk!.flags.length} due diligence flag${provRisk!.flags.length > 1 ? 's' : ''} detected — review before bidding.`
                   : 'No provenance or compliance flags detected on this lot.',
-                lot.is_low_supply ? 'Low supply signal — fewer than 3 comparable works currently on market.' : null,
+                lot.oracle?.signal === 'BUY_NOW' ? `Oracle signal: BUY NOW · ${lot.oracle.target_upside ? `+${lot.oracle.target_upside}% target upside` : 'strong conviction'}` : null,
               ].filter(Boolean) as string[];
               const content = (
                 <div style={{ padding: '20px 24px' }}>
@@ -816,38 +832,185 @@ export default function OpportunityDetail() {
               );
             })()}
 
+            {/* ── INTELLIGENCE SIGNALS — Oracle + Artist Profile + Due Diligence ── */}
+            {canSeeAnalysis && (lot.oracle || lot.artist_profile || cycleStage || estBias || consignAlert) && (
+              <div style={{ padding: '0 40px 32px' }}>
+                <div style={sl}>INTELLIGENCE SIGNALS</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+
+                  {/* Oracle signal card */}
+                  {lot.oracle && (() => {
+                    const sig = lot.oracle.signal as string;
+                    const oColor = sig === 'BUY_NOW' ? GL : sig === 'AVOID' ? RED : sig === 'WATCH' ? AMB : BL;
+                    const oBg   = sig === 'BUY_NOW' ? '#F0FDF4' : sig === 'AVOID' ? '#FEF2F2' : sig === 'WATCH' ? '#FFFBEB' : '#EFF6FF';
+                    const oBorder = sig === 'BUY_NOW' ? '#BBF7D0' : sig === 'AVOID' ? '#FECACA' : sig === 'WATCH' ? '#FDE68A' : '#BFDBFE';
+                    const oLabel = sig === 'BUY_NOW' ? 'BUY NOW' : sig;
+                    return (
+                      <div style={{ background: oBg, border: `1px solid ${oBorder}`, borderRadius: '12px', padding: '18px 20px' }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '10px' }}>ORACLE VERDICT</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 800, color: oColor, letterSpacing: '0.04em', marginBottom: '8px' }}>{oLabel}</div>
+                        {lot.oracle.narrative && (
+                          <div style={{ fontSize: '12px', color: LTT2, lineHeight: 1.5, marginBottom: '10px' }}>{lot.oracle.narrative}</div>
+                        )}
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' as const }}>
+                          {lot.oracle.score_6m != null && (
+                            <div>
+                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '2px' }}>6M SCORE</div>
+                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>{lot.oracle.score_6m.toFixed(0)}</div>
+                            </div>
+                          )}
+                          {lot.oracle.score_18m != null && (
+                            <div>
+                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '2px' }}>18M SCORE</div>
+                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>{lot.oracle.score_18m.toFixed(0)}</div>
+                            </div>
+                          )}
+                          {lot.oracle.target_upside != null && (
+                            <div>
+                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '2px' }}>TARGET</div>
+                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: GL }}>+{lot.oracle.target_upside}%</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Artist profile card */}
+                  {lot.artist_profile && (
+                    <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '18px 20px' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '10px' }}>ARTIST PROFILE</div>
+                      {lot.artist_profile.investment_tier && (
+                        <div style={{ marginBottom: '10px' }}>
+                          <span style={{
+                            fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const,
+                            color: lot.artist_profile.investment_tier === 'blue_chip' ? BL : lot.artist_profile.investment_tier === 'emerging' ? GL : AMB,
+                            background: lot.artist_profile.investment_tier === 'blue_chip' ? '#EFF6FF' : lot.artist_profile.investment_tier === 'emerging' ? '#F0FDF4' : '#FFFBEB',
+                            padding: '3px 8px', borderRadius: '3px',
+                          }}>{lot.artist_profile.investment_tier.replace('_', ' ')}</span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' as const, marginBottom: '8px' }}>
+                        {lot.artist_profile.institutional_score != null && (
+                          <div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '2px' }}>INSTITUTIONAL</div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>{lot.artist_profile.institutional_score.toFixed(0)}/100</div>
+                          </div>
+                        )}
+                        {lot.artist_profile.shows_last_12m != null && (
+                          <div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '2px' }}>SHOWS 12M</div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>{lot.artist_profile.shows_last_12m}</div>
+                          </div>
+                        )}
+                        {lot.artist_profile.gallery_count != null && lot.artist_profile.gallery_count > 0 && (
+                          <div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '2px' }}>GALLERIES</div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>{lot.artist_profile.gallery_count}</div>
+                          </div>
+                        )}
+                      </div>
+                      {lot.artist_profile.top_gallery_name && (
+                        <div style={{ fontSize: '11px', color: LTT3, fontStyle: 'italic' }}>Rep. by {lot.artist_profile.top_gallery_name}</div>
+                      )}
+                      {lot.artist_profile.is_pre_auction && (
+                        <div style={{ marginTop: '8px', fontFamily: 'var(--font-mono)', fontSize: '9px', color: AMB, fontWeight: 700 }}>↑ PRE-AUCTION MOMENTUM</div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Due diligence signals */}
+                  {(cycleStage || estBias || consignAlert) && (
+                    <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '18px 20px' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '12px' }}>MARKET SIGNALS</div>
+                      {cycleStage && (
+                        <div style={{ marginBottom: '10px' }}>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '3px' }}>MARKET CYCLE</div>
+                          <span style={{
+                            fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700,
+                            color: cycleStage.stage === 'PEAK' ? RED : cycleStage.stage === 'RECOVERY' ? GL : AMB,
+                          }}>{cycleStage.stage}</span>
+                          {cycleStage.description && <span style={{ fontSize: '11px', color: LTT3, marginLeft: '8px' }}>{cycleStage.description}</span>}
+                        </div>
+                      )}
+                      {estBias && (
+                        <div style={{ marginBottom: '10px' }}>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '3px' }}>ESTIMATE BIAS</div>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: (estBias.pct_above_low_estimate || 0) > 30 ? AMB : GL }}>
+                            {(estBias.pct_above_low_estimate || 0) > 0 ? `+${Math.round(estBias.pct_above_low_estimate)}%` : `${Math.round(estBias.pct_above_low_estimate || 0)}%`} vs history
+                          </span>
+                        </div>
+                      )}
+                      {consignAlert && (
+                        <div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '3px' }}>CONSIGNMENT</div>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: consignAlert.level === 'HIGH VOLUME' ? RED : GL }}>{consignAlert.level}</span>
+                          {consignAlert.message && <div style={{ fontSize: '11px', color: LTT3, marginTop: '2px' }}>{consignAlert.message}</div>}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                </div>
+              </div>
+            )}
+
             {/* ── KEY RISKS + FUTURE VALUE PROJECTIONS — side by side ─────────── */}
             {canSeeAnalysis && (
               <div style={{ padding: '0 40px 32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'stretch' }}>
 
-                {/* KEY RISKS */}
-                <div style={wCard}>
-                  <div style={{ ...sl, marginBottom: '12px' }}>KEY RISKS</div>
-                  {[
-                    { text: 'Limited resale liquidity for niche artists', sev: 'MED' },
-                    { text: 'Auction estimate may be optimistic', sev: 'MED' },
-                    { text: 'Market illiquidity in niche categories', sev: 'HIGH' },
-                  ].map((risk, i, arr) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: i < arr.length - 1 ? `1px solid ${LT}` : 'none' }}>
-                      <span style={{
-                        fontSize: '8px', fontWeight: 700, fontFamily: 'var(--font-mono)',
-                        color: risk.sev === 'HIGH' ? RED : AMB,
-                        background: risk.sev === 'HIGH' ? '#FEE2E2' : '#FEF3C7',
-                        border: `1px solid ${risk.sev === 'HIGH' ? '#FECACA' : '#FDE68A'}`,
-                        padding: '2px 6px', borderRadius: '3px', flexShrink: 0,
-                      }}>{risk.sev}</span>
-                      <span style={{ fontSize: '13px', color: LTT1 }}>{risk.text}</span>
+                {/* KEY RISKS — data-driven */}
+                {(() => {
+                  const risks: { text: string; sev: 'HIGH' | 'MED' | 'LOW' }[] = [];
+                  if (hasProvHighRisk)
+                    risks.push({ text: 'Provenance flags detected — verify title and ownership history before bidding', sev: 'HIGH' });
+                  if (hasCycleRisk)
+                    risks.push({ text: `Market at peak cycle (${cycleStage?.stage}) — limited near-term price upside`, sev: 'HIGH' });
+                  if (hasConsignHigh)
+                    risks.push({ text: 'High consignment volume at this house — oversupply may compress resale prices', sev: 'HIGH' });
+                  if (estBias && Math.abs(estBias.pct_above_low_estimate || 0) > 50)
+                    risks.push({ text: `Estimate may be optimistic — currently +${Math.round(estBias.pct_above_low_estimate || 0)}% above historical average for this artist`, sev: 'MED' });
+                  if (lot.artist?.trend === 'down')
+                    risks.push({ text: 'Artist momentum declining — consider exit timing carefully', sev: 'MED' });
+                  if ((lot.artist?.liquidity_score ?? 60) < 40)
+                    risks.push({ text: 'Low market liquidity for this artist — resale may require 12–24 months', sev: 'MED' });
+                  if (lot.oracle?.signal === 'AVOID')
+                    risks.push({ text: `Oracle signal: AVOID — ${lot.oracle.narrative || 'below conviction threshold'}`, sev: 'HIGH' });
+                  if (risks.length === 0) {
+                    risks.push({ text: 'Standard art market illiquidity — minimum 3–5 year hold recommended', sev: 'LOW' });
+                    risks.push({ text: "Buyer's premium and storage fees increase total acquisition cost", sev: 'LOW' });
+                  }
+                  return (
+                    <div style={wCard}>
+                      <div style={{ ...sl, marginBottom: '12px' }}>KEY RISKS</div>
+                      {risks.map((risk, i, arr) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 0', borderBottom: i < arr.length - 1 ? `1px solid ${LT}` : 'none' }}>
+                          <span style={{
+                            fontSize: '8px', fontWeight: 700, fontFamily: 'var(--font-mono)',
+                            color: risk.sev === 'HIGH' ? RED : risk.sev === 'MED' ? AMB : LTT3,
+                            background: risk.sev === 'HIGH' ? '#FEE2E2' : risk.sev === 'MED' ? '#FEF3C7' : LT,
+                            border: `1px solid ${risk.sev === 'HIGH' ? '#FECACA' : risk.sev === 'MED' ? '#FDE68A' : LTB}`,
+                            padding: '2px 6px', borderRadius: '3px', flexShrink: 0, marginTop: '2px',
+                          }}>{risk.sev}</span>
+                          <span style={{ fontSize: '13px', color: LTT1, lineHeight: 1.5 }}>{risk.text}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
 
                 {/* FUTURE VALUE PROJECTIONS */}
                 {visibleYears.length > 0 ? (
                   <div style={wCard}>
-                    <div style={{ ...sl, marginBottom: '20px' }}>FUTURE VALUE PROJECTIONS · 7% CAGR</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
+                      <div style={sl}>FUTURE VALUE PROJECTIONS · {projCagr.toFixed(1)}% CAGR</div>
+                      {lot.projection?.artist_tier && (
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>{lot.projection.artist_tier.replace('_', ' ')}</span>
+                      )}
+                    </div>
                     {visibleYears.map((y: number) => {
                       const val = proj(y);
-                      const pct = price > 0 ? ((val - price) / price) * 100 : 0;
+                      const pct = projGainPct(y);
                       const w   = maxProjVal > 0 ? Math.min((val / maxProjVal) * 100, 100) : 0;
                       return (
                         <div key={y} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
@@ -860,6 +1023,12 @@ export default function OpportunityDetail() {
                         </div>
                       );
                     })}
+                    {lot.projection?.sell_recommendation && (
+                      <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '6px', padding: '8px 12px', marginTop: '6px' }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GL, letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>OPTIMAL EXIT · </span>
+                        <span style={{ fontSize: '12px', color: LTT2 }}>{lot.projection.sell_recommendation}</span>
+                      </div>
+                    )}
                     <p style={{ fontSize: '11px', fontStyle: 'italic', color: LTT3, marginTop: '10px', lineHeight: 1.6 }}>
                       Projections are indicative only. Art investment carries significant risk. Not financial advice.
                     </p>
