@@ -1,4 +1,4 @@
-// File: /Users/camillefroment/Documents/Claude code/ArtAlpha/frontend/app/artists/emerging/page.tsx
+// File: /Users/camillefroment/Documents/Claude code/artalpha-figma/frontend/app/artists/emerging/page.tsx
 import * as entry from '../../../../../app/artists/emerging/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

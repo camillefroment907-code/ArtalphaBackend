@@ -1,4 +1,4 @@
-// File: /Users/camillefroment/Documents/Claude code/ArtAlpha/frontend/app/dashboard/top-deals/page.tsx
+// File: /Users/camillefroment/Documents/Claude code/artalpha-figma/frontend/app/dashboard/top-deals/page.tsx
 import * as entry from '../../../../../app/dashboard/top-deals/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

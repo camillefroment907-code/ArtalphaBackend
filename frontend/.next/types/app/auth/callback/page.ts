@@ -1,4 +1,4 @@
-// File: /Users/camillefroment/Documents/Claude code/ArtAlpha/frontend/app/auth/callback/page.tsx
+// File: /Users/camillefroment/Documents/Claude code/artalpha-figma/frontend/app/auth/callback/page.tsx
 import * as entry from '../../../../../app/auth/callback/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
