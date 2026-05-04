@@ -177,14 +177,20 @@ async def _fetch_category(
         target = f"{API_URL}?{urlencode(params)}"
         resp = await client.get(
             SCRAPERAPI_URL,
-            params={"api_key": SCRAPERAPI_KEY, "url": target},
-            timeout=30.0,
+            params={
+                "api_key": SCRAPERAPI_KEY,
+                "url": target,
+                "render": "true",       # headless browser — bypasses JS challenges
+                "country_code": "nl",   # Netherlands residential IP (Catawiki origin)
+                "keep_headers": "true",
+            },
+            timeout=45.0,
         )
     else:
         resp = await client.get(API_URL, params=params, timeout=20.0)
 
     if resp.status_code != 200:
-        logger.warning("catawiki_non200", status=resp.status_code, category_id=cat_id)
+        logger.info("catawiki_non200", status=resp.status_code, category_id=cat_id)
         return []
 
     data = resp.json()

@@ -125,7 +125,13 @@ def _map_lot(record: dict) -> Optional[LotNormalized]:
         return None
 
 
-MAX_RATE_LIMIT_WAIT = 30  # seconds — if API asks for more, skip the page
+MAX_RATE_LIMIT_WAIT = 30  # seconds — if API asks for more, abort the run
+
+
+class _QuotaExceeded(Exception):
+    """Raised when ArtMarket API returns a rate-limit with a long retry_after (daily quota)."""
+    def __init__(self, retry_after: int):
+        self.retry_after = retry_after
 
 
 async def _fetch_page(
@@ -137,7 +143,7 @@ async def _fetch_page(
 
     Rate limit policy:
     - If Retry-After <= 30s: wait and retry (up to max_retries times)
-    - If Retry-After > 30s: log and skip immediately (return [], False)
+    - If Retry-After > 30s: raise _QuotaExceeded to abort the entire run
     """
     for attempt in range(max_retries):
         try:
@@ -146,13 +152,7 @@ async def _fetch_page(
             if resp.status_code == 429:
                 retry_after = int(resp.headers.get("Retry-After", 60))
                 if retry_after > MAX_RATE_LIMIT_WAIT:
-                    logger.warning(
-                        "ArtMarket API rate limited — skipping page",
-                        retry_after=retry_after,
-                        search=params.get("search"),
-                        page=params.get("page"),
-                    )
-                    return [], False
+                    raise _QuotaExceeded(retry_after)
                 # Short wait — worth retrying
                 wait = min(retry_after, MAX_RATE_LIMIT_WAIT)
                 logger.warning("ArtMarket API rate limited — waiting", wait=wait, attempt=attempt + 1)
@@ -168,6 +168,8 @@ async def _fetch_page(
             has_more = len(records) >= params.get("limit", 100)
             return records, has_more
 
+        except _QuotaExceeded:
+            raise  # propagate without wrapping
         except Exception as e:
             logger.warning("ArtMarket API fetch error", error=str(e), attempt=attempt + 1)
             if attempt < max_retries - 1:
@@ -255,7 +257,7 @@ class ArtMarketAPIConnector:
     async def fetch_lots(self, limit: int = 5000) -> List[LotNormalized]:
         api_key = os.getenv("ART_MARKET_API_KEY")
         if not api_key:
-            logger.warning("ART_MARKET_API_KEY not set — skipping ArtMarket API")
+            logger.info("artmarketapi_no_key")
             return []
 
         headers = {
@@ -267,68 +269,74 @@ class ArtMarketAPIConnector:
         seen_ids: set = set()
         per_page = 100
 
-        async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
-            for performance in ("upcoming", "sold"):
-                for search_term in _AUCTION_HOUSE_SEARCHES:
-                    if len(all_lots) >= limit:
-                        break
+        try:
+            async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
+                for performance in ("upcoming", "sold"):
+                    for search_term in _AUCTION_HOUSE_SEARCHES:
+                        if len(all_lots) >= limit:
+                            break
 
-                    params: dict = {
-                        "lot_performance": performance,
-                        "search": search_term,
-                        "limit": per_page,
-                        "page": 1,
-                    }
-                    if performance == "sold":
-                        params["sort"] = "sale_date:desc"
+                        params: dict = {
+                            "lot_performance": performance,
+                            "search": search_term,
+                            "limit": per_page,
+                            "page": 1,
+                        }
+                        if performance == "sold":
+                            params["sort"] = "sale_date:desc"
 
-                    records, has_more = await _fetch_page(client, params)
-
-                    if not records:
-                        await asyncio.sleep(7.0)
-                        continue
-
-                    added = 0
-                    for rec in records:
-                        # Skip gallery/primary market lots
-                        if _is_gallery_lot(rec):
-                            continue
-                        lot = _map_lot(rec)
-                        if lot and lot.external_id not in seen_ids:
-                            seen_ids.add(lot.external_id)
-                            all_lots.append(lot)
-                            added += 1
-
-                    logger.info(
-                        "ArtMarket API fetched",
-                        performance=performance,
-                        search=search_term,
-                        records=len(records),
-                        added=added,
-                        total=len(all_lots),
-                    )
-
-                    # Paginate if we got a full page and still need more
-                    page = 2
-                    while has_more and len(all_lots) < limit:
-                        params["page"] = page
                         records, has_more = await _fetch_page(client, params)
+
+                        if not records:
+                            await asyncio.sleep(7.0)
+                            continue
+
+                        added = 0
                         for rec in records:
+                            # Skip gallery/primary market lots
                             if _is_gallery_lot(rec):
                                 continue
                             lot = _map_lot(rec)
                             if lot and lot.external_id not in seen_ids:
                                 seen_ids.add(lot.external_id)
                                 all_lots.append(lot)
-                        page += 1
-                        await asyncio.sleep(7.0)
+                                added += 1
 
-                    await asyncio.sleep(7.0)  # 10 req/min free plan — conservative, 2s minimum per spec
+                        logger.info(
+                            "ArtMarket API fetched",
+                            performance=performance,
+                            search=search_term,
+                            records=len(records),
+                            added=added,
+                            total=len(all_lots),
+                        )
+
+                        # Paginate if we got a full page and still need more
+                        page = 2
+                        while has_more and len(all_lots) < limit:
+                            params["page"] = page
+                            records, has_more = await _fetch_page(client, params)
+                            for rec in records:
+                                if _is_gallery_lot(rec):
+                                    continue
+                                lot = _map_lot(rec)
+                                if lot and lot.external_id not in seen_ids:
+                                    seen_ids.add(lot.external_id)
+                                    all_lots.append(lot)
+                            page += 1
+                            await asyncio.sleep(7.0)
+
+                        await asyncio.sleep(7.0)  # 10 req/min free plan
+
+        except _QuotaExceeded as e:
+            logger.warning("artmarketapi_quota_exceeded",
+                           retry_after=e.retry_after,
+                           note="Daily quota reached — aborting all searches")
 
         logger.info("ArtMarket API: done", total=len(all_lots))
         return all_lots[:limit]
 
-    async def fetch_historical_lots(self, limit: int = 5000, months_back: int = 24) -> List[LotNormalized]:
+    async def fetch_historical_lots(self, limit: int = 5000, months_back: int = 24) -> List[LotNormalized]:  # noqa: C901
         """
         Fetch historically sold lots by iterating backwards through monthly periods.
         Uses sale_date_from / sale_date_to params to target specific time windows.
@@ -357,68 +365,47 @@ class ArtMarketAPIConnector:
         start_time = time.monotonic()
         max_seconds = 110  # stop fetching after 110s so caller's 120s wrapper has margin
 
-        async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
-            # Start from 2 months ago and go back month by month
-            for month_offset in range(2, months_back + 1):
-                if len(all_lots) >= limit:
-                    break
-                if time.monotonic() - start_time > max_seconds:
-                    logger.warning("ArtMarket API historical: time limit reached, returning early",
-                                   total=len(all_lots), elapsed=round(time.monotonic() - start_time))
-                    break
-
-                end_dt = now.replace(day=1) - timedelta(days=(month_offset - 1) * 30)
-                start_dt = end_dt - timedelta(days=30)
-                date_from = start_dt.strftime("%Y-%m-%d")
-                date_to = end_dt.strftime("%Y-%m-%d")
-
-                # Top 5 houses only — 5 terms × 3 months × 7s = ~105s, fits in 120s window
-                top_terms = _AUCTION_HOUSE_SEARCHES[:5]  # Christie's, Sotheby's, Bonhams, Phillips, Heritage
-                for search_term in top_terms:
+        try:
+            async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
+                # Start from 2 months ago and go back month by month
+                for month_offset in range(2, months_back + 1):
                     if len(all_lots) >= limit:
                         break
                     if time.monotonic() - start_time > max_seconds:
+                        logger.info("artmarketapi_historical_time_limit",
+                                    total=len(all_lots), elapsed=round(time.monotonic() - start_time))
                         break
 
-                    params: dict = {
-                        "lot_performance": "sold",
-                        "search": search_term,
-                        "sale_date_from": date_from,
-                        "sale_date_to": date_to,
-                        "limit": per_page,
-                        "page": 1,
-                        "sort": "sale_date:desc",
-                    }
+                    end_dt = now.replace(day=1) - timedelta(days=(month_offset - 1) * 30)
+                    start_dt = end_dt - timedelta(days=30)
+                    date_from = start_dt.strftime("%Y-%m-%d")
+                    date_to = end_dt.strftime("%Y-%m-%d")
 
-                    records, has_more = await _fetch_page(client, params)
+                    # Top 5 houses only — 5 terms × 3 months × 7s = ~105s, fits in 120s window
+                    top_terms = _AUCTION_HOUSE_SEARCHES[:5]  # Christie's, Sotheby's, Bonhams, Phillips, Heritage
+                    for search_term in top_terms:
+                        if len(all_lots) >= limit:
+                            break
+                        if time.monotonic() - start_time > max_seconds:
+                            break
 
-                    if not records:
-                        await asyncio.sleep(7.0)
-                        continue
+                        params: dict = {
+                            "lot_performance": "sold",
+                            "search": search_term,
+                            "sale_date_from": date_from,
+                            "sale_date_to": date_to,
+                            "limit": per_page,
+                            "page": 1,
+                            "sort": "sale_date:desc",
+                        }
 
-                    added = 0
-                    for rec in records:
-                        if _is_gallery_lot(rec):
-                            continue
-                        lot = _map_lot(rec)
-                        if lot and lot.external_id not in seen_ids:
-                            seen_ids.add(lot.external_id)
-                            all_lots.append(lot)
-                            added += 1
-
-                    logger.info(
-                        "ArtMarket API historical",
-                        period=f"{date_from}:{date_to}",
-                        search=search_term,
-                        added=added,
-                        total=len(all_lots),
-                    )
-
-                    # Paginate if full page
-                    page = 2
-                    while has_more and len(all_lots) < limit and (time.monotonic() - start_time) < max_seconds:
-                        params["page"] = page
                         records, has_more = await _fetch_page(client, params)
+
+                        if not records:
+                            await asyncio.sleep(7.0)
+                            continue
+
+                        added = 0
                         for rec in records:
                             if _is_gallery_lot(rec):
                                 continue
@@ -426,10 +413,35 @@ class ArtMarketAPIConnector:
                             if lot and lot.external_id not in seen_ids:
                                 seen_ids.add(lot.external_id)
                                 all_lots.append(lot)
-                        page += 1
-                        await asyncio.sleep(7.0)
+                                added += 1
 
-                    await asyncio.sleep(7.0)
+                        logger.info(
+                            "ArtMarket API historical",
+                            period=f"{date_from}:{date_to}",
+                            search=search_term,
+                            added=added,
+                            total=len(all_lots),
+                        )
+
+                        # Paginate if full page
+                        page = 2
+                        while has_more and len(all_lots) < limit and (time.monotonic() - start_time) < max_seconds:
+                            params["page"] = page
+                            records, has_more = await _fetch_page(client, params)
+                            for rec in records:
+                                if _is_gallery_lot(rec):
+                                    continue
+                                lot = _map_lot(rec)
+                                if lot and lot.external_id not in seen_ids:
+                                    seen_ids.add(lot.external_id)
+                                    all_lots.append(lot)
+                            page += 1
+                            await asyncio.sleep(7.0)
+
+        except _QuotaExceeded as e:
+            logger.warning("artmarketapi_historical_quota_exceeded",
+                           retry_after=e.retry_after,
+                           note="Daily quota reached — aborting historical fetch")
 
         logger.info("ArtMarket API historical: done", total=len(all_lots), months_back=months_back)
         return all_lots[:limit]

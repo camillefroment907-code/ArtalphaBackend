@@ -1,104 +1,217 @@
-"""Phillips auction connector — public JSON API."""
+"""Phillips auction connector.
+
+Scrapes https://www.phillips.com/en/buy/lots via ScraperAPI (if key is set)
+and parses lot data from the page's __NEXT_DATA__ JSON.
+
+Falls back silently (info log, 0 lots) if ScraperAPI is not configured or the
+page structure changes — Phillips lots are also covered by the ArtMarket API
+connector so no data is permanently lost.
+"""
+import json
+import os
+import re
+from datetime import datetime
+from typing import List, Optional
+
 import httpx
 import structlog
-from datetime import datetime
-from typing import List
+from bs4 import BeautifulSoup
+
 from app.models.schemas import LotNormalized, AuctionHouseEnum
 
 logger = structlog.get_logger()
 
+SCRAPERAPI_KEY = os.getenv("SCRAPERAPI_KEY")
+BROWSE_URL = "https://www.phillips.com/en/buy/lots"
+SCRAPERAPI_URL = "https://api.scraperapi.com/"
+
+
+def _safe_float(val) -> Optional[float]:
+    if val is None:
+        return None
+    try:
+        return float(str(val).replace(",", "").replace(" ", "")) or None
+    except (ValueError, TypeError):
+        return None
+
+
+def _safe_date(val) -> Optional[datetime]:
+    if not val:
+        return None
+    try:
+        return datetime.fromisoformat(str(val)[:19].replace("Z", ""))
+    except Exception:
+        return None
+
+
+def _parse_lot(item: dict) -> Optional[LotNormalized]:
+    """Map a Phillips lot dict (from __NEXT_DATA__ or JSON-LD) to LotNormalized."""
+    try:
+        lot_id = str(
+            item.get("lotId") or item.get("id") or item.get("lotNumber") or
+            item.get("webId") or ""
+        )
+        if not lot_id:
+            return None
+
+        title = (
+            item.get("title") or item.get("lotTitle") or
+            item.get("description") or item.get("name") or ""
+        ).strip()
+        if not title or len(title) < 3:
+            return None
+
+        artist = (
+            item.get("makerName") or item.get("artistName") or
+            item.get("maker") or item.get("artist") or ""
+        )
+        if isinstance(artist, dict):
+            artist = artist.get("name") or artist.get("displayName") or ""
+
+        est_low = _safe_float(item.get("estimateLow") or item.get("lowEstimate") or item.get("estimate_low"))
+        est_high = _safe_float(item.get("estimateHigh") or item.get("highEstimate") or item.get("estimate_high"))
+        currency = str(item.get("currency") or item.get("currencyCode") or "USD").upper()
+
+        auction_date = _safe_date(item.get("saleDate") or item.get("auctionDate") or item.get("date"))
+
+        image_url = (
+            item.get("imageUrl") or item.get("primaryImage") or item.get("image") or
+            (item.get("images", [{}])[0].get("url") if item.get("images") else None)
+        )
+
+        sale_id = item.get("saleId") or item.get("saleNumber") or ""
+        url = item.get("url") or (
+            f"https://www.phillips.com/lot/{sale_id}/{lot_id}" if sale_id else
+            f"https://www.phillips.com/lots/{lot_id}"
+        )
+
+        return LotNormalized(
+            external_id=f"phillips-{lot_id}",
+            source=AuctionHouseEnum.OTHER,
+            title=title[:500],
+            artist_name_raw=str(artist)[:500] if artist else None,
+            estimate_low=est_low,
+            estimate_high=est_high,
+            current_price=est_low,
+            currency=currency,
+            auction_date=auction_date,
+            auction_house_name="Phillips",
+            image_url=str(image_url)[:500] if image_url else None,
+            url=str(url)[:500] if url else None,
+            category=item.get("category") or item.get("medium"),
+            medium=item.get("medium") or item.get("materials"),
+            raw_data=item,
+        )
+    except Exception as e:
+        logger.debug("phillips_lot_parse_error", error=str(e))
+        return None
+
+
+def _extract_lots_from_next_data(data: dict) -> List[dict]:
+    """Walk common __NEXT_DATA__ paths to find lot arrays."""
+    candidates: List[dict] = []
+
+    def _walk(obj, depth=0):
+        if depth > 8:
+            return
+        if isinstance(obj, list):
+            for item in obj:
+                if isinstance(item, dict) and (
+                    item.get("lotId") or item.get("lotNumber") or item.get("lotTitle")
+                    or item.get("makerName") or item.get("estimateLow")
+                ):
+                    candidates.append(item)
+                else:
+                    _walk(item, depth + 1)
+        elif isinstance(obj, dict):
+            for v in obj.values():
+                _walk(v, depth + 1)
+
+    _walk(data)
+    return candidates
+
+
+async def _fetch_html(client: httpx.AsyncClient) -> Optional[str]:
+    """Fetch the Phillips browse page via ScraperAPI (if key set) or direct."""
+    try:
+        if SCRAPERAPI_KEY:
+            resp = await client.get(
+                SCRAPERAPI_URL,
+                params={
+                    "api_key": SCRAPERAPI_KEY,
+                    "url": BROWSE_URL,
+                    "render": "true",
+                    "country_code": "gb",   # UK IP — closer to Phillips London
+                    "keep_headers": "true",
+                },
+                timeout=45.0,
+            )
+        else:
+            resp = await client.get(
+                BROWSE_URL,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                    "Accept": "text/html,application/xhtml+xml",
+                },
+                timeout=20.0,
+            )
+
+        if resp.status_code == 200:
+            return resp.text
+        logger.info("phillips_page_fetch_failed", status=resp.status_code)
+    except Exception as e:
+        logger.info("phillips_fetch_error", error=str(e))
+    return None
+
 
 async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
-    lots = []
-    try:
-        async with httpx.AsyncClient(timeout=20, headers={
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-            "Accept": "application/json",
-        }) as client:
-            params = {
-                "upcoming": "true",
-                "size": min(limit, 100),
-                "from": 0,
-                "sort": "saleDate",
-            }
-            resp = await client.get("https://www.phillips.com/api/search/lots", params=params)
-            if resp.status_code != 200:
-                logger.warning("phillips_api_failed", status=resp.status_code)
-                return []
+    lots: List[LotNormalized] = []
+    seen_ids: set = set()
 
-            data = resp.json()
-            items = data.get("results", data.get("lots", data.get("hits", {}).get("hits", [])))
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        html = await _fetch_html(client)
+        if not html:
+            logger.info("phillips_unavailable")
+            return []
 
-            for item in items[:limit]:
+        # Try __NEXT_DATA__ first
+        soup = BeautifulSoup(html, "lxml")
+        script = soup.find("script", {"id": "__NEXT_DATA__"})
+        if script and script.string:
+            try:
+                data = json.loads(script.string)
+                raw_lots = _extract_lots_from_next_data(data)
+                for item in raw_lots:
+                    lot = _parse_lot(item)
+                    if lot and lot.external_id not in seen_ids:
+                        seen_ids.add(lot.external_id)
+                        lots.append(lot)
+                        if len(lots) >= limit:
+                            break
+            except Exception as e:
+                logger.debug("phillips_next_data_parse_error", error=str(e))
+
+        # Fallback: JSON-LD product/auction schema
+        if not lots:
+            for tag in soup.find_all("script", {"type": "application/ld+json"}):
                 try:
-                    src = item.get("_source", item)
-
-                    lot_id = str(src.get("lotId") or src.get("id") or src.get("lotNumber", ""))
-                    if not lot_id:
-                        continue
-
-                    title = src.get("title") or src.get("lotTitle") or src.get("description", "")
-                    artist = src.get("makerName") or src.get("artistName") or src.get("maker", "")
-
-                    estimate_low = None
-                    estimate_high = None
-                    low = src.get("estimateLow") or src.get("lowEstimate")
-                    high = src.get("estimateHigh") or src.get("highEstimate")
-                    if low:
-                        try:
-                            estimate_low = float(str(low).replace(",", ""))
-                        except Exception:
-                            pass
-                    if high:
-                        try:
-                            estimate_high = float(str(high).replace(",", ""))
-                        except Exception:
-                            pass
-
-                    auction_date = None
-                    date_str = src.get("saleDate") or src.get("auctionDate")
-                    if date_str:
-                        try:
-                            auction_date = datetime.fromisoformat(str(date_str)[:19])
-                        except Exception:
-                            pass
-
-                    currency = str(src.get("currency") or src.get("currencyCode") or "USD").upper()
-
-                    image_url = (
-                        src.get("imageUrl") or
-                        src.get("primaryImage") or
-                        (src.get("images", [{}])[0].get("url") if src.get("images") else None)
-                    )
-
-                    sale_id = src.get("saleId") or src.get("saleNumber", "")
-                    url = src.get("url") or (
-                        f"https://www.phillips.com/lot/{sale_id}/{lot_id}" if sale_id else None
-                    )
-
-                    lots.append(LotNormalized(
-                        external_id=f"phillips-{lot_id}",
-                        source=AuctionHouseEnum.OTHER,
-                        title=str(title)[:500] if title else "Untitled",
-                        artist_name_raw=str(artist)[:500] if artist else None,
-                        estimate_low=estimate_low,
-                        estimate_high=estimate_high,
-                        current_price=estimate_low,
-                        currency=currency,
-                        auction_date=auction_date,
-                        auction_house_name="Phillips",
-                        image_url=str(image_url) if image_url else None,
-                        url=url,
-                        category=src.get("category") or src.get("medium"),
-                        medium=src.get("medium") or src.get("materials"),
-                        raw_data=src,
-                    ))
-                except Exception as e:
-                    logger.debug("phillips_lot_parse_error", error=str(e))
+                    ld = json.loads(tag.string or "")
+                    items = ld if isinstance(ld, list) else [ld]
+                    for item in items:
+                        # Handle ItemList
+                        if item.get("@type") == "ItemList":
+                            items = item.get("itemListElement", [])
+                        lot = _parse_lot(item)
+                        if lot and lot.external_id not in seen_ids:
+                            seen_ids.add(lot.external_id)
+                            lots.append(lot)
+                            if len(lots) >= limit:
+                                break
+                except Exception:
                     continue
 
-    except Exception as e:
-        logger.warning("phillips_fetch_failed", error=str(e))
-
-    logger.info("phillips_fetched", count=len(lots))
+    if lots:
+        logger.info("phillips_fetched", count=len(lots))
+    else:
+        logger.info("phillips_no_lots_found")
     return lots
