@@ -1519,7 +1519,11 @@ async def get_comparables(
                     HammerPrice.hammer_price.isnot(None),
                 )
             )
-            .order_by(HammerPrice.sale_date.desc().nullslast())
+            # Prefer records with images (Christie's Lotfinder has 6k+ no-image records)
+            .order_by(
+                HammerPrice.image_url.isnot(None).desc(),
+                HammerPrice.sale_date.desc().nullslast(),
+            )
             .limit(8)
         )
         hammer_comps = hp_result.scalars().all()
@@ -1589,7 +1593,12 @@ async def get_comparables(
 
     # ── Serialize ─────────────────────────────────────────────────────────────
     def _hammer_to_dict(hp: HammerPrice) -> dict:
+        from datetime import timezone
         price_eur = hp.hammer_price_eur or hp.hammer_price
+        days_since: int | None = None
+        if hp.sale_date:
+            sale_dt = hp.sale_date if hp.sale_date.tzinfo else hp.sale_date.replace(tzinfo=timezone.utc)
+            days_since = max(0, (datetime.now(timezone.utc) - sale_dt).days)
         return {
             "id":                     str(hp.id),
             "title":                  hp.artwork_title or "Untitled",
@@ -1604,6 +1613,7 @@ async def get_comparables(
             "image_url":              hp.image_url,
             "auction_house_name":     hp.auction_house,
             "auction_date":           hp.sale_date.isoformat() if hp.sale_date else None,
+            "days_since_sale":        days_since,
             "source":                 hp.source,
             "currency":               "EUR" if hp.hammer_price_eur else (hp.currency or "EUR"),
             "medium":                 hp.medium,
