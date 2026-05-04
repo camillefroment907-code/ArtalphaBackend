@@ -19,6 +19,7 @@ import { WishlistButton } from "@/components/lots/WishlistButton";
 import { GalleryCard } from "@/components/lots/GalleryCard";
 import { TabsNav } from "@/components/lot/TabsNav";
 import { ComparablesTab } from "@/components/lot/ComparablesTab";
+import { ComparablesHero } from "@/components/lot/ComparablesHero";
 import { AnalysisTab } from "@/components/lot/AnalysisTab";
 import { ProvenanceTab } from "@/components/lot/ProvenanceTab";
 import { DocumentsTab } from "@/components/lot/DocumentsTab";
@@ -726,10 +727,15 @@ export default function LotPage({ params }: { params: { id: string } }) {
     () => lotsApi.get(id).then(r => r.data)
   );
 
-  const { data: comparables = [] } = useSWR<Lot[]>(
+  const { data: _rawComparables } = useSWR(
     id ? `comparables-${id}` : null,
     () => lotsApi.comparables(id).then(r => r.data)
   );
+  const comparables: Lot[] = Array.isArray(_rawComparables)
+    ? (_rawComparables as Lot[])
+    : Array.isArray((_rawComparables as unknown as Record<string, unknown>)?.comparables)
+      ? ((_rawComparables as unknown as Record<string, unknown>).comparables as Lot[])
+      : [];
 
   const fmt = (v?: number | null) => v != null ? formatPriceInCurrency(v, currency, locale) : "—";
 
@@ -813,6 +819,14 @@ export default function LotPage({ params }: { params: { id: string } }) {
 
               {/* ── KPI STRIP ───────────────────────────────────── */}
               <KPIStrip lot={lot} fmt={fmt} />
+
+              {/* ── COMPARABLES HERO ────────────────────────────── */}
+              <ComparablesHero
+                lotId={id}
+                currentLotPrice={lot.current_price}
+                currency={currency}
+                locale={locale}
+              />
 
               {/* ── TABS ────────────────────────────────────────── */}
               <TabsNav
