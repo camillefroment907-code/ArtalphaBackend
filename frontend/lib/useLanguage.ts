@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { LANGUAGES, type LangCode } from "./i18n";
+import { LANGUAGES, type LangCode, convertPrice } from "./i18n";
 
 interface LanguageStore {
   lang: LangCode;
@@ -12,11 +12,12 @@ interface LanguageStore {
 }
 
 export function formatPriceInCurrency(price: number, currency: string, locale: string): string {
+  const converted = convertPrice(price, currency);
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
     maximumFractionDigits: 0,
-  }).format(price);
+  }).format(converted);
 }
 
 export const useLanguageStore = create<LanguageStore>()(

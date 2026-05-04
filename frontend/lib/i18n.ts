@@ -1,6 +1,6 @@
 export const LANGUAGES = [
   { code: "fr", label: "Français", flag: "🇫🇷", currency: "EUR", symbol: "€", locale: "fr-FR", rtl: false },
-  { code: "en", label: "English",  flag: "🇬🇧", currency: "GBP", symbol: "£", locale: "en-GB", rtl: false },
+  { code: "en", label: "English",  flag: "🇺🇸", currency: "USD", symbol: "$", locale: "en-US", rtl: false },
   { code: "es", label: "Español",  flag: "🇪🇸", currency: "EUR", symbol: "€", locale: "es-ES", rtl: false },
   { code: "zh", label: "中文",      flag: "🇨🇳", currency: "CNY", symbol: "¥", locale: "zh-CN", rtl: false },
   { code: "ar", label: "العربية",  flag: "🇸🇦", currency: "AED", symbol: "د.إ", locale: "ar-SA", rtl: true },
@@ -14,7 +14,7 @@ export const EXCHANGE_RATES: Record<string, number> = {
   GBP: 0.86,
   CNY: 7.85,
   AED: 3.97,
-  USD: 1.09,
+  USD: 1.10,
 };
 
 export function convertPrice(priceEur: number, targetCurrency: string): number {
