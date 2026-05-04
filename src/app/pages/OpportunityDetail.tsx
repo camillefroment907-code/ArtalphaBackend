@@ -729,26 +729,12 @@ export default function OpportunityDetail() {
                       }
                     />
                   )}
-                  {/* Score breakdown */}
-                  <div style={{ display: 'flex', gap: 24, padding: '16px 0 0', flexWrap: 'wrap' as const }}>
-                    {scorePillars.map(({ label, value }) => (
-                      <div key={label} style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
-                        <span style={{ fontFamily: 'monospace', fontSize: 8, letterSpacing: '0.15em', color: '#9CA3AF', textTransform: 'uppercase' as const }}>{label}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <div style={{ width: 60, height: 3, background: '#E8E4DD', borderRadius: 2, overflow: 'hidden' }}>
-                            <div style={{ width: `${value}%`, height: '100%', background: '#C6A85A' }} />
-                          </div>
-                          <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#111827' }}>{value}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </div>
 
               </div>
 
               {/* RIGHT COLUMN — Lot Details */}
-              <div style={{ ...wCard, alignSelf: 'stretch' }}>
+              <div style={{ ...wCard, height: '100%', boxSizing: 'border-box' }}>
                 <div style={sl}>LOT DETAILS</div>
                 {([
                   { label: 'Artist',     value: lot.artist_name_raw, nav: `/app/artists/${encodeURIComponent(lot.artist_name_raw || '')}`, link: true },
