@@ -24,6 +24,7 @@ import { AnalysisTab } from "@/components/lot/AnalysisTab";
 import { ProvenanceTab } from "@/components/lot/ProvenanceTab";
 import { DocumentsTab } from "@/components/lot/DocumentsTab";
 import { useLanguageStore, formatPriceInCurrency } from "@/lib/useLanguage";
+import { convertPrice } from "@/lib/i18n";
 import { useAuthStore } from "@/lib/store";
 import { computeFairValue, getConfidenceLabel } from "@/lib/lotHelpers";
 
@@ -65,12 +66,6 @@ function pillarColor(v: number): string {
   if (v >= 70) return SUCCESS;
   if (v >= 50) return WARNING;
   return DANGER;
-}
-
-function fmtShort(v: number): string {
-  if (v >= 1_000_000) return `€${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `€${Math.round(v / 1_000)}K`;
-  return `€${v}`;
 }
 
 // ── ScoreGauge ────────────────────────────────────────────────────────────────
@@ -200,6 +195,13 @@ function KPIStrip({ lot, fmt }: { lot: Lot; fmt: (v?: number | null) => string }
 
 // ── PriceChart ────────────────────────────────────────────────────────────────
 function PriceChart({ comparables, lot, fmt }: { comparables: Lot[]; lot: Lot; fmt: (v?: number | null) => string }) {
+  const { symbol, currency: chartCurrency } = useLanguageStore();
+  const fmtShort = (v: number): string => {
+    const c = convertPrice(v, chartCurrency);
+    if (c >= 1_000_000) return `${symbol}${(c / 1_000_000).toFixed(1)}M`;
+    if (c >= 1_000) return `${symbol}${Math.round(c / 1_000)}K`;
+    return `${symbol}${Math.round(c)}`;
+  };
   const fairValue = computeFairValue(lot);
 
   const points = comparables
@@ -355,15 +357,6 @@ function ScoreBreakdownPanel({ lot }: { lot: Lot }) {
         </div>
       )}
 
-      <div style={{ paddingTop: "14px", borderTop: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: "13px", fontWeight: 700, color: NAVY }}>Total Score</span>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "20px", fontWeight: 700, color: NAVY }}>
-            {score.toFixed(0)}<span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 400 }}>/100</span>
-          </span>
-          <span style={{ fontSize: "11px", fontWeight: 800, color, letterSpacing: "0.06em" }}>{label}</span>
-        </div>
-      </div>
       <button style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: GOLD, background: "none", border: "none", cursor: "pointer", padding: 0, fontWeight: 600 }}>
         How we score <ChevronRight size={12} />
       </button>
@@ -719,7 +712,7 @@ function ErrorState() {
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function LotPage({ params }: { params: { id: string } }) {
   const { id } = params;
-  const { currency, locale } = useLanguageStore();
+  const { currency, locale, lang } = useLanguageStore();
   const [activeTab, setActiveTab] = useState("overview");
 
   const { data: lot, isLoading, error } = useSWR<Lot>(
@@ -819,6 +812,15 @@ export default function LotPage({ params }: { params: { id: string } }) {
 
               {/* ── KPI STRIP ───────────────────────────────────── */}
               <KPIStrip lot={lot} fmt={fmt} />
+
+              {/* ── EUR→USD DISCLAIMER (EN only) ─────────────────── */}
+              {lang === "en" && (
+                <div style={{ padding: "4px 32px", background: "var(--white)", borderBottom: `1px solid ${BORDER}` }}>
+                  <span style={{ fontSize: "10px", fontStyle: "italic", color: "var(--text-muted)" }}>
+                    Prices converted at 1 EUR = 1.10 USD
+                  </span>
+                </div>
+              )}
 
               {/* ── COMPARABLES HERO ────────────────────────────── */}
               <ComparablesHero
