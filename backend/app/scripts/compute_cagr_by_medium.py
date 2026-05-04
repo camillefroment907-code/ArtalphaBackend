@@ -196,15 +196,15 @@ def main():
     print(f"  No segmentation:      {stats['no_segmentation']}")
     print(f"  Errors:               {stats['errors']}")
 
-    # Distribution
+    # Distribution (lateral expand avoids set-returning-in-aggregate error)
     cur.execute("""
-        SELECT
-          jsonb_object_keys(cagr_by_medium::jsonb) AS medium,
-          COUNT(*) AS artists,
-          AVG((cagr_by_medium::jsonb -> jsonb_object_keys(cagr_by_medium::jsonb) ->> 'cagr')::float) AS avg_cagr
-        FROM artists
-        WHERE cagr_by_medium IS NOT NULL
-        GROUP BY medium
+        SELECT med, COUNT(*) AS artists, AVG(cagr_val) AS avg_cagr
+        FROM (
+          SELECT key AS med, (value->>'cagr')::float AS cagr_val
+          FROM artists, jsonb_each(cagr_by_medium::jsonb)
+          WHERE cagr_by_medium IS NOT NULL
+        ) t
+        GROUP BY med
         ORDER BY artists DESC
     """)
     print(f"\n  {'Medium':<18} {'Artists':<9} {'Avg CAGR':>9}")
