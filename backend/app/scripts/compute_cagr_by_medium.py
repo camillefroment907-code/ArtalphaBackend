@@ -1,17 +1,27 @@
 """
-Sprint 2.5 — Per-medium CAGR computation.
+Sprint 2.5 + 2.6 — Per-medium CAGR computation with signal classification
+and cross-medium recommendations.
 
-For each artist with >= 20 sales in any canonical medium group, compute
-CAGR for that (artist, medium) pair using the same logic as Sprint 2:
-  - 10-year rolling window (expand to all history if <10y)
-  - Winsorize 5% standard trim
-  - CAGR = (P_end_median / P_start_median) ^ (1/n_years) - 1
-  - Cap 0-15%
+Sprint 2.5:
+  For each artist with >= 20 sales in any canonical medium group, compute
+  CAGR using: 10-year rolling, winsorize 5%, cap 0–15%.
+
+Sprint 2.6 additions:
+  - Signal: AVOID (<0%) / WATCH (0–3%) / NEUTRAL (3–7%) / BUY (>=7%)
+    Uses cagr_raw (not capped).
+  - Alternatives: top 2 other mediums with delta >= +3% in cagr_raw.
+  - Template-based rationale (no GPT).
 
 Result stored as JSON on artists.cagr_by_medium:
 {
-  "oil_on_canvas": {"cagr": 0.042, "cagr_raw": 0.038, "n_sales": 296, "confidence": "MEDIUM"},
-  "prints":        {"cagr": 0.018, "cagr_raw": 0.021, "n_sales": 1560, "confidence": "HIGH"}
+  "oil_on_canvas": {
+    "cagr": 0.0, "cagr_raw": -0.072, "n_sales": 143, "confidence": "HIGH",
+    "signal": "AVOID",
+    "alternatives": [
+      {"medium": "prints", "cagr": 0.039, "cagr_raw": 0.039, "n_sales": 1578,
+       "delta": 0.111, "signal": "NEUTRAL", "rationale": "Stable demand for Matisse Prints"}
+    ]
+  }
 }
 """
 import os
@@ -22,22 +32,99 @@ import psycopg2.extras
 import numpy as np
 from datetime import datetime, timedelta
 
-# Allow import of sibling module when run directly
 sys.path.insert(0, os.path.dirname(__file__))
 from medium_taxonomy import canonicalize_medium, is_dept_name
 
+# ── CAGR computation constants ────────────────────────────────────────────────
 CAP_UPPER = 0.15
 CAP_LOWER = 0.0
 MIN_SALES = 20
 WINDOW_YEARS = 10
 
+# ── Sprint 2.6 signal constants ───────────────────────────────────────────────
+SIGNAL_BUY_THRESHOLD     = 0.07
+SIGNAL_NEUTRAL_THRESHOLD = 0.03
+SIGNAL_WATCH_THRESHOLD   = 0.0
+ALTERNATIVE_DELTA        = 0.03   # alternative must be >= +3% better in cagr_raw
+MAX_ALTERNATIVES         = 2
+
+MEDIUM_DISPLAY = {
+    'oil_on_canvas':  'Oil on canvas',
+    'prints':         'Prints',
+    'works_on_paper': 'Works on Paper',
+    'sculpture':      'Sculpture',
+    'photography':    'Photography',
+}
+
+
+def classify_signal(cagr_raw: float) -> str:
+    """Signal based on raw (uncapped) CAGR."""
+    if cagr_raw < SIGNAL_WATCH_THRESHOLD:
+        return 'AVOID'
+    if cagr_raw < SIGNAL_NEUTRAL_THRESHOLD:
+        return 'WATCH'
+    if cagr_raw < SIGNAL_BUY_THRESHOLD:
+        return 'NEUTRAL'
+    return 'BUY'
+
+
+def artist_lastname(full_name: str) -> str:
+    parts = full_name.strip().split()
+    return parts[-1] if parts else full_name
+
+
+def generate_rationale(artist_name: str, medium: str, signal: str) -> str:
+    display = MEDIUM_DISPLAY.get(medium, medium.replace('_', ' ').title())
+    name = artist_lastname(artist_name)
+    if signal == 'BUY':
+        return f"Strong demand for {name} {display}"
+    elif signal == 'NEUTRAL':
+        return f"Stable demand for {name} {display}"
+    elif signal == 'WATCH':
+        return f"Modest growth for {name} {display}"
+    return f"Limited momentum for {name} {display}"
+
+
+def find_alternatives(
+    current_medium: str,
+    current_cagr_raw: float,
+    artist_name: str,
+    all_mediums: dict,
+) -> list:
+    """
+    Return up to MAX_ALTERNATIVES mediums where cagr_raw >= current + ALTERNATIVE_DELTA.
+    Filters out AVOID alternatives. Sorted by cagr_raw DESC.
+    """
+    candidates = []
+    for medium, data in all_mediums.items():
+        if medium == current_medium:
+            continue
+        delta = data['cagr_raw'] - current_cagr_raw
+        if delta < ALTERNATIVE_DELTA:
+            continue
+        signal = classify_signal(data['cagr_raw'])
+        if signal == 'AVOID':
+            continue
+        candidates.append({
+            'medium':    medium,
+            'cagr':      data['cagr'],
+            'cagr_raw':  data['cagr_raw'],
+            'n_sales':   data['n_sales'],
+            'delta':     round(delta, 4),
+            'signal':    signal,
+            'rationale': generate_rationale(artist_name, medium, signal),
+        })
+    candidates.sort(key=lambda x: x['cagr_raw'], reverse=True)
+    return candidates[:MAX_ALTERNATIVES]
+
+
+# ── CAGR computation helpers ──────────────────────────────────────────────────
 
 def winsorize(values: list, pct: float = 0.05):
-    """Standard trim: remove bottom pct% and top pct% of values."""
     if len(values) < 4:
         return np.array(values, dtype=float)
     arr = np.array(values, dtype=float)
-    low = np.percentile(arr, pct * 100)
+    low  = np.percentile(arr, pct * 100)
     high = np.percentile(arr, (1 - pct) * 100)
     return arr[(arr >= low) & (arr <= high)]
 
@@ -60,30 +147,25 @@ def confidence_label(n_sales: int) -> str:
     return 'LOW'
 
 
-def compute_for_group(rows: list) -> dict | None:
-    """
-    Given rows (DictRow with hammer_price_eur, sale_date) for one
-    (artist, canonical_medium) pair, compute CAGR. Returns None if insufficient.
-    """
+def compute_for_group(rows: list):
+    """Compute CAGR for one (artist, canonical_medium) group. Returns None if insufficient."""
     if len(rows) < MIN_SALES:
         return None
 
     prices_all = [float(r['hammer_price_eur']) for r in rows]
-    dates_all = [r['sale_date'] for r in rows]
-    n_sales = len(rows)
+    dates_all  = [r['sale_date'] for r in rows]
+    n_sales    = len(rows)
 
-    # Winsorize and pair with dates
-    arr = np.array(prices_all, dtype=float)
-    low = np.percentile(arr, 5)
+    arr  = np.array(prices_all, dtype=float)
+    low  = np.percentile(arr, 5)
     high = np.percentile(arr, 95)
     mask = (arr >= low) & (arr <= high)
     prices_w = arr[mask]
-    dates_w = [d for d, m in zip(dates_all, mask) if m]
+    dates_w  = [d for d, m in zip(dates_all, mask) if m]
 
     if len(prices_w) < 4:
         return None
 
-    # Group by year → median per year
     yearly: dict = {}
     for price, dt in zip(prices_w, dates_w):
         yearly.setdefault(dt.year, []).append(float(price))
@@ -97,9 +179,9 @@ def compute_for_group(rows: list) -> dict | None:
         return None
 
     p_start = float(np.median(yearly[years_sorted[0]]))
-    p_end = float(np.median(yearly[years_sorted[-1]]))
+    p_end   = float(np.median(yearly[years_sorted[-1]]))
 
-    raw = compute_cagr(p_start, p_end, n_years)
+    raw    = compute_cagr(p_start, p_end, n_years)
     capped = cap_cagr(raw)
 
     return {
@@ -110,69 +192,82 @@ def compute_for_group(rows: list) -> dict | None:
     }
 
 
+# ── Main ──────────────────────────────────────────────────────────────────────
+
 def main():
     conn = psycopg2.connect(os.environ['DATABASE_URL'])
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur  = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     cur.execute("SELECT id, name FROM artists ORDER BY name")
     artists = cur.fetchall()
-    total = len(artists)
-    print(f"Computing per-medium CAGR for {total} artists...")
+    total   = len(artists)
+    print(f"Computing per-medium CAGR + signals for {total} artists...")
 
-    cutoff = (datetime.utcnow() - timedelta(days=365 * WINDOW_YEARS)).date()
+    cutoff     = (datetime.utcnow() - timedelta(days=365 * WINDOW_YEARS)).date()
     update_cur = conn.cursor()
     stats = {'with_segmented': 0, 'no_segmentation': 0, 'errors': 0}
 
     for i, artist in enumerate(artists):
         try:
-            # Fetch 10-year window first
+            # ── Fetch sales (10y window, expand if sparse) ────────────────────
             cur.execute("""
                 SELECT hammer_price_eur, sale_date, medium
                 FROM hammer_prices
                 WHERE artist_name = %s
-                  AND hammer_price_eur IS NOT NULL
-                  AND hammer_price_eur > 0
+                  AND hammer_price_eur IS NOT NULL AND hammer_price_eur > 0
                   AND sale_date IS NOT NULL
-                  AND medium IS NOT NULL
-                  AND medium != ''
+                  AND medium IS NOT NULL AND medium != ''
                   AND sale_date >= %s
                 ORDER BY sale_date ASC
             """, (artist['name'], cutoff))
             rows = cur.fetchall()
 
-            # If too few for any meaningful split, fall back to full history
             if len(rows) < MIN_SALES * 2:
                 cur.execute("""
                     SELECT hammer_price_eur, sale_date, medium
                     FROM hammer_prices
                     WHERE artist_name = %s
-                      AND hammer_price_eur IS NOT NULL
-                      AND hammer_price_eur > 0
+                      AND hammer_price_eur IS NOT NULL AND hammer_price_eur > 0
                       AND sale_date IS NOT NULL
-                      AND medium IS NOT NULL
-                      AND medium != ''
+                      AND medium IS NOT NULL AND medium != ''
                     ORDER BY sale_date ASC
                 """, (artist['name'],))
                 rows = cur.fetchall()
 
-            # Bucket by canonical medium (skip dept names + unmatched)
+            # ── Bucket by canonical medium ────────────────────────────────────
             by_medium: dict = {}
             for row in rows:
                 if is_dept_name(row['medium']):
                     continue
                 canonical = canonicalize_medium(row['medium'])
-                if canonical is None:
-                    continue
-                by_medium.setdefault(canonical, []).append(row)
+                if canonical:
+                    by_medium.setdefault(canonical, []).append(row)
 
-            # Compute CAGR for each bucket with >= MIN_SALES
-            cagr_by_medium = {}
+            # ── Compute CAGR per bucket ───────────────────────────────────────
+            cagr_by_medium: dict = {}
             for canonical, group in by_medium.items():
                 result = compute_for_group(group)
                 if result:
                     cagr_by_medium[canonical] = result
 
+            # ── Sprint 2.6: enrich with signals + alternatives ────────────────
             if cagr_by_medium:
+                enriched = {}
+                for medium, data in cagr_by_medium.items():
+                    signal = classify_signal(data['cagr_raw'])
+                    alts   = find_alternatives(
+                        current_medium=medium,
+                        current_cagr_raw=data['cagr_raw'],
+                        artist_name=artist['name'],
+                        all_mediums=cagr_by_medium,
+                    )
+                    enriched[medium] = {
+                        **data,
+                        'signal':       signal,
+                        'alternatives': alts,
+                    }
+                cagr_by_medium = enriched
+
                 update_cur.execute(
                     "UPDATE artists SET cagr_by_medium = %s WHERE id = %s",
                     (json.dumps(cagr_by_medium), artist['id']),
@@ -196,7 +291,7 @@ def main():
     print(f"  No segmentation:      {stats['no_segmentation']}")
     print(f"  Errors:               {stats['errors']}")
 
-    # Distribution (lateral expand avoids set-returning-in-aggregate error)
+    # ── Distribution ──────────────────────────────────────────────────────────
     cur.execute("""
         SELECT med, COUNT(*) AS artists, AVG(cagr_val) AS avg_cagr
         FROM (
@@ -204,12 +299,24 @@ def main():
           FROM artists, jsonb_each(cagr_by_medium::jsonb)
           WHERE cagr_by_medium IS NOT NULL
         ) t
-        GROUP BY med
-        ORDER BY artists DESC
+        GROUP BY med ORDER BY artists DESC
     """)
     print(f"\n  {'Medium':<18} {'Artists':<9} {'Avg CAGR':>9}")
     for r in cur.fetchall():
         print(f"  {r[0]:<18} {r[1]:<9} {r[2]*100:>8.2f}%")
+
+    cur.execute("""
+        SELECT signal, COUNT(*) AS pairs
+        FROM (
+          SELECT value->>'signal' AS signal
+          FROM artists, jsonb_each(cagr_by_medium::jsonb)
+          WHERE cagr_by_medium IS NOT NULL
+        ) t
+        GROUP BY signal ORDER BY pairs DESC
+    """)
+    print(f"\n  Signal distribution:")
+    for r in cur.fetchall():
+        print(f"  {r[0]:<10} {r[1]}")
 
 
 if __name__ == '__main__':
