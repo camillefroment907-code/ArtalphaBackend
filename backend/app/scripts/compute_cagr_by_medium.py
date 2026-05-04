@@ -33,7 +33,7 @@ import numpy as np
 from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.dirname(__file__))
-from medium_taxonomy import canonicalize_medium, is_dept_name
+from medium_taxonomy import canonicalize_medium, is_dept_name, MEDIUM_DISPLAY
 
 # ── CAGR computation constants ────────────────────────────────────────────────
 CAP_UPPER = 0.15
@@ -47,14 +47,6 @@ SIGNAL_NEUTRAL_THRESHOLD = 0.03
 SIGNAL_WATCH_THRESHOLD   = 0.0
 ALTERNATIVE_DELTA        = 0.03   # alternative must be >= +3% better in cagr_raw
 MAX_ALTERNATIVES         = 2
-
-MEDIUM_DISPLAY = {
-    'oil_on_canvas':  'Oil on canvas',
-    'prints':         'Prints',
-    'works_on_paper': 'Works on Paper',
-    'sculpture':      'Sculpture',
-    'photography':    'Photography',
-}
 
 
 def classify_signal(cagr_raw: float) -> str:

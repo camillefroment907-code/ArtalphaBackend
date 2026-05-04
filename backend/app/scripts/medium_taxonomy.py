@@ -97,6 +97,15 @@ CANONICAL_GROUPS = [
 ]
 
 
+MEDIUM_DISPLAY = {
+    'oil_on_canvas':  'Oil on canvas',
+    'prints':         'Prints',
+    'works_on_paper': 'Works on Paper',
+    'sculpture':      'Sculpture',
+    'photography':    'Photography',
+}
+
+
 def is_dept_name(medium_value: str) -> bool:
     """Return True if value is an auction dept name, not a real medium."""
     if not medium_value:

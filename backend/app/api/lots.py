@@ -1466,34 +1466,54 @@ async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
     lot_dict["projection"] = None
     if hammer:
         from app.engines.projections import project_value
-        from app.scripts.medium_taxonomy import canonicalize_medium
+        from app.scripts.medium_taxonomy import canonicalize_medium, MEDIUM_DISPLAY  # noqa: F401
 
-        # ── Sprint 2.5 fallback cascade ──────────────────────────────────────
+        # ── Sprint 2.5 + 2.6 fallback cascade ────────────────────────────────
         # 1. medium-specific CAGR (if lot.medium maps to a canonical group)
         # 2. aggregate CAGR (Sprint 2, per-artist)
         # 3. engine tier-based fallback (inside project_value when override=None)
-        cagr_override = None
-        cagr_source_used = None
-        cagr_medium_used = None
-        cagr_n_sales_used = None
+        cagr_override      = None
+        cagr_raw_used      = None
+        cagr_source_used   = None
+        cagr_medium_used   = None
+        cagr_n_sales_used  = None
         cagr_confidence_used = None
-        cagr_aggregate = lot.artist.cagr_calculated if lot.artist else None
+        signal_used        = None
+        alternatives_used  = []
+        cagr_aggregate     = lot.artist.cagr_calculated if lot.artist else None
 
         if lot.artist:
             canonical = canonicalize_medium(lot.medium) if lot.medium else None
             by_medium = lot.artist.cagr_by_medium or {}
             if canonical and canonical in by_medium:
                 m = by_medium[canonical]
-                cagr_override = m.get('cagr')
-                cagr_source_used = 'medium_specific'
-                cagr_medium_used = canonical
-                cagr_n_sales_used = m.get('n_sales')
+                cagr_override      = m.get('cagr')
+                cagr_raw_used      = m.get('cagr_raw')
+                cagr_source_used   = 'medium_specific'
+                cagr_medium_used   = canonical
+                cagr_n_sales_used  = m.get('n_sales')
                 cagr_confidence_used = m.get('confidence')
+                signal_used        = m.get('signal')
+                # Reshape alternatives for API output
+                for alt in (m.get('alternatives') or []):
+                    alternatives_used.append({
+                        'medium':         alt['medium'],
+                        'medium_display': MEDIUM_DISPLAY.get(alt['medium'], alt['medium'].replace('_', ' ').title()),
+                        'cagr_pct':       round(alt['cagr'] * 100, 2),
+                        'cagr_raw_pct':   round(alt['cagr_raw'] * 100, 2),
+                        'n_sales':        alt['n_sales'],
+                        'delta_pct':      round(alt['delta'] * 100, 2),
+                        'signal':         alt['signal'],
+                        'rationale':      alt['rationale'],
+                    })
             elif lot.artist.cagr_calculated is not None:
-                cagr_override = lot.artist.cagr_calculated
-                cagr_source_used = lot.artist.cagr_source  # 'COMPUTED' | 'TIER_FALLBACK'
-                cagr_n_sales_used = lot.artist.cagr_n_sales
+                cagr_override      = lot.artist.cagr_calculated
+                cagr_source_used   = lot.artist.cagr_source
+                cagr_n_sales_used  = lot.artist.cagr_n_sales
                 cagr_confidence_used = lot.artist.cagr_confidence
+                # Derive signal from aggregate cagr_raw (raw ≈ capped when no floor hit)
+                from app.scripts.compute_cagr_by_medium import classify_signal
+                signal_used = classify_signal(lot.artist.cagr_raw or lot.artist.cagr_calculated or 0)
 
         proj = project_value(
             purchase_price_eur=float(hammer),
@@ -1507,11 +1527,14 @@ async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
         lot_dict["projection"] = {
             "artist_tier":            proj["artist_tier"],
             "cagr_pct":               proj["base_cagr_pct"],
+            "cagr_raw_pct":           round(cagr_raw_used * 100, 2) if cagr_raw_used is not None else proj["base_cagr_pct"],
             "cagr_aggregate_pct":     round(cagr_aggregate * 100, 2) if cagr_aggregate is not None else None,
             "cagr_source":            cagr_source_used,
             "cagr_medium_used":       cagr_medium_used,
             "cagr_confidence":        cagr_confidence_used,
             "cagr_n_sales":           cagr_n_sales_used,
+            "signal":                 signal_used,
+            "alternatives":           alternatives_used,
             "recommended_hold_years": proj["recommended_hold_years"],
             "sell_recommendation":    proj["sell_recommendation"],
             "years":                  proj["projections"],
