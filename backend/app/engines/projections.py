@@ -54,13 +54,22 @@ def project_value(
     popularity_score: float = 50.0,
     trend: str = "stable",
     years: List[int] = None,
+    cagr_override: Optional[float] = None,
 ) -> dict:
-    """Project artwork value over time using compounded growth model."""
+    """Project artwork value over time using compounded growth model.
+
+    If cagr_override is provided (Sprint 2 real per-artist CAGR, already capped
+    0-15%), it is used as the base CAGR instead of the hardcoded tier lookup.
+    Trend/liquidity/popularity micro-adjustments still apply on top.
+    """
     if years is None:
         years = [5, 10, 20, 30, 50]
 
     tier = get_artist_tier(artist_name)
-    base_cagr = ARTIST_TIER_CAGR[tier]
+    if cagr_override is not None:
+        base_cagr = float(cagr_override)
+    else:
+        base_cagr = ARTIST_TIER_CAGR[tier]
     volatility = ARTIST_TIER_VOLATILITY[tier]
 
     trend_adj = {"up": 0.015, "stable": 0.0, "down": -0.012}.get(trend, 0.0)

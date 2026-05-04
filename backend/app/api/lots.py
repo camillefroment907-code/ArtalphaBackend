@@ -1466,6 +1466,9 @@ async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
     lot_dict["projection"] = None
     if hammer:
         from app.engines.projections import project_value
+        # Sprint 2: use real per-artist CAGR if computed, else engine falls back
+        # to hardcoded tier lookup inside project_value
+        artist_cagr = lot.artist.cagr_calculated if lot.artist else None
         proj = project_value(
             purchase_price_eur=float(hammer),
             artist_name=lot.artist_name_raw,
@@ -1473,10 +1476,14 @@ async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
             popularity_score=lot.artist.popularity_score if lot.artist else 50.0,
             trend=lot.artist.trend.value if lot.artist and lot.artist.trend else "stable",
             years=[3, 5, 10],
+            cagr_override=artist_cagr,
         )
         lot_dict["projection"] = {
             "artist_tier":            proj["artist_tier"],
             "cagr_pct":               proj["base_cagr_pct"],
+            "cagr_confidence":        lot.artist.cagr_confidence if lot.artist else None,
+            "cagr_source":            lot.artist.cagr_source if lot.artist else None,
+            "cagr_n_sales":           lot.artist.cagr_n_sales if lot.artist else None,
             "recommended_hold_years": proj["recommended_hold_years"],
             "sell_recommendation":    proj["sell_recommendation"],
             "years":                  proj["projections"],
@@ -1745,4 +1752,5 @@ async def get_lot_projection(
         liquidity_score=lot.artist.liquidity_score if lot.artist else 50.0,
         popularity_score=lot.artist.popularity_score if lot.artist else 50.0,
         trend=lot.artist.trend.value if lot.artist and lot.artist.trend else "stable",
+        cagr_override=lot.artist.cagr_calculated if lot.artist else None,
     )

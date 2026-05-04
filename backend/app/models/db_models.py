@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, String, Integer, Float, Boolean, DateTime, Text,
+    Column, String, Integer, Float, Boolean, DateTime, Date, Text,
     ForeignKey, JSON, Enum, Index, ARRAY, UniqueConstraint, text
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
@@ -163,6 +163,16 @@ class Artist(Base):
     trend = Column(Enum(TrendDirection), default=TrendDirection.STABLE)
     total_lots_sold = Column(Integer, default=0)
     sell_through_rate = Column(Float, default=0.7)
+
+    # Sprint 2 — per-artist CAGR (computed from hammer_prices)
+    cagr_calculated = Column(Float, nullable=True)   # capped 0–15%
+    cagr_raw = Column(Float, nullable=True)           # uncapped
+    cagr_confidence = Column(String(20), nullable=True)  # HIGH / MEDIUM / LOW
+    cagr_source = Column(String(30), nullable=True)       # COMPUTED / TIER_FALLBACK
+    cagr_n_sales = Column(Integer, nullable=True)
+    cagr_window_start = Column(Date, nullable=True)
+    cagr_window_end = Column(Date, nullable=True)
+    cagr_computed_at = Column(DateTime, nullable=True)
 
     # Meta
     last_enriched_at = Column(DateTime, nullable=True)
