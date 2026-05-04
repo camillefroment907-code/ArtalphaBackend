@@ -1466,9 +1466,35 @@ async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
     lot_dict["projection"] = None
     if hammer:
         from app.engines.projections import project_value
-        # Sprint 2: use real per-artist CAGR if computed, else engine falls back
-        # to hardcoded tier lookup inside project_value
-        artist_cagr = lot.artist.cagr_calculated if lot.artist else None
+        from app.scripts.medium_taxonomy import canonicalize_medium
+
+        # ── Sprint 2.5 fallback cascade ──────────────────────────────────────
+        # 1. medium-specific CAGR (if lot.medium maps to a canonical group)
+        # 2. aggregate CAGR (Sprint 2, per-artist)
+        # 3. engine tier-based fallback (inside project_value when override=None)
+        cagr_override = None
+        cagr_source_used = None
+        cagr_medium_used = None
+        cagr_n_sales_used = None
+        cagr_confidence_used = None
+        cagr_aggregate = lot.artist.cagr_calculated if lot.artist else None
+
+        if lot.artist:
+            canonical = canonicalize_medium(lot.medium) if lot.medium else None
+            by_medium = lot.artist.cagr_by_medium or {}
+            if canonical and canonical in by_medium:
+                m = by_medium[canonical]
+                cagr_override = m.get('cagr')
+                cagr_source_used = 'medium_specific'
+                cagr_medium_used = canonical
+                cagr_n_sales_used = m.get('n_sales')
+                cagr_confidence_used = m.get('confidence')
+            elif lot.artist.cagr_calculated is not None:
+                cagr_override = lot.artist.cagr_calculated
+                cagr_source_used = lot.artist.cagr_source  # 'COMPUTED' | 'TIER_FALLBACK'
+                cagr_n_sales_used = lot.artist.cagr_n_sales
+                cagr_confidence_used = lot.artist.cagr_confidence
+
         proj = project_value(
             purchase_price_eur=float(hammer),
             artist_name=lot.artist_name_raw,
@@ -1476,14 +1502,16 @@ async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
             popularity_score=lot.artist.popularity_score if lot.artist else 50.0,
             trend=lot.artist.trend.value if lot.artist and lot.artist.trend else "stable",
             years=[3, 5, 10],
-            cagr_override=artist_cagr,
+            cagr_override=cagr_override,
         )
         lot_dict["projection"] = {
             "artist_tier":            proj["artist_tier"],
             "cagr_pct":               proj["base_cagr_pct"],
-            "cagr_confidence":        lot.artist.cagr_confidence if lot.artist else None,
-            "cagr_source":            lot.artist.cagr_source if lot.artist else None,
-            "cagr_n_sales":           lot.artist.cagr_n_sales if lot.artist else None,
+            "cagr_aggregate_pct":     round(cagr_aggregate * 100, 2) if cagr_aggregate is not None else None,
+            "cagr_source":            cagr_source_used,
+            "cagr_medium_used":       cagr_medium_used,
+            "cagr_confidence":        cagr_confidence_used,
+            "cagr_n_sales":           cagr_n_sales_used,
             "recommended_hold_years": proj["recommended_hold_years"],
             "sell_recommendation":    proj["sell_recommendation"],
             "years":                  proj["projections"],
@@ -1746,11 +1774,23 @@ async def get_lot_projection(
     price = purchase_price or lot.current_price or lot.estimate_low or 1000.0
 
     from app.engines.projections import project_value
+    from app.scripts.medium_taxonomy import canonicalize_medium
+
+    # Sprint 2.5 cascade: medium-specific → aggregate → tier
+    cagr_override = None
+    if lot.artist:
+        canonical = canonicalize_medium(lot.medium) if lot.medium else None
+        by_medium = lot.artist.cagr_by_medium or {}
+        if canonical and canonical in by_medium:
+            cagr_override = by_medium[canonical].get('cagr')
+        elif lot.artist.cagr_calculated is not None:
+            cagr_override = lot.artist.cagr_calculated
+
     return project_value(
         purchase_price_eur=float(price),
         artist_name=lot.artist_name_raw,
         liquidity_score=lot.artist.liquidity_score if lot.artist else 50.0,
         popularity_score=lot.artist.popularity_score if lot.artist else 50.0,
         trend=lot.artist.trend.value if lot.artist and lot.artist.trend else "stable",
-        cagr_override=lot.artist.cagr_calculated if lot.artist else None,
+        cagr_override=cagr_override,
     )

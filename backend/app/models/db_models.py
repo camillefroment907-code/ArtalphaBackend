@@ -165,6 +165,7 @@ class Artist(Base):
     sell_through_rate = Column(Float, default=0.7)
 
     # Sprint 2 — per-artist CAGR (computed from hammer_prices)
+    cagr_by_medium = Column(JSON, nullable=True)     # Sprint 2.5: per-medium breakdown
     cagr_calculated = Column(Float, nullable=True)   # capped 0–15%
     cagr_raw = Column(Float, nullable=True)           # uncapped
     cagr_confidence = Column(String(20), nullable=True)  # HIGH / MEDIUM / LOW
