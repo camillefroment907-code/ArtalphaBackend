@@ -37,6 +37,33 @@ api.interceptors.response.use(
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+export interface ProjectionAlternative {
+  medium: string;
+  medium_display?: string;
+  cagr_pct: number;      // percentage, e.g. 4.3 = 4.3%
+  cagr_raw_pct?: number;
+  n_sales: number;
+  delta_pct: number;     // percentage
+  signal: string;
+  rationale: string;
+}
+
+export interface LotProjection {
+  cagr_pct?: number | null;         // percentage 0–15 (capped)
+  cagr_raw_pct?: number | null;     // percentage, can be negative
+  cagr_aggregate_pct?: number | null;
+  cagr_source?: string;             // 'medium_specific' | 'COMPUTED' | 'TIER_FALLBACK'
+  cagr_medium_used?: string;        // canonical medium key
+  cagr_confidence?: string;         // 'HIGH' | 'MEDIUM' | 'LOW'
+  cagr_n_sales?: number | null;
+  signal?: "AVOID" | "WATCH" | "NEUTRAL" | "BUY";
+  alternatives?: ProjectionAlternative[];
+  recommended_hold_years?: number | null;
+  optimal_exit_label?: string;
+  all_in_cost?: number | null;
+  years?: Record<number, unknown>;
+}
+
 export interface Artist {
   id: string;
   name: string;
@@ -99,6 +126,7 @@ export interface Lot {
   ai_insight?: string;
   time_left_hours?: number;
   fomo_level?: "critical" | "high" | "medium" | "low";
+  projection?: LotProjection;
 }
 
 export interface LotListResponse {

@@ -21,6 +21,7 @@ import { TabsNav } from "@/components/lot/TabsNav";
 import { ComparablesTab } from "@/components/lot/ComparablesTab";
 import { ComparablesHero } from "@/components/lot/ComparablesHero";
 import { AnalysisTab } from "@/components/lot/AnalysisTab";
+import { InvestmentTimeline } from "@/components/lot/InvestmentTimeline";
 import { ProvenanceTab } from "@/components/lot/ProvenanceTab";
 import { DocumentsTab } from "@/components/lot/DocumentsTab";
 import { useLanguageStore, formatPriceInCurrency } from "@/lib/useLanguage";
@@ -855,7 +856,12 @@ export default function LotPage({ params }: { params: { id: string } }) {
                     Price history chart — coming in Sprint C.
                   </div>
                 )}
-                {activeTab === "analysis" && <AnalysisTab lot={lot} />}
+                {activeTab === "analysis" && (
+                  <>
+                    <InvestmentTimeline lot={lot} />
+                    <AnalysisTab lot={lot} />
+                  </>
+                )}
                 {activeTab === "provenance" && <ProvenanceTab lot={lot} />}
                 {activeTab === "documents" && <DocumentsTab lot={lot} />}
 
