@@ -591,6 +591,72 @@ export default function OpportunityDetail() {
         {/* ──────────────── OVERVIEW TAB ──────────────── */}
         {activeTab === 'overview' && (
           <>
+            {/* ── MINI ARTIST CARD ────────────────────────────────────────────── */}
+            {lot.artist_name_raw && (
+              <div style={{ padding: '20px 40px 0' }}>
+                <div
+                  onClick={() => navigate(`/app/artists/${encodeURIComponent(lot.artist_name_raw || '')}`)}
+                  className="comp-card-light"
+                  style={{
+                    background: LTC, border: `1px solid ${LTB}`, borderRadius: '10px',
+                    padding: '14px 20px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '16px',
+                  }}
+                >
+                  {/* Left: avatar placeholder */}
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: DK, border: `0.5px solid ${DKB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: '16px', opacity: 0.4, color: '#F0EDE6' }}>◎</span>
+                  </div>
+                  {/* Center: name + metrics */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px', flexWrap: 'wrap' as const }}>
+                      <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', fontWeight: 600, color: LTT1 }}>{lot.artist_name_raw}</span>
+                      {lot.artist_profile?.investment_tier && (
+                        <span style={{
+                          fontFamily: 'var(--font-mono)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, padding: '2px 7px', borderRadius: '3px',
+                          color: lot.artist_profile.investment_tier === 'blue_chip' ? BL : lot.artist_profile.investment_tier === 'emerging' ? GL : AMB,
+                          background: lot.artist_profile.investment_tier === 'blue_chip' ? '#EFF6FF' : lot.artist_profile.investment_tier === 'emerging' ? '#F0FDF4' : '#FFFBEB',
+                        }}>{lot.artist_profile.investment_tier.replace('_', ' ')}</span>
+                      )}
+                      {lot.artist?.trend && (
+                        <span style={{
+                          fontFamily: 'var(--font-mono)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.08em', padding: '2px 7px', borderRadius: '3px',
+                          color: lot.artist.trend === 'up' ? GL : lot.artist.trend === 'down' ? RED : LTT3,
+                          background: lot.artist.trend === 'up' ? '#F0FDF4' : lot.artist.trend === 'down' ? '#FEF2F2' : LT,
+                        }}>{lot.artist.trend === 'up' ? '↑ RISING' : lot.artist.trend === 'down' ? '↓ FALLING' : '→ STABLE'}</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' as const }}>
+                      {lot.artist?.liquidity_score != null && (
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>
+                          Liquidity <strong style={{ color: LTT2 }}>{Math.round(lot.artist.liquidity_score)}/100</strong>
+                        </span>
+                      )}
+                      {lot.artist?.sell_through_rate != null && (
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>
+                          Sell-thru <strong style={{ color: LTT2 }}>{Math.round(lot.artist.sell_through_rate * 100)}%</strong>
+                        </span>
+                      )}
+                      {lot.artist?.total_lots_sold != null && lot.artist.total_lots_sold > 0 && (
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>
+                          <strong style={{ color: LTT2 }}>{lot.artist.total_lots_sold.toLocaleString()}</strong> lots tracked
+                        </span>
+                      )}
+                      {lot.artist?.avg_auction_price != null && lot.artist.avg_auction_price > 0 && (
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>
+                          Avg <strong style={{ color: LTT2 }}>{lot.artist.avg_auction_price >= 1000 ? `€${(lot.artist.avg_auction_price / 1000).toFixed(0)}K` : `€${Math.round(lot.artist.avg_auction_price)}`}</strong>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Right: CTA */}
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: GOLD, fontWeight: 700, letterSpacing: '0.08em', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    FULL ANALYSIS →
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ── DATA GRID 50/50 ─────────────────────────────────────────────── */}
             <div style={{ padding: '32px 40px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'stretch' }}>
 
@@ -1030,7 +1096,8 @@ export default function OpportunityDetail() {
                       </div>
                     )}
                     <p style={{ fontSize: '11px', fontStyle: 'italic', color: LTT3, marginTop: '10px', lineHeight: 1.6 }}>
-                      Projections are indicative only. Art investment carries significant risk. Not financial advice.
+                      Projections based on historical auction data and statistical modeling, capped at 15% to reflect long-term market realism.
+                      Past performance does not guarantee future returns. Nautilus is not a financial advisor — this is not financial advice.
                     </p>
                   </div>
                 ) : <div />}
@@ -1116,41 +1183,57 @@ export default function OpportunityDetail() {
                 <div style={{ display: 'grid', gridTemplateColumns: displayComps.length === 1 ? '1fr' : displayComps.length === 2 ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '16px' }}>
                   {displayComps.map((comp: any) => {
                     const compPrice = comp.current_price || comp.estimate_low || 0;
+                    const daysAgo = comp.days_since_sale;
+                    const daysLabel = daysAgo != null
+                      ? daysAgo < 30 ? `${daysAgo}d ago`
+                      : daysAgo < 365 ? `${Math.round(daysAgo / 30)}mo ago`
+                      : `${Math.round(daysAgo / 365)}yr ago`
+                      : null;
+                    const premRatio = comp.premium_ratio;
                     return (
                       <div key={comp.id}
                         className="comp-card-light"
-                        onClick={() => navigate(`/app/opportunities/${comp.id}`)}
-                        style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '10px', overflow: 'hidden', cursor: 'pointer' }}
+                        onClick={() => comp.is_historical ? null : navigate(`/app/opportunities/${comp.id}`)}
+                        style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '10px', overflow: 'hidden', cursor: comp.is_historical ? 'default' : 'pointer' }}
                       >
                         {comp.image_url ? (
-                          <div style={{ height: '130px', overflow: 'hidden' }}>
+                          <div style={{ height: '130px', overflow: 'hidden', position: 'relative' }}>
                             <img src={comp.image_url} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            {daysLabel && (
+                              <span style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.65)', color: '#fff', fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>
+                                {daysLabel}
+                              </span>
+                            )}
                           </div>
                         ) : (
-                          <div style={{ height: '130px', background: LT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{ height: '130px', background: LT, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                             <span style={{ fontSize: '28px', opacity: 0.12 }}>◎</span>
+                            {daysLabel && (
+                              <span style={{ position: 'absolute', top: '8px', right: '8px', background: LTB, color: LTT3, fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>
+                                {daysLabel}
+                              </span>
+                            )}
                           </div>
                         )}
                         <div style={{ padding: '12px 14px' }}>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {comp.artist_name_raw || 'Unknown'}
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                            {comp.auction_house_name || comp.artist_name_raw || 'Unknown'}
                           </div>
-                          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '13px', color: LTT1, marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '13px', color: LTT1, marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
                             {comp.title || 'Untitled'}
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600, color: GOLD }}>€{compPrice.toLocaleString('en-GB')}</span>
-                            {comp.deal_score && (
+                            {premRatio && premRatio > 1 ? (
+                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GL, fontWeight: 600 }}>
+                                {Math.round(premRatio * 100)}% of est.
+                              </span>
+                            ) : comp.deal_score ? (
                               <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>
                                 {comp.deal_score.toFixed(0)}/100
                               </span>
-                            )}
+                            ) : null}
                           </div>
-                          {comp.deal_score > (lot.deal_score || 0) && (
-                            <div style={{ fontFamily: 'monospace', fontSize: 9, color: '#1A7F4B', marginTop: 3 }}>
-                              ↑ Better deal
-                            </div>
-                          )}
                         </div>
                       </div>
                     );
