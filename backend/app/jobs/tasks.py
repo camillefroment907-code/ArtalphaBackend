@@ -176,6 +176,7 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
                 select(Lot.source, Lot.external_id).where(
                     Lot.external_id.in_(candidate_eids),
                 )
+            )
             existing_pairs = {
                 (
                     row.source.value if hasattr(row.source, "value") else str(row.source),
