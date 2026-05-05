@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, String, Integer, Float, Boolean, DateTime, Date, Text,
-    ForeignKey, JSON, Enum, Index, ARRAY, UniqueConstraint, text
+    ForeignKey, JSON, Enum, Index, ARRAY, UniqueConstraint, text, TypeDecorator
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.dialects.postgresql import UUID
@@ -16,55 +16,63 @@ class Base(DeclarativeBase):
     pass
 
 
-class _FaultTolerantEnum(Enum):
+class _FaultTolerantEnum(TypeDecorator):
     """
-    SQLAlchemy Enum that never raises LookupError for unknown DB values.
+    Maps the 'auctionhouse' PG enum column to Python AuctionHouse members.
 
-    SQLAlchemy's built-in Enum._object_lookup is keyed by .name (e.g. 'ARTSY')
-    but PostgreSQL stores .value (e.g. 'artsy').  This subclass overrides
-    result_processor with a closure that does value-based lookup so every
-    read from the DB maps correctly regardless of case or copy/adapt calls.
+    TypeDecorator is the correct SQLAlchemy extension point: process_result_value
+    is guaranteed to be called even after dialect type adaptation, unlike Enum
+    subclassing which breaks when SQLAlchemy copies the type for the PG dialect.
+
+    asyncpg returns PG enum values as plain strings.  This decorator converts
+    them to AuctionHouse members, handling both lowercase values ('artsy') and
+    legacy uppercase labels ('ARTSY').
 
     Usage:
         source = Column(_FaultTolerantEnum(AuctionHouse, fallback=AuctionHouse.OTHER))
     """
 
+    impl = String
+    cache_ok = True
+
     def __init__(self, enum_class, *args, fallback=None, **kwargs):
+        self._enum_class = enum_class
         self._fallback_member = fallback
-        super().__init__(enum_class, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
-    def result_processor(self, dialect, coltype):
-        """Return a processor that resolves PG enum labels to Python members."""
-        ec = self.enum_class          # captured by value — survives type copies
-        fallback = self._fallback_member
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, self._enum_class):
+            return value.value
+        return str(value) if value is not None else None
 
-        def process(value):
-            if value is None:
-                return None
-            # 1. Direct value match (e.g. 'artsy' → AuctionHouse.ARTSY)
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        ec = self._enum_class
+        # 1. Direct value match ('artsy' → AuctionHouse.ARTSY)
+        try:
+            return ec(value)
+        except (ValueError, KeyError):
+            pass
+        if isinstance(value, str):
+            # 2. Case-insensitive value ('ARTSY' stored as label)
             try:
-                return ec(value)
+                return ec(value.lower())
             except (ValueError, KeyError):
                 pass
-            if isinstance(value, str):
-                # 2. Case-insensitive value match (legacy UPPERCASE DB rows)
-                try:
-                    return ec(value.lower())
-                except (ValueError, KeyError):
-                    pass
-                # 3. Name-based lookup (e.g. 'ARTSY' → AuctionHouse['ARTSY'])
-                try:
-                    return ec[value.upper()]
-                except (KeyError, AttributeError):
-                    pass
-            if fallback is not None:
-                _logger.warning(
-                    "Unknown enum value %r — mapped to %r", value, fallback.value
-                )
-                return fallback
-            return value  # pass-through as last resort
-
-        return process
+            # 3. Name-based lookup ('ARTSY' → AuctionHouse['ARTSY'])
+            try:
+                return ec[value.upper()]
+            except (KeyError, AttributeError):
+                pass
+        if self._fallback_member is not None:
+            _logger.warning(
+                "Unknown enum value %r — mapped to %r", value, self._fallback_member.value
+            )
+            return self._fallback_member
+        return value  # pass-through as last resort
 
 
 class AuctionHouse(str, enum.Enum):
