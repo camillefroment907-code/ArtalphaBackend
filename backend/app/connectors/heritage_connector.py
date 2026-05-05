@@ -179,7 +179,7 @@ def _parse_lot(item: dict) -> Optional[LotNormalized]:
 
     return LotNormalized(
         external_id=f"heritage-{lot_id}",
-        source=AuctionHouseEnum.OTHER,
+        source=AuctionHouseEnum.HERITAGE,
         title=str(title)[:500],
         artist_name_raw=str(artist)[:500] if artist else None,
         estimate_low=estimate_low,
