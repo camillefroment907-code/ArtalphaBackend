@@ -368,7 +368,12 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
                     estimate_high=lot_data.estimate_high,
                     current_price=lot_data.current_price,
                     currency=lot_data.currency,
-                    auction_date=lot_data.auction_date,
+                    # Strip timezone so asyncpg can write to TIMESTAMP WITHOUT TIME ZONE
+                    auction_date=(
+                        lot_data.auction_date.replace(tzinfo=None)
+                        if lot_data.auction_date and lot_data.auction_date.tzinfo
+                        else lot_data.auction_date
+                    ),
                     auction_house_name=lot_data.auction_house_name,
                     auction_sale_title=lot_data.auction_sale_title,
                     status=_lot_status,
