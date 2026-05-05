@@ -259,7 +259,9 @@ def _compute_similarity(a: LotNormalized, b: LotNormalized) -> float:
 
     # Auction date proximity ±7 days
     if a.auction_date and b.auction_date:
-        delta = abs((a.auction_date - b.auction_date).days)
+        a_date = a.auction_date.replace(tzinfo=None) if a.auction_date.tzinfo else a.auction_date
+        b_date = b.auction_date.replace(tzinfo=None) if b.auction_date.tzinfo else b.auction_date
+        delta = abs((a_date - b_date).days)
         if delta <= 7:
             score += 0.10
 
