@@ -57,6 +57,12 @@ NON_ART_KEYWORDS = {
     "action figure", "toy train", "banknote", "currency note", "gold coin", "silver coin",
 }
 
+# Auction houses we want to sweep completely (all their open lots, not just keyword matches).
+# The sweep uses sellerId once discovered from keyword results or a dedicated name search.
+FEATURED_HOUSES = [
+    "swanley",
+]
+
 
 def _is_art(title: str) -> bool:
     """Heuristic: exclude obvious non-art lots by title keywords."""
@@ -205,14 +211,73 @@ async def _fetch_page(
         return []
 
 
+async def _search_seller_by_name(client: httpx.AsyncClient, house_name: str) -> Optional[int]:
+    """
+    Search for an auction house by name and return their sellerId.
+    Uses the house name as a keyword — the seller name appears in result items.
+    """
+    try:
+        resp = await client.get(
+            SEARCH_URL,
+            params={"keyword": house_name, "status": "open", "rows": 24, "page": 1},
+            timeout=20.0,
+        )
+        if resp.status_code != 200:
+            return None
+        items = resp.json().get("payload", {}).get("items", [])
+        for item in items:
+            seller_name = (item.get("sellerName") or "").lower()
+            if house_name.lower() in seller_name:
+                return item.get("sellerId")
+    except Exception as e:
+        logger.debug("seller_search_error", house=house_name, error=str(e))
+    return None
+
+
+async def _fetch_all_seller_lots(
+    client: httpx.AsyncClient, seller_id: int, max_lots: int = 500
+) -> List[dict]:
+    """Fetch ALL open lots from a seller by their sellerId (all pages, no category filter)."""
+    items: List[dict] = []
+    for page in range(1, 25):  # up to 600 lots
+        try:
+            resp = await client.get(
+                SEARCH_URL,
+                params={
+                    "keyword": "",
+                    "sellerId": seller_id,
+                    "status": "open",
+                    "rows": 24,
+                    "page": page,
+                },
+                timeout=20.0,
+            )
+            if resp.status_code != 200:
+                break
+            page_items = resp.json().get("payload", {}).get("items", [])
+            if not page_items:
+                break
+            items.extend(page_items)
+            if len(items) >= max_lots:
+                break
+            await asyncio.sleep(0.3)
+        except Exception as e:
+            logger.debug("seller_fetch_error", seller_id=seller_id, page=page, error=str(e))
+            break
+    return items
+
+
 async def fetch_lots(limit: int = 600) -> List[LotNormalized]:
     """
     Fetch upcoming fine-art lots from LiveAuctioneers.
     Uses the internal search-party API — no authentication required.
     Queries multiple art keywords × multiple pages to maximise coverage.
+    Also sweeps FEATURED_HOUSES completely so all their lots appear regardless of title.
     """
     lots: List[LotNormalized] = []
     seen_ids: set = set()
+    # Track seller IDs discovered during keyword sweeps
+    discovered_sellers: dict[int, str] = {}  # sellerId → sellerName
 
     # Pages per keyword: spread the budget across all queries
     pages_per_query = max(2, min(5, limit // (len(ART_QUERIES) * 24) + 1))
@@ -224,6 +289,7 @@ async def fetch_lots(limit: int = 600) -> List[LotNormalized]:
             follow_redirects=True,
             verify=False,
         ) as client:
+            # ── Keyword sweep ────────────────────────────────────────────────
             for query in ART_QUERIES:
                 if len(lots) >= limit:
                     break
@@ -235,6 +301,11 @@ async def fetch_lots(limit: int = 600) -> List[LotNormalized]:
                     if not items:
                         break  # no more pages
                     for item in items:
+                        # Track seller IDs for featured house sweeps
+                        sid = item.get("sellerId")
+                        sname = (item.get("sellerName") or "").lower()
+                        if sid and any(h in sname for h in FEATURED_HOUSES):
+                            discovered_sellers[sid] = item.get("sellerName", "")
                         parsed = _parse_lot(item, query=query)
                         if parsed and parsed.external_id not in seen_ids:
                             seen_ids.add(parsed.external_id)
@@ -245,8 +316,34 @@ async def fetch_lots(limit: int = 600) -> List[LotNormalized]:
                 logger.debug("query_done", keyword=query, added=query_added, total=len(lots))
                 await asyncio.sleep(0.5)
 
+            # ── Featured house complete sweep ─────────────────────────────────
+            # For each featured house, discover their sellerId (from keyword
+            # results above, or via a name search) and fetch ALL their lots.
+            for house in FEATURED_HOUSES:
+                # Find seller ID: from keyword results or explicit name search
+                seller_id = next(
+                    (sid for sid, name in discovered_sellers.items() if house in name.lower()),
+                    None,
+                )
+                if seller_id is None:
+                    seller_id = await _search_seller_by_name(client, house)
+
+                if seller_id is None:
+                    logger.debug("featured_house_not_found", house=house)
+                    continue
+
+                all_items = await _fetch_all_seller_lots(client, seller_id, max_lots=500)
+                added = 0
+                for item in all_items:
+                    parsed = _parse_lot(item, query="")
+                    if parsed and parsed.external_id not in seen_ids:
+                        seen_ids.add(parsed.external_id)
+                        lots.append(parsed)
+                        added += 1
+                logger.info("featured_house_sweep", house=house, seller_id=seller_id, added=added)
+
     except Exception as e:
         logger.warning("connector_failed", error=str(e))
 
     logger.info("fetched", count=len(lots))
-    return lots[:limit]
+    return lots

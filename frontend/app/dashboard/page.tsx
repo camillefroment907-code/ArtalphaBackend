@@ -52,6 +52,7 @@ export default function DashboardPage() {
       qs.set("page_size", viewMode === "list" ? "30" : "24");
       qs.set("sort_by", feedMode === "trending" ? "auction_date" : "deal_score");
       qs.set("sort_dir", "desc");
+      qs.set("market_type", "auction");  // All Auctions = auction lots only (no gallery/primary)
       if (feedMode === "deals") qs.set("is_deal", "true");
       if (category)     qs.set("category", category);
       if (searchQuery)  qs.set("search", searchQuery);

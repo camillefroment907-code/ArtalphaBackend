@@ -579,18 +579,18 @@ async def get_top_deals(
     db: AsyncSession = Depends(get_db),
 ):
     today = datetime.utcnow()
-    week_ahead = today + timedelta(days=7)
+    month_ahead = today + timedelta(days=30)
 
     stmt = (
         select(Lot)
         .options(selectinload(Lot.artist))
         .where(
             and_(
-                Lot.is_deal == True,
-                Lot.deal_score.isnot(None),
+                Lot.deal_score >= 70,
                 Lot.auction_date >= today,
-                Lot.auction_date <= week_ahead,
+                Lot.auction_date <= month_ahead,
                 Lot.status == LotStatus.UPCOMING,
+                Lot.market_type == MarketType.AUCTION,
             )
         )
         .order_by(desc(Lot.deal_score))
