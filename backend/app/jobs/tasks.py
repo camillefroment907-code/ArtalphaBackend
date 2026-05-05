@@ -87,56 +87,47 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
     start_time = datetime.utcnow()
 
     if not skip_purge:
-        # 0. Purge UPCOMING lots whose auction_date is more than 1 day past.
-        #    SOLD lots (historical data) are kept — never purged here.
-        #    Must delete FK dependents (score_performance, hammer_prices, user_signals) first.
+        # 0. Soft-archive UPCOMING lots whose auction_date is more than 1 day past.
+        #    Sets status=PAST and archived_at=NOW() — rows are kept for audit history.
+        #    SOLD lots are never touched here.
         async with AsyncSessionLocal() as _cleanup_session:
             from sqlalchemy import text as _text
 
-            async def _purge_by_sql(where_clause: str, params: dict) -> int:
-                """Delete lots matching where_clause, cleaning FK deps first via CTE."""
+            async def _archive_by_sql(where_clause: str, params: dict) -> int:
+                """Soft-archive lots matching where_clause: set status=PAST + archived_at."""
                 result = await _cleanup_session.execute(_text(f"""
-                    WITH to_del AS (
-                        SELECT id FROM lots WHERE {where_clause}
-                    ),
-                    del_score AS (
-                        DELETE FROM score_performance WHERE lot_id IN (SELECT id FROM to_del)
-                    ),
-                    del_hammer AS (
-                        DELETE FROM hammer_prices WHERE lot_id IN (SELECT id FROM to_del)
-                    ),
-                    del_signals AS (
-                        DELETE FROM user_signals WHERE lot_id IN (SELECT id FROM to_del)
-                    )
-                    DELETE FROM lots WHERE id IN (SELECT id FROM to_del)
+                    UPDATE lots
+                    SET status = 'PAST', archived_at = NOW()
+                    WHERE {where_clause}
                 """), params)
                 await _cleanup_session.commit()
                 return result.rowcount
 
             expired_cutoff = datetime.utcnow() - timedelta(days=1)
-            expired_count = await _purge_by_sql(
+            expired_count = await _archive_by_sql(
                 "auction_date IS NOT NULL AND auction_date < :cutoff AND status = 'UPCOMING'",
                 {"cutoff": expired_cutoff},
             )
             if expired_count:
-                logger.info("Purged expired lots", count=expired_count)
+                logger.info("Archived expired lots", count=expired_count)
 
-            # Purge UPCOMING lots with no auction_date older than 3 days
+            # Archive UPCOMING lots with no auction_date older than 3 days
             no_date_cutoff = datetime.utcnow() - timedelta(days=3)
-            no_date_count = await _purge_by_sql(
+            no_date_count = await _archive_by_sql(
                 "auction_date IS NULL AND created_at < :cutoff AND status = 'UPCOMING'",
                 {"cutoff": no_date_cutoff},
             )
             if no_date_count:
-                logger.info("Purged no-date lots", count=no_date_count)
+                logger.info("Archived no-date lots", count=no_date_count)
 
-            # Purge Drouot lots with countdown timer titles (legacy bad data)
-            bad_title_count = await _purge_by_sql(
-                r"title ~ '^\d+h\s*\d+m\s*\d+s'",
-                {},
-            )
-            if bad_title_count:
-                logger.info("Purged countdown-title lots", count=bad_title_count)
+            # Hard-delete Drouot countdown-timer title lots (legacy bad data, no value)
+            from sqlalchemy import text as _text2
+            bad_result = await _cleanup_session.execute(_text2(
+                r"DELETE FROM lots WHERE title ~ '^\d+h\s*\d+m\s*\d+s'"
+            ))
+            await _cleanup_session.commit()
+            if bad_result.rowcount:
+                logger.info("Purged countdown-title lots", count=bad_result.rowcount)
 
     # 1. Fetch lots from all sources (parallel)
     raw_lots = await fetch_all_lots(lots_per_source=lots_per_source)
@@ -368,7 +359,11 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
                     estimate_high=lot_data.estimate_high,
                     current_price=lot_data.current_price,
                     currency=lot_data.currency,
-                    auction_date=lot_data.auction_date,
+                    auction_date=(
+                        lot_data.auction_date.replace(tzinfo=None)
+                        if lot_data.auction_date and lot_data.auction_date.tzinfo
+                        else lot_data.auction_date
+                    ),
                     auction_house_name=lot_data.auction_house_name,
                     auction_sale_title=lot_data.auction_sale_title,
                     status=_lot_status,
@@ -483,6 +478,63 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
         await _run_ai_agents_async()
     except Exception as e:
         logger.warning("ai agents pipeline failed", error=str(e))
+
+    try:
+        await _send_scrape_health_alert()
+    except Exception as e:
+        logger.warning("scrape_health_alert failed", error=str(e))
+
+
+async def _send_scrape_health_alert():
+    """Check scrape_runs written during this poll and email if any source FAILED or EMPTY."""
+    import os
+    from sqlalchemy import select, desc, text as _text
+    from app.database import BgSessionLocal
+    from app.models.scrape_run import ScrapeRun
+
+    async with BgSessionLocal() as session:
+        stmt = (
+            select(ScrapeRun)
+            .where(ScrapeRun.started_at > datetime.utcnow() - timedelta(hours=1))
+            .order_by(desc(ScrapeRun.started_at))
+        )
+        result = await session.execute(stmt)
+        runs = result.scalars().all()
+
+    if not runs:
+        return  # no runs recorded (scrape_runs table empty or very new)
+
+    failed = [r for r in runs if r.status == "FAILED"]
+    empty = [r for r in runs if r.status == "EMPTY"]
+
+    if not failed and not empty:
+        return  # all connectors healthy
+
+    subject = f"[Nautilus] Scraping issues — {len(failed)} failed, {len(empty)} empty"
+
+    rows = ""
+    for r in failed:
+        rows += f"<tr><td><b>{r.source}</b></td><td style='color:red'>FAILED</td><td>{r.error_message or ''}</td></tr>"
+    for r in empty:
+        rows += f"<tr><td><b>{r.source}</b></td><td style='color:orange'>EMPTY</td><td>0 lots returned</td></tr>"
+
+    html = f"""
+<h2>Nautilus — Scraping health alert</h2>
+<p>Run completed at {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC</p>
+<table border="1" cellpadding="6" style="border-collapse:collapse;font-family:monospace">
+  <tr><th>Source</th><th>Status</th><th>Detail</th></tr>
+  {rows}
+</table>
+<p>Check <code>GET /admin/scrape-runs</code> for full details.</p>
+"""
+
+    alert_email = os.environ.get("ALERT_EMAIL", "camillefroment907@gmail.com")
+    try:
+        from app.services.email_base import send_email
+        await send_email(to_email=alert_email, subject=subject, html=html)
+        logger.info("scrape_health_alert_sent", to=alert_email, failed=len(failed), empty=len(empty))
+    except Exception as e:
+        logger.warning("scrape_health_alert_email_failed", error=str(e))
 
 
 @celery_app.task(name="app.jobs.tasks.rescore_live_lots", bind=True)

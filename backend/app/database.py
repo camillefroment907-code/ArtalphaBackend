@@ -92,6 +92,8 @@ async def run_migrations():
         "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'ARTSY'",
         "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'CATAWIKI'",
         "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'ARTCURIAL'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'auctionet'",
+        "ALTER TYPE lotstatus ADD VALUE IF NOT EXISTS 'PAST'",
     ]
     # ALTER TYPE ADD VALUE must run outside any transaction.
     # Use a dedicated NullPool engine with AUTOCOMMIT so asyncpg never wraps it in a TX.
@@ -135,6 +137,22 @@ async def run_migrations():
         "ALTER TABLE lots ADD COLUMN IF NOT EXISTS size_category VARCHAR(50)",
         # Phase 5: content fingerprint for cross-source deduplication
         "ALTER TABLE lots ADD COLUMN IF NOT EXISTS lot_fingerprint VARCHAR(64)",
+        "ALTER TABLE lots ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP WITHOUT TIME ZONE",
+        """CREATE TABLE IF NOT EXISTS scrape_runs (
+            id SERIAL PRIMARY KEY,
+            run_id UUID NOT NULL,
+            source VARCHAR(50) NOT NULL,
+            started_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+            ended_at TIMESTAMP WITHOUT TIME ZONE,
+            status VARCHAR(20) NOT NULL DEFAULT 'RUNNING',
+            n_fetched INTEGER DEFAULT 0,
+            n_inserted INTEGER DEFAULT 0,
+            n_skipped INTEGER DEFAULT 0,
+            error_message TEXT,
+            duration_seconds NUMERIC(10,2)
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_scrape_runs_started ON scrape_runs(started_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_scrape_runs_source_status ON scrape_runs(source, status)",
         # NPS survey: add comment column (guarded — table may not exist yet)
         "DO $$ BEGIN IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'nps_responses') THEN ALTER TABLE nps_responses ADD COLUMN IF NOT EXISTS comment TEXT; END IF; END $$",
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_lots_fingerprint ON lots(lot_fingerprint) WHERE lot_fingerprint IS NOT NULL",

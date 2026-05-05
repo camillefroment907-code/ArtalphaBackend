@@ -1483,3 +1483,40 @@ async def enrich_artist_nationality(body: dict = None) -> Dict[str, Any]:
         "max_artists": max_artists,
         "message": "Nationality enrichment running. Poll GET /api/admin/enrich-artist-nationality/status.",
     }
+
+
+@router.get("/scrape-runs", dependencies=[Depends(verify_admin)])
+async def list_scrape_runs(
+    limit: int = 50,
+    source: Optional[str] = None,
+    status: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get the latest scrape runs for connector health monitoring."""
+    from app.models.scrape_run import ScrapeRun
+    from sqlalchemy import desc
+
+    stmt = select(ScrapeRun).order_by(desc(ScrapeRun.started_at)).limit(min(limit, 200))
+    if source:
+        stmt = stmt.where(ScrapeRun.source == source.upper())
+    if status:
+        stmt = stmt.where(ScrapeRun.status == status.upper())
+
+    result = await db.execute(stmt)
+    runs = result.scalars().all()
+
+    return [
+        {
+            "id": r.id,
+            "run_id": str(r.run_id),
+            "source": r.source,
+            "status": r.status,
+            "started_at": r.started_at.isoformat() if r.started_at else None,
+            "ended_at": r.ended_at.isoformat() if r.ended_at else None,
+            "duration_s": float(r.duration_seconds) if r.duration_seconds else None,
+            "n_fetched": r.n_fetched,
+            "n_inserted": r.n_inserted,
+            "error_message": r.error_message,
+        }
+        for r in runs
+    ]

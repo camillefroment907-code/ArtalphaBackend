@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 
 # ── schedule config ───────────────────────────────────────────
-POLL_INTERVAL_S      = 12 * 60 * 60  # 12h — 2 runs per day
+POLL_INTERVAL_S      = 6 * 60 * 60   # 6h — 4 runs per day
 RESCORE_INTERVAL_S   = 60 * 60   # 60 min
 RESCORE_OFFSET_S     =  5 * 60   # start rescore 5 min after first poll
 RATIONALE_INTERVAL_S = 30 * 60   # 30 min

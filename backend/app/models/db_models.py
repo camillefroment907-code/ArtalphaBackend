@@ -26,6 +26,7 @@ class AuctionHouse(str, enum.Enum):
     ARTMARKETAPI = "artmarketapi"
     LIVEAUCTIONEERS = "liveauctioneers"
     ARTSY = "artsy"
+    AUCTIONET = "auctionet"
     CATAWIKI = "catawiki"
     ARTCURIAL = "artcurial"
     OTHER = "other"
@@ -37,6 +38,7 @@ class LotStatus(str, enum.Enum):
     SOLD = "sold"
     UNSOLD = "unsold"
     WITHDRAWN = "withdrawn"
+    PAST = "past"
 
 
 class MarketType(str, enum.Enum):
@@ -251,6 +253,9 @@ class Lot(Base):
     # Content-based deduplication — hash of (title + artist + est_low + est_high).
     # Prevents the same lot appearing from multiple connectors covering the same house.
     lot_fingerprint = Column(String(64), nullable=True)
+
+    # Soft-delete: set when lot is archived (past auction date, no longer UPCOMING)
+    archived_at = Column(DateTime, nullable=True)
 
     # Meta
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -3,20 +3,10 @@ Auction Aggregator — orchestrates all connectors.
 REAL DATA ONLY. No mock/fake lots.
 """
 import asyncio
+import uuid
+from datetime import datetime
 from typing import List, Dict, Any
 import structlog
-
-
-async def _with_timeout(coro, timeout: float, name: str):
-    """Run a coroutine with a timeout. Returns [] on timeout or error."""
-    try:
-        return await asyncio.wait_for(coro, timeout=timeout)
-    except asyncio.TimeoutError:
-        logger.warning("connector_timeout", connector=name, timeout=timeout)
-        return []
-    except Exception as e:
-        logger.warning("connector_error", connector=name, error=str(e))
-        return []
 
 from app.models.schemas import LotNormalized, AuctionHouseEnum
 from app.connectors import drouot_connector
@@ -29,325 +19,158 @@ logger = structlog.get_logger()
 
 CONNECTORS = {
     AuctionHouseEnum.DROUOT: drouot_connector,
-    # AuctionHouseEnum.INTERENCHERES: interencheres_connector,  # Cloudflare blocked
-    # AuctionHouseEnum.INVALUABLE: invaluable_connector,        # Cloudflare blocked
-    # AuctionHouseEnum.CHRISTIES: christies_connector,          # no public API
-    # AuctionHouseEnum.SOTHEBYS: sothebys_connector,            # no public API
 }
 
 CONNECTOR_METAS = {
     AuctionHouseEnum.DROUOT: drouot_connector.CONNECTOR_META,
-    # AuctionHouseEnum.INTERENCHERES: interencheres_connector.CONNECTOR_META,
-    # AuctionHouseEnum.INVALUABLE: invaluable_connector.CONNECTOR_META,
-    # AuctionHouseEnum.CHRISTIES: christies_connector.CONNECTOR_META,
-    # AuctionHouseEnum.SOTHEBYS: sothebys_connector.CONNECTOR_META,
 }
+
+
+async def _track_connector(
+    name: str,
+    coro,
+    timeout: float = 120.0,
+) -> List[LotNormalized]:
+    """
+    Wrap a connector coroutine with timing, error handling, and scrape_runs persistence.
+    Always returns a list (empty on failure) — never raises.
+    """
+    started_at = datetime.utcnow()
+    run_id = uuid.uuid4()
+    lots: List[LotNormalized] = []
+    status = "SUCCESS"
+    error_message = None
+
+    try:
+        lots = await asyncio.wait_for(coro, timeout=timeout)
+        if not lots:
+            status = "EMPTY"
+    except asyncio.TimeoutError:
+        status = "FAILED"
+        error_message = f"Timeout after {timeout}s"
+        logger.warning("connector_timeout", connector=name, timeout=timeout)
+    except Exception as e:
+        status = "FAILED"
+        error_message = f"{type(e).__name__}: {str(e)[:500]}"
+        logger.warning("connector_error", connector=name, error=str(e))
+
+    ended_at = datetime.utcnow()
+    duration = round((ended_at - started_at).total_seconds(), 2)
+
+    try:
+        from app.database import BgSessionLocal
+        from app.models.scrape_run import ScrapeRun
+        async with BgSessionLocal() as session:
+            run = ScrapeRun(
+                run_id=run_id,
+                source=name,
+                started_at=started_at,
+                ended_at=ended_at,
+                status=status,
+                n_fetched=len(lots),
+                error_message=error_message,
+                duration_seconds=duration,
+            )
+            session.add(run)
+            await session.commit()
+    except Exception as db_err:
+        logger.warning("scrape_run_write_failed", connector=name, error=str(db_err))
+
+    logger.info("connector_done", connector=name, status=status, n_fetched=len(lots), duration_s=duration)
+    return lots
 
 
 async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     """
     Fetch REAL lots only. Never returns mock/fake data.
-
-    Sources:
-    1. DrouotRealConnector — Playwright scraping of drouot.com (always works)
-    2. Live Auctioneers — REST API (requires LIVEAUCTIONEERS_API_KEY in .env)
+    Each connector is wrapped with _track_connector for metrics and error handling.
     """
     real_lots: List[LotNormalized] = []
     seen_ids: set = set()
 
-    # --- Drouot via ScraperAPI headless render (replaces Playwright) ---
-    # Requires SCRAPERAPI_KEY env var. Uses render=true + French IP to bypass Cloudflare.
-    try:
-        from app.connectors.drouot_scraperapi_connector import fetch_lots as drouot_fetch
-        drouot_lots = await _with_timeout(drouot_fetch(lots_per_source), timeout=180, name="drouot_scraperapi")
+    def _merge(lots: List[LotNormalized]) -> int:
         added = 0
-        for lot in drouot_lots:
+        for lot in lots:
             if lot.external_id not in seen_ids:
                 seen_ids.add(lot.external_id)
                 real_lots.append(lot)
                 added += 1
-        if added:
-            logger.info("Drouot (ScraperAPI): fetched", count=added)
-    except Exception as e:
-        logger.warning("Drouot ScraperAPI connector skipped", error=str(e))
+        return added
 
-    # --- Interenchères — disabled (Cloudflare blocks all access, 0 real lots) ---
-    # try:
-    #     from app.connectors.interencheres_real_connector import fetch_lots as ie_fetch
-    #     lots = await ie_fetch(lots_per_source)
-    #     ...
-    # except Exception as e:
-    #     logger.warning("Interenchères real connector skipped", error=str(e))
+    # --- Drouot via ScraperAPI headless render ---
+    from app.connectors.drouot_scraperapi_connector import fetch_lots as drouot_fetch
+    _merge(await _track_connector("DROUOT", drouot_fetch(lots_per_source), timeout=180))
 
-    # --- Invaluable — JSON API scraping (300s timeout) ---
-    try:
-        from app.connectors.invaluable_connector import fetch_lots as inv_fetch
-        inv_lots = await _with_timeout(inv_fetch(lots_per_source), timeout=300, name="invaluable")
-        added = 0
-        for lot in inv_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("Invaluable: fetched", count=added)
-    except Exception as e:
-        logger.warning("Invaluable connector skipped", error=str(e))
+    # --- Invaluable — JSON API scraping ---
+    from app.connectors.invaluable_connector import fetch_lots as inv_fetch
+    _merge(await _track_connector("INVALUABLE", inv_fetch(lots_per_source), timeout=300))
 
-    # --- LiveAuctioneers direct API (no key required, browser headers) ---
-    try:
-        from app.connectors.liveauctioneers_connector import fetch_lots as la_fetch
-        la_lots = await _with_timeout(la_fetch(lots_per_source), timeout=120, name="liveauctioneers")
-        added = 0
-        for lot in la_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("LiveAuctioneers: fetched", count=added)
-    except Exception as e:
-        logger.warning("LiveAuctioneers connector skipped", error=str(e))
+    # --- LiveAuctioneers ---
+    from app.connectors.liveauctioneers_connector import fetch_lots as la_fetch
+    _merge(await _track_connector("LIVEAUCTIONEERS", la_fetch(lots_per_source), timeout=120))
 
-    # --- Artsy — free public API (auction lots, full cursor pagination, 180s timeout) ---
-    try:
-        from app.connectors.artsy_connector import fetch_lots as artsy_fetch
-        artsy_lots = await _with_timeout(artsy_fetch(min(5000, lots_per_source)), timeout=180, name="artsy")
-        added = 0
-        for lot in artsy_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("Artsy: fetched", count=added)
-    except Exception as e:
-        logger.warning("Artsy connector skipped", error=str(e))
+    # --- Artsy auction lots ---
+    from app.connectors.artsy_connector import fetch_lots as artsy_fetch
+    _merge(await _track_connector("ARTSY", artsy_fetch(min(5000, lots_per_source)), timeout=180))
 
-    # --- Auctionet — 300+ European auction houses, public API, no key needed ---
-    try:
-        from app.connectors.auctionet_connector import fetch_lots as auctionet_fetch
-        auctionet_lots = await _with_timeout(auctionet_fetch(lots_per_source), timeout=120, name="auctionet")
-        added = 0
-        for lot in auctionet_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("Auctionet: fetched", count=added)
-    except Exception as e:
-        logger.warning("Auctionet connector skipped", error=str(e))
+    # --- Auctionet — 300+ European auction houses ---
+    from app.connectors.auctionet_connector import fetch_lots as auctionet_fetch
+    _merge(await _track_connector("AUCTIONET", auctionet_fetch(lots_per_source), timeout=120))
 
-    # --- ArtMarket API — Christie's, Sotheby's, Bonhams, Phillips via aggregator (1800s timeout) ---
-    try:
-        from app.connectors.artmarketapi_connector import ArtMarketAPIConnector
-        amapi = ArtMarketAPIConnector()
-        amapi_lots = await _with_timeout(amapi.fetch_lots(lots_per_source), timeout=1800, name="artmarketapi")  # 30 min max
-        added = 0
-        for lot in amapi_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("ArtMarket API: fetched", count=added)
-    except Exception as e:
-        logger.warning("ArtMarket API connector skipped", error=str(e))
+    # --- ArtMarket API — Christie's, Sotheby's, Bonhams, Phillips (30 min max) ---
+    from app.connectors.artmarketapi_connector import ArtMarketAPIConnector
+    _merge(await _track_connector("ARTMARKETAPI", ArtMarketAPIConnector().fetch_lots(lots_per_source), timeout=1800))
 
-    # --- Phillips — public JSON API ---
-    try:
-        from app.connectors.phillips_connector import fetch_lots as phillips_fetch
-        phillips_lots = await phillips_fetch(lots_per_source)
-        added = 0
-        for lot in phillips_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("Phillips: fetched", count=added)
-    except Exception as e:
-        logger.warning("Phillips connector skipped", error=str(e))
+    # --- Phillips ---
+    from app.connectors.phillips_connector import fetch_lots as phillips_fetch
+    _merge(await _track_connector("PHILLIPS", phillips_fetch(lots_per_source), timeout=60))
 
-    # --- Artcurial — public JSON API ---
-    try:
-        from app.connectors.artcurial_connector import fetch_lots as artcurial_fetch
-        artcurial_lots = await artcurial_fetch(lots_per_source)
-        added = 0
-        for lot in artcurial_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("Artcurial: fetched", count=added)
-    except Exception as e:
-        logger.warning("Artcurial connector skipped", error=str(e))
+    # --- Artcurial ---
+    from app.connectors.artcurial_connector import fetch_lots as artcurial_fetch
+    _merge(await _track_connector("ARTCURIAL", artcurial_fetch(lots_per_source), timeout=60))
 
-    # --- Artsper — gallery platform ---
-    try:
-        from app.connectors.artsper_connector import fetch_lots as artsper_fetch
-        artsper_lots = await artsper_fetch(lots_per_source)
-        added = 0
-        for lot in artsper_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("Artsper: fetched", count=added)
-    except Exception as e:
-        logger.warning("Artsper connector skipped", error=str(e))
+    # --- Artsper ---
+    from app.connectors.artsper_connector import fetch_lots as artsper_fetch
+    _merge(await _track_connector("ARTSPER", artsper_fetch(lots_per_source), timeout=60))
 
-    # --- Saatchi Art — primary market ---
-    try:
-        from app.connectors.saatchiart_connector import fetch_lots as saatchi_fetch
-        saatchi_lots = await saatchi_fetch(lots_per_source)
-        added = 0
-        for lot in saatchi_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("Saatchi Art: fetched", count=added)
-    except Exception as e:
-        logger.warning("Saatchi Art connector skipped", error=str(e))
+    # --- Saatchi Art ---
+    from app.connectors.saatchiart_connector import fetch_lots as saatchi_fetch
+    _merge(await _track_connector("SAATCHIART", saatchi_fetch(lots_per_source), timeout=60))
 
-    # --- Singulart — primary market ---
-    try:
-        from app.connectors.singulart_connector import fetch_lots as singulart_fetch
-        singulart_lots = await singulart_fetch(lots_per_source)
-        added = 0
-        for lot in singulart_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("Singulart: fetched", count=added)
-    except Exception as e:
-        logger.warning("Singulart connector skipped", error=str(e))
+    # --- Singulart ---
+    from app.connectors.singulart_connector import fetch_lots as singulart_fetch
+    _merge(await _track_connector("SINGULART", singulart_fetch(lots_per_source), timeout=60))
 
-    # --- Heritage Auctions — public fine art lots ---
-    if False:  # Blocked by Railway IP — re-enable if proxy added
-        try:
-            from app.connectors.heritage_connector import fetch_lots as heritage_fetch
-            heritage_lots = await heritage_fetch(lots_per_source)
-            added = 0
-            for lot in heritage_lots:
-                if lot.external_id not in seen_ids:
-                    seen_ids.add(lot.external_id)
-                    real_lots.append(lot)
-                    added += 1
-            if added:
-                logger.info("Heritage Auctions: fetched", count=added)
-        except Exception as e:
-            logger.warning("Heritage Auctions connector skipped", error=str(e))
+    # --- Heritage Auctions — disabled (Railway IP blocked) ---
+    if False:
+        from app.connectors.heritage_connector import fetch_lots as heritage_fetch
+        _merge(await _track_connector("HERITAGE", heritage_fetch(lots_per_source), timeout=60))
 
-    # --- Catawiki — fine art auction lots (needs SCRAPERAPI_KEY on Railway) ---
-    try:
-        from app.connectors.catawiki_connector import fetch_lots as catawiki_fetch
-        catawiki_lots = await _with_timeout(catawiki_fetch(lots_per_source), timeout=120, name="catawiki")
-        added = 0
-        for lot in catawiki_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("Catawiki: fetched", count=added)
-    except Exception as e:
-        logger.warning("Catawiki connector skipped", error=str(e))
+    # --- Catawiki ---
+    from app.connectors.catawiki_connector import fetch_lots as catawiki_fetch
+    _merge(await _track_connector("CATAWIKI", catawiki_fetch(lots_per_source), timeout=120))
 
-    # --- Barnebys — disabled (no public API, returns 0 real lots) ---
-    # try:
-    #     from app.connectors.barnebys_connector import fetch_lots as barnebys_fetch
-    #     ...
-    # except Exception as e:
-    #     logger.warning("Barnebys connector skipped", error=str(e))
+    # --- Bonhams ---
+    from app.connectors.bonhams_connector import fetch_lots as bonhams_fetch
+    _merge(await _track_connector("BONHAMS", bonhams_fetch(lots_per_source), timeout=60))
 
-    # --- Bonhams — major UK/US auction house ---
-    try:
-        from app.connectors.bonhams_connector import fetch_lots as bonhams_fetch
-        bonhams_lots = await bonhams_fetch(lots_per_source)
-        added = 0
-        for lot in bonhams_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("Bonhams: fetched", count=added)
-    except Exception as e:
-        logger.warning("Bonhams connector skipped", error=str(e))
+    # --- eBay Art ---
+    from app.connectors.ebay_connector import fetch_lots as ebay_fetch
+    _merge(await _track_connector("EBAY", ebay_fetch(lots_per_source), timeout=60))
 
-    # --- eBay Art — auction listings (requires EBAY_CLIENT_ID + EBAY_CLIENT_SECRET) ---
-    try:
-        from app.connectors.ebay_connector import fetch_lots as ebay_fetch
-        ebay_lots = await ebay_fetch(lots_per_source)
-        added = 0
-        for lot in ebay_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("eBay Art: fetched", count=added)
-    except Exception as e:
-        logger.warning("eBay connector skipped", error=str(e))
+    # --- Christie's ---
+    from app.connectors.christies_connector import fetch_lots as christies_fetch
+    _merge(await _track_connector("CHRISTIES", christies_fetch(lots_per_source), timeout=60))
 
-    # --- Christie's — blue chip auction house ---
-    try:
-        from app.connectors.christies_connector import fetch_lots as christies_fetch
-        christies_lots = await christies_fetch(lots_per_source)
-        added = 0
-        for lot in christies_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("Christie's: fetched", count=added)
-    except Exception as e:
-        logger.warning("Christie's connector skipped", error=str(e))
+    # --- Sotheby's ---
+    from app.connectors.sothebys_connector import fetch_lots as sothebys_fetch
+    _merge(await _track_connector("SOTHEBYS", sothebys_fetch(lots_per_source), timeout=60))
 
-    # --- Sotheby's — blue chip auction house ---
-    try:
-        from app.connectors.sothebys_connector import fetch_lots as sothebys_fetch
-        sothebys_lots = await sothebys_fetch(lots_per_source)
-        added = 0
-        for lot in sothebys_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("Sotheby's: fetched", count=added)
-    except Exception as e:
-        logger.warning("Sotheby's connector skipped", error=str(e))
+    # --- Artsy primary market ---
+    from app.connectors.artsy_connector import fetch_primary_lots as artsy_primary_fetch
+    _merge(await _track_connector("ARTSY_PRIMARY", artsy_primary_fetch(min(10000, lots_per_source * 2)), timeout=600))
 
-    # --- Artsy primary market — for sale artworks (600s timeout for 10K lots) ---
-    try:
-        from app.connectors.artsy_connector import fetch_primary_lots as artsy_primary_fetch
-        artsy_primary_lots = await _with_timeout(artsy_primary_fetch(min(10000, lots_per_source * 2)), timeout=600, name="artsy_primary")
-        added = 0
-        for lot in artsy_primary_lots:
-            if lot.external_id not in seen_ids:
-                seen_ids.add(lot.external_id)
-                real_lots.append(lot)
-                added += 1
-        if added:
-            logger.info("Artsy primary: fetched", count=added)
-    except Exception as e:
-        logger.warning("Artsy primary connector skipped", error=str(e))
-
-    # NOTE: Invaluable past lots and ArtMarket API historical are NOT in the regular
-    # 15-min poll cycle — they take hours and block the pipeline.
-    # Run them manually via: python -m app.scripts.bulk_ingest
-
-    logger.info("Aggregation complete — real lots only", total=len(real_lots))
+    logger.info("aggregation_complete", total=len(real_lots))
     return real_lots
 
 

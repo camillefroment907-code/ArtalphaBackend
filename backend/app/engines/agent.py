@@ -166,10 +166,11 @@ async def run_agent_for_alert(
             if alert.artist_name.lower() not in raw:
                 continue
 
-        # Category filter
+        # Category filter (normalize plural/singular: "Paintings" matches "Painting")
         if alert.category:
-            cat = (lot.category or "").lower()
-            if alert.category.lower() not in cat:
+            alert_cat = alert.category.lower().rstrip("s")
+            cat = (lot.category or "").lower().rstrip("s")
+            if alert_cat not in cat:
                 continue
 
         # Subcategory filter
