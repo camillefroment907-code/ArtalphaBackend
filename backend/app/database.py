@@ -205,6 +205,13 @@ async def run_migrations():
         "UPDATE lots SET source = 'artsy'::auctionhouse        WHERE source::text = 'ARTSY'",
         "UPDATE lots SET source = 'catawiki'::auctionhouse     WHERE source::text = 'CATAWIKI'",
         "UPDATE lots SET source = 'artcurial'::auctionhouse    WHERE source::text = 'ARTCURIAL'",
+        # ── Normalise legacy UPPERCASE lotstatus values to lowercase ────────────
+        "UPDATE lots SET status = 'upcoming'::lotstatus   WHERE status::text = 'UPCOMING'",
+        "UPDATE lots SET status = 'live'::lotstatus       WHERE status::text = 'LIVE'",
+        "UPDATE lots SET status = 'sold'::lotstatus       WHERE status::text = 'SOLD'",
+        "UPDATE lots SET status = 'unsold'::lotstatus     WHERE status::text = 'UNSOLD'",
+        "UPDATE lots SET status = 'withdrawn'::lotstatus  WHERE status::text = 'WITHDRAWN'",
+        "UPDATE lots SET status = 'past'::lotstatus       WHERE status::text = 'PAST'",
     ]
     for sql in migrations:
         try:

@@ -289,7 +289,7 @@ class Lot(Base):
     auction_date = Column(DateTime, nullable=True)
     auction_house_name = Column(String(300), nullable=True)
     auction_sale_title = Column(String(500), nullable=True)
-    status = Column(Enum(LotStatus), default=LotStatus.UPCOMING)
+    status = Column(_FaultTolerantEnum(LotStatus, fallback=LotStatus.UPCOMING), default=LotStatus.UPCOMING)
 
     # Market type — auction vs primary/gallery market
     market_type = Column(Enum(MarketType), default=MarketType.AUCTION, nullable=True)

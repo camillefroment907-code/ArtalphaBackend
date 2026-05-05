@@ -55,7 +55,7 @@ def _poll_loop():
     """Poll every 12h indefinitely — 2000 lots per source per run."""
     from app.jobs.tasks import _poll_and_score_async
     while True:
-        _run(lambda: _poll_and_score_async(lots_per_source=2000), "poll_and_score_lots")
+        _run(lambda: _poll_and_score_async(lots_per_source=5000), "poll_and_score_lots")
         time.sleep(POLL_INTERVAL_S)
 
 
