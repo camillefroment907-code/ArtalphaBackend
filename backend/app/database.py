@@ -84,14 +84,31 @@ async def run_migrations():
         "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'INSTITUTIONAL'",
         "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'ELITE'",
         "ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'EXPERT'",
-        # auctionhouse enum: SQLAlchemy uses Python member NAMES (uppercase) as DB values.
-        # Existing PG values: DROUOT, INTERENCHERES, INVALUABLE, CHRISTIES, SOTHEBYS,
-        # BONHAMS, OTHER, PHILLIPS, ROSEBERYS, HERITAGE, ARTMARKETAPI (all uppercase).
-        # New sources must also be uppercase to match member names.
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'LIVEAUCTIONEERS'",
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'ARTSY'",
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'CATAWIKI'",
-        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'ARTCURIAL'",
+        # auctionhouse enum: Python enum uses lowercase values (e.g. 'drouot').
+        # Legacy DB rows used UPPERCASE (e.g. 'DROUOT') — both sets must coexist.
+        # Add lowercase counterparts for every UPPERCASE-only original value so that
+        # new INSERTs (which use lowercase Python enum values) succeed in PostgreSQL.
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'drouot'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'interencheres'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'invaluable'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'artmarketapi'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'roseberys'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'christies'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'sothebys'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'bonhams'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'heritage'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'phillips'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'other'",
+        # New sources added after initial deploy
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'liveauctioneers'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'artsy'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'catawiki'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'artcurial'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'auctionet'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'ebay'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'artsper'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'saatchiart'",
+        "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'singulart'",
     ]
     # ALTER TYPE ADD VALUE must run outside any transaction.
     # Use a dedicated NullPool engine with AUTOCOMMIT so asyncpg never wraps it in a TX.
@@ -160,6 +177,25 @@ async def run_migrations():
         "CREATE INDEX IF NOT EXISTS idx_lots_artist_name ON lots(artist_name_raw)",
         "CREATE INDEX IF NOT EXISTS idx_lots_category ON lots(category)",
         "CREATE INDEX IF NOT EXISTS idx_lots_auction_date ON lots(auction_date)",
+        # ── Normalise legacy UPPERCASE source values to lowercase ──────────────
+        # Old rows were inserted with UPPERCASE enum values (e.g. 'DROUOT').
+        # Python enum uses lowercase values. Align existing data so ORM reads
+        # correctly without relying on the case-insensitive fallback path.
+        "UPDATE lots SET source = 'drouot'::auctionhouse       WHERE source::text = 'DROUOT'",
+        "UPDATE lots SET source = 'interencheres'::auctionhouse WHERE source::text = 'INTERENCHERES'",
+        "UPDATE lots SET source = 'invaluable'::auctionhouse   WHERE source::text = 'INVALUABLE'",
+        "UPDATE lots SET source = 'artmarketapi'::auctionhouse WHERE source::text = 'ARTMARKETAPI'",
+        "UPDATE lots SET source = 'christies'::auctionhouse    WHERE source::text = 'CHRISTIES'",
+        "UPDATE lots SET source = 'sothebys'::auctionhouse     WHERE source::text = 'SOTHEBYS'",
+        "UPDATE lots SET source = 'bonhams'::auctionhouse      WHERE source::text = 'BONHAMS'",
+        "UPDATE lots SET source = 'phillips'::auctionhouse     WHERE source::text = 'PHILLIPS'",
+        "UPDATE lots SET source = 'roseberys'::auctionhouse    WHERE source::text = 'ROSEBERYS'",
+        "UPDATE lots SET source = 'heritage'::auctionhouse     WHERE source::text = 'HERITAGE'",
+        "UPDATE lots SET source = 'other'::auctionhouse        WHERE source::text = 'OTHER'",
+        "UPDATE lots SET source = 'liveauctioneers'::auctionhouse WHERE source::text = 'LIVEAUCTIONEERS'",
+        "UPDATE lots SET source = 'artsy'::auctionhouse        WHERE source::text = 'ARTSY'",
+        "UPDATE lots SET source = 'catawiki'::auctionhouse     WHERE source::text = 'CATAWIKI'",
+        "UPDATE lots SET source = 'artcurial'::auctionhouse    WHERE source::text = 'ARTCURIAL'",
     ]
     for sql in migrations:
         try:

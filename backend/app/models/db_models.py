@@ -37,6 +37,14 @@ class _FaultTolerantEnum(Enum):
         try:
             return super()._object_value_for_elem(elem)
         except LookupError:
+            # Legacy rows may be stored with UPPERCASE values while the Python enum
+            # uses lowercase.  Try case-insensitive lookup before giving up.
+            if isinstance(elem, str):
+                lower = elem.lower()
+                try:
+                    return super()._object_value_for_elem(lower)
+                except LookupError:
+                    pass
             if self._fallback_member is not None:
                 _logger.warning(
                     "Unknown enum value %r for %s — mapped to %r",
