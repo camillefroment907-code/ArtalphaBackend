@@ -109,6 +109,15 @@ async def run_migrations():
         "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'artsper'",
         "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'saatchiart'",
         "ALTER TYPE auctionhouse ADD VALUE IF NOT EXISTS 'singulart'",
+        # lotstatus enum: same UPPERCASE/lowercase mismatch as auctionhouse.
+        # PG has 'UPCOMING','LIVE','SOLD','UNSOLD','WITHDRAWN','PAST' (uppercase).
+        # Python enum uses lowercase values — INSERTs fail without lowercase values.
+        "ALTER TYPE lotstatus ADD VALUE IF NOT EXISTS 'upcoming'",
+        "ALTER TYPE lotstatus ADD VALUE IF NOT EXISTS 'live'",
+        "ALTER TYPE lotstatus ADD VALUE IF NOT EXISTS 'sold'",
+        "ALTER TYPE lotstatus ADD VALUE IF NOT EXISTS 'unsold'",
+        "ALTER TYPE lotstatus ADD VALUE IF NOT EXISTS 'withdrawn'",
+        "ALTER TYPE lotstatus ADD VALUE IF NOT EXISTS 'past'",
     ]
     # ALTER TYPE ADD VALUE must run outside any transaction.
     # Use a dedicated NullPool engine with AUTOCOMMIT so asyncpg never wraps it in a TX.
