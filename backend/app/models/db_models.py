@@ -7,10 +7,43 @@ from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
 import uuid
 import enum
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class Base(DeclarativeBase):
     pass
+
+
+class _FaultTolerantEnum(Enum):
+    """
+    SQLAlchemy Enum that never raises LookupError for unknown DB values.
+
+    When a DB row contains a value not present in the Python enum (e.g. a new
+    connector was deployed to prod before the enum was updated), the ORM would
+    normally crash the entire query.  This subclass catches that and substitutes
+    a configurable fallback member instead, keeping the API alive.
+
+    Usage:
+        source = Column(_FaultTolerantEnum(AuctionHouse, fallback=AuctionHouse.OTHER))
+    """
+
+    def __init__(self, enum_class, *args, fallback=None, **kwargs):
+        self._fallback_member = fallback
+        super().__init__(enum_class, *args, **kwargs)
+
+    def _object_value_for_elem(self, elem):
+        try:
+            return super()._object_value_for_elem(elem)
+        except LookupError:
+            if self._fallback_member is not None:
+                _logger.warning(
+                    "Unknown enum value %r for %s — mapped to %r",
+                    elem, self.name, self._fallback_member.value,
+                )
+                return self._fallback_member
+            raise
 
 
 class AuctionHouse(str, enum.Enum):
@@ -196,7 +229,7 @@ class Lot(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     external_id = Column(String(500), nullable=True)
-    source = Column(Enum(AuctionHouse), nullable=False)
+    source = Column(_FaultTolerantEnum(AuctionHouse, fallback=AuctionHouse.OTHER), nullable=False)
     url = Column(Text, nullable=True)
     image_url = Column(Text, nullable=True)
 
