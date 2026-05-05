@@ -171,15 +171,11 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
         candidate_eids = [eid for _, eid in candidate_pairs]
         candidate_sources = list({src for src, _ in candidate_pairs})
         if candidate_eids:
-            from sqlalchemy import and_, or_
+            from sqlalchemy import cast, Text
             existing_result = await session.execute(
                 select(Lot.source, Lot.external_id).where(
-                    and_(
-                        Lot.external_id.in_(candidate_eids),
-                        Lot.source.in_(candidate_sources),
-                    )
+                    Lot.external_id.in_(candidate_eids),
                 )
-            )
             existing_pairs = {
                 (
                     row.source.value if hasattr(row.source, "value") else str(row.source),
@@ -963,7 +959,6 @@ async def _ingest_artsy_liveauctioneers_async():
             existing_rows = await session.execute(
                 select(LotModel.source, LotModel.external_id).where(
                     LotModel.external_id.in_(candidate_eids),
-                    LotModel.source.in_(candidate_sources),
                 )
             )
             existing_pairs = {
