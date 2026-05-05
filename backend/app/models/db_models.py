@@ -37,13 +37,24 @@ class _FaultTolerantEnum(Enum):
         try:
             return super()._object_value_for_elem(elem)
         except LookupError:
-            # Legacy rows may be stored with UPPERCASE values while the Python enum
-            # uses lowercase.  Try case-insensitive lookup before giving up.
+            # SQLAlchemy's _object_lookup uses .name (e.g. 'ARTSY') as keys,
+            # but PostgreSQL stores .value (e.g. 'artsy').  Try value-based
+            # lookup via the enum constructor, then case-insensitive fallbacks.
             if isinstance(elem, str):
+                try:
+                    return self.enum_class(elem)
+                except ValueError:
+                    pass
                 lower = elem.lower()
                 try:
-                    return super()._object_value_for_elem(lower)
-                except LookupError:
+                    return self.enum_class(lower)
+                except ValueError:
+                    pass
+                # Try matching by name (for legacy UPPERCASE-stored values)
+                upper = elem.upper()
+                try:
+                    return self.enum_class[upper]
+                except KeyError:
                     pass
             if self._fallback_member is not None:
                 _logger.warning(
