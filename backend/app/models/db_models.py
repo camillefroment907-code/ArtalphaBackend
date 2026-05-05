@@ -20,10 +20,10 @@ class _FaultTolerantEnum(Enum):
     """
     SQLAlchemy Enum that never raises LookupError for unknown DB values.
 
-    When a DB row contains a value not present in the Python enum (e.g. a new
-    connector was deployed to prod before the enum was updated), the ORM would
-    normally crash the entire query.  This subclass catches that and substitutes
-    a configurable fallback member instead, keeping the API alive.
+    SQLAlchemy's built-in Enum._object_lookup is keyed by .name (e.g. 'ARTSY')
+    but PostgreSQL stores .value (e.g. 'artsy').  This subclass overrides
+    result_processor with a closure that does value-based lookup so every
+    read from the DB maps correctly regardless of case or copy/adapt calls.
 
     Usage:
         source = Column(_FaultTolerantEnum(AuctionHouse, fallback=AuctionHouse.OTHER))
@@ -33,36 +33,38 @@ class _FaultTolerantEnum(Enum):
         self._fallback_member = fallback
         super().__init__(enum_class, *args, **kwargs)
 
-    def _object_value_for_elem(self, elem):
-        try:
-            return super()._object_value_for_elem(elem)
-        except LookupError:
-            # SQLAlchemy's _object_lookup uses .name (e.g. 'ARTSY') as keys,
-            # but PostgreSQL stores .value (e.g. 'artsy').  Try value-based
-            # lookup via the enum constructor, then case-insensitive fallbacks.
-            if isinstance(elem, str):
+    def result_processor(self, dialect, coltype):
+        """Return a processor that resolves PG enum labels to Python members."""
+        ec = self.enum_class          # captured by value — survives type copies
+        fallback = self._fallback_member
+
+        def process(value):
+            if value is None:
+                return None
+            # 1. Direct value match (e.g. 'artsy' → AuctionHouse.ARTSY)
+            try:
+                return ec(value)
+            except (ValueError, KeyError):
+                pass
+            if isinstance(value, str):
+                # 2. Case-insensitive value match (legacy UPPERCASE DB rows)
                 try:
-                    return self.enum_class(elem)
-                except ValueError:
+                    return ec(value.lower())
+                except (ValueError, KeyError):
                     pass
-                lower = elem.lower()
+                # 3. Name-based lookup (e.g. 'ARTSY' → AuctionHouse['ARTSY'])
                 try:
-                    return self.enum_class(lower)
-                except ValueError:
+                    return ec[value.upper()]
+                except (KeyError, AttributeError):
                     pass
-                # Try matching by name (for legacy UPPERCASE-stored values)
-                upper = elem.upper()
-                try:
-                    return self.enum_class[upper]
-                except KeyError:
-                    pass
-            if self._fallback_member is not None:
+            if fallback is not None:
                 _logger.warning(
-                    "Unknown enum value %r for %s — mapped to %r",
-                    elem, self.name, self._fallback_member.value,
+                    "Unknown enum value %r — mapped to %r", value, fallback.value
                 )
-                return self._fallback_member
-            raise
+                return fallback
+            return value  # pass-through as last resort
+
+        return process
 
 
 class AuctionHouse(str, enum.Enum):
