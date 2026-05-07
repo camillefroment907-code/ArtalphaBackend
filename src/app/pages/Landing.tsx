@@ -165,6 +165,7 @@ function NautilusMockup({ lots = [] }: { lots: any[] }) {
 export default function Landing() {
   const { t, i18n } = useTranslation();
   const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
+  const isFr = i18n.language?.startsWith('fr');
   useSEO({
     title: 'Nautilus — Art Market Intelligence | Find Undervalued Art Before the Market',
     description: 'Nautilus scans 500,000+ auction lots across 30+ sources and scores every opportunity with AI. Find undervalued art before the market corrects.',
@@ -393,10 +394,10 @@ export default function Landing() {
       <section style={{ padding: '32px 120px', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', background: 'white' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
           {[
-            { value: '500K+',  label: t('landing.lotsAnalyzed'),    sub: t('landing.lotsAnalyzedSub')    },
-            { value: '87%',    label: t('landing.predictionAcc'),   sub: t('landing.predictionAccSub')   },
-            { value: '€2.3M',  label: t('landing.valueIdentified'), sub: t('landing.valueIdentifiedSub') },
-            { value: '30+',    label: t('landing.globalSources'),   sub: t('landing.globalSourcesSub')   },
+            { value: isFr ? '448'    : '500K+', label: t('landing.lotsAnalyzed'),    sub: t('landing.lotsAnalyzedSub')    },
+            { value: isFr ? '85/100' : '87%',   label: t('landing.predictionAcc'),   sub: t('landing.predictionAccSub')   },
+            { value: isFr ? '€1.1M+' : '€2.3M', label: t('landing.valueIdentified'), sub: t('landing.valueIdentifiedSub') },
+            { value: isFr ? '84'     : '30+',   label: t('landing.globalSources'),   sub: t('landing.globalSourcesSub')   },
           ].map(({ value, label, sub }, i) => (
             <div key={i} style={{ padding: '20px 32px', borderRight: i < 3 ? '1px solid var(--border)' : 'none' }}>
               <div style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>{value}</div>
