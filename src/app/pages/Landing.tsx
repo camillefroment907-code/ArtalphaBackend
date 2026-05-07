@@ -850,12 +850,7 @@ export default function Landing() {
             {/* Col 1 — Brand */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <svg width="20" height="20" viewBox="0 0 40 40" fill="none">
-                  <path d="M 20 4 A 16 16 0 0 1 36 20" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-                  <path d="M 36 20 A 16 16 0 0 1 20 36" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.5"/>
-                  <path d="M 20 36 A 8 8 0 0 1 12 28" stroke="#C6A85A" strokeWidth="2.5" strokeLinecap="round"/>
-                  <circle cx="20" cy="20" r="2" fill="#C6A85A"/>
-                </svg>
+                <img src="/logo-nautilus.png" alt="Nautilus" style={{ height: '32px', width: 'auto' }} />
                 <span style={{ fontFamily: "-apple-system, 'Inter', 'Helvetica Neue', Arial, sans-serif", fontSize: '16px', color: 'white', letterSpacing: '-0.02em', fontWeight: 700 }}>Nautilus</span>
               </div>
               <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '14px' }}>
