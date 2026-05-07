@@ -4,7 +4,13 @@
   import App from "./app/App.tsx";
   import "./styles/index.css";
 
+  import i18n from 'i18next';
+i18n.on('initialized', () => {
   createRoot(document.getElementById("root")!).render(<App />);
+});
+if (i18n.isInitialized) {
+  createRoot(document.getElementById("root")!).render(<App />);
+}
 
   // Wake up backend + prefetch critical data immediately after render
   const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
