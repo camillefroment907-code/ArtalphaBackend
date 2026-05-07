@@ -405,9 +405,9 @@ export default function Landing() {
 
       {/* ── METRICS ── */}
       {isFr ? (
-        <section style={{ background: '#FAFAF8', padding: '72px 120px', textAlign: 'center' }}>
-          <div style={{ width: '48px', height: '1px', background: '#B8922A', margin: '0 auto 40px' }} />
-          <p style={{ fontFamily: 'Georgia, serif', fontSize: '13px', fontStyle: 'italic', color: '#9CA3AF', margin: '0 0 48px' }}>En chiffres</p>
+        <section style={{ background: '#FAFAF8', padding: '40px 120px', textAlign: 'center' }}>
+          <div style={{ width: '48px', height: '1px', background: '#B8922A', margin: '0 auto 24px' }} />
+          <p style={{ fontFamily: 'Georgia, serif', fontSize: '13px', fontStyle: 'italic', color: '#9CA3AF', margin: '0 0 20px' }}>En chiffres</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
             {[
               { value: '1,5M+',  label: t('landing.lotsAnalyzed')  },
