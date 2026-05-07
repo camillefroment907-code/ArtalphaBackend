@@ -359,7 +359,6 @@ const fr: TranslationKeys = {
     addToPortfolio: 'Ajouter au portfolio',
     setAlert: 'Créer une alerte prix',
     watchlist: 'Ajouter à la liste de suivi',
-    lotDetails: 'Détails du lot',
     medium: 'Technique',
     dimensions: 'Dimensions',
     year: 'Année',

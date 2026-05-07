@@ -354,7 +354,6 @@ const en = {
     addToPortfolio: 'Add to portfolio',
     setAlert: 'Set price alert',
     watchlist: 'Add to watchlist',
-    lotDetails: 'Lot Details',
     medium: 'Medium',
     dimensions: 'Dimensions',
     year: 'Year',
