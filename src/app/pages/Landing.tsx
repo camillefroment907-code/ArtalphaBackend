@@ -392,14 +392,18 @@ export default function Landing() {
 
       {/* ── METRICS ── */}
       <section style={{ padding: '32px 120px', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', background: 'white' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
-          {[
-            { value: isFr ? '448'    : '500K+', label: t('landing.lotsAnalyzed'),    sub: t('landing.lotsAnalyzedSub')    },
-            { value: isFr ? '85/100' : '87%',   label: t('landing.predictionAcc'),   sub: t('landing.predictionAccSub')   },
-            { value: isFr ? '€1.1M+' : '€2.3M', label: t('landing.valueIdentified'), sub: t('landing.valueIdentifiedSub') },
-            { value: isFr ? '84'     : '30+',   label: t('landing.globalSources'),   sub: t('landing.globalSourcesSub')   },
-          ].map(({ value, label, sub }, i) => (
-            <div key={i} style={{ padding: '20px 32px', borderRight: i < 3 ? '1px solid var(--border)' : 'none' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isFr ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)' }}>
+          {(isFr ? [
+            { value: '1,5M+',  label: t('landing.lotsAnalyzed'),  sub: '' },
+            { value: '85/100', label: t('landing.predictionAcc'), sub: '' },
+            { value: '84',     label: t('landing.globalSources'), sub: '' },
+          ] : [
+            { value: '500K+', label: t('landing.lotsAnalyzed'),    sub: t('landing.lotsAnalyzedSub')    },
+            { value: '87%',   label: t('landing.predictionAcc'),   sub: t('landing.predictionAccSub')   },
+            { value: '€2.3M', label: t('landing.valueIdentified'), sub: t('landing.valueIdentifiedSub') },
+            { value: '30+',   label: t('landing.globalSources'),   sub: t('landing.globalSourcesSub')   },
+          ]).map(({ value, label, sub }, i) => (
+            <div key={i} style={{ padding: '20px 32px', borderRight: i < (isFr ? 2 : 3) ? '1px solid var(--border)' : 'none' }}>
               <div style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>{value}</div>
               <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-2)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>{label}</div>
               <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{sub}</div>
@@ -570,14 +574,14 @@ export default function Landing() {
         </h2>
         <div className="landing-features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '48px' }}>
           {[
-            { titleKey: 'landing.edgeEarlyDetect', body: 'Identify undervalued works 2–4 weeks before market adjustment through pattern recognition across 10+ global sources.', metric: '24 days avg. lead time' },
-            { titleKey: 'landing.edgePriceVal', body: 'Every lot benchmarked against historical sales, artist market data, and real-time comparable transactions.', metric: '4.2M transactions analyzed' },
-            { titleKey: 'landing.edgeConviction', body: 'Our AI assigns a 0–100 conviction score to every opportunity. Only what matters rises to the top.', metric: 'Score ≥ 65 = strong signal' },
-          ].map(({ titleKey, body, metric }) => (
+            { titleKey: 'landing.edgeEarlyDetect', body: 'Identify undervalued works 2–4 weeks before market adjustment through pattern recognition across 10+ global sources.', metric: '24 days avg. lead time', frBody: "Repérez les œuvres sous-évaluées avant leur revalorisation, grâce à l'analyse croisée de données globales et de signaux faibles.", frMetric: '→ Entrez avant la hausse' },
+            { titleKey: 'landing.edgePriceVal',     body: 'Every lot benchmarked against historical sales, artist market data, and real-time comparable transactions.',                metric: '4.2M transactions analyzed',  frBody: "Chaque lot est confronté aux ventes historiques, à la dynamique de l'artiste et à des comparables en temps réel.",                   frMetric: '→ Achetez au bon prix, systématiquement' },
+            { titleKey: 'landing.edgeConviction',   body: 'Our AI assigns a 0–100 conviction score to every opportunity. Only what matters rises to the top.',                      metric: 'Score ≥ 65 = strong signal',  frBody: "Un score de conviction identifie les opportunités à fort potentiel et élimine le bruit du marché.",                                    frMetric: '→ Investissez uniquement quand le risque est maîtrisé' },
+          ].map(({ titleKey, body, metric, frBody, frMetric }) => (
             <div key={titleKey}>
               <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 600, color: 'var(--text)', marginBottom: '12px' }}>{t(titleKey as any)}</h3>
-              <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.7, marginBottom: '16px' }}>{body}</p>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold-dim)', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>{metric}</div>
+              <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.7, marginBottom: '16px' }}>{isFr ? frBody : body}</p>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold-dim)', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>{isFr ? frMetric : metric}</div>
             </div>
           ))}
         </div>
