@@ -690,88 +690,83 @@ export default function Landing() {
       </section>
 
       {/* ═══ TESTIMONIALS ═══ */}
-      <section style={{ padding: '96px 0', background: 'white' }}>
+      <section style={{ padding: '96px 0', background: isFr ? '#FAFAF8' : 'white' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 40px' }}>
           {isFr ? (
             <>
               {/* FR — Block 0: Title */}
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '38px', fontWeight: 600, color: 'var(--text)', margin: '0 0 64px', lineHeight: 1.2 }}>
+              <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '38px', fontWeight: 600, color: '#1A2A44', margin: '0 0 64px', lineHeight: 1.2 }}>
                 La performance, sans interprétation.
               </h2>
 
               {/* FR — Block 1: Main testimonial */}
-              <div style={{ background: 'var(--navy)', borderRadius: '16px', padding: '48px 56px', marginBottom: '32px', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: '24px', left: '40px', fontSize: '120px', color: 'rgba(198,168,90,0.12)', fontFamily: 'Georgia, serif', lineHeight: 1, userSelect: 'none' }}>"</div>
+              <div style={{ background: '#0A1628', borderRadius: '2px', padding: '56px', marginBottom: '64px', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: '16px', left: '40px', fontSize: '120px', color: '#B8922A', opacity: 0.3, fontFamily: 'Georgia, serif', lineHeight: 1, userSelect: 'none' }}>"</div>
                 <div style={{ position: 'relative' }}>
-                  <p style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'white', lineHeight: 1.7, marginBottom: '28px', fontStyle: 'italic', maxWidth: '680px' }}>
+                  <p style={{ fontFamily: 'Georgia, serif', fontSize: '22px', color: 'white', lineHeight: 1.7, marginBottom: '36px', fontStyle: 'italic', maxWidth: '680px' }}>
                     "12 400 € investis sur une lithographie de Zao Wou-Ki identifiée par Nautilus. Revente 17 500 € huit mois plus tard."
                   </p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(198,168,90,0.2)', border: '2px solid rgba(198,168,90,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--gold)' }}>T</span>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(184,146,42,0.2)', border: '2px solid rgba(184,146,42,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ fontFamily: 'Georgia, serif', fontSize: '18px', color: '#B8922A' }}>T</span>
                     </div>
                     <div>
                       <div style={{ fontSize: '14px', fontWeight: 700, color: 'white', marginBottom: '2px' }}>Théodore M.</div>
                       <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono)' }}>Family office · Paris</div>
                     </div>
-                    <div style={{ marginLeft: 'auto', padding: '6px 16px', background: 'rgba(198,168,90,0.15)', border: '1px solid rgba(198,168,90,0.3)', borderRadius: '20px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)' }}>+41% sur un seul lot</span>
+                    <div style={{ marginLeft: 'auto', padding: '6px 18px', background: 'rgba(184,146,42,0.15)', border: '1px solid rgba(184,146,42,0.35)', borderRadius: '2px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#B8922A', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>+41% sur un seul lot</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* FR — Block 2: Metric rows */}
-              <div style={{ marginBottom: '48px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '24px' }}>
+              <div style={{ marginBottom: '64px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, color: '#B8922A', fontFamily: 'var(--font-mono)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '32px' }}>
                   Ce que les investisseurs observent
                 </div>
                 {[
-                  { value: '+79%', label: 'Joan Mitchell',        desc: 'Opportunité identifiée sous le prix du marché' },
-                  { value: '+37%', label: 'Bernard Buffet',       desc: 'Décote détectée, revalorisation rapide' },
+                  { value: '+79%', label: 'Joan Mitchell',         desc: 'Opportunité identifiée sous le prix du marché' },
+                  { value: '+37%', label: 'Bernard Buffet',        desc: 'Décote détectée, revalorisation rapide' },
                   { value: '71%',  label: 'Précision des signaux', desc: 'Lots score 75+' },
                 ].map(({ value, label, desc }, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '24px', padding: '18px 0', borderBottom: '1px solid var(--border)' }}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: 'var(--navy)', minWidth: '72px' }}>{value}</div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', minWidth: '180px' }}>{label}</div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-2)' }}>{desc}</div>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '32px', paddingTop: '24px', paddingBottom: '24px', borderBottom: '1px solid #E8E4DC' }}>
+                    <div style={{ fontFamily: 'Georgia, serif', fontSize: '28px', fontWeight: 700, color: '#1A2A44', minWidth: '88px' }}>{value}</div>
+                    <div style={{ fontSize: '15px', fontWeight: 500, color: '#1A2A44', minWidth: '180px' }}>{label}</div>
+                    <div style={{ fontSize: '14px', color: '#9CA3AF', fontStyle: 'italic' }}>{desc}</div>
                   </div>
                 ))}
               </div>
 
               {/* FR — Block 3: Second testimonial */}
-              <div style={{ padding: '40px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', marginBottom: '48px' }}>
-                <p style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', lineHeight: 1.7, marginBottom: '24px', fontStyle: 'italic', maxWidth: '680px' }}>
+              <div style={{ borderLeft: '3px solid #B8922A', paddingLeft: '32px', marginBottom: '64px' }}>
+                <p style={{ fontFamily: 'Georgia, serif', fontSize: '20px', color: '#1A2A44', lineHeight: 1.8, marginBottom: '20px', fontStyle: 'italic', maxWidth: '680px' }}>
                   "Nous sommes passés de plusieurs dizaines d'heures d'analyse à quelques décisions ciblées."
                 </p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: 'white' }}>C</span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>Christian B.</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>Art fund manager · Luxembourg</div>
-                  </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#1A2A44', marginBottom: '2px' }}>Christian B.</div>
+                  <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>Art fund manager · Luxembourg</div>
                 </div>
               </div>
 
               {/* FR — Block 4: KPI row */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '48px', textAlign: 'center' }}>
                 {[
-                  { value: '4,9 / 5', label: 'Satisfaction' },
-                  { value: '€2,4M+',  label: 'Capital engagé' },
-                  { value: '+31%',    label: 'Potentiel moyen' },
-                  { value: '73%',     label: 'Précision des signaux' },
+                  { value: '4,9 / 5', label: 'SATISFACTION' },
+                  { value: '€2,4M+',  label: 'CAPITAL ENGAGÉ' },
+                  { value: '+31%',    label: 'POTENTIEL MOYEN' },
+                  { value: '73%',     label: 'PRÉCISION DES SIGNAUX' },
                 ].map(({ value, label }) => (
-                  <div key={label} style={{ background: 'white', padding: '28px 24px', textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: 'var(--navy)', marginBottom: '6px' }}>{value}</div>
-                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>{label}</div>
+                  <div key={label}>
+                    <div style={{ fontFamily: 'Georgia, serif', fontSize: '42px', fontWeight: 700, color: '#1A2A44', lineHeight: 1 }}>{value}</div>
+                    <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginTop: '8px' }}>{label}</div>
                   </div>
                 ))}
               </div>
 
-              {/* FR — Micro footer */}
-              <p style={{ fontSize: 11, color: '#999', textAlign: 'center', marginTop: 8 }}>Performances passées non garanties.</p>
+              {/* FR — Footer */}
+              <p style={{ fontSize: 11, color: '#9CA3AF', fontStyle: 'italic', textAlign: 'center', marginTop: '48px' }}>Performances passées non garanties.</p>
             </>
           ) : (
             <>
