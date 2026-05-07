@@ -84,14 +84,14 @@ function NautilusMockup({ lots = [] }: { lots: any[] }) {
   ];
 
   return (
-    <div style={{ background: 'white', borderRadius: '16px', boxShadow: '0 24px 64px rgba(0,0,0,0.12)', border: '1px solid var(--border)', overflow: 'hidden', width: '100%', maxWidth: '528px', margin: '0 auto', userSelect: 'none', transform: 'perspective(1000px) rotateY(-3deg) rotateX(1deg)' }}>
+    <div style={{ background: 'white', borderRadius: '16px', boxShadow: '0 24px 64px rgba(0,0,0,0.12)', border: '1px solid var(--border)', overflow: 'hidden', width: '100%', maxWidth: '680px', margin: '0 auto', userSelect: 'none', transform: 'perspective(1000px) rotateY(-3deg) rotateX(1deg)' }}>
 
       {/* Main content */}
       <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: '1fr 140px', gap: '12px' }}>
 
         {/* Active lot card */}
         <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(10,22,40,0.08)' }}>
-          <div style={{ height: '156px', position: 'relative', overflow: 'hidden', background: 'var(--bg-subtle)' }}>
+          <div style={{ height: '220px', position: 'relative', overflow: 'hidden', background: 'var(--bg-subtle)' }}>
             {imgSrc ? (
               <img src={imgSrc} alt={title}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', opacity: fade ? 1 : 0, transition: 'opacity 0.3s ease' }}
@@ -250,31 +250,6 @@ export default function Landing() {
           <Link to="/app/pricing" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>{t('landing.footerPricing')}</Link>
           <Link to="/faq" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>{t('landing.footerFaq')}</Link>
           <Link to="/blog" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>{t('blog.title')}</Link>
-          {/* Language toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.08em' }}>
-            {(['en', 'fr'] as const).map((lng, i) => (
-              <>
-                {i > 0 && <span key={`lsep-${lng}`} style={{ color: 'var(--border)', userSelect: 'none' }}>·</span>}
-                <button
-                  key={lng}
-                  onClick={() => { i18n.changeLanguage(lng); localStorage.setItem('i18nextLng', lng); }}
-                  style={{
-                    background: 'none', border: 'none',
-                    cursor: currentLang === lng ? 'default' : 'pointer',
-                    fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em',
-                    fontWeight: currentLang === lng ? 700 : 400,
-                    color: currentLang === lng ? 'var(--text)' : 'var(--text-3)',
-                    transition: 'color 0.15s', textTransform: 'uppercase', padding: '2px 0',
-                  }}
-                  onMouseEnter={e => { if (currentLang !== lng) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-2)'; }}
-                  onMouseLeave={e => { if (currentLang !== lng) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-3)'; }}
-                >
-                  {lng}
-                </button>
-              </>
-            ))}
-          </div>
-
           <button onClick={() => navigate('/app/login')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: 'var(--text-2)', padding: '0 4px' }}>
             {t('common.signIn')}
           </button>
@@ -327,7 +302,7 @@ export default function Landing() {
             {t('landing.sectionLabel')}
           </div>
 
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(38px, 4.5vw, 58px)', fontWeight: 700, color: 'var(--text)', lineHeight: 1.1, marginBottom: '20px' }}>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(38px, 4.5vw, 58px)', fontWeight: 700, color: 'var(--text)', lineHeight: 1.1, marginBottom: '20px', whiteSpace: 'pre-line' }}>
             {t('landing.heroTitle')}
           </h1>
 
