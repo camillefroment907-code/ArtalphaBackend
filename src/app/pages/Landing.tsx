@@ -692,146 +692,184 @@ export default function Landing() {
       {/* ═══ TESTIMONIALS ═══ */}
       <section style={{ padding: '96px 0', background: 'white' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 40px' }}>
+          {isFr ? (
+            <>
+              {/* FR — Block 0: Title */}
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '38px', fontWeight: 600, color: 'var(--text)', margin: '0 0 64px', lineHeight: 1.2 }}>
+                La performance, sans interprétation.
+              </h2>
 
-          {/* Header */}
-          <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '16px' }}>
-              {t('landing.testiLabel')}
-            </div>
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '38px', fontWeight: 600, color: 'var(--text)', margin: '0 0 16px', lineHeight: 1.2 }}>
-              {t('landing.testiTitle')}
-            </h2>
-            <p style={{ fontSize: '16px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto', lineHeight: 1.7 }}>
-              {t('landing.testiSub')}
-            </p>
-          </div>
-
-          {/* Featured testimonial */}
-          <div style={{
-            background: 'var(--navy)', borderRadius: '16px', padding: '48px 56px',
-            marginBottom: '24px', position: 'relative', overflow: 'hidden',
-          }}>
-            {/* Quote mark */}
-            <div style={{ position: 'absolute', top: '24px', left: '40px', fontSize: '120px', color: 'rgba(198,168,90,0.12)', fontFamily: 'Georgia, serif', lineHeight: 1, userSelect: 'none' }}>
-              "
-            </div>
-
-            <div className="landing-featured-testimonial" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '48px', alignItems: 'center', position: 'relative' }}>
-              <div>
-                <p style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'white', lineHeight: 1.7, marginBottom: '16px', fontStyle: 'italic' }}>
-                  "I invested €12,400 in a Zao Wou-Ki lithograph that Nautilus scored 84/100 — priced 34% below its last comparable sale at Drouot. Eight months later, it sold for €17,500 at Christie's Paris. That's a 41% return on a single lot. My subscription paid for itself 200x over."
-                </p>
-                <div style={{ marginBottom: '20px', padding: '6px 10px', background: 'rgba(255,255,255,0.07)', borderRadius: '4px', fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', display: 'inline-block' }}>
-                  Zao Wou-Ki lithograph · Bought €12,400 · Sold €17,500
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(198,168,90,0.2)', border: '2px solid rgba(198,168,90,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--gold)' }}>T</span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: 'white', marginBottom: '3px' }}>Théodore M.</div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono)' }}>Family office director · €2M+ art portfolio · Paris</div>
-                  </div>
-                  <div style={{ marginLeft: 'auto', padding: '4px 14px', background: 'rgba(198,168,90,0.15)', border: '1px solid rgba(198,168,90,0.3)', borderRadius: '20px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)' }}>+41% in 8 months</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 3-column testimonials */}
-          <div className="landing-testimonials-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '56px' }}>
-            {[
-              {
-                initial: 'N',
-                name: 'Nicolas R.',
-                role: 'Private wealth manager · Geneva · Investor plan',
-                result: '+79% in 14 months' as string | null,
-                quote: "Nautilus flagged a Joan Mitchell print at Heritage Auctions with a score of 79/100. Estimate was $8,000–12,000 but the AI analysis showed comparable prints selling at $18,000+. I bid $9,200 and won. Current market value: $16,500. Up 79% in 14 months.",
-                detail: 'Joan Mitchell print · Bought $9,200 · Est. value $16,500',
-              },
-              {
-                initial: 'M',
-                name: 'Morgane L.',
-                role: 'Entrepreneur · Lyon · Collector plan',
-                result: '+37% in 6 months' as string | null,
-                quote: "First time buying art as investment. €8,000 budget. Nautilus identified a Bernard Buffet etching at Artcurial scoring 77/100, underpriced by 28%. Bought for €3,800. Gallery offer came in at €5,200 six months later. I'm now looking at my second acquisition.",
-                detail: 'Bernard Buffet etching · €3,800 → €5,200 offer',
-              },
-              {
-                initial: 'C',
-                name: 'Christian B.',
-                role: 'Art fund manager · Luxembourg · Family Office plan',
-                result: '40h → 4h weekly research' as string | null,
-                quote: "We run a €15M art fund. Before Nautilus, our research team spent 40 hours a week screening auction catalogues. Now we spend 4. The signal accuracy on score 75+ lots has been 71% directionally correct over 18 months. That's our alpha.",
-                detail: '18-month track record · Score 75+ accuracy: 71%',
-              },
-            ].map(({ initial, name, role, result, quote, detail }) => (
-              <div key={name} style={{
-                background: 'white', border: '1px solid var(--border)', borderRadius: '12px', padding: '28px',
-                display: 'flex', flexDirection: 'column', transition: 'box-shadow 0.2s, transform 0.2s',
-              }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-md)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; (e.currentTarget as HTMLDivElement).style.transform = 'none'; }}
-              >
-                <div style={{ display: 'flex', gap: '3px', marginBottom: '16px' }}>
-                  {[...Array(5)].map((_, i) => (
-                    <span key={i} style={{ color: '#C6A85A', fontSize: '14px' }}>★</span>
-                  ))}
-                </div>
-
-                <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.8, flex: 1, marginBottom: '12px', fontStyle: 'italic' }}>
-                  "{quote}"
-                </p>
-
-                <div style={{ marginBottom: '16px', padding: '6px 10px', background: 'var(--bg-subtle)', borderRadius: '4px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-                  {detail}
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: 'white' }}>{initial}</span>
+              {/* FR — Block 1: Main testimonial */}
+              <div style={{ background: 'var(--navy)', borderRadius: '16px', padding: '48px 56px', marginBottom: '32px', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: '24px', left: '40px', fontSize: '120px', color: 'rgba(198,168,90,0.12)', fontFamily: 'Georgia, serif', lineHeight: 1, userSelect: 'none' }}>"</div>
+                <div style={{ position: 'relative' }}>
+                  <p style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'white', lineHeight: 1.7, marginBottom: '28px', fontStyle: 'italic', maxWidth: '680px' }}>
+                    "12 400 € investis sur une lithographie de Zao Wou-Ki identifiée par Nautilus. Revente 17 500 € huit mois plus tard."
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(198,168,90,0.2)', border: '2px solid rgba(198,168,90,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--gold)' }}>T</span>
                     </div>
                     <div>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{name}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{role}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: 'white', marginBottom: '2px' }}>Théodore M.</div>
+                      <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono)' }}>Family office · Paris</div>
+                    </div>
+                    <div style={{ marginLeft: 'auto', padding: '6px 16px', background: 'rgba(198,168,90,0.15)', border: '1px solid rgba(198,168,90,0.3)', borderRadius: '20px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)' }}>+41% sur un seul lot</span>
                     </div>
                   </div>
-                  {result && (
-                    <div style={{ padding: '3px 10px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', borderRadius: '20px', flexShrink: 0, marginLeft: '8px' }}>
-                      <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--electric)', fontFamily: 'var(--font-mono)' }}>{result}</span>
+                </div>
+              </div>
+
+              {/* FR — Block 2: Metric rows */}
+              <div style={{ marginBottom: '48px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '24px' }}>
+                  Ce que les investisseurs observent
+                </div>
+                {[
+                  { value: '+79%', label: 'Joan Mitchell',        desc: 'Opportunité identifiée sous le prix du marché' },
+                  { value: '+37%', label: 'Bernard Buffet',       desc: 'Décote détectée, revalorisation rapide' },
+                  { value: '71%',  label: 'Précision des signaux', desc: 'Lots score 75+' },
+                ].map(({ value, label, desc }, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '24px', padding: '18px 0', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: 'var(--navy)', minWidth: '72px' }}>{value}</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', minWidth: '180px' }}>{label}</div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-2)' }}>{desc}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* FR — Block 3: Second testimonial */}
+              <div style={{ padding: '40px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', marginBottom: '48px' }}>
+                <p style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', lineHeight: 1.7, marginBottom: '24px', fontStyle: 'italic', maxWidth: '680px' }}>
+                  "Nous sommes passés de plusieurs dizaines d'heures d'analyse à quelques décisions ciblées."
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: 'white' }}>C</span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>Christian B.</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>Art fund manager · Luxembourg</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* FR — Block 4: KPI row */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px' }}>
+                {[
+                  { value: '4,9 / 5', label: 'Satisfaction' },
+                  { value: '€2,4M+',  label: 'Capital engagé' },
+                  { value: '+31%',    label: 'Potentiel moyen' },
+                  { value: '73%',     label: 'Précision des signaux' },
+                ].map(({ value, label }) => (
+                  <div key={label} style={{ background: 'white', padding: '28px 24px', textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: 'var(--navy)', marginBottom: '6px' }}>{value}</div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* FR — Micro footer */}
+              <p style={{ fontSize: 11, color: '#999', textAlign: 'center', marginTop: 8 }}>Performances passées non garanties.</p>
+            </>
+          ) : (
+            <>
+              {/* EN — Header */}
+              <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '16px' }}>
+                  {t('landing.testiLabel')}
+                </div>
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '38px', fontWeight: 600, color: 'var(--text)', margin: '0 0 16px', lineHeight: 1.2 }}>
+                  {t('landing.testiTitle')}
+                </h2>
+                <p style={{ fontSize: '16px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto', lineHeight: 1.7 }}>
+                  {t('landing.testiSub')}
+                </p>
+              </div>
+
+              {/* EN — Featured testimonial */}
+              <div style={{ background: 'var(--navy)', borderRadius: '16px', padding: '48px 56px', marginBottom: '24px', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: '24px', left: '40px', fontSize: '120px', color: 'rgba(198,168,90,0.12)', fontFamily: 'Georgia, serif', lineHeight: 1, userSelect: 'none' }}>"</div>
+                <div className="landing-featured-testimonial" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '48px', alignItems: 'center', position: 'relative' }}>
+                  <div>
+                    <p style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'white', lineHeight: 1.7, marginBottom: '16px', fontStyle: 'italic' }}>
+                      "I invested €12,400 in a Zao Wou-Ki lithograph that Nautilus scored 84/100 — priced 34% below its last comparable sale at Drouot. Eight months later, it sold for €17,500 at Christie's Paris. That's a 41% return on a single lot. My subscription paid for itself 200x over."
+                    </p>
+                    <div style={{ marginBottom: '20px', padding: '6px 10px', background: 'rgba(255,255,255,0.07)', borderRadius: '4px', fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', display: 'inline-block' }}>
+                      Zao Wou-Ki lithograph · Bought €12,400 · Sold €17,500
                     </div>
-                  )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(198,168,90,0.2)', border: '2px solid rgba(198,168,90,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <span style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--gold)' }}>T</span>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: 'white', marginBottom: '3px' }}>Théodore M.</div>
+                        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono)' }}>Family office director · €2M+ art portfolio · Paris</div>
+                      </div>
+                      <div style={{ marginLeft: 'auto', padding: '4px 14px', background: 'rgba(198,168,90,0.15)', border: '1px solid rgba(198,168,90,0.3)', borderRadius: '20px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)' }}>+41% in 8 months</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
 
-          {/* Trust indicators */}
-          <div className="landing-trust-grid" style={{
-            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: '1px', background: 'var(--border)',
-            border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden',
-          }}>
-            {[
-              { value: '4.9/5', labelKey: 'landing.testiRating', subKey: 'landing.testiRatingSub' },
-              { value: '€2.4M+', labelKey: 'landing.testiPortfolio', subKey: 'landing.testiPortfolioSub' },
-              { value: '73%', labelKey: 'landing.testiAccuracy', subKey: 'landing.testiAccuracySub' },
-              { value: '31%', labelKey: 'landing.testiUpside', subKey: 'landing.testiUpsideSub' },
-            ].map(({ value, labelKey, subKey }) => (
-              <div key={labelKey} style={{ background: 'white', padding: '28px 24px', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: 'var(--navy)', marginBottom: '6px' }}>
-                  {value}
-                </div>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>{t(labelKey as any)}</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{t(subKey as any)}</div>
+              {/* EN — 3-column testimonials */}
+              <div className="landing-testimonials-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '56px' }}>
+                {[
+                  { initial: 'N', name: 'Nicolas R.',  role: 'Private wealth manager · Geneva · Investor plan',       result: '+79% in 14 months' as string | null,      quote: "Nautilus flagged a Joan Mitchell print at Heritage Auctions with a score of 79/100. Estimate was $8,000–12,000 but the AI analysis showed comparable prints selling at $18,000+. I bid $9,200 and won. Current market value: $16,500. Up 79% in 14 months.", detail: 'Joan Mitchell print · Bought $9,200 · Est. value $16,500' },
+                  { initial: 'M', name: 'Morgane L.',  role: 'Entrepreneur · Lyon · Collector plan',                  result: '+37% in 6 months' as string | null,        quote: "First time buying art as investment. €8,000 budget. Nautilus identified a Bernard Buffet etching at Artcurial scoring 77/100, underpriced by 28%. Bought for €3,800. Gallery offer came in at €5,200 six months later. I'm now looking at my second acquisition.", detail: 'Bernard Buffet etching · €3,800 → €5,200 offer' },
+                  { initial: 'C', name: 'Christian B.', role: 'Art fund manager · Luxembourg · Family Office plan',   result: '40h → 4h weekly research' as string | null, quote: "We run a €15M art fund. Before Nautilus, our research team spent 40 hours a week screening auction catalogues. Now we spend 4. The signal accuracy on score 75+ lots has been 71% directionally correct over 18 months. That's our alpha.", detail: '18-month track record · Score 75+ accuracy: 71%' },
+                ].map(({ initial, name, role, result, quote, detail }) => (
+                  <div key={name} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '12px', padding: '28px', display: 'flex', flexDirection: 'column', transition: 'box-shadow 0.2s, transform 0.2s' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-md)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; (e.currentTarget as HTMLDivElement).style.transform = 'none'; }}
+                  >
+                    <div style={{ display: 'flex', gap: '3px', marginBottom: '16px' }}>
+                      {[...Array(5)].map((_, i) => <span key={i} style={{ color: '#C6A85A', fontSize: '14px' }}>★</span>)}
+                    </div>
+                    <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.8, flex: 1, marginBottom: '12px', fontStyle: 'italic' }}>"{quote}"</p>
+                    <div style={{ marginBottom: '16px', padding: '6px 10px', background: 'var(--bg-subtle)', borderRadius: '4px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{detail}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <span style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: 'white' }}>{initial}</span>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{name}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{role}</div>
+                        </div>
+                      </div>
+                      {result && (
+                        <div style={{ padding: '3px 10px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', borderRadius: '20px', flexShrink: 0, marginLeft: '8px' }}>
+                          <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--electric)', fontFamily: 'var(--font-mono)' }}>{result}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          <p style={{ fontSize: 11, color: '#999', textAlign: 'center', marginTop: 8 }}>* Résultats illustratifs. Les performances passées ne préjugent pas des performances futures.</p>
+              {/* EN — Trust indicators */}
+              <div className="landing-trust-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+                {[
+                  { value: '4.9/5',  labelKey: 'landing.testiRating',    subKey: 'landing.testiRatingSub'    },
+                  { value: '€2.4M+', labelKey: 'landing.testiPortfolio', subKey: 'landing.testiPortfolioSub' },
+                  { value: '73%',    labelKey: 'landing.testiAccuracy',  subKey: 'landing.testiAccuracySub'  },
+                  { value: '31%',    labelKey: 'landing.testiUpside',    subKey: 'landing.testiUpsideSub'    },
+                ].map(({ value, labelKey, subKey }) => (
+                  <div key={labelKey} style={{ background: 'white', padding: '28px 24px', textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: 'var(--navy)', marginBottom: '6px' }}>{value}</div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>{t(labelKey as any)}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{t(subKey as any)}</div>
+                  </div>
+                ))}
+              </div>
+
+              <p style={{ fontSize: 11, color: '#999', textAlign: 'center', marginTop: 8 }}>* Résultats illustratifs. Les performances passées ne préjugent pas des performances futures.</p>
+            </>
+          )}
         </div>
       </section>
 
