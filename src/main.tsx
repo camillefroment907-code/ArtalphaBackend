@@ -1,9 +1,15 @@
 import { createRoot } from "react-dom/client";
-import './i18n';
 import App from "./app/App.tsx";
 import "./styles/index.css";
 
-createRoot(document.getElementById("root")!).render(<App />);
+import { I18nextProvider } from 'react-i18next';
+import i18n from './i18n';
+
+createRoot(document.getElementById("root")!).render(
+  <I18nextProvider i18n={i18n}>
+    <App />
+  </I18nextProvider>
+);
 
 // Wake up backend + prefetch critical data immediately after render
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
