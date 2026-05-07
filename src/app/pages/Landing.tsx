@@ -84,57 +84,14 @@ function NautilusMockup({ lots = [] }: { lots: any[] }) {
   ];
 
   return (
-    <div style={{ background: 'white', borderRadius: '16px', boxShadow: '0 24px 80px rgba(10,22,40,0.15)', border: '1px solid var(--border)', overflow: 'hidden', width: '100%', maxWidth: '480px', margin: '0 auto', userSelect: 'none' }}>
-
-      {/* Browser chrome */}
-      <div style={{ background: '#F1F0ED', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', gap: '5px' }}>
-          {['#FF5F57', '#FFBD2E', '#28C840'].map(c => (
-            <div key={c} style={{ width: '10px', height: '10px', borderRadius: '50%', background: c }} />
-          ))}
-        </div>
-        <div style={{ flex: 1, background: 'white', borderRadius: '4px', padding: '4px 12px', fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>
-          app.nautilus.so/explore
-        </div>
-      </div>
-
-      {/* App header */}
-      <div style={{ background: 'white', borderBottom: '1px solid var(--border)', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <svg width="16" height="16" viewBox="0 0 40 40" fill="none">
-            <path d="M 20 4 A 16 16 0 0 1 36 20" stroke="#0A1628" strokeWidth="2.5" strokeLinecap="round"/>
-            <path d="M 36 20 A 16 16 0 0 1 20 36" stroke="#0A1628" strokeWidth="2.5" strokeLinecap="round" opacity="0.5"/>
-            <path d="M 20 36 A 8 8 0 0 1 12 28" stroke="#C6A85A" strokeWidth="2.5" strokeLinecap="round"/>
-            <circle cx="20" cy="20" r="2" fill="#C6A85A"/>
-          </svg>
-          <span style={{ fontFamily: "-apple-system, 'Inter', 'Helvetica Neue', Arial, sans-serif", fontSize: '12px', fontWeight: 700, color: 'var(--navy)', letterSpacing: '-0.02em' }}>Nautilus</span>
-        </div>
-        {['Dashboard', 'Explorer', 'Portfolio'].map((navItem, i) => (
-          <span key={navItem} style={{ fontSize: '11px', color: i === 1 ? 'var(--navy)' : 'var(--text-3)', fontWeight: i === 1 ? 700 : 400, borderBottom: i === 1 ? '2px solid var(--navy)' : 'none', paddingBottom: '2px' }}>
-            {navItem}
-          </span>
-        ))}
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#34D399', animation: 'pulseDot 2s infinite' }} />
-          <span style={{ fontSize: '9px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>LIVE</span>
-        </div>
-      </div>
-
-      {/* Tab bar */}
-      <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '4px' }}>
-        {['Best Lots', 'All Auctions', 'Primary', 'Convictions'].map((tab, i) => (
-          <div key={tab} style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '10px', fontWeight: i === 0 ? 700 : 400, background: i === 0 ? 'var(--navy)' : 'transparent', color: i === 0 ? 'white' : 'var(--text-3)' }}>
-            {tab}
-          </div>
-        ))}
-      </div>
+    <div style={{ background: 'white', borderRadius: '16px', boxShadow: '0 24px 64px rgba(0,0,0,0.12)', border: '1px solid var(--border)', overflow: 'hidden', width: '100%', maxWidth: '528px', margin: '0 auto', userSelect: 'none', transform: 'perspective(1000px) rotateY(-3deg) rotateX(1deg)' }}>
 
       {/* Main content */}
       <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: '1fr 140px', gap: '12px' }}>
 
         {/* Active lot card */}
         <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(10,22,40,0.08)' }}>
-          <div style={{ height: '120px', position: 'relative', overflow: 'hidden', background: 'var(--bg-subtle)' }}>
+          <div style={{ height: '156px', position: 'relative', overflow: 'hidden', background: 'var(--bg-subtle)' }}>
             {imgSrc ? (
               <img src={imgSrc} alt={title}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', opacity: fade ? 1 : 0, transition: 'opacity 0.3s ease' }}
@@ -1001,6 +958,29 @@ export default function Landing() {
             <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-mono)' }}>
               {t('landing.footerCopyright')}
             </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '10px' }}>
+              {(['en', 'fr'] as const).map((lng, i) => (
+                <>
+                  {i > 0 && <span key={`fsep-${lng}`} style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>}
+                  <button
+                    key={lng}
+                    onClick={() => { i18n.changeLanguage(lng); localStorage.setItem('i18nextLng', lng); }}
+                    style={{
+                      background: 'none', border: 'none', cursor: currentLang === lng ? 'default' : 'pointer',
+                      fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em',
+                      fontWeight: currentLang === lng ? 700 : 400,
+                      color: currentLang === lng ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)',
+                      textTransform: 'uppercase', padding: 0,
+                      transition: 'color 0.15s',
+                    }}
+                    onMouseEnter={e => { if (currentLang !== lng) (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.5)'; }}
+                    onMouseLeave={e => { if (currentLang !== lng) (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.2)'; }}
+                  >
+                    {lng}
+                  </button>
+                </>
+              ))}
+            </div>
             <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)', fontFamily: 'var(--font-mono)' }}>
               {t('landing.footerTagline')}
             </span>
