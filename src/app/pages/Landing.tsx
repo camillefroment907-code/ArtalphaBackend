@@ -384,47 +384,64 @@ export default function Landing() {
       </section>
 
       {/* ── URGENCY STRIP ── */}
-      <div style={{ background: 'var(--navy)', padding: '14px 0', overflow: 'hidden' }}>
-        <div className="landing-urgency-strip" style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 40px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '32px', flexWrap: 'nowrap' }}>
-          {[
-            { icon: '⚡', text: t('landing.urgency3Lots'), highlight: true },
-            { icon: '◎', text: t('landing.urgencyTracked', { count: (lotCount ?? dailyLots()).toLocaleString() }), highlight: false },
-            { icon: '◈', text: t('landing.urgencyHouses'), highlight: false },
-          ].map(({ icon, text, highlight }) => (
-            <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-              <span style={{ fontSize: '12px', color: highlight ? '#C6A85A' : 'rgba(255,255,255,0.4)' }}>{icon}</span>
-              <span style={{ fontSize: '12px', color: highlight ? 'white' : 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', fontWeight: highlight ? 600 : 400 }}>
-                {text}
-              </span>
-            </div>
-          ))}
+      {!isFr && (
+        <div style={{ background: 'var(--navy)', padding: '14px 0', overflow: 'hidden' }}>
+          <div className="landing-urgency-strip" style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 40px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '32px', flexWrap: 'nowrap' }}>
+            {[
+              { icon: '⚡', text: t('landing.urgency3Lots'), highlight: true },
+              { icon: '◎', text: t('landing.urgencyTracked', { count: (lotCount ?? dailyLots()).toLocaleString() }), highlight: false },
+              { icon: '◈', text: t('landing.urgencyHouses'), highlight: false },
+            ].map(({ icon, text, highlight }) => (
+              <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <span style={{ fontSize: '12px', color: highlight ? '#C6A85A' : 'rgba(255,255,255,0.4)' }}>{icon}</span>
+                <span style={{ fontSize: '12px', color: highlight ? 'white' : 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', fontWeight: highlight ? 600 : 400 }}>
+                  {text}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── METRICS ── */}
-      <section style={{ padding: '32px 120px', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', background: 'white' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: isFr ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)' }}>
-          {(isFr ? [
-            { value: '1,5M+',  label: t('landing.lotsAnalyzed'),  sub: '' },
-            { value: '85/100', label: t('landing.predictionAcc'), sub: '' },
-            { value: '84',     label: t('landing.globalSources'), sub: '' },
-          ] : [
-            { value: '500K+', label: t('landing.lotsAnalyzed'),    sub: t('landing.lotsAnalyzedSub')    },
-            { value: '87%',   label: t('landing.predictionAcc'),   sub: t('landing.predictionAccSub')   },
-            { value: '€2.3M', label: t('landing.valueIdentified'), sub: t('landing.valueIdentifiedSub') },
-            { value: '30+',   label: t('landing.globalSources'),   sub: t('landing.globalSourcesSub')   },
-          ]).map(({ value, label, sub }, i) => (
-            <div key={i} style={{ padding: '20px 32px', borderRight: i < (isFr ? 2 : 3) ? '1px solid var(--border)' : 'none' }}>
-              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>{value}</div>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-2)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>{label}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{sub}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', fontStyle: 'italic' }}>
-          {t('landing.dataNote')}
-        </div>
-      </section>
+      {isFr ? (
+        <section style={{ background: '#0A1628', padding: '96px 120px', textAlign: 'center' }}>
+          <div style={{ width: '48px', height: '1px', background: '#B8922A', margin: '0 auto 40px' }} />
+          <p style={{ fontFamily: 'Georgia, serif', fontSize: '13px', fontStyle: 'italic', color: 'rgba(255,255,255,0.4)', margin: '0 0 48px' }}>En chiffres</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
+            {[
+              { value: '1,5M+',  label: t('landing.lotsAnalyzed')  },
+              { value: '85/100', label: t('landing.predictionAcc') },
+              { value: '84',     label: t('landing.globalSources') },
+            ].map(({ value, label }, i) => (
+              <div key={i} style={{ padding: '0 64px', borderRight: i < 2 ? '1px solid rgba(255,255,255,0.1)' : 'none' }}>
+                <div style={{ fontFamily: 'Georgia, serif', fontSize: '64px', fontWeight: 300, color: '#FFFFFF', letterSpacing: '-0.02em', lineHeight: 1 }}>{value}</div>
+                <div style={{ fontFamily: 'monospace', fontSize: '10px', letterSpacing: '0.2em', color: '#B8922A', textTransform: 'uppercase' as const, marginTop: '16px' }}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <section style={{ padding: '32px 120px', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', background: 'white' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
+            {[
+              { value: '500K+', label: t('landing.lotsAnalyzed'),    sub: t('landing.lotsAnalyzedSub')    },
+              { value: '87%',   label: t('landing.predictionAcc'),   sub: t('landing.predictionAccSub')   },
+              { value: '€2.3M', label: t('landing.valueIdentified'), sub: t('landing.valueIdentifiedSub') },
+              { value: '30+',   label: t('landing.globalSources'),   sub: t('landing.globalSourcesSub')   },
+            ].map(({ value, label, sub }, i) => (
+              <div key={i} style={{ padding: '20px 32px', borderRight: i < 3 ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>{value}</div>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-2)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>{label}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{sub}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', fontStyle: 'italic' }}>
+            {t('landing.dataNote')}
+          </div>
+        </section>
+      )}
 
       {/* ── FOUNDING MEMBER ── */}
       <section style={{ background: '#0A1628', padding: '80px 24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
