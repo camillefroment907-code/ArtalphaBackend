@@ -177,6 +177,7 @@ export default function Landing() {
   const [tickerItems, setTickerItems]       = useState(SEED_TICKER);
   const [lotCount, setLotCount]             = useState<number | null>(null);
   const [showStickyCTA, setShowStickyCTA]   = useState(false);
+  const [closingSoonCount, setClosingSoonCount] = useState<number>(0);
 
   useEffect(() => {
     // Public top lots for landing page preview (no auth required)
@@ -213,6 +214,12 @@ export default function Landing() {
       .then(d => setWeeklyStats(d))
       .catch(() => {});
 
+    // Closing soon count for FR sticky banner
+    fetch(`${BACKEND}/api/lots/closing-today?days=1&limit=50&min_score=0`)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: any) => { if (d?.total) setClosingSoonCount(d.total); })
+      .catch(() => {});
+
     // Sticky CTA — show after 50% scroll
     const onScroll = () => {
       const pct = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
@@ -232,13 +239,17 @@ export default function Landing() {
       {showStickyCTA && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100, background: 'var(--navy)', borderTop: '1px solid rgba(255,255,255,0.1)', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', boxShadow: '0 -4px 20px rgba(10,22,40,0.2)' }}>
           <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-sans)' }}>
-            <span style={{ color: 'var(--gold)', fontWeight: 700 }}>{t('landing.stickyExceptional')}</span> {t('landing.stickyClosing')} {t('landing.stickyCta')}
+            {isFr ? (
+              <><span style={{ color: 'var(--gold)', fontWeight: 700 }}>{closingSoonCount > 0 ? closingSoonCount : '—'} opportunités à fort potentiel</span> clôturent dans 48h</>
+            ) : (
+              <><span style={{ color: 'var(--gold)', fontWeight: 700 }}>{t('landing.stickyExceptional')}</span> {t('landing.stickyClosing')} {t('landing.stickyCta')}</>
+            )}
           </span>
           <button
             onClick={() => navigate('/app/signup')}
             style={{ background: 'var(--gold)', color: 'white', border: 'none', borderRadius: '6px', padding: '10px 24px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}
           >
-            {t('landing.startFree')} →
+            {isFr ? 'Commencer gratuitement →' : `${t('landing.startFree')} →`}
           </button>
           <button onClick={() => setShowStickyCTA(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '16px', cursor: 'pointer', padding: '4px 8px', lineHeight: 1 }}>✕</button>
         </div>
@@ -891,22 +902,24 @@ export default function Landing() {
       {/* ── FINAL CTA ── */}
       <section className="landing-cta-section" style={{ padding: '120px', background: 'var(--bg-subtle)', textAlign: 'center' }}>
         <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '48px', fontWeight: 600, color: 'var(--text)', marginBottom: '16px', lineHeight: 1.2 }}>
-          {t('landing.ctaTitle')}
+          {isFr ? "Les meilleures opportunités ne restent jamais longtemps visibles." : t('landing.ctaTitle')}
         </h2>
         <p style={{ fontSize: '18px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto 40px', lineHeight: 1.6 }}>
-          {t('landing.ctaSub')}
+          {isFr ? "Prenez une longueur d'avance." : t('landing.ctaSub')}
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
           <button onClick={() => navigate('/app/signup')} className="btn-navy" style={{ fontSize: '14px', padding: '16px 48px' }}>
             {t('landing.ctaButton')}
           </button>
-          <button onClick={() => navigate('/pricing')} className="btn-outline" style={{ fontSize: '14px', padding: '16px 32px' }}>
-            {t('landing.ctaPlans')}
+          <button onClick={() => navigate(isFr ? '/app/signup' : '/pricing')} className="btn-outline" style={{ fontSize: '14px', padding: '16px 32px' }}>
+            {isFr ? 'Voir les opportunités →' : t('landing.ctaPlans')}
           </button>
         </div>
-        <div style={{ marginTop: '16px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>
-          {t('landing.ctaNote')}
-        </div>
+        {!isFr && (
+          <div style={{ marginTop: '16px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>
+            {t('landing.ctaNote')}
+          </div>
+        )}
       </section>
 
       {/* ── FOOTER ── */}
@@ -926,7 +939,7 @@ export default function Landing() {
                 {t('landing.footerMktLabel')}
               </div>
               <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', lineHeight: 1.7, maxWidth: '240px' }}>
-                {t('landing.footerMktSub')}
+                {isFr ? "Nautilus identifie ce que le marché n'a pas encore pricé." : t('landing.footerMktSub')}
               </p>
               <div style={{ marginTop: '20px', fontSize: '12px', color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-mono)' }}>
                 {t('landing.footerEmail')}
