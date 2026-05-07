@@ -14,6 +14,8 @@ i18n
     lng: localStorage.getItem('i18nextLng') || (navigator.language?.startsWith('fr') ? 'fr' : 'en'),
   });
 
+console.log('i18n initialized with language:', i18n.language);
+
 // Force language from localStorage on every load
 const storedLang = localStorage.getItem('i18nextLng');
 if (storedLang && storedLang !== i18n.language) {
