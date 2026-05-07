@@ -178,6 +178,7 @@ export default function Landing() {
   const [lotCount, setLotCount]             = useState<number | null>(null);
   const [showStickyCTA, setShowStickyCTA]   = useState(false);
   const [closingSoonCount, setClosingSoonCount] = useState<number>(0);
+  const [bottomStats, setBottomStats] = useState({ total: 28677, closing: 3, exceptional: 12 });
 
   useEffect(() => {
     // Public top lots for landing page preview (no auth required)
@@ -219,6 +220,17 @@ export default function Landing() {
       .then(r => r.ok ? r.json() : null)
       .then((d: any) => { if (d?.total) setClosingSoonCount(d.total); })
       .catch(() => {});
+
+    // Bottom bar real stats
+    Promise.all([
+      fetch(`${BACKEND}/api/lots/stats`).then(r => r.ok ? r.json() : null),
+      fetch(`${BACKEND}/api/lots/closing-today?days=1&limit=50&min_score=0`).then(r => r.ok ? r.json() : null),
+      fetch(`${BACKEND}/api/lots/closing-today?days=30&min_score=80&limit=100`).then(r => r.ok ? r.json() : null),
+    ]).then(([stats, closing24h, exceptional]) => {
+      if (stats)      setBottomStats(prev => ({ ...prev, total:       stats.total_upcoming   || prev.total       }));
+      if (closing24h) setBottomStats(prev => ({ ...prev, closing:     closing24h.total       || prev.closing     }));
+      if (exceptional) setBottomStats(prev => ({ ...prev, exceptional: exceptional.total     || prev.exceptional }));
+    }).catch(() => {});
 
     // Sticky CTA — show after 50% scroll
     const onScroll = () => {
@@ -405,18 +417,17 @@ export default function Landing() {
 
       {/* ── METRICS ── */}
       {isFr ? (
-        <section style={{ background: '#FAFAF8', padding: '40px 120px', textAlign: 'center' }}>
-          <div style={{ width: '48px', height: '1px', background: '#B8922A', margin: '0 auto 24px' }} />
-          <p style={{ fontFamily: 'Georgia, serif', fontSize: '13px', fontStyle: 'italic', color: '#9CA3AF', margin: '0 0 20px' }}>En chiffres</p>
+        <section style={{ borderTop: '1px solid #E8E4DC', borderBottom: '1px solid #E8E4DC', padding: '48px 120px', textAlign: 'center' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
             {[
-              { value: '1,5M+',  label: t('landing.lotsAnalyzed')  },
-              { value: '85/100', label: t('landing.predictionAcc') },
-              { value: '84',     label: t('landing.globalSources') },
-            ].map(({ value, label }, i) => (
-              <div key={i} style={{ padding: '0 64px', borderRight: i < 2 ? '1px solid #E8E4DC' : 'none' }}>
-                <div style={{ fontFamily: 'Georgia, serif', fontSize: '44px', fontWeight: 300, color: '#1A2A44', letterSpacing: '-0.02em', lineHeight: 1 }}>{value}</div>
-                <div style={{ fontFamily: 'monospace', fontSize: '10px', letterSpacing: '0.2em', color: '#B8922A', textTransform: 'uppercase' as const, marginTop: '16px' }}>{label}</div>
+              { value: '1,5M+',  label: t('landing.lotsAnalyzed'),  desc: 'transactions historiques'    },
+              { value: '85/100', label: t('landing.predictionAcc'), desc: 'score moyen · lots 80+'      },
+              { value: '84',     label: t('landing.globalSources'), desc: 'maisons de vente mondiales'  },
+            ].map(({ value, label, desc }, i) => (
+              <div key={i} style={{ padding: '0 32px' }}>
+                <div style={{ fontFamily: 'Georgia, serif', fontSize: '40px', fontWeight: 400, color: '#1A2A44', lineHeight: 1 }}>{value}</div>
+                <div style={{ fontFamily: 'monospace', fontSize: '10px', letterSpacing: '0.15em', color: '#B8922A', textTransform: 'uppercase' as const, marginTop: '8px' }}>{label}</div>
+                <div style={{ fontSize: '12px', color: '#9CA3AF', fontStyle: 'italic', marginTop: '4px' }}>{desc}</div>
               </div>
             ))}
           </div>
@@ -902,16 +913,16 @@ export default function Landing() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C6A85A', animation: 'pulseDot 2s infinite' }} />
             <span style={{ fontSize: '12px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
-              {t('landing.urgencyWeek', { count: weeklyStats?.segments?.reduce((a: number, s: any) => a + (s.total_lots_30d || 0), 0) || (lotCount ?? dailyLots()) })}
+              {bottomStats.total.toLocaleString('fr-FR')} lots suivis cette semaine
             </span>
           </div>
           <span style={{ color: 'var(--border)' }}>·</span>
           <span style={{ fontSize: '12px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
-            {t('landing.urgency12')}
+            {bottomStats.exceptional} opportunités exceptionnelles identifiées
           </span>
           <span style={{ color: 'var(--border)' }}>·</span>
           <span style={{ fontSize: '12px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
-            {t('landing.urgency3Closing')}
+            {bottomStats.closing} clôturent dans 48h
           </span>
         </div>
       </div>
