@@ -348,7 +348,7 @@ export default function Dashboard() {
             background: 'white', border: '1px solid #E8E4DC', borderRadius: '10px',
             overflow: 'hidden', marginBottom: '24px',
           }}>
-            [
+            {[
               {
                 icon: '↓',
                 iconColor: '#2563EB',
