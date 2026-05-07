@@ -591,36 +591,59 @@ export default function Landing() {
       <section className="landing-gated-section" style={{ padding: '80px 120px', background: 'var(--bg-subtle)' }}>
         <div style={{ marginBottom: '40px' }}>
           <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '36px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px' }}>
-            {t('landing.gatedTitle')}
+            {isFr ? "Des opportunités que le marché n'a pas encore pricées" : t('landing.gatedTitle')}
           </h2>
-          <p style={{ fontSize: '14px', color: 'var(--text-2)', margin: 0 }}>{t('landing.gatedSub')}</p>
+          <p style={{ fontSize: '14px', color: 'var(--text-2)', margin: 0 }}>
+            {isFr ? "Accédez à des œuvres identifiées comme sous-évaluées, avec une projection claire du potentiel." : t('landing.gatedSub')}
+          </p>
         </div>
         <div className="landing-gated-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '40px' }}>
           {[
-            { entry: '€52K', target: '€72K', upside: 28, score: 82 },
-            { entry: '£38K', target: '£62K', upside: 42, score: 91 },
-            { entry: '€64K', target: '€98K', upside: 35, score: 76 },
+            { entry: '€52K', target: '€72K', upside: 28, score: 82, frDecision: 'Décision : opportunité solide' },
+            { entry: '€38K', target: '€62K', upside: 42, score: 91, frDecision: 'Décision : signal fort' },
+            { entry: '€64K', target: '€98K', upside: 35, score: 76, frDecision: 'Décision : à surveiller' },
           ].map((opp, i) => (
             <div key={i} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', position: 'relative', cursor: 'pointer', minHeight: '200px' }} onClick={() => navigate('/app/signup')}>
-              <div style={{ paddingTop: '60%', background: 'var(--bg-subtle)', filter: 'blur(8px)', opacity: 0.4 }} />
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <div style={{ padding: '4px 12px', background: 'var(--navy)', borderRadius: '4px' }}>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>{t('landing.gatedMembersOnly')}</span>
+              {isFr ? (
+                <div style={{ padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '16px', fontWeight: 700, color: 'var(--text)' }}>
+                    {opp.entry} → {opp.target}
+                  </div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--electric)', fontFamily: 'var(--font-mono)' }}>
+                    +{opp.upside}% potentiel · Score {opp.score}
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>
+                    {opp.frDecision}
+                  </div>
                 </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
-                  {opp.entry} → {opp.target}
-                </div>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--electric)', fontFamily: 'var(--font-mono)' }}>+{opp.upside}% upside · Score {opp.score}</div>
-              </div>
+              ) : (
+                <>
+                  <div style={{ paddingTop: '60%', background: 'var(--bg-subtle)', filter: 'blur(8px)', opacity: 0.4 }} />
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <div style={{ padding: '4px 12px', background: 'var(--navy)', borderRadius: '4px' }}>
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>{t('landing.gatedMembersOnly')}</span>
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+                      {opp.entry} → {opp.target}
+                    </div>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--electric)', fontFamily: 'var(--font-mono)' }}>+{opp.upside}% upside · Score {opp.score}</div>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>
+        {isFr && (
+          <div style={{ textAlign: 'center', marginBottom: '24px', fontSize: '14px', color: 'var(--text-2)', fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}>
+            Chaque opportunité inclut une décision claire. Pas de data brute.
+          </div>
+        )}
         <div style={{ textAlign: 'center' }}>
           <p style={{ fontSize: '16px', color: 'var(--text-2)', marginBottom: '20px', fontFamily: 'var(--font-serif)' }}>
             {t('landing.gatedReserved')}
           </p>
           <button onClick={() => navigate('/app/signup')} className="btn-electric" style={{ fontSize: '13px', padding: '14px 40px' }}>
-            {t('landing.gatedCta')}
+            {isFr ? 'Accéder aux opportunités' : t('landing.gatedCta')}
           </button>
           <div style={{ marginTop: '12px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
             {t('landing.gatedNote')}
@@ -636,25 +659,33 @@ export default function Landing() {
             {t('landing.momentumLabel')}
           </div>
           <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '36px', fontWeight: 600, color: 'white', marginBottom: '8px' }}>
-            {t('landing.momentumTitle')}
+            {isFr ? "Suivez où l'argent se déplace" : t('landing.momentumTitle')}
           </h2>
           <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginBottom: '48px', fontFamily: 'var(--font-mono)' }}>
-            {t('landing.momentumSub')}
+            {isFr ? "Identifiez les artistes en phase d'accélération avant que les prix ne s'ajustent pleinement." : t('landing.momentumSub')}
           </p>
           <div className="landing-momentum-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
             {[
-              { name: 'Georges Mathieu', movement: 'Lyrical Abstraction', growth: 18 },
-              { name: 'Pierre Soulages', movement: 'Abstract Expressionism', growth: 24 },
-              { name: 'Hans Hartung', movement: 'Post-War European', growth: 15 },
-              { name: 'Zao Wou-Ki', movement: 'Abstract Painting', growth: 32 },
+              { name: 'Georges Mathieu', movement: 'Lyrical Abstraction', growth: 18, frQualifier: 'Début d\'accélération' },
+              { name: 'Pierre Soulages', movement: 'Abstract Expressionism', growth: 24, frQualifier: 'Tendance confirmée' },
+              { name: 'Hans Hartung',    movement: 'Post-War European',      growth: 15, frQualifier: 'À surveiller' },
+              { name: 'Zao Wou-Ki',      movement: 'Abstract Painting',      growth: 32, frQualifier: 'Momentum fort' },
             ].map((artist, i) => (
               <div key={i} style={{ padding: '0 32px', borderRight: i < 3 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
                 <div style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 600, color: 'white', marginBottom: '6px' }}>{artist.name}</div>
                 <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginBottom: '16px' }}>{artist.movement}</div>
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--gold)' }}>+{artist.growth}%</div>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--gold)', lineHeight: 1.1 }}>
+                  +{artist.growth}%
+                  {isFr && <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono)', fontWeight: 400, marginLeft: '8px' }}>· {artist.frQualifier}</span>}
+                </div>
               </div>
             ))}
           </div>
+          {isFr && (
+            <div style={{ marginTop: '40px', fontSize: '14px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-serif)', fontStyle: 'italic', textAlign: 'center' }}>
+              Le momentum précède les prix. Anticipez les prochains mouvements.
+            </div>
+          )}
         </div>
       </section>
 
