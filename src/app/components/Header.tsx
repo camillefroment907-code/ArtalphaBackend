@@ -17,13 +17,13 @@ function useIsMobile(breakpoint = 900) {
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 const NAV_ITEMS = [
-  { tKey: 'nav.signalFeed',   label: 'Signal Feed', to: '/app/dashboard', dropdown: null },
-  { tKey: 'nav.explorer',     label: '',            to: '/app/explore',   dropdown: 'explorer' },
-  { tKey: 'nav.artists',      label: 'Artists',     to: '/app/artists',   dropdown: null },
-  { tKey: 'nav.emerging',     label: 'Emerging',    to: '/app/emerging',  dropdown: null },
-  { tKey: 'nav.calendar',     label: 'Calendar',    to: '/app/calendar',  dropdown: null },
-  { tKey: 'nav.intelligence', label: '',            to: '/app/agent',     dropdown: null },
-  { tKey: 'nav.portfolio',    label: '',            to: '/app/portfolio',  dropdown: null },
+  { tKey: 'nav.signalFeed',   label: '', to: '/app/dashboard', dropdown: null },
+  { tKey: 'nav.explorer',     label: '', to: '/app/explore',   dropdown: 'explorer' },
+  { tKey: 'nav.artists',      label: '', to: '/app/artists',   dropdown: null },
+  { tKey: 'nav.emerging',     label: '', to: '/app/emerging',  dropdown: null },
+  { tKey: 'nav.calendar',     label: '', to: '/app/calendar',  dropdown: null },
+  { tKey: 'nav.intelligence', label: '', to: '/app/agent',     dropdown: null },
+  { tKey: 'nav.portfolio',    label: '', to: '/app/portfolio', dropdown: null },
 ];
 
 const EXPLORER_ITEMS = [
@@ -47,7 +47,7 @@ export function Header() {
   const { t, i18n } = useTranslation();
   const isMobile = useIsMobile();
 
-  const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
+const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
   const toggleLang = () => {
     const newLang = currentLang === 'fr' ? 'en' : 'fr';
     i18n.changeLanguage(newLang);
@@ -328,27 +328,30 @@ export function Header() {
           </div>
 
           {/* Language toggle */}
-          <button
-            onClick={toggleLang}
-            style={{
-              padding: '3px 8px',
-              background: 'transparent',
-              border: '1px solid var(--border)',
-              borderRadius: '4px',
-              fontSize: '10px',
-              fontWeight: 700,
-              color: 'var(--text-2)',
-              cursor: 'pointer',
-              fontFamily: 'var(--font-mono)',
-              letterSpacing: '0.08em',
-              transition: 'all 0.15s',
-              flexShrink: 0,
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--electric)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--electric)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-2)'; }}
-          >
-            {currentLang === 'fr' ? 'EN' : 'FR'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.08em' }}>
+            {(['en', 'fr'] as const).map((lng, i) => (
+              <>
+                {i > 0 && <span key={`sep-${lng}`} style={{ color: 'var(--border)', userSelect: 'none' }}>·</span>}
+                <button
+                  key={lng}
+                  onClick={() => { i18n.changeLanguage(lng); localStorage.setItem('i18nextLng', lng); }}
+                  style={{
+                    background: 'none', border: 'none', cursor: currentLang === lng ? 'default' : 'pointer',
+                    padding: '2px 0',
+                    fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em',
+                    fontWeight: currentLang === lng ? 700 : 400,
+                    color: currentLang === lng ? 'var(--text)' : 'var(--text-3)',
+                    transition: 'color 0.15s',
+                    textTransform: 'uppercase',
+                  }}
+                  onMouseEnter={e => { if (currentLang !== lng) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-2)'; }}
+                  onMouseLeave={e => { if (currentLang !== lng) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-3)'; }}
+                >
+                  {lng}
+                </button>
+              </>
+            ))}
+          </div>
 
           {/* Search */}
           <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -585,6 +588,29 @@ export function Header() {
           </button>
 
           <div style={{ height: '1px', background: 'var(--border)', margin: '8px 0' }} />
+
+          {/* Language toggle mobile */}
+          <div style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {(['en', 'fr'] as const).map((lng, i) => (
+              <>
+                {i > 0 && <span key={`msep-${lng}`} style={{ color: 'var(--border)', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>·</span>}
+                <button
+                  key={lng}
+                  onClick={() => { i18n.changeLanguage(lng); localStorage.setItem('i18nextLng', lng); }}
+                  style={{
+                    background: 'none', border: 'none',
+                    cursor: currentLang === lng ? 'default' : 'pointer',
+                    fontSize: '12px', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em',
+                    fontWeight: currentLang === lng ? 700 : 400,
+                    color: currentLang === lng ? 'var(--text)' : 'var(--text-3)',
+                    padding: 0, textTransform: 'uppercase',
+                  }}
+                >
+                  {lng === 'en' ? 'English' : 'Français'}
+                </button>
+              </>
+            ))}
+          </div>
 
           <button
             onClick={() => { logout(); navigate('/'); }}

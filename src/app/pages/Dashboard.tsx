@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { getToken } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
@@ -44,6 +45,8 @@ function LotImage({ src, alt }: { src: string; alt: string }) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
 
   const [topLots, setTopLots]               = useState<any[]>([]);
   const [recentLots, setRecentLots]         = useState<any[]>([]);
@@ -54,23 +57,43 @@ export default function Dashboard() {
   const [portfolioItems, setPortfolioItems] = useState<any[]>([]);
   const [agentAlerts, setAgentAlerts]       = useState<any[]>([]);
   const [brief, setBrief]                   = useState<string>('');
+  const [refreshKey, setRefreshKey]         = useState(0);
+  const [closingSoonCount, setClosingSoonCount] = useState(0);
+
+  // Auto-refresh every 2 minutes
+  useEffect(() => {
+    const interval = setInterval(() => setRefreshKey(k => k + 1), 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const token = getToken();
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
-    // Top lots
-    cachedFetch(`${BACKEND}/api/lots?sort_by=deal_score&sort_dir=desc&min_score=60&page_size=6`, { headers })
+    // Dashboard stats — total lots, avg score, deals today, real source count
+    fetch(`${BACKEND}/api/lots/stats`)
+      .then(r => r.json())
       .then((d: any) => {
-        const items = d.items || [];
-        setTopLots(items);
-        const total = d.total || 0;
-        const avgScore = items.length > 0
-          ? Math.round(items.reduce((s: number, l: any) => s + (l.deal_score ?? 0), 0) / items.length)
-          : 0;
-        const exceptional = items.filter((l: any) => (l.deal_score ?? 0) >= 80).length;
-        setMarketStats({ total_lots: total, avg_score: avgScore, exceptional });
+        setMarketStats(prev => ({
+          ...prev,
+          total_lots: d.total_lots_tracked || prev.total_lots,
+          avg_score: d.avg_deal_score ? Math.round(d.avg_deal_score) : prev.avg_score,
+          exceptional: d.deals_detected_today ?? prev.exceptional,
+        }));
       })
+      .catch(() => {});
+
+    // Top picks: best-scored lots closing in the next 30 days
+    cachedFetch(`${BACKEND}/api/lots/closing-today?days=30&limit=6&min_score=60`)
+      .then((d: any) => {
+        setTopLots(d.items || []);
+      })
+      .catch(() => {});
+
+    // Closing soon count — dedicated fetch with wider net (days=1, no score filter)
+    fetch(`${BACKEND}/api/lots/closing-today?days=1&limit=50&min_score=0`)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: any) => { if (d) setClosingSoonCount(d.total); })
       .catch(() => {});
 
     // Market sentiment
@@ -101,56 +124,19 @@ export default function Dashboard() {
         .then((d: any) => setAgentAlerts(d.alerts || (Array.isArray(d) ? d : [])))
         .catch(() => {});
     }
-  }, []);
+  }, [refreshKey]);
 
-  // AI Market Brief — streams from chat endpoint
+  // AI Market Brief — dedicated dashboard-brief endpoint
   useEffect(() => {
     if (topLots.length === 0) return;
     const token = getToken();
-    const avgScore = Math.round(topLots.reduce((s, l) => s + (l.deal_score ?? 0), 0) / topLots.length);
-    const exceptional = topLots.filter(l => (l.deal_score ?? 0) >= 80).length;
-
-    fetch(`${BACKEND}/api/chat/message`, {
+    if (!token) return;
+    fetch(`${BACKEND}/api/chat/dashboard-brief`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({
-        message: `You are Larry, art investment advisor for Nautilus.
-
-Generate an AI Market Brief of 3 ULTRA concise bullet points (max 15 words each) based on this market data:
-- ${topLots.length} opportunities detected, avg score ${avgScore}/100
-- ${exceptional} EXCEPTIONAL lots (score ≥ 80)
-- Top opportunity: ${topLots[0]?.artist_name_raw || 'Unknown'} — ${topLots[0]?.title || ''} at ${topLots[0]?.current_price ? '€' + Math.round(topLots[0].current_price) : 'unknown price'}
-
-STRICT response format — exactly 3 lines, each starting with ◆:
-◆ [market insight 1]
-◆ [market insight 2]
-◆ [market insight 3]
-
-No introduction, no conclusion, just the 3 lines.`,
-      }),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'Accept-Language': lang },
     })
-      .then(async resp => {
-        if (!resp.ok) return;
-        const reader = resp.body?.getReader();
-        const decoder = new TextDecoder();
-        let fullText = '';
-        if (!reader) return;
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          for (const line of chunk.split('\n')) {
-            if (!line.startsWith('data: ')) continue;
-            try {
-              const parsed = JSON.parse(line.slice(6));
-              if (parsed.delta) fullText += parsed.delta;
-              if (parsed.done) {
-                setBrief((parsed.full || fullText).replace(/\s*—\s*Larry[\s\S]*$/im, '').trim());
-              }
-            } catch { continue; }
-          }
-        }
-      })
+      .then(r => r.ok ? r.json() : null)
+      .then((d: any) => { if (d?.brief) setBrief(d.brief); })
       .catch(() => {});
   }, [topLots]);
 
@@ -202,7 +188,7 @@ No introduction, no conclusion, just the 3 lines.`,
             letterSpacing: '-0.01em',
             lineHeight: 1.2,
           }}>
-            High conviction opportunities
+            {t('dashboard.heroTitle')}
           </h1>
           <p style={{
             fontFamily: 'var(--font-mono)',
@@ -211,7 +197,7 @@ No introduction, no conclusion, just the 3 lines.`,
             margin: 0,
             letterSpacing: '0.08em',
           }}>
-            AI-POWERED ART INVESTMENT SIGNALS · UPDATED LIVE
+            {t('dashboard.heroSubtitle')}
             <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#34D399', marginLeft: '8px', verticalAlign: 'middle', animation: 'pulse 2s infinite' }} />
           </p>
         </div>
@@ -220,17 +206,17 @@ No introduction, no conclusion, just the 3 lines.`,
         <div style={{ display: 'flex', gap: '0', border: '1px solid #E8E4DC', borderRadius: '10px', overflow: 'hidden', background: 'white' }}>
           {[
             {
-              label: 'Exceptional',
+              label: t('dashboard.statsExceptional'),
               value: marketStats.exceptional > 0 ? marketStats.exceptional.toString() : '—',
               accent: '#C0392B',
             },
             {
-              label: 'Avg conviction',
+              label: t('dashboard.statsAvgConviction'),
               value: marketStats.avg_score > 0 ? `${marketStats.avg_score}/100` : '—',
               accent: '#1A2A44',
             },
             {
-              label: 'Market',
+              label: t('dashboard.statsMarket'),
               value: sentiment?.overall || 'NEUTRAL',
               accent: sentiment?.overall === 'BULLISH' ? '#2563EB' : '#6B7280',
             },
@@ -255,7 +241,7 @@ No introduction, no conclusion, just the 3 lines.`,
       {/* ══════════════════════════════════════════════
           MAIN BODY — left scroll + right sidebar
       ══════════════════════════════════════════════ */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 320px', overflow: 'hidden' }}>
+      <div className="dashboard-grid" style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 320px', overflow: 'hidden' }}>
 
         {/* LEFT — scrollable main */}
         <div className="no-scrollbar" style={{ overflowY: 'auto', padding: '28px 32px', borderRight: '1px solid #E8E4DC' }}>
@@ -264,14 +250,14 @@ No introduction, no conclusion, just the 3 lines.`,
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
             <div>
               <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '16px', fontWeight: 600, color: '#1A2A44', margin: 0 }}>
-                Today's Top Picks
+                {t('dashboard.bestOpps')}
               </h2>
             </div>
             <button
               onClick={() => navigate('/app/explore?tab=best')}
               style={{ fontSize: '12px', color: 'var(--electric)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', letterSpacing: '0.01em' }}
             >
-              View all →
+              {t('dashboard.viewAll')}
             </button>
           </div>
 
@@ -332,19 +318,19 @@ No introduction, no conclusion, just the 3 lines.`,
                         {/* 3-column bottom row */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', borderTop: '1px solid #F0EDE8', paddingTop: '10px' }}>
                           <div>
-                            <div style={{ fontSize: '9px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em', marginBottom: '2px' }}>EST.</div>
+                            <div style={{ fontSize: '9px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em', marginBottom: '2px' }}>{t('dashboard.colEst')}</div>
                             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: '#374151' }}>
                               {fmtPrice(lot.estimate_low)}
                             </div>
                           </div>
                           <div>
-                            <div style={{ fontSize: '9px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em', marginBottom: '2px' }}>COST</div>
+                            <div style={{ fontSize: '9px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em', marginBottom: '2px' }}>{t('dashboard.colCost')}</div>
                             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: '#374151' }}>
                               {fmtPrice(realCost ?? lot.current_price)}
                             </div>
                           </div>
                           <div>
-                            <div style={{ fontSize: '9px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em', marginBottom: '2px' }}>UPSIDE</div>
+                            <div style={{ fontSize: '9px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em', marginBottom: '2px' }}>{t('dashboard.colUpside')}</div>
                             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 800, color: upside > 0 ? '#059669' : '#9CA3AF' }}>
                               {upside > 0 ? `+${upside}%` : '—'}
                             </div>
@@ -362,34 +348,34 @@ No introduction, no conclusion, just the 3 lines.`,
             background: 'white', border: '1px solid #E8E4DC', borderRadius: '10px',
             overflow: 'hidden', marginBottom: '24px',
           }}>
-            {[
+            [
               {
                 icon: '↓',
                 iconColor: '#2563EB',
                 value: estimationBias > 0 ? `-${estimationBias}%` : '—',
-                label: 'Below estimate',
-                sub: 'avg estimation bias',
+                label: t('dashboard.kpiBelowEst'),
+                sub: t('dashboard.kpiAvgBias'),
               },
               {
                 icon: '↑',
                 iconColor: '#059669',
                 value: bestUpside > 0 ? `+${bestUpside}%` : '—',
-                label: 'Best upside',
-                sub: 'max profit potential',
+                label: t('dashboard.kpiBestUpside'),
+                sub: t('dashboard.kpiMaxPotential'),
               },
               {
                 icon: '◆',
                 iconColor: '#C0392B',
                 value: marketStats.exceptional > 0 ? marketStats.exceptional.toString() : '0',
-                label: 'Exceptional',
-                sub: 'conviction score ≥ 80',
+                label: t('dashboard.kpiExceptional'),
+                sub: t('dashboard.kpiConvictionGe80'),
               },
               {
                 icon: '⏱',
                 iconColor: '#D97706',
-                value: closingSoon.length > 0 ? closingSoon.length.toString() : '0',
-                label: 'Closing soon',
-                sub: 'within 24 hours',
+                value: closingSoonCount > 0 ? closingSoonCount.toString() : '0',
+                label: t('dashboard.kpiClosingSoon'),
+                sub: t('dashboard.kpiWithin24h'),
               },
             ].map(({ icon, iconColor, value, label, sub }, i) => (
               <div key={label} style={{
@@ -411,13 +397,13 @@ No introduction, no conclusion, just the 3 lines.`,
           <div style={{ background: 'white', border: '1px solid #E8E4DC', borderRadius: '10px', overflow: 'hidden' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #E8E4DC' }}>
               <h3 style={{ fontFamily: 'Georgia, serif', fontSize: '15px', fontWeight: 600, color: '#1A2A44', margin: 0 }}>
-                Recent Exceptional
+                {t('dashboard.recentExceptional')}
               </h3>
               <button
                 onClick={() => navigate('/app/explore?tab=best')}
                 style={{ fontSize: '12px', color: 'var(--electric)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
               >
-                View all →
+                {t('dashboard.viewAll')}
               </button>
             </div>
 
@@ -429,7 +415,7 @@ No introduction, no conclusion, just the 3 lines.`,
               background: '#F7F4EF',
               borderBottom: '1px solid #E8E4DC',
             }}>
-              {['Artwork', 'Artist', 'Est. Value', 'Real Cost', 'Upside', 'Score', ''].map(h => (
+              {[t('dashboard.colArtwork'), t('dashboard.colArtist'), t('dashboard.colEstValue'), t('dashboard.colRealCost'), t('dashboard.colUpside'), t('dashboard.colScore'), ''].map(h => (
                 <div key={h} style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase' }}>{h}</div>
               ))}
             </div>
@@ -520,7 +506,7 @@ No introduction, no conclusion, just the 3 lines.`,
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'white', letterSpacing: '0.04em' }}>AI Market Brief</span>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'white', letterSpacing: '0.04em' }}>{t('dashboard.aiMarketBrief')}</span>
                   <span style={{ fontSize: '8px', fontWeight: 700, color: '#34D399', fontFamily: 'var(--font-mono)', background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.3)', padding: '1px 6px', borderRadius: '2px', letterSpacing: '0.12em' }}>LIVE</span>
                 </div>
                 <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.7 }}>
@@ -535,17 +521,17 @@ No introduction, no conclusion, just the 3 lines.`,
         {/* ══════════════════════════════════════════════
             RIGHT SIDEBAR — 320px
         ══════════════════════════════════════════════ */}
-        <div className="no-scrollbar" style={{ overflowY: 'auto', background: 'white', borderLeft: '1px solid #E8E4DC' }}>
+        <div className="no-scrollbar dashboard-sidebar" style={{ overflowY: 'auto', background: 'white', borderLeft: '1px solid #E8E4DC' }}>
 
           {/* Market Activity */}
           <div style={{ padding: '20px', borderBottom: '1px solid #E8E4DC' }}>
             <h3 style={{ fontFamily: 'Georgia, serif', fontSize: '15px', fontWeight: 600, color: '#1A2A44', margin: '0 0 14px' }}>
-              Market Activity
+              {t('dashboard.marketActivity')}
             </h3>
             {[
-              { label: 'Auction lots', sub: 'Global coverage', value: marketStats.total_lots > 0 ? marketStats.total_lots.toLocaleString() : '—' },
-              { label: 'Avg deal score', sub: 'Current selection', value: marketStats.avg_score > 0 ? `${marketStats.avg_score}/100` : '—' },
-              { label: 'Exceptional lots', sub: 'Score ≥ 80', value: marketStats.exceptional > 0 ? marketStats.exceptional.toString() : '—' },
+              { label: t('dashboard.auctionLots'), sub: t('dashboard.globalCoverage'), value: marketStats.total_lots > 0 ? marketStats.total_lots.toLocaleString() : '—' },
+              { label: t('dashboard.avgDealScore'), sub: t('dashboard.currentSelection'), value: marketStats.avg_score > 0 ? `${marketStats.avg_score}/100` : '—' },
+              { label: t('dashboard.exceptionalLots'), sub: t('dashboard.scoreGe80'), value: marketStats.exceptional > 0 ? marketStats.exceptional.toString() : '—' },
             ].map(({ label, sub, value }, i) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i < 2 ? '1px solid #F0EDE8' : 'none' }}>
                 <div>
@@ -562,7 +548,7 @@ No introduction, no conclusion, just the 3 lines.`,
             <div style={{ padding: '20px', borderBottom: '1px solid #E8E4DC' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <h3 style={{ fontFamily: 'Georgia, serif', fontSize: '15px', fontWeight: 600, color: '#1A2A44', margin: 0 }}>
-                  Market Sentiment
+                  {t('dashboard.marketSentiment')}
                 </h3>
                 <span style={{
                   fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)', padding: '2px 8px', borderRadius: '3px', letterSpacing: '0.1em',
@@ -588,14 +574,14 @@ No introduction, no conclusion, just the 3 lines.`,
           {/* Quick Actions */}
           <div style={{ padding: '20px' }}>
             <h3 style={{ fontFamily: 'Georgia, serif', fontSize: '15px', fontWeight: 600, color: '#1A2A44', margin: '0 0 12px' }}>
-              Quick Actions
+              {t('dashboard.quickActions')}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {[
-                { label: 'Browse all opportunities', sub: `${marketStats.total_lots > 0 ? marketStats.total_lots.toLocaleString() : '—'} lots available`, icon: '◆', to: '/app/explore?tab=best' },
-                { label: 'View convictions', sub: 'AI highest-conviction picks', icon: '★', to: '/app/explore?tab=convictions' },
-                { label: 'My portfolio', sub: `${portfolioItems.length} works tracked`, icon: '◐', to: '/app/portfolio' },
-                { label: 'Ask Larry', sub: 'AI art investment advisor', icon: '◎', to: '/app/agent' },
+                { label: t('dashboard.browseOpportunities'), sub: t('dashboard.lotsAvailableCount', { count: marketStats.total_lots > 0 ? marketStats.total_lots.toLocaleString() : '—' }), icon: '◆', to: '/app/explore?tab=best' },
+                { label: t('dashboard.viewConvictions'), sub: t('dashboard.aiHighestConviction'), icon: '★', to: '/app/explore?tab=convictions' },
+                { label: t('dashboard.myPortfolio'), sub: t('dashboard.worksTracked', { count: portfolioItems.length }), icon: '◐', to: '/app/portfolio' },
+                { label: t('dashboard.askLarry'), sub: t('dashboard.aiAdvisor'), icon: '◎', to: '/app/agent' },
               ].map(({ label, sub, icon, to }) => (
                 <div
                   key={to}
@@ -619,9 +605,9 @@ No introduction, no conclusion, just the 3 lines.`,
           {agentAlerts.length > 0 && (
             <div style={{ padding: '0 20px 20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <h3 style={{ fontFamily: 'Georgia, serif', fontSize: '15px', fontWeight: 600, color: '#1A2A44', margin: 0 }}>Agent Signals</h3>
+                <h3 style={{ fontFamily: 'Georgia, serif', fontSize: '15px', fontWeight: 600, color: '#1A2A44', margin: 0 }}>{t('dashboard.agentSignals')}</h3>
                 <button onClick={() => navigate('/app/agent')} style={{ fontSize: '12px', color: 'var(--electric)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
-                  Manage →
+                  {t('dashboard.manage')}
                 </button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
