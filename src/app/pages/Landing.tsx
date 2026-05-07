@@ -405,17 +405,17 @@ export default function Landing() {
 
       {/* ── METRICS ── */}
       {isFr ? (
-        <section style={{ background: '#0A1628', padding: '96px 120px', textAlign: 'center' }}>
+        <section style={{ background: '#FAFAF8', padding: '72px 120px', textAlign: 'center' }}>
           <div style={{ width: '48px', height: '1px', background: '#B8922A', margin: '0 auto 40px' }} />
-          <p style={{ fontFamily: 'Georgia, serif', fontSize: '13px', fontStyle: 'italic', color: 'rgba(255,255,255,0.4)', margin: '0 0 48px' }}>En chiffres</p>
+          <p style={{ fontFamily: 'Georgia, serif', fontSize: '13px', fontStyle: 'italic', color: '#9CA3AF', margin: '0 0 48px' }}>En chiffres</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
             {[
               { value: '1,5M+',  label: t('landing.lotsAnalyzed')  },
               { value: '85/100', label: t('landing.predictionAcc') },
               { value: '84',     label: t('landing.globalSources') },
             ].map(({ value, label }, i) => (
-              <div key={i} style={{ padding: '0 64px', borderRight: i < 2 ? '1px solid rgba(255,255,255,0.1)' : 'none' }}>
-                <div style={{ fontFamily: 'Georgia, serif', fontSize: '64px', fontWeight: 300, color: '#FFFFFF', letterSpacing: '-0.02em', lineHeight: 1 }}>{value}</div>
+              <div key={i} style={{ padding: '0 64px', borderRight: i < 2 ? '1px solid #E8E4DC' : 'none' }}>
+                <div style={{ fontFamily: 'Georgia, serif', fontSize: '44px', fontWeight: 300, color: '#1A2A44', letterSpacing: '-0.02em', lineHeight: 1 }}>{value}</div>
                 <div style={{ fontFamily: 'monospace', fontSize: '10px', letterSpacing: '0.2em', color: '#B8922A', textTransform: 'uppercase' as const, marginTop: '16px' }}>{label}</div>
               </div>
             ))}
