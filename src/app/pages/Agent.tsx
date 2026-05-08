@@ -541,23 +541,7 @@ function AgentPage() {
             </div>
           )}
 
-          {/* Empty state */}
-          {recs.length === 0 ? (
-            <div style={{
-              padding: '64px 40px', textAlign: 'center',
-              border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg-subtle)',
-            }}>
-              <div style={{ fontSize: '30px', color: 'var(--text-3)', marginBottom: '16px', letterSpacing: '-0.02em' }}>◈</div>
-              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--text-2)', marginBottom: '8px' }}>
-                {isFr ? 'Votre analyste est prêt.' : 'Your analyst is ready.'}
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.7, maxWidth: '280px', margin: '0 auto' }}>
-                {isFr
-                  ? 'Créez une stratégie pour recevoir vos premiers signaux.'
-                  : 'Create a strategy to receive your first signals.'}
-              </div>
-            </div>
-          ) : (
+          {recs.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {filteredRecs.map(rec => {
                 const vColor = verdictColor(rec.verdict);
