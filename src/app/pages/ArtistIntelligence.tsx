@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { getToken, getUserPlan } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
@@ -287,6 +288,8 @@ function PriceChart({ data, stats }: { data: YearPoint[]; stats: any }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ArtistIntelligence() {
+  const { t, i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
   const navigate = useNavigate();
   const { artistName } = useParams<{ artistName: string }>();
   const [artist, setArtist] = useState<any>(null);
@@ -435,13 +438,13 @@ export default function ArtistIntelligence() {
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
             <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', marginBottom: '12px', textTransform: 'uppercase' }}>
-              Artist Intelligence
+              {isFr ? 'INTELLIGENCE ARTISTE' : 'ARTIST INTELLIGENCE'}
             </div>
             <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '40px', fontWeight: 600, color: 'var(--text)', margin: '0 0 12px' }}>
-              Search any artist
+              {isFr ? 'Rechercher un artiste' : 'Search any artist'}
             </h1>
             <p style={{ fontSize: '15px', color: 'var(--text-2)', maxWidth: '440px', margin: '0 auto' }}>
-              Full market intelligence — prices, scores, auction history, AI analysis.
+              {isFr ? 'Intelligence marché complète — prix, scores, historique des enchères, analyse IA.' : 'Full market intelligence — prices, scores, auction history, AI analysis.'}
             </p>
           </div>
 
@@ -449,7 +452,7 @@ export default function ArtistIntelligence() {
           <div style={{ position: 'relative', marginBottom: '32px' }}>
             <input
               className="input"
-              placeholder="Search artist — e.g. Picasso, Basquiat, Miró..."
+              placeholder={isFr ? "Rechercher un artiste — ex. Picasso, Basquiat, Miró..." : "Search artist — e.g. Picasso, Basquiat, Miró..."}
               value={searchQuery}
               onChange={e => handleSearch(e.target.value)}
               style={{ fontSize: '16px', padding: '16px 20px', borderRadius: '10px', boxShadow: '0 4px 20px rgba(10,22,40,0.06)', width: '100%' }}
@@ -549,7 +552,7 @@ export default function ArtistIntelligence() {
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px' }}>
 
         {/* Artist header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '32px', marginBottom: '32px' }}>
+        <div className="intelligence-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '32px', marginBottom: '32px' }}>
 
           {/* Left — Identity + AI brief */}
           <div>
@@ -1315,13 +1318,13 @@ export default function ArtistIntelligence() {
         {artist.all_lots?.length > 0 && (
           <div>
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '16px' }}>
-              All tracked lots
+              {t('artist.allLots')}
             </h2>
-            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
+            <div className="intelligence-table-wrap" style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border)' }}>
-                    {['Title', 'Score', 'Price', 'Est. Range', 'Auction House', 'Date', ''].map(h => (
+                    {[t('artist.title'), t('artist.score'), t('lot.price'), t('artist.estRange'), t('artist.auctionHouse'), t('artist.date'), ''].map(h => (
                       <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
                         {h}
                       </th>

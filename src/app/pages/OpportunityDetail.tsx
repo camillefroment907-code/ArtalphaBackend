@@ -265,12 +265,12 @@ export default function OpportunityDetail() {
     if (hasProvHighRisk)
       return { label: isFr ? 'RISQUE ÉLEVÉ' : 'HIGH RISK', dk: '#EF4444', gl: RED,  icon: '⚠', sub: isFr ? 'Problème de provenance détecté' : 'Provenance issue detected' };
     if ((lot.deal_score || 0) >= 80 && upsidePct >= 20 && !hasCycleRisk)
-      return { label: 'BUY',       dk: GD,        gl: GL,   icon: '↑', sub: 'Strong conviction signal' };
+      return { label: 'BUY',       dk: GD,        gl: GL,   icon: '↑', sub: isFr ? 'Signal fort de conviction' : 'Strong conviction signal' };
     if ((lot.deal_score || 0) >= 65 && upsidePct >= 10)
-      return { label: 'WATCH',     dk: '#FBBF24',  gl: AMB,  icon: '◎', sub: 'Monitor closely' };
+      return { label: isFr ? 'SURVEILLER' : 'WATCH',     dk: '#FBBF24',  gl: AMB,  icon: '◎', sub: isFr ? 'À surveiller de près' : 'Monitor closely' };
     if ((lot.deal_score || 0) < 50 || upsidePct < 0)
-      return { label: 'PASS',      dk: '#EF4444',  gl: RED,  icon: '↓', sub: 'Below conviction threshold' };
-    return   { label: 'WATCH',     dk: '#FBBF24',  gl: AMB,  icon: '◎', sub: 'Insufficient signal' };
+      return { label: 'PASS',      dk: '#EF4444',  gl: RED,  icon: '↓', sub: isFr ? 'Sous le seuil de conviction' : 'Below conviction threshold' };
+    return   { label: isFr ? 'SURVEILLER' : 'WATCH',     dk: '#FBBF24',  gl: AMB,  icon: '◎', sub: isFr ? 'Signal insuffisant' : 'Insufficient signal' };
   })();
 
   const riskFlagCount = ([hasProvHighRisk, hasConsignHigh, !!(estBias && Math.abs(estBias.pct_above_low_estimate || 0) > 50)] as boolean[]).filter(Boolean).length;
@@ -554,12 +554,12 @@ export default function OpportunityDetail() {
           {/* Market narrative */}
           <p style={{ fontSize: 13, fontStyle: 'italic', color: '#6B7280', marginTop: 8 }}>
             {(lot.deal_score || 0) >= 80
-              ? `Strong buy signal at ${lot.auction_house_name || 'this auction house'} — top conviction tier.`
+              ? isFr ? `Fort signal d'achat chez ${lot.auction_house_name || 'cette maison de ventes'} — conviction maximale.` : `Strong buy signal at ${lot.auction_house_name || 'this auction house'} — top conviction tier.`
               : (lot.deal_score || 0) >= 65
-              ? `Solid opportunity at ${lot.auction_house_name || 'this auction house'} — above average for this category.`
+              ? isFr ? `Bonne opportunité chez ${lot.auction_house_name || 'cette maison de ventes'} — au-dessus de la moyenne pour cette catégorie.` : `Solid opportunity at ${lot.auction_house_name || 'this auction house'} — above average for this category.`
               : (lot.deal_score || 0) >= 45
-              ? `Moderate signal — monitor as auction date approaches.`
-              : `Below threshold — better opportunities currently available.`}
+              ? isFr ? `Signal modéré — à surveiller avant la date de vente.` : `Moderate signal — monitor as auction date approaches.`
+              : isFr ? `Sous le seuil — de meilleures opportunités sont disponibles.` : `Below threshold — better opportunities currently available.`}
           </p>
 
           {/* External link */}
@@ -686,7 +686,7 @@ export default function OpportunityDetail() {
                           fontFamily: 'var(--font-mono)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, padding: '2px 7px', borderRadius: '3px',
                           color: lot.artist_profile.investment_tier === 'blue_chip' ? BL : lot.artist_profile.investment_tier === 'emerging' ? GL : AMB,
                           background: lot.artist_profile.investment_tier === 'blue_chip' ? '#EFF6FF' : lot.artist_profile.investment_tier === 'emerging' ? '#F0FDF4' : '#FFFBEB',
-                        }}>{lot.artist_profile.investment_tier.replace('_', ' ')}</span>
+                        }}>{isFr ? (lot.artist_profile.investment_tier === 'emerging' ? 'émergent' : lot.artist_profile.investment_tier === 'mid_career' ? 'mi-carrière' : lot.artist_profile.investment_tier.replace('_', ' ')) : lot.artist_profile.investment_tier.replace('_', ' ')}</span>
                       )}
                       {lot.artist?.trend && (
                         <span style={{
@@ -875,8 +875,8 @@ export default function OpportunityDetail() {
               const timingColor = score >= 80 ? GD : score >= 65 ? GOLD : RED;
               const bullets = [
                 (provRisk?.flags?.length || 0) > 0
-                  ? `${provRisk!.flags.length} due diligence flag${provRisk!.flags.length > 1 ? 's' : ''} detected — review before bidding.`
-                  : 'No provenance or compliance flags detected on this lot.',
+                  ? isFr ? `${provRisk!.flags.length} signal${provRisk!.flags.length > 1 ? 's' : ''} de due diligence détecté${provRisk!.flags.length > 1 ? 's' : ''} — vérifier avant d'enchérir.` : `${provRisk!.flags.length} due diligence flag${provRisk!.flags.length > 1 ? 's' : ''} detected — review before bidding.`
+                  : isFr ? 'Aucun problème de provenance ou de conformité détecté.' : 'No provenance or compliance flags detected on this lot.',
                 lot.oracle?.signal === 'BUY_NOW' ? `Oracle signal: BUY NOW · ${lot.oracle.target_upside ? `+${lot.oracle.target_upside}% target upside` : 'strong conviction'}` : null,
               ].filter(Boolean) as string[];
               const content = (
@@ -889,7 +889,7 @@ export default function OpportunityDetail() {
                     </div>
                     {maxBid && (
                       <div style={{ background: LT, border: `1px solid ${LTB}`, borderRadius: '6px', padding: '10px 14px', flex: 1, minWidth: '120px' }}>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', marginBottom: '6px' }}>MAX BID</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', marginBottom: '6px' }}>{isFr ? 'ENCHÈRE MAX' : 'MAX BID'}</div>
                         <div style={{ fontSize: '13px', fontWeight: 700, color: LTT1 }}>{sym}{maxBid.toLocaleString()}</div>
                       </div>
                     )}
@@ -900,7 +900,7 @@ export default function OpportunityDetail() {
                   </div>
                   {comparables.length > 0 && (
                     <div style={{ marginBottom: '16px', borderTop: `1px solid ${LTB}`, paddingTop: '14px' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', marginBottom: '8px' }}>RECENT COMPARABLES</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', marginBottom: '8px' }}>{isFr ? 'COMPARABLES RÉCENTS' : 'RECENT COMPARABLES'}</div>
                       {comparables.slice(0, 2).map((c: any, i: number) => (
                         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: i === 0 && comparables.length > 1 ? `1px solid ${LTB}` : 'none' }}>
                           <div style={{ fontSize: '11px', color: LTT2 }}>
@@ -1035,7 +1035,7 @@ export default function OpportunityDetail() {
                             color: lot.artist_profile.investment_tier === 'blue_chip' ? BL : lot.artist_profile.investment_tier === 'emerging' ? GL : AMB,
                             background: lot.artist_profile.investment_tier === 'blue_chip' ? '#EFF6FF' : lot.artist_profile.investment_tier === 'emerging' ? '#F0FDF4' : '#FFFBEB',
                             padding: '3px 8px', borderRadius: '3px',
-                          }}>{lot.artist_profile.investment_tier.replace('_', ' ')}</span>
+                          }}>{isFr ? (lot.artist_profile.investment_tier === 'emerging' ? 'émergent' : lot.artist_profile.investment_tier === 'mid_career' ? 'mi-carrière' : lot.artist_profile.investment_tier.replace('_', ' ')) : lot.artist_profile.investment_tier.replace('_', ' ')}</span>
                         </div>
                       )}
                       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' as const, marginBottom: '8px' }}>
@@ -1111,22 +1111,22 @@ export default function OpportunityDetail() {
                 {(() => {
                   const risks: { text: string; sev: 'HIGH' | 'MED' | 'LOW' }[] = [];
                   if (hasProvHighRisk)
-                    risks.push({ text: 'Provenance flags detected — verify title and ownership history before bidding', sev: 'HIGH' });
+                    risks.push({ text: isFr ? "Problèmes de provenance détectés — vérifier le titre et l'historique avant d'enchérir" : 'Provenance flags detected — verify title and ownership history before bidding', sev: 'HIGH' });
                   if (hasCycleRisk)
-                    risks.push({ text: `Market at peak cycle (${cycleStage?.stage}) — limited near-term price upside`, sev: 'HIGH' });
+                    risks.push({ text: isFr ? `Marché au pic du cycle (${cycleStage?.stage}) — hausse des prix à court terme limitée` : `Market at peak cycle (${cycleStage?.stage}) — limited near-term price upside`, sev: 'HIGH' });
                   if (hasConsignHigh)
-                    risks.push({ text: 'High consignment volume at this house — oversupply may compress resale prices', sev: 'HIGH' });
+                    risks.push({ text: isFr ? 'Volume de consignation élevé dans cette maison — la suroffre peut comprimer les prix de revente' : 'High consignment volume at this house — oversupply may compress resale prices', sev: 'HIGH' });
                   if (estBias && Math.abs(estBias.pct_above_low_estimate || 0) > 50)
-                    risks.push({ text: `Estimate may be optimistic — currently +${Math.round(estBias.pct_above_low_estimate || 0)}% above historical average for this artist`, sev: 'MED' });
+                    risks.push({ text: isFr ? `Estimation potentiellement optimiste — actuellement +${Math.round(estBias.pct_above_low_estimate || 0)}% au-dessus de la moyenne historique pour cet artiste` : `Estimate may be optimistic — currently +${Math.round(estBias.pct_above_low_estimate || 0)}% above historical average for this artist`, sev: 'MED' });
                   if (lot.artist?.trend === 'down')
-                    risks.push({ text: 'Artist momentum declining — consider exit timing carefully', sev: 'MED' });
+                    risks.push({ text: isFr ? "Momentum de l'artiste en déclin — considérer attentivement le timing de sortie" : 'Artist momentum declining — consider exit timing carefully', sev: 'MED' });
                   if ((lot.artist?.liquidity_score ?? 60) < 40)
-                    risks.push({ text: 'Low market liquidity for this artist — resale may require 12–24 months', sev: 'MED' });
+                    risks.push({ text: isFr ? 'Faible liquidité de marché pour cet artiste — la revente peut nécessiter 12 à 24 mois' : 'Low market liquidity for this artist — resale may require 12–24 months', sev: 'MED' });
                   if (lot.oracle?.signal === 'AVOID')
-                    risks.push({ text: `Oracle signal: AVOID — ${lot.oracle.narrative || 'below conviction threshold'}`, sev: 'HIGH' });
+                    risks.push({ text: isFr ? `Signal Oracle : ÉVITER — ${lot.oracle.narrative || 'sous le seuil de conviction'}` : `Oracle signal: AVOID — ${lot.oracle.narrative || 'below conviction threshold'}`, sev: 'HIGH' });
                   if (risks.length === 0) {
-                    risks.push({ text: 'Standard art market illiquidity — minimum 3–5 year hold recommended', sev: 'LOW' });
-                    risks.push({ text: "Buyer's premium and storage fees increase total acquisition cost", sev: 'LOW' });
+                    risks.push({ text: isFr ? "Illiquidité standard du marché de l'art — durée de détention minimale recommandée : 3 à 5 ans" : 'Standard art market illiquidity — minimum 3–5 year hold recommended', sev: 'LOW' });
+                    risks.push({ text: isFr ? "Les frais acheteur et de stockage augmentent le coût total d'acquisition" : "Buyer's premium and storage fees increase total acquisition cost", sev: 'LOW' });
                   }
                   return (
                     <div style={wCard}>
@@ -1266,9 +1266,9 @@ export default function OpportunityDetail() {
                     const compPrice = comp.current_price || comp.estimate_low || 0;
                     const daysAgo = comp.days_since_sale;
                     const daysLabel = daysAgo != null
-                      ? daysAgo < 30 ? `${daysAgo}d ago`
-                      : daysAgo < 365 ? `${Math.round(daysAgo / 30)}mo ago`
-                      : `${Math.round(daysAgo / 365)}yr ago`
+                      ? daysAgo < 30 ? (isFr ? `il y a ${daysAgo}j` : `${daysAgo}d ago`)
+                      : daysAgo < 365 ? (isFr ? `il y a ${Math.round(daysAgo / 30)} mois` : `${Math.round(daysAgo / 30)}mo ago`)
+                      : (isFr ? `il y a ${Math.round(daysAgo / 365)} an${Math.round(daysAgo / 365) > 1 ? 's' : ''}` : `${Math.round(daysAgo / 365)}yr ago`)
                       : null;
                     const premRatio = comp.premium_ratio;
                     return (
