@@ -10,6 +10,8 @@ const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-produc
 interface YearPoint { year: string; avg_price: number; max_price: number; sale_count: number; }
 
 function PriceChart({ data, stats }: { data: YearPoint[]; stats: any }) {
+  const { i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
   const [hovered, setHovered] = useState<number | null>(null);
 
   if (!data || data.length < 2) return null;
@@ -111,13 +113,13 @@ function PriceChart({ data, stats }: { data: YearPoint[]; stats: any }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', position: 'relative' }}>
         <div>
           <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '8px' }}>
-            Hammer Price History · Nautilus
+            {isFr ? 'Historique des prix · Nautilus' : 'Hammer Price History · Nautilus'}
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: 'white', letterSpacing: '-0.02em', lineHeight: 1 }}>
               {fmt(stats?.avg_hammer_eur || 0)}
             </div>
-            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)' }}>avg hammer</div>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)' }}>{isFr ? 'prix adjugé moy.' : 'avg hammer'}</div>
           </div>
           <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginTop: '5px' }}>
             {data[0].year}–{data[data.length - 1].year} · {stats?.total_sales?.toLocaleString()} sales
@@ -129,7 +131,7 @@ function PriceChart({ data, stats }: { data: YearPoint[]; stats: any }) {
           {stats?.max_hammer_eur != null && (
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#F59E0B', lineHeight: 1 }}>{fmt(stats.max_hammer_eur)}</div>
-              <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '3px' }}>record sale</div>
+              <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '3px' }}>{isFr ? 'VENTE RECORD' : 'RECORD SALE'}</div>
             </div>
           )}
           {stats?.trend_pct != null && (
@@ -141,7 +143,7 @@ function PriceChart({ data, stats }: { data: YearPoint[]; stats: any }) {
           {stats?.sell_above_estimate_pct != null && (
             <div style={{ textAlign: 'right', paddingLeft: '12px', borderLeft: '1px solid rgba(255,255,255,0.08)' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#60A5FA', lineHeight: 1 }}>{stats.sell_above_estimate_pct}%</div>
-              <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '3px' }}>above est.</div>
+              <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '3px' }}>{isFr ? 'AU-DESSUS EST.' : 'ABOVE EST.'}</div>
             </div>
           )}
         </div>
@@ -154,9 +156,9 @@ function PriceChart({ data, stats }: { data: YearPoint[]; stats: any }) {
       }}>
         {hov && <>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'white' }}>{hov.year}</span>
-          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>avg</span>
+          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>{isFr ? 'moy.' : 'avg'}</span>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: '#93C5FD' }}>{fmt(hov.avg_price)}</span>
-          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>record</span>
+          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>{isFr ? 'record' : 'record'}</span>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: '#F59E0B' }}>{fmt(hov.max_price)}</span>
           <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)' }}>{hov.sale_count} sale{hov.sale_count !== 1 ? 's' : ''}</span>
         </>}
@@ -541,11 +543,11 @@ export default function ArtistIntelligence() {
       {/* Breadcrumb */}
       <div style={{ background: 'white', borderBottom: '1px solid var(--border)', padding: '10px 32px', display: 'flex', alignItems: 'center', gap: '8px' }}>
         <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '13px' }}>
-          ← Back
+          {isFr ? '← Retour' : '← Back'}
         </button>
         <span style={{ color: 'var(--border)' }}>·</span>
         <button onClick={() => navigate('/app/artists')} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '12px', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          Artist Intelligence
+          {isFr ? 'Intelligence Artiste' : 'Artist Intelligence'}
         </button>
       </div>
 
@@ -578,7 +580,7 @@ export default function ArtistIntelligence() {
                     </div>
                     <div>
                       <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: col, lineHeight: 1 }}>{investmentGrade.score}/100</div>
-                      <div style={{ fontSize: '9px', color: col, opacity: 0.8, lineHeight: 1.2, letterSpacing: '0.06em' }}>{investmentGrade.label}</div>
+                      <div style={{ fontSize: '9px', color: col, opacity: 0.8, lineHeight: 1.2, letterSpacing: '0.06em' }}>{isFr ? "Grade d'investissement" : investmentGrade.label}</div>
                     </div>
                   </div>
                 );
@@ -605,7 +607,7 @@ export default function ArtistIntelligence() {
             {artist.ai_brief ? (
               <div style={{ background: 'var(--navy)', borderRadius: '10px', padding: '18px 22px', marginBottom: '20px' }}>
                 <div style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '8px' }}>
-                  ◆ NAUTILUS ANALYST BRIEF
+                  {isFr ? '◆ ANALYSE NAUTILUS' : '◆ NAUTILUS ANALYST BRIEF'}
                 </div>
                 <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>
                   {artist.ai_brief}
@@ -631,7 +633,7 @@ export default function ArtistIntelligence() {
             {auctionHouseStats.length > 0 && (
               <div>
                 <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '10px' }}>
-                  Top auction houses
+                  {isFr ? 'PRINCIPALES MAISONS DE VENTE' : 'TOP AUCTION HOUSES'}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12, marginTop: 12 }}>
                   {auctionHouseStats.map(house => (
@@ -645,7 +647,7 @@ export default function ArtistIntelligence() {
                         </span>
                         {house.avg && (
                           <span style={{ fontSize: 12, color: '#4B5563' }}>
-                            avg €{house.avg.toLocaleString()}
+                            {isFr ? 'moy.' : 'avg'} €{house.avg.toLocaleString()}
                           </span>
                         )}
                         {house.max && (
@@ -665,7 +667,7 @@ export default function ArtistIntelligence() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{ background: 'var(--navy)', borderRadius: '10px', padding: '20px 24px' }}>
               <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '6px' }}>
-                AVG CONVICTION SCORE
+                {isFr ? 'SCORE DE CONVICTION MOY.' : 'AVG CONVICTION SCORE'}
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '10px' }}>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '44px', fontWeight: 700, color: (stats.avg_score || 0) >= 80 ? '#C6A85A' : 'white', lineHeight: 1 }}>
@@ -680,10 +682,10 @@ export default function ArtistIntelligence() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               {[
-                { label: 'LOTS TRACKED', value: artist.total_lots?.toLocaleString() || '0', color: undefined },
-                { label: 'AVG PRICE', value: stats.avg_price ? `€${stats.avg_price.toLocaleString()}` : '—', color: undefined },
-                { label: 'PRICE RANGE', value: stats.max_price ? `€${(stats.min_price || 0).toLocaleString()}–${(stats.max_price || 0).toLocaleString()}` : '—', color: undefined },
-                { label: 'MOMENTUM', value: (stats.momentum || 'stable').toUpperCase(), color: stats.momentum === 'rising' ? '#34D399' : undefined },
+                { label: isFr ? 'LOTS SUIVIS' : 'LOTS TRACKED', value: artist.total_lots?.toLocaleString() || '0', color: undefined },
+                { label: isFr ? 'PRIX MOYEN' : 'AVG PRICE', value: stats.avg_price ? `€${stats.avg_price.toLocaleString()}` : '—', color: undefined },
+                { label: isFr ? 'FOURCHETTE DE PRIX' : 'PRICE RANGE', value: stats.max_price ? `€${(stats.min_price || 0).toLocaleString()}–${(stats.max_price || 0).toLocaleString()}` : '—', color: undefined },
+                { label: 'MOMENTUM', value: isFr ? (stats.momentum === 'rising' ? 'EN HAUSSE' : stats.momentum === 'falling' ? 'EN BAISSE' : 'STABLE') : (stats.momentum || 'stable').toUpperCase(), color: stats.momentum === 'rising' ? '#34D399' : undefined },
               ].map(({ label, value, color }) => (
                 <div key={label} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px' }}>
                   <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px' }}>
@@ -712,7 +714,7 @@ export default function ArtistIntelligence() {
               onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.opacity = '0.9'}
               onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.opacity = '1'}
             >
-              ★ Follow this artist
+              {isFr ? '★ Suivre cet artiste' : '★ Follow this artist'}
             </button>
           </div>
         </div>
@@ -720,7 +722,7 @@ export default function ArtistIntelligence() {
         {/* Categories */}
         {artist.categories?.length > 0 && (
           <div style={{ marginBottom: '32px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>WORKS IN:</span>
+            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>{isFr ? 'TRAVAILLE EN :' : 'WORKS IN:'}</span>
             {artist.categories.map((c: any) => (
               <span key={c.name} style={{ padding: '4px 12px', background: 'white', border: '1px solid var(--border)', borderRadius: '20px', fontSize: '12px', color: 'var(--text-2)' }}>
                 {c.name} <span style={{ color: 'var(--text-3)', fontSize: '10px', fontFamily: 'var(--font-mono)' }}>({c.count})</span>
@@ -734,10 +736,10 @@ export default function ArtistIntelligence() {
           <div style={{ marginBottom: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>
-                Top opportunities
+                {isFr ? 'Meilleures opportunités' : 'Top opportunities'}
               </h2>
               <span style={{ fontSize: '12px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-                {artist.total_lots} lots total
+                {artist.total_lots} {isFr ? 'lots au total' : 'lots total'}
               </span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
@@ -832,11 +834,11 @@ export default function ArtistIntelligence() {
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div>
                 <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>
-                  Format Performance Matrix
+                  {isFr ? 'Matrice de performance par format' : 'Format Performance Matrix'}
                 </h2>
               </div>
               <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-                {formatMatrix.reduce((s, f) => s + f.count, 0).toLocaleString()} sales analyzed
+                {formatMatrix.reduce((s, f) => s + f.count, 0).toLocaleString()} {isFr ? 'ventes analysées' : 'sales analyzed'}
               </span>
             </div>
 
@@ -851,7 +853,7 @@ export default function ArtistIntelligence() {
                 background: 'var(--bg-subtle)',
                 borderBottom: '1px solid var(--border)',
               }}>
-                {['FORMAT', 'VOLUME', 'AVG PRICE', 'RECORD', 'ENTRY', 'ABOVE EST.'].map(h => (
+                {['FORMAT', 'VOLUME', isFr ? 'PRIX MOY.' : 'AVG PRICE', 'RECORD', isFr ? 'ENTRÉE' : 'ENTRY', isFr ? 'AU-DESSUS EST.' : 'ABOVE EST.'].map(h => (
                   <div key={h} style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>
                     {h}
                   </div>
@@ -904,7 +906,7 @@ export default function ArtistIntelligence() {
                             {f.format}
                           </div>
                           <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-                            {f.count} sales
+                            {f.count} {isFr ? 'ventes' : 'sales'}
                           </div>
                         </div>
                       </div>
@@ -960,10 +962,10 @@ export default function ArtistIntelligence() {
             {/* Legend */}
             <div style={{ display: 'flex', gap: '20px', marginTop: '10px', flexWrap: 'wrap' }}>
               {[
-                { label: 'AVG PRICE', desc: 'Mean hammer price (EUR)' },
-                { label: 'RECORD', desc: 'Highest hammer price achieved' },
-                { label: 'ENTRY', desc: 'Lowest hammer price (min. investment)' },
-                { label: 'ABOVE EST.', desc: '% of sales exceeding high estimate' },
+                { label: isFr ? 'PRIX MOY.' : 'AVG PRICE', desc: isFr ? 'Prix adjugé moyen (EUR)' : 'Mean hammer price (EUR)' },
+                { label: 'RECORD', desc: isFr ? 'Prix adjugé le plus élevé' : 'Highest hammer price achieved' },
+                { label: isFr ? 'ENTRÉE' : 'ENTRY', desc: isFr ? "Prix adjugé le plus bas (investissement min.)" : 'Lowest hammer price (min. investment)' },
+                { label: isFr ? 'AU-DESSUS EST.' : 'ABOVE EST.', desc: isFr ? "% des ventes dépassant l'estimation haute" : '% of sales exceeding high estimate' },
               ].map(({ label, desc }) => (
                 <div key={label} style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
                   <span style={{ fontWeight: 700, color: 'var(--text-2)' }}>{label}</span> — {desc}
@@ -989,7 +991,7 @@ export default function ArtistIntelligence() {
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div>
                   <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>
-                    Geographic Arbitrage Detector
+                    {isFr ? 'Arbitrage géographique' : 'Geographic Arbitrage Detector'}
                   </h2>
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -999,7 +1001,7 @@ export default function ArtistIntelligence() {
                     </div>
                   )}
                   <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-                    price spread
+                    {isFr ? 'écart de prix' : 'price spread'}
                   </div>
                 </div>
               </div>
@@ -1010,14 +1012,14 @@ export default function ArtistIntelligence() {
                   <div style={{ background: 'rgba(52,211,153,0.05)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '8px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ fontSize: '20px' }}>🛒</span>
                     <div>
-                      <div style={{ fontSize: '9px', fontWeight: 700, color: '#34D399', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>BEST MARKET TO BUY</div>
+                      <div style={{ fontSize: '9px', fontWeight: 700, color: '#34D399', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>{isFr ? 'MEILLEUR MARCHÉ POUR ACHETER' : 'BEST MARKET TO BUY'}</div>
                       <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)', marginTop: '2px' }}>{geoArbitrage.best_buy}</div>
                     </div>
                   </div>
                   <div style={{ background: 'rgba(198,168,90,0.05)', border: '1px solid rgba(198,168,90,0.2)', borderRadius: '8px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ fontSize: '20px' }}>🏷</span>
                     <div>
-                      <div style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>BEST MARKET TO SELL</div>
+                      <div style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>{isFr ? 'MEILLEUR MARCHÉ POUR VENDRE' : 'BEST MARKET TO SELL'}</div>
                       <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)', marginTop: '2px' }}>{geoArbitrage.best_sell}</div>
                     </div>
                   </div>
@@ -1068,9 +1070,9 @@ export default function ArtistIntelligence() {
                             {r.flag} <span style={{ fontWeight: 600, color: 'var(--text)' }}>{r.region}</span>
                           </div>
                           <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
-                            {r.count} sales
-                            {isBestSell && <span style={{ color: '#C6A85A', marginLeft: '6px' }}>★ best sell</span>}
-                            {isBestBuy  && <span style={{ color: '#34D399', marginLeft: '6px' }}>↓ best buy</span>}
+                            {r.count} {isFr ? 'ventes' : 'sales'}
+                            {isBestSell && <span style={{ color: '#C6A85A', marginLeft: '6px' }}>{isFr ? '★ meilleure vente' : '★ best sell'}</span>}
+                            {isBestBuy  && <span style={{ color: '#34D399', marginLeft: '6px' }}>{isFr ? '↓ meilleur achat' : '↓ best buy'}</span>}
                           </div>
                         </div>
                       </div>
@@ -1117,7 +1119,7 @@ export default function ArtistIntelligence() {
 
               {/* Note */}
               <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: '10px' }}>
-                Market regions inferred from auction currency. All prices normalized to EUR.
+                {isFr ? 'Régions déduites de la devise des enchères. Prix normalisés en EUR.' : 'Market regions inferred from auction currency. All prices normalized to EUR.'}
                 {geoArbitrage.total_sales && ` · ${geoArbitrage.total_sales.toLocaleString()} historical sales analyzed.`}
               </div>
             </div>
@@ -1133,11 +1135,11 @@ export default function ArtistIntelligence() {
             <div style={{ marginBottom: '32px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div>
-                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>Auction House Timing Optimizer</h2>
+                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>{isFr ? 'Optimiseur de timing par maison de vente' : 'Auction House Timing Optimizer'}</h2>
                 </div>
                 {timingOptimizer.best_month && (
                   <div style={{ background: 'var(--navy)', borderRadius: '8px', padding: '10px 16px', textAlign: 'right' }}>
-                    <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>BEST WINDOW</div>
+                    <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>{isFr ? 'MEILLEURE PÉRIODE' : 'BEST WINDOW'}</div>
                     <div style={{ fontSize: '15px', fontWeight: 700, color: '#C6A85A', marginTop: '3px' }}>
                       📅 {timingOptimizer.best_month} · {timingOptimizer.best_season}
                     </div>
@@ -1168,13 +1170,16 @@ export default function ArtistIntelligence() {
                 </div>
                 {/* Season legend */}
                 <div style={{ display: 'flex', gap: '16px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-light)' }}>
-                  {Object.entries(SEASON_COLOR).map(([s, c]) => (
-                    <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: c }} />
-                      <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{s}</span>
-                    </div>
-                  ))}
-                  <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginLeft: 'auto' }}>Bar height = avg hammer price (EUR)</span>
+                  {(() => {
+                    const seasonFr: Record<string, string> = { Spring: 'Printemps', Summer: 'Été', Autumn: 'Automne', Winter: 'Hiver' };
+                    return Object.entries(SEASON_COLOR).map(([s, c]) => (
+                      <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: c }} />
+                        <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{isFr ? (seasonFr[s] || s) : s}</span>
+                      </div>
+                    ));
+                  })()}
+                  <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginLeft: 'auto' }}>{isFr ? 'Hauteur des barres = prix adjugé moy. (EUR)' : 'Bar height = avg hammer price (EUR)'}</span>
                 </div>
               </div>
 
@@ -1186,7 +1191,7 @@ export default function ArtistIntelligence() {
                       <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text)', marginBottom: '4px' }}>{e.house}</div>
                       <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginBottom: '6px' }}>{e.month_name} · {e.count} sales</div>
                       <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: i === 0 ? '#C6A85A' : 'var(--text)' }}>{fmt(e.avg_price)}</div>
-                      {e.sell_above_pct !== null && <div style={{ fontSize: '10px', color: e.sell_above_pct >= 70 ? '#34D399' : e.sell_above_pct >= 50 ? '#F59E0B' : '#F87171', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>{e.sell_above_pct}% above est.</div>}
+                      {e.sell_above_pct !== null && <div style={{ fontSize: '10px', color: e.sell_above_pct >= 70 ? '#34D399' : e.sell_above_pct >= 50 ? '#F59E0B' : '#F87171', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>{e.sell_above_pct}% {isFr ? 'au-dessus est.' : 'above est.'}</div>}
                     </div>
                   ))}
                 </div>
@@ -1204,9 +1209,9 @@ export default function ArtistIntelligence() {
             <div style={{ marginBottom: '32px' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div>
-                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>Liquidity Depth Map</h2>
+                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>{isFr ? 'Carte de liquidité' : 'Liquidity Depth Map'}</h2>
                 </div>
-                <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{liquidityMap.total_sales?.toLocaleString()} sales mapped</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{liquidityMap.total_sales?.toLocaleString()} {isFr ? 'ventes cartographiées' : 'sales mapped'}</span>
               </div>
 
               <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
@@ -1219,11 +1224,13 @@ export default function ArtistIntelligence() {
                 </div>
 
                 {/* Rows — time periods */}
-                {liquidityMap.periods.map((period: string, pi: number) => (
+                {liquidityMap.periods.map((period: string, pi: number) => {
+                  const periodFr: Record<string, string> = { 'Last 2 years': '2 dernières années', '2–5 years ago': 'il y a 2 à 5 ans', '5+ years ago': 'il y a 5 ans+' };
+                  return (
                   <div key={period} style={{ display: 'grid', gridTemplateColumns: '120px repeat(5, 1fr)', borderBottom: pi < 2 ? '1px solid var(--border-light)' : 'none' }}>
                     <div style={{ padding: '14px 12px', display: 'flex', alignItems: 'center' }}>
                       <div style={{ width: '3px', height: '28px', borderRadius: '2px', background: PERIOD_COLORS[pi], marginRight: '8px', flexShrink: 0 }} />
-                      <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', lineHeight: 1.3 }}>{period}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', lineHeight: 1.3 }}>{isFr ? (periodFr[period] || period) : period}</span>
                     </div>
                     {liquidityMap.price_bands.map((_: string, bi: number) => {
                       const cell = cells.find((c: any) => c.price_band === bi && c.period === pi);
@@ -1246,10 +1253,11 @@ export default function ArtistIntelligence() {
                       );
                     })}
                   </div>
-                ))}
+                  );
+                })}
               </div>
               <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: '8px' }}>
-                Cell intensity = relative sales density. Darker = more liquid at this price range.
+                {isFr ? 'Intensité = densité relative des ventes. Plus foncé = plus liquide à cette fourchette.' : 'Cell intensity = relative sales density. Darker = more liquid at this price range.'}
               </div>
             </div>
           );
@@ -1258,16 +1266,16 @@ export default function ArtistIntelligence() {
         {/* ── Institutional Calendar Overlay ──────────────────────────── */}
         {calendarOverlay && (() => {
           const fmt = (v: number) => v >= 1_000_000 ? `€${(v/1_000_000).toFixed(1)}M` : v >= 1_000 ? `€${Math.round(v/1_000)}K` : `€${v}`;
-          const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          const MONTH_NAMES = isFr ? ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'] : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
           return (
             <div style={{ marginBottom: '32px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div>
-                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>Institutional Calendar Overlay</h2>
+                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>{isFr ? 'Calendrier institutionnel' : 'Institutional Calendar Overlay'}</h2>
                 </div>
                 {calendarOverlay.peak_season && (
                   <div style={{ background: 'rgba(198,168,90,0.08)', border: '1px solid rgba(198,168,90,0.25)', borderRadius: '8px', padding: '8px 14px', textAlign: 'right' }}>
-                    <div style={{ fontSize: '9px', color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>PEAK SEASON</div>
+                    <div style={{ fontSize: '9px', color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>{isFr ? 'SAISON FORTE' : 'PEAK SEASON'}</div>
                     <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)', marginTop: '2px' }}>{calendarOverlay.peak_season} · {calendarOverlay.peak_month}</div>
                   </div>
                 )}
@@ -1275,7 +1283,7 @@ export default function ArtistIntelligence() {
 
               {/* Monthly activity ring */}
               <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '20px 24px', marginBottom: '12px' }}>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '14px' }}>Historical sale activity by month</div>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '14px' }}>{isFr ? 'Activité des ventes par mois' : 'Historical sale activity by month'}</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '4px' }}>
                   {MONTH_NAMES.map((mn, i) => {
                     const entry = calendarOverlay.active_months.find((a: any) => a.month_name === mn);

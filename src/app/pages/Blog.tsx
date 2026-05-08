@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useSEO } from '../../lib/useSEO';
 import { Link } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { Logo } from '../components/Logo';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
@@ -19,6 +20,24 @@ interface BlogPost {
   tags: string[];
   published_at: string | null;
   read_time_minutes: number;
+}
+
+function getLang(): 'fr' | 'en' {
+  const stored = localStorage.getItem('lang') || navigator.language || 'en';
+  return stored.startsWith('fr') ? 'fr' : 'en';
+}
+
+function localize(field: any): string {
+  if (!field) return '';
+  if (typeof field !== 'string') return String(field);
+  try {
+    const parsed = JSON.parse(field);
+    if (typeof parsed === 'object' && parsed !== null) {
+      const lang = getLang();
+      return parsed[lang] || parsed['en'] || parsed['fr'] || field;
+    }
+  } catch {}
+  return field;
 }
 
 function formatDate(iso: string | null) {
@@ -49,11 +68,11 @@ function PostCard({ post }: { post: BlogPost }) {
             </div>
           )}
           <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px', lineHeight: 1.35 }}>
-            {post.title}
+            {localize(post.title)}
           </h2>
           {post.excerpt && (
             <p style={{ fontSize: '13px', color: 'var(--text-2)', margin: '0 0 14px', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-              {post.excerpt}
+              {localize(post.excerpt)}
             </p>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -68,6 +87,7 @@ function PostCard({ post }: { post: BlogPost }) {
 }
 
 export default function Blog() {
+  const { t } = useTranslation();
   const [posts, setPosts]   = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal]   = useState(0);
@@ -96,8 +116,8 @@ export default function Blog() {
           <Logo variant="horizontal" color="dark" size={24} />
         </Link>
         <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-          <Link to="/app/login" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>Sign in</Link>
-          <Link to="/app/signup" style={{ fontSize: '13px', color: 'white', background: 'var(--navy)', padding: '8px 20px', borderRadius: '6px', textDecoration: 'none', fontWeight: 600 }}>Get access</Link>
+          <Link to="/app/login" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>{t('common.signIn')}</Link>
+          <Link to="/app/signup" style={{ fontSize: '13px', color: 'white', background: 'var(--navy)', padding: '8px 20px', borderRadius: '6px', textDecoration: 'none', fontWeight: 600 }}>{t('common.getAccess')}</Link>
         </div>
       </header>
 
@@ -105,13 +125,13 @@ export default function Blog() {
         {/* Page header */}
         <div style={{ marginBottom: '48px' }}>
           <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '12px' }}>
-            MARKET INTELLIGENCE
+            {t('blog.sectionLabel')}
           </div>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '42px', fontWeight: 700, color: 'var(--text)', marginBottom: '12px' }}>
-            The Nautilus Brief
+            {t('blog.title')}
           </h1>
           <p style={{ fontSize: '16px', color: 'var(--text-2)', lineHeight: 1.6, maxWidth: '560px' }}>
-            Art market analysis, investment signals, and collector intelligence — updated weekly.
+            {t('blog.subtitle')}
           </p>
         </div>
 
@@ -126,10 +146,10 @@ export default function Blog() {
         {!loading && posts.length === 0 && (
           <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-3)' }}>
             <div style={{ fontSize: '32px', marginBottom: '16px' }}>◆</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>Market intelligence briefs coming soon</div>
-            <p style={{ fontSize: '14px' }}>Weekly analysis, collector insights, and market intelligence from Nautilus.</p>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>{t('blog.emptyTitle')}</div>
+            <p style={{ fontSize: '14px' }}>{t('blog.emptySub')}</p>
             <Link to="/app/signup" style={{ display: 'inline-block', marginTop: '20px', background: 'var(--navy)', color: 'white', padding: '12px 24px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
-              Start free →
+              {t('blog.emptyCta')}
             </Link>
           </div>
         )}
@@ -149,9 +169,9 @@ export default function Blog() {
                     </div>
                   )}
                   <div style={{ padding: '40px 44px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold-dim)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '12px' }}>✦ FEATURED</div>
-                    <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 600, color: 'var(--text)', margin: '0 0 12px', lineHeight: 1.3 }}>{posts[0].title}</h2>
-                    {posts[0].excerpt && <p style={{ fontSize: '14px', color: 'var(--text-2)', margin: '0 0 20px', lineHeight: 1.7 }}>{posts[0].excerpt}</p>}
+                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold-dim)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '12px' }}>{t('blog.featured')}</div>
+                    <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 600, color: 'var(--text)', margin: '0 0 12px', lineHeight: 1.3 }}>{localize(posts[0].title)}</h2>
+                    {posts[0].excerpt && <p style={{ fontSize: '14px', color: 'var(--text-2)', margin: '0 0 20px', lineHeight: 1.7 }}>{localize(posts[0].excerpt)}</p>}
                     <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{formatDate(posts[0].published_at)} · {posts[0].read_time_minutes} min read</div>
                   </div>
                 </article>

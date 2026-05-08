@@ -330,3 +330,134 @@ async def send_collection_completion_email(
 """
     return await send_email(to_email, f"A new piece for your {collection_theme} collection",
                             html_email(content, "Collection completion"), ALERT_FROM)
+
+
+async def send_auction_reminder_1h(
+    to_email: str,
+    artist_name: str,
+    lot_title: str,
+    auction_house: str,
+    estimate_range: str,
+    lot_url: str,
+    lot_image_url: Optional[str] = None,
+) -> bool:
+    """Reminder 1h before followed lot goes live."""
+    image_block = (
+        f'<div style="padding:0 0 24px 0;">'
+        f'<a href="{lot_url}" style="display:block;">'
+        f'<img src="{lot_image_url}" alt="Artwork" '
+        f'style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;display:block;">'
+        f'</a></div>'
+    ) if lot_image_url else ""
+    content = f"""
+{label("AUCTION ALERT")}
+<h1>{artist_name} goes live in 1 hour.</h1>
+<p>A lot you're following at <strong>{auction_house}</strong> starts in approximately 1 hour. Open Larry Live for real-time analysis before you bid.</p>
+{image_block}{lot_card(artist_name.upper(), lot_title, auction_house, f"Est. {estimate_range}")}
+<div style="text-align:center;">{cta("Open Larry Live →", lot_url, gold=True)}</div>
+<p style="color:#888888;font-size:13px;">You're receiving this because you followed this lot on Nautilus.</p>
+"""
+    try:
+        return await send_email(
+            to_email,
+            f"⚡ Dans 1h — {lot_title}",
+            html_email(content, f"Auction Alert: {artist_name}"),
+            ALERT_FROM,
+        )
+    except Exception:
+        return False
+
+
+async def send_auction_reminder_30min(
+    to_email: str,
+    artist_name: str,
+    lot_title: str,
+    auction_house: str,
+    estimate_range: str,
+    lot_url: str,
+    lot_image_url: Optional[str] = None,
+) -> bool:
+    """Reminder 30min before followed lot goes live."""
+    image_block = (
+        f'<div style="padding:0 0 24px 0;">'
+        f'<a href="{lot_url}" style="display:block;">'
+        f'<img src="{lot_image_url}" alt="Artwork" '
+        f'style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;display:block;">'
+        f'</a></div>'
+    ) if lot_image_url else ""
+    content = f"""
+{label("FINAL ALERT")}
+<h1>30 minutes until {artist_name}.</h1>
+<p><strong>{auction_house}</strong> — bidding opens in 30 minutes. Last chance to review the analysis before the hammer drops.</p>
+{image_block}{lot_card(artist_name.upper(), lot_title, auction_house, f"Est. {estimate_range}")}
+<div style="text-align:center;">{cta("Open Larry Live →", lot_url, gold=True)}</div>
+<p style="color:#888888;font-size:13px;">You're receiving this because you followed this lot on Nautilus.</p>
+"""
+    try:
+        return await send_email(
+            to_email,
+            f"⏱ 30 minutes — {lot_title}",
+            html_email(content, f"Final Alert: {artist_name}"),
+            ALERT_FROM,
+        )
+    except Exception:
+        return False
+
+
+async def send_oracle_signal_email(
+    to_email: str,
+    artist_name: str,
+    signal: str,
+    oracle_score: float,
+    active_signals: list,
+    narrative: str,
+    target_upside: str,
+    artist_url: str,
+) -> bool:
+    """Dedicated Oracle alert — replaces generic weekly momentum email."""
+    signal_label = "BUY NOW" if signal == "BUY_NOW" else "WATCH"
+    signal_color = "#C6A85A" if signal == "BUY_NOW" else "#1A2A44"
+    signal_text_color = "#1A2A44" if signal == "BUY_NOW" else "#fff"
+    signals_html = "".join(
+        f'<div style="padding:6px 0;border-bottom:1px solid #E8E4DC;'
+        f'font-size:13px;color:#555;">◆ {s}</div>'
+        for s in (active_signals or [])[:4]
+    )
+    count = len(active_signals or [])
+    content = f"""
+{label("NAUTILUS ORACLE")}
+<h1>{artist_name} — Oracle signal detected.</h1>
+<p>Nautilus Intelligence has identified <strong>{count} active signal{'s' if count != 1 else ''}</strong> on {artist_name}. Oracle confidence: <strong>{int(oracle_score)}/100</strong>.</p>
+
+<div style="background:#F5F4F0;border-radius:8px;padding:20px;margin:20px 0;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <div style="font-family:'Inter',sans-serif;font-size:10px;letter-spacing:0.15em;color:#888;text-transform:uppercase;">Oracle Signal</div>
+    <span style="background:{signal_color};color:{signal_text_color};font-size:11px;font-weight:700;letter-spacing:0.1em;padding:5px 14px;border-radius:3px;">{signal_label}</span>
+  </div>
+  {signals_html}
+</div>
+
+<p style="color:#555;font-size:14px;line-height:1.75;">{narrative or 'Nautilus Oracle has detected significant market movement for this artist.'}</p>
+
+<div style="background:#1A2A44;border-radius:8px;padding:16px 20px;margin:20px 0;display:flex;justify-content:space-between;align-items:center;">
+  <div>
+    <div style="color:rgba(255,255,255,0.5);font-size:9px;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:4px;">TARGET UPSIDE</div>
+    <div style="color:#C6A85A;font-size:20px;font-weight:700;">{target_upside}</div>
+  </div>
+  <div style="text-align:right;">
+    <div style="color:rgba(255,255,255,0.5);font-size:9px;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:4px;">CONFIDENCE</div>
+    <div style="color:#fff;font-size:20px;font-weight:700;">{int(oracle_score)}/100</div>
+  </div>
+</div>
+
+{cta("View artist intelligence", artist_url)}
+"""
+    try:
+        return await send_email(
+            to_email,
+            f"⚡ Oracle: {artist_name} — {signal_label}",
+            html_email(content, f"Oracle: {artist_name}"),
+            ALERT_FROM,
+        )
+    except Exception:
+        return False

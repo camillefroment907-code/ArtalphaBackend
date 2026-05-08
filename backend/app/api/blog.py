@@ -263,6 +263,117 @@ _LAUNCH_POSTS = [
 ]
 
 
+async def generate_blog_post_logic(db: AsyncSession, post_type: str = "weekly_opportunities") -> dict:
+    """Core generation logic — callable from the API endpoint or Celery tasks.
+    Generates bilingual (FR/EN) content stored as JSON in content/excerpt fields.
+    """
+    import os
+    import json
+    from openai import AsyncOpenAI
+
+    api_key = os.getenv("OPENAI_API_KEY")
+
+    if not api_key:
+        slug = f"draft-{int(datetime.utcnow().timestamp())}"
+        post = BlogPost(
+            slug=slug,
+            title="Draft — OPENAI_API_KEY not set",
+            excerpt=json.dumps({"fr": "Article en attente de génération.", "en": "Article pending generation."}),
+            content=json.dumps({"fr": "<p>Contenu non disponible.</p>", "en": "<p>Content unavailable.</p>"}),
+            author="Nautilus Intelligence",
+            tags=["draft"],
+            read_time_minutes=5,
+            is_published=True,
+            published_at=datetime.utcnow(),
+        )
+        db.add(post)
+        await db.commit()
+        await db.refresh(post)
+        return _serialize(post)
+
+    system = (
+        "You are a world-class art market journalist writing for Nautilus, "
+        "the Bloomberg Terminal for art investment. Write factual, compelling "
+        "content only. Never hallucinate prices or facts."
+    )
+
+    user_prompt = """Write a bilingual art market article.
+
+Return ONLY valid JSON, no markdown, no backticks:
+{
+  "title_fr": "compelling French title",
+  "title_en": "compelling English title",
+  "excerpt_fr": "2 sentence French summary",
+  "excerpt_en": "2 sentence English summary",
+  "content_fr": "full 800-word article in French with ## subheadings",
+  "content_en": "full 800-word article in English with ## subheadings",
+  "tags": ["art", "investment", "auction"],
+  "read_time_minutes": 5
+}
+
+Topic: rotate between these themes based on current date:
+- Monday week: auction market analysis and recent results
+- Tuesday week: artist spotlight and investment potential
+- Wednesday week: bidding strategy and market timing
+- Thursday week: emerging categories and price trends
+- Friday week: collector education and provenance
+
+The article must:
+- Reference real artists, auction houses, market data
+- Show how Nautilus tools (deal score, Oracle, Pre-Bid Intelligence, Larry) help investors
+- Be engaging for serious art collectors and investors
+- Include specific numbers, percentages, examples"""
+
+    try:
+        client = AsyncOpenAI(api_key=api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user_prompt},
+            ],
+            max_tokens=3000,
+            temperature=0.7,
+            response_format={"type": "json_object"},
+        )
+        data = json.loads(response.choices[0].message.content or "{}")
+    except Exception as e:
+        data = {
+            "title_fr": f"Intelligence Marché — {datetime.utcnow().strftime('%B %Y')}",
+            "title_en": f"Market Intelligence — {datetime.utcnow().strftime('%B %Y')}",
+            "excerpt_fr": f"Article en cours de génération. Erreur : {str(e)[:80]}",
+            "excerpt_en": f"Article generation failed. Error: {str(e)[:80]}",
+            "content_fr": f"<p>Génération automatique échouée : {str(e)[:100]}. Veuillez modifier cet article manuellement.</p>",
+            "content_en": f"<p>Auto-generation failed: {str(e)[:100]}. Please edit this post manually.</p>",
+            "tags": ["intelligence"],
+            "read_time_minutes": 5,
+        }
+
+    title = data.get("title_fr") or "Intelligence Marché — Nautilus"
+    slug = _slugify(data.get("title_en") or title)
+
+    # Ensure slug uniqueness
+    existing = (await db.execute(select(BlogPost).where(BlogPost.slug == slug))).scalar_one_or_none()
+    if existing:
+        slug = f"{slug}-{int(datetime.utcnow().timestamp())}"
+
+    post = BlogPost(
+        slug=slug,
+        title=title,
+        excerpt=json.dumps({"fr": data.get("excerpt_fr", ""), "en": data.get("excerpt_en", "")}),
+        content=json.dumps({"fr": data.get("content_fr", ""), "en": data.get("content_en", "")}),
+        author="Nautilus Intelligence",
+        tags=data.get("tags", ["art", "investment"]),
+        read_time_minutes=data.get("read_time_minutes", 5),
+        is_published=True,
+        published_at=datetime.utcnow(),
+    )
+    db.add(post)
+    await db.commit()
+    await db.refresh(post)
+    return _serialize(post)
+
+
 @router.post("/generate")
 async def generate_blog_post(
     body: dict,
@@ -273,63 +384,8 @@ async def generate_blog_post(
     Generate a blog post using GPT-4o and publish it.
     Body: { "type": "weekly_opportunities" | "artist_spotlight" | "market_outlook" | "methodology" }
     """
-    import os
-    from openai import AsyncOpenAI
-
     post_type = body.get("type", "weekly_opportunities")
-    prompt = _GENERATE_PROMPTS.get(post_type, _GENERATE_PROMPTS["weekly_opportunities"])
-
-    # Find matching metadata
-    meta = next((p for p in _LAUNCH_POSTS if p["type"] == post_type), _LAUNCH_POSTS[0])
-
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        # Fallback: create a placeholder post
-        content = f"<p>This article will be auto-generated once OPENAI_API_KEY is set in Railway environment. Type: {post_type}</p>"
-        title = meta["title"]
-    else:
-        try:
-            client = AsyncOpenAI(api_key=api_key)
-            response = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are an expert art market analyst."},
-                    {"role": "user", "content": prompt},
-                ],
-                max_tokens=1200,
-                temperature=0.7,
-            )
-            content = response.choices[0].message.content or ""
-            title = meta["title"]
-        except Exception as e:
-            content = f"<p>Auto-generation failed: {str(e)[:100]}. Please edit this post manually.</p>"
-            title = meta["title"]
-
-    # Check if post with this slug already exists
-    slug = meta["slug"]
-    existing = (await db.execute(select(BlogPost).where(BlogPost.slug == slug))).scalar_one_or_none()
-    if existing:
-        # Update content
-        existing.content = content
-        existing.updated_at = datetime.utcnow()
-        await db.commit()
-        return _serialize(existing)
-
-    post = BlogPost(
-        slug=slug,
-        title=title,
-        excerpt=title + " — Art market intelligence by Nautilus.",
-        content=content,
-        author="Nautilus Editorial",
-        tags=meta.get("tags", []),
-        read_time_minutes=meta.get("read_time_minutes", 5),
-        is_published=True,
-        published_at=datetime.utcnow(),
-    )
-    db.add(post)
-    await db.commit()
-    await db.refresh(post)
-    return _serialize(post)
+    return await generate_blog_post_logic(db, post_type)
 
 
 @router.post("/seed", status_code=201)

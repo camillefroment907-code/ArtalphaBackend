@@ -1,24 +1,6 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/artists/analytics/page": "app/artists/analytics/page.js",
-  "/artists/blue-chip/page": "app/artists/blue-chip/page.js",
-  "/alerts/page": "app/alerts/page.js",
-  "/artists/emerging/page": "app/artists/emerging/page.js",
-  "/artists/page": "app/artists/page.js",
-  "/auth/callback/page": "app/auth/callback/page.js",
-  "/admin/page": "app/admin/page.js",
-  "/auth/login/page": "app/auth/login/page.js",
   "/auth/register/page": "app/auth/register/page.js",
-  "/billing/success/page": "app/billing/success/page.js",
   "/hot-deals/page": "app/hot-deals/page.js",
-  "/page": "app/page.js",
-  "/missed/page": "app/missed/page.js",
-  "/lot/[id]/page": "app/lot/[id]/page.js",
-  "/portfolio/page": "app/portfolio/page.js",
-  "/wishlist/page": "app/wishlist/page.js",
-  "/profile/page": "app/profile/page.js",
-  "/pricing/page": "app/pricing/page.js",
-  "/settings/page": "app/settings/page.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/dashboard/top-deals/page": "app/dashboard/top-deals/page.js"
+  "/auth/login/page": "app/auth/login/page.js",
+  "/dashboard/page": "app/dashboard/page.js"
 }

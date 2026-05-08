@@ -18,51 +18,61 @@ class Base(DeclarativeBase):
 
 class _FaultTolerantEnum(TypeDecorator):
     """
-    Maps the 'auctionhouse' PG enum column to Python AuctionHouse members.
+    Fault-tolerant PG enum column mapping.
 
-    TypeDecorator is the correct SQLAlchemy extension point: process_result_value
-    is guaranteed to be called even after dialect type adaptation, unlike Enum
-    subclassing which breaks when SQLAlchemy copies the type for the PG dialect.
+    Wraps SQLAlchemy's Enum as impl so asyncpg sends the correct PG enum type
+    (not ::varchar), while process_result_value handles legacy UPPERCASE values
+    and unknown enum members gracefully.
 
-    asyncpg returns PG enum values as plain strings.  This decorator converts
-    them to AuctionHouse members, handling both lowercase values ('artsy') and
-    legacy uppercase labels ('ARTSY').
-
-    Usage:
-        source = Column(_FaultTolerantEnum(AuctionHouse, fallback=AuctionHouse.OTHER))
+    process_bind_param accepts any enum-like object (including the schema-layer
+    AuctionHouseEnum which has the same string values as the DB-layer AuctionHouse)
+    by extracting .value rather than calling str(), which in Python 3.11 returns
+    the full 'ClassName.MEMBER' repr for str+Enum subclasses.
     """
 
-    impl = String
     cache_ok = True
+    impl = String  # fallback; overridden to SAEnum in __init__
 
     def __init__(self, enum_class, *args, fallback=None, **kwargs):
         self._enum_class = enum_class
         self._fallback_member = fallback
+        # super().__init__() reads self.__class__.impl (String) and sets
+        # self.impl = String().  We override AFTER so the instance attribute wins.
         super().__init__(*args, **kwargs)
+        # Replace with the real SQLAlchemy Enum so asyncpg types bind parameters
+        # as the PG enum OID (auctionhouse / lotstatus) rather than ::varchar.
+        pg_name = enum_class.__name__.lower()
+        values = [m.value for m in enum_class]
+        self.impl = Enum(*values, name=pg_name, create_constraint=False)
 
     def process_bind_param(self, value, dialect):
         if value is None:
             return None
         if isinstance(value, self._enum_class):
             return value.value
-        return str(value) if value is not None else None
+        # Handle any enum-like object with a .value (e.g. AuctionHouseEnum from
+        # schemas.py — a different class but identical string values).
+        # Must extract .value here: in Python 3.11, str(StrEnum.MEMBER) returns
+        # 'ClassName.MEMBER', not the raw value.
+        if hasattr(value, 'value') and isinstance(value.value, str):
+            return value.value
+        if isinstance(value, str):
+            return value
+        return str(value)
 
     def process_result_value(self, value, dialect):
         if value is None:
             return None
         ec = self._enum_class
-        # 1. Direct value match ('artsy' → AuctionHouse.ARTSY)
         try:
             return ec(value)
         except (ValueError, KeyError):
             pass
         if isinstance(value, str):
-            # 2. Case-insensitive value ('ARTSY' stored as label)
             try:
                 return ec(value.lower())
             except (ValueError, KeyError):
                 pass
-            # 3. Name-based lookup ('ARTSY' → AuctionHouse['ARTSY'])
             try:
                 return ec[value.upper()]
             except (KeyError, AttributeError):
@@ -72,7 +82,7 @@ class _FaultTolerantEnum(TypeDecorator):
                 "Unknown enum value %r — mapped to %r", value, self._fallback_member.value
             )
             return self._fallback_member
-        return value  # pass-through as last resort
+        return value
 
 
 class AuctionHouse(str, enum.Enum):
@@ -373,6 +383,28 @@ class Alert(Base):
     __table_args__ = (
         Index("ix_alerts_user_id", "user_id"),
         Index("ix_alerts_user_sent", "user_id", "sent_at"),
+    )
+
+
+class AuctionSubscription(Base):
+    __tablename__ = "auction_subscriptions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    type = Column(String(10), nullable=False)            # 'lot' or 'sale'
+    lot_id = Column(UUID(as_uuid=True), ForeignKey("lots.id", ondelete="CASCADE"), nullable=True)
+    auction_house_name = Column(String(300), nullable=True)
+    auction_date = Column(DateTime, nullable=True)
+    notified_1h = Column(Boolean, default=False)
+    notified_30min = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+    lot = relationship("Lot")
+
+    __table_args__ = (
+        Index("ix_auction_subs_user_id", "user_id"),
+        Index("ix_auction_subs_auction_date", "auction_date"),
     )
 
 

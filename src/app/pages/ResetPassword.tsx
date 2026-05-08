@@ -133,14 +133,34 @@ export default function ResetPassword() {
       </div>
 
       {/* Right panel */}
-      <div style={{ flex: '0 0 42%', background: '#0A1628', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '64px 56px' }}>
-        <Logo variant="symbol" color="white" size={40} />
-        <h2 style={{ color: '#fff', fontFamily: 'Georgia,serif', fontSize: 26, fontWeight: 'normal', lineHeight: 1.3, margin: '28px 0 12px' }}>
-          Your account,<br />secured.
-        </h2>
-        <p style={{ color: 'rgba(198,168,90,0.8)', fontSize: 13, lineHeight: 1.6, margin: 0 }}>
-          Choose a strong password you don't use elsewhere.
-        </p>
+      <div style={{
+        flex: '0 0 42%',
+        backgroundImage: 'url(/auth-painting.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        position: 'relative'
+      }}>
+        <div style={{
+          position: 'absolute',
+          bottom: 40,
+          left: 40,
+          right: 40,
+          color: 'white'
+        }}>
+          <div style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            letterSpacing: '0.2em',
+            color: 'rgba(255,255,255,0.6)',
+            marginBottom: 8
+          }}>NAUTILUS · ART MARKET INTELLIGENCE</div>
+          <div style={{
+            fontFamily: 'Georgia, serif',
+            fontSize: 28,
+            fontWeight: 400,
+            lineHeight: 1.3
+          }}>Your account,<br/>secured.</div>
+        </div>
       </div>
     </div>
   );

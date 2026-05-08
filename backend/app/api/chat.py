@@ -280,9 +280,16 @@ async def _get_user_context(user: User, _db: AsyncSession) -> str:
 
 
 async def _get_lot_context(lot_id: str, db: AsyncSession) -> str:
-    result = await db.execute(select(Lot).where(Lot.id == lot_id))
+    import uuid as uuid_lib
+    try:
+        parsed_id = uuid_lib.UUID(str(lot_id))
+    except (ValueError, AttributeError):
+        logger.warning(f"invalid lot_id: {lot_id}")
+        return ""
+    result = await db.execute(select(Lot).where(Lot.id == parsed_id))
     lot = result.scalar_one_or_none()
     if not lot:
+        logger.warning(f"lot not found in DB: {lot_id}")
         return ""
     price = lot.current_price or lot.estimate_low or 0
     upside = lot.pct_below_low_estimate or 0
@@ -362,6 +369,7 @@ async def _stream_larry_response(
 class ChatRequest(BaseModel):
     message: str
     lot_id: Optional[str] = None
+    live_mode: bool = False
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -435,9 +443,24 @@ async def send_message(
         lot_context = await _get_lot_context(body.lot_id, db)
 
     system = LARRY_SYSTEM_PROMPT + "\n\n" + LARRY_FAQ_CONTEXT
+    if body.live_mode:
+        live_prefix = (
+            "LIVE AUCTION MODE — CRITICAL INSTRUCTIONS:\n"
+            "You MUST respond in EXACTLY this format, no exceptions:\n"
+            "MAX BID: €X,XXX\n"
+            "VERDICT: BUY / PASS / WAIT\n"
+            "REASON: [max 10 words]\n"
+            "RISK: [max 10 words]\n"
+            "Never write prose. Never say 'I don't have'.\n"
+            "Use the lot context already provided.\n\n"
+        )
+        system = live_prefix + system
     if user_context:
         system += f"\n\n{user_context}"
-    system_content = system + lot_context
+    system_content = system + (
+        f"\n\n---\nCURRENT LOT CONTEXT:\n{lot_context}"
+        if lot_context else ""
+    )
 
     # Inject real-time web intelligence when the question warrants it
     if needs_web_search(body.message):

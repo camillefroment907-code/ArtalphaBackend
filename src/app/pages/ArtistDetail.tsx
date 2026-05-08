@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { getToken, getUserPlan } from '../../lib/auth';
 
 const BACKEND = 'https://artalpha-backend-production.up.railway.app';
@@ -184,6 +185,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 export default function ArtistDetail() {
+  const { t } = useTranslation();
   const { id: name } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [data, setData] = useState<ArtistProfile | null>(null);
@@ -279,7 +281,7 @@ export default function ArtistDetail() {
           onClick={() => navigate(-1)}
           style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.1em', color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 32, padding: 0 }}
         >
-          ← BACK
+          {t('common.back')}
         </button>
 
         {/* HERO SECTION */}
@@ -343,12 +345,12 @@ export default function ArtistDetail() {
             overflow: 'hidden',
           }}
         >
-          <ScoreTile label="Momentum" value={data.momentum_score} unit="/100" />
-          <ScoreTile label="Liquidity" value={data.liquidity_score} unit="/100" />
-          <ScoreTile label="Institutional" value={data.institutional_score} unit="/100" />
+          <ScoreTile label={t('artist.momentumLabel')} value={data.momentum_score} unit="/100" />
+          <ScoreTile label={t('artist.liquidityLabel')} value={data.liquidity_score} unit="/100" />
+          <ScoreTile label={t('artist.institutionalLabel')} value={data.institutional_score} unit="/100" />
           <div style={{ flex: 1, padding: '16px 20px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 6 }}>
-              Galleries
+              {t('artist.galleriesLabel')}
             </div>
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, color: 'white' }}>
               {data.gallery_count > 0 ? `${data.gallery_count}` : '—'}
@@ -357,7 +359,7 @@ export default function ArtistDetail() {
           {data.statistics?.trend_direction && (
             <div style={{ flex: 1, padding: '16px 20px', textAlign: 'center' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 6 }}>
-                Trend
+                {t('artist.trendLabel')}
               </div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 22, fontWeight: 700, color: data.statistics.trend_direction === 'up' ? '#34D399' : data.statistics.trend_direction === 'down' ? '#F87171' : '#94A3B8' }}>
                 {data.statistics.trend_direction === 'up' ? '↑' : data.statistics.trend_direction === 'down' ? '↓' : '→'}
@@ -367,12 +369,12 @@ export default function ArtistDetail() {
         </div>
 
         {hasFullAccess ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 40 }}>
+        <div className="artist-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 40 }}>
           {/* LEFT COLUMN */}
           <div>
             {/* SIGNALS */}
             <div style={{ marginBottom: 40 }}>
-              <SectionTitle>Investment Signals</SectionTitle>
+              <SectionTitle>{t('artist.investmentSignals')}</SectionTitle>
               {data.signals && data.signals.length > 0 ? (
                 data.signals.map((signal, i) => (
                   <div
@@ -408,7 +410,7 @@ export default function ArtistDetail() {
                 ))
               ) : (
                 <div style={{ fontSize: 14, color: 'var(--text-3)', fontStyle: 'italic' }}>
-                  Insufficient data for signal generation
+                  {t('artist.noSignals')}
                 </div>
               )}
             </div>
@@ -454,7 +456,7 @@ export default function ArtistDetail() {
             {/* CURRENT LOTS */}
             <div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16 }}>
-                <SectionTitle>Current Opportunities</SectionTitle>
+                <SectionTitle>{t('artist.allLots')}</SectionTitle>
                 {data.lots && data.lots.length > 0 && (
                   <span style={{
                     fontFamily: 'var(--font-mono)',
@@ -483,7 +485,7 @@ export default function ArtistDetail() {
                   color: 'var(--text-3)',
                   fontSize: 14,
                 }}>
-                  No current lots on Nautilus for this artist
+                  {t('artist.noSignalsSub')}
                 </div>
               )}
             </div>
@@ -514,7 +516,7 @@ export default function ArtistDetail() {
 
           {/* RIGHT COLUMN — INVESTMENT CONTEXT */}
           <div>
-            <SectionTitle>Investment Context</SectionTitle>
+            <SectionTitle>{t('artist.marketData')}</SectionTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {/* Gallery Representation */}
               <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 6, padding: '18px 20px' }}>

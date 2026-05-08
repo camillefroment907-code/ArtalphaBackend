@@ -327,32 +327,6 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
             </span>
           </div>
 
-          {/* Language toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.08em' }}>
-            {(['en', 'fr'] as const).map((lng, i) => (
-              <>
-                {i > 0 && <span key={`sep-${lng}`} style={{ color: 'var(--border)', userSelect: 'none' }}>·</span>}
-                <button
-                  key={lng}
-                  onClick={() => { i18n.changeLanguage(lng); localStorage.setItem('i18nextLng', lng); }}
-                  style={{
-                    background: 'none', border: 'none', cursor: currentLang === lng ? 'default' : 'pointer',
-                    padding: '2px 0',
-                    fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em',
-                    fontWeight: currentLang === lng ? 700 : 400,
-                    color: currentLang === lng ? 'var(--text)' : 'var(--text-3)',
-                    transition: 'color 0.15s',
-                    textTransform: 'uppercase',
-                  }}
-                  onMouseEnter={e => { if (currentLang !== lng) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-2)'; }}
-                  onMouseLeave={e => { if (currentLang !== lng) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-3)'; }}
-                >
-                  {lng}
-                </button>
-              </>
-            ))}
-          </div>
-
           {/* Search */}
           <div style={{ position: 'relative', flexShrink: 0 }}>
             <input
@@ -588,29 +562,6 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
           </button>
 
           <div style={{ height: '1px', background: 'var(--border)', margin: '8px 0' }} />
-
-          {/* Language toggle mobile */}
-          <div style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {(['en', 'fr'] as const).map((lng, i) => (
-              <>
-                {i > 0 && <span key={`msep-${lng}`} style={{ color: 'var(--border)', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>·</span>}
-                <button
-                  key={lng}
-                  onClick={() => { i18n.changeLanguage(lng); localStorage.setItem('i18nextLng', lng); }}
-                  style={{
-                    background: 'none', border: 'none',
-                    cursor: currentLang === lng ? 'default' : 'pointer',
-                    fontSize: '12px', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em',
-                    fontWeight: currentLang === lng ? 700 : 400,
-                    color: currentLang === lng ? 'var(--text)' : 'var(--text-3)',
-                    padding: 0, textTransform: 'uppercase',
-                  }}
-                >
-                  {lng === 'en' ? 'English' : 'Français'}
-                </button>
-              </>
-            ))}
-          </div>
 
           <button
             onClick={() => { logout(); navigate('/'); }}

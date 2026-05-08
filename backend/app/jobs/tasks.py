@@ -1153,3 +1153,130 @@ def sync_poush_artists(self):
 async def _sync_poush_async():
     from app.connectors.poush_connector import sync_to_db
     return await sync_to_db()
+
+
+# ── Auction Reminders ─────────────────────────────────────────────────────────
+
+@celery_app.task(name="check_auction_reminders")
+def check_auction_reminders():
+    """Check for subscribed lots going live in ~1h or ~30min and send reminder emails."""
+    asyncio.run(_check_auction_reminders_async())
+
+
+async def _check_auction_reminders_async():
+    from sqlalchemy import select
+    from app.database import get_db
+    from app.models.db_models import AuctionSubscription, User, Lot
+    from app.services.email_alerts import send_auction_reminder_1h, send_auction_reminder_30min
+
+    async for db in get_db():
+        now = datetime.utcnow()
+
+        def _build_estimate(lot) -> str:
+            if lot.estimate_low and lot.estimate_high:
+                return f"€{lot.estimate_low:,.0f} – €{lot.estimate_high:,.0f}"
+            if lot.estimate_low:
+                return f"€{lot.estimate_low:,.0f}"
+            return "—"
+
+        # ── 1h window: auction_date in [now+55min, now+65min] ────────────────
+        result_1h = await db.execute(
+            select(AuctionSubscription).where(
+                AuctionSubscription.notified_1h == False,  # noqa: E712
+                AuctionSubscription.auction_date >= now + timedelta(minutes=55),
+                AuctionSubscription.auction_date <= now + timedelta(minutes=65),
+            )
+        )
+        for sub in result_1h.scalars():
+            try:
+                user = await db.get(User, sub.user_id)
+                if not user:
+                    continue
+                artist_name, lot_title, estimate_range, image_url = (
+                    "Unknown artist", "Upcoming lot", "—", None
+                )
+                if sub.lot_id:
+                    lot = await db.get(Lot, sub.lot_id)
+                    if lot:
+                        artist_name  = lot.artist_name_raw or artist_name
+                        lot_title    = lot.title or lot_title
+                        estimate_range = _build_estimate(lot)
+                        image_url    = lot.image_url
+                lot_url = (
+                    f"https://www.get-nautilus.com/app/lot/{sub.lot_id}"
+                    if sub.lot_id else "https://www.get-nautilus.com/app/explore"
+                )
+                await send_auction_reminder_1h(
+                    to_email=user.email,
+                    artist_name=artist_name,
+                    lot_title=lot_title,
+                    auction_house=sub.auction_house_name or "Auction house",
+                    estimate_range=estimate_range,
+                    lot_url=lot_url,
+                    lot_image_url=image_url,
+                )
+                sub.notified_1h = True
+                await db.commit()
+                logger.info("auction_reminder_1h_sent", sub_id=str(sub.id))
+            except Exception as exc:
+                logger.error("auction_reminder_1h_failed", sub_id=str(sub.id), error=str(exc))
+
+        # ── 30min window: auction_date in [now+25min, now+35min] ─────────────
+        result_30 = await db.execute(
+            select(AuctionSubscription).where(
+                AuctionSubscription.notified_30min == False,  # noqa: E712
+                AuctionSubscription.auction_date >= now + timedelta(minutes=25),
+                AuctionSubscription.auction_date <= now + timedelta(minutes=35),
+            )
+        )
+        for sub in result_30.scalars():
+            try:
+                user = await db.get(User, sub.user_id)
+                if not user:
+                    continue
+                artist_name, lot_title, estimate_range, image_url = (
+                    "Unknown artist", "Upcoming lot", "—", None
+                )
+                if sub.lot_id:
+                    lot = await db.get(Lot, sub.lot_id)
+                    if lot:
+                        artist_name  = lot.artist_name_raw or artist_name
+                        lot_title    = lot.title or lot_title
+                        estimate_range = _build_estimate(lot)
+                        image_url    = lot.image_url
+                lot_url = (
+                    f"https://www.get-nautilus.com/app/lot/{sub.lot_id}"
+                    if sub.lot_id else "https://www.get-nautilus.com/app/explore"
+                )
+                await send_auction_reminder_30min(
+                    to_email=user.email,
+                    artist_name=artist_name,
+                    lot_title=lot_title,
+                    auction_house=sub.auction_house_name or "Auction house",
+                    estimate_range=estimate_range,
+                    lot_url=lot_url,
+                    lot_image_url=image_url,
+                )
+                sub.notified_30min = True
+                await db.commit()
+                logger.info("auction_reminder_30min_sent", sub_id=str(sub.id))
+            except Exception as exc:
+                logger.error("auction_reminder_30min_failed", sub_id=str(sub.id), error=str(exc))
+
+        break
+
+
+# ── Weekly Blog Generation ────────────────────────────────────────────────────
+
+@celery_app.task(name="generate_weekly_blog_post")
+def generate_weekly_blog_post():
+    """Generate this week's art market opportunities blog post. Runs every Wednesday at 10am UTC."""
+    asyncio.run(_generate_weekly_blog_async())
+
+
+async def _generate_weekly_blog_async():
+    from app.api.blog import generate_blog_post_logic
+    from app.database import get_db
+    async for db in get_db():
+        await generate_blog_post_logic(db)
+        break

@@ -224,16 +224,24 @@ async def send_artist_momentum_alerts(
         return 0  # Signal was already strong — not a new transition
 
     from sqlalchemy import select, and_
-    from app.models.db_models import User, UserPreference, UserAlertPreferences
-    from app.services.email_alerts import send_weekly_momentum_email
+    from app.models.db_models import User, UserPreference, UserAlertPreferences, ArtistSignal
+    from app.services.email_alerts import send_oracle_signal_email
     from app.database import BgSessionLocal
 
     sent = 0
     dedup_cutoff = datetime.utcnow() - timedelta(days=7)
-    score_pct = 40 if new_signal == "BUY_NOW" else 20
 
     try:
         async with BgSessionLocal() as db:
+            # Fetch oracle data for this artist
+            oracle_result = await db.execute(
+                select(ArtistSignal)
+                .where(ArtistSignal.artist_id == artist_id)
+                .order_by(ArtistSignal.computed_at.desc())
+                .limit(1)
+            )
+            oracle = oracle_result.scalar_one_or_none()
+
             # Fetch all users who have momentum alerts on + we'll filter by artist in Python
             users_result = await db.execute(
                 select(User, UserAlertPreferences, UserPreference)
@@ -262,14 +270,21 @@ async def send_artist_momentum_alerts(
             if not eligible:
                 return 0
 
+            artist_url = f"https://www.get-nautilus.com/app/artists/{artist_name.replace(' ', '%20')}"
+
             for user, _prefs in eligible:
                 try:
                     if await _already_sent_artist(db, user.id, artist_id, dedup_cutoff):
                         continue
-                    ok = await send_weekly_momentum_email(
+                    ok = await send_oracle_signal_email(
                         to_email=user.email,
-                        momentum_artists=[{"name": artist_name, "momentum_pct": score_pct}],
-                        top_lots=[],
+                        artist_name=artist_name,
+                        signal=new_signal,
+                        oracle_score=oracle.oracle_score_6m if oracle else 70.0,
+                        active_signals=oracle.active_signals if oracle else [],
+                        narrative=oracle.oracle_narrative if oracle else "",
+                        target_upside=oracle.oracle_target_upside if oracle else "+20 to +40%",
+                        artist_url=artist_url,
                     )
                     if ok:
                         await _record_alert(db, user.id, None, f"MOMENTUM_{artist_id}", 0.0, user.email)

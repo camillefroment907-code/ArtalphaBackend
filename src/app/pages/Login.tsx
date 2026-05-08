@@ -47,6 +47,8 @@ type FeaturedLot = { artist: string; title: string; upside: number | null; score
 function RightPanel() {
   const [cards, setCards] = useState<SignalCard[]>(FALLBACK_CARDS);
   const [lotCountLabel, setLotCountLabel] = useState('—');
+  const [avgUpside, setAvgUpside] = useState('—');
+  const [signalsToday, setSignalsToday] = useState('—');
   const [bgImage, setBgImage] = useState<string | null>(null);
   const [featured, setFeatured] = useState<FeaturedLot | null>(null);
 
@@ -77,6 +79,15 @@ function RightPanel() {
         if (n && n > 0) setLotCountLabel(n >= 1000 ? `${Math.floor(n / 100) / 10}K+` : `${n}`);
       })
       .catch(() => {});
+
+    fetch(`${API}/api/lots/stats`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        if (data.avg_deal_score) setAvgUpside(`+${Math.round(data.avg_deal_score)}%`);
+        if (data.deals_detected_today != null) setSignalsToday(String(data.deals_detected_today));
+      })
+      .catch(() => {});
   }, []);
 
   const panelBg = bgImage
@@ -84,7 +95,7 @@ function RightPanel() {
     : 'linear-gradient(135deg, #0A1628 0%, #0f2040 100%)';
 
   return (
-    <div style={{ flex: '0 0 50%', background: '#0A1628', backgroundImage: panelBg, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 52px' }}>
+    <div className="login-right-panel" style={{ flex: '0 0 50%', background: '#0A1628', backgroundImage: panelBg, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 52px' }}>
       {/* Vignette edges */}
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%)', pointerEvents: 'none' }} />
 
@@ -108,8 +119,8 @@ function RightPanel() {
         <div style={{ display: 'flex', borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', marginBottom: 20, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(12px)' }}>
           {[
             { value: lotCountLabel, label: 'lots analyzed', color: '#fff' },
-            { value: '+31%', label: 'avg upside', color: '#C6A85A' },
-            { value: '6', label: 'signals today', color: '#60a5fa' },
+            { value: avgUpside, label: 'avg upside', color: '#C6A85A' },
+            { value: signalsToday, label: 'signals today', color: '#60a5fa' },
           ].map((s, i) => (
             <div key={i} style={{ flex: 1, padding: '12px 8px', textAlign: 'center', borderRight: i < 2 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
               <div style={{ fontSize: 18, fontWeight: 700, color: s.color, fontFamily: 'var(--font-mono)', lineHeight: 1 }}>{s.value}</div>
@@ -210,9 +221,9 @@ export default function Login() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', maxHeight: '100vh', overflow: 'hidden', background: '#FAFAFA' }}>
+    <div className="login-container" style={{ display: 'flex', height: '100vh', maxHeight: '100vh', overflow: 'hidden', background: '#FAFAFA' }}>
       {/* Left — form */}
-      <div style={{ flex: '0 0 50%', background: 'white', display: 'flex', flexDirection: 'column', overflowY: 'hidden' }}>
+      <div className="login-left-panel" style={{ flex: '0 0 50%', background: 'white', display: 'flex', flexDirection: 'column', overflowY: 'hidden' }}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '20px 72px', maxWidth: '480px', margin: '0 auto', width: '100%' }}>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px', lineHeight: 1.2 }}>
             Access your intelligence

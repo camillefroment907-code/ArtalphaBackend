@@ -389,3 +389,239 @@ select:hover {
 @keyframes npsDrawCheck {
   to { stroke-dashoffset: 0; }
 }
+
+
+/* ─── NAUTILUS MOBILE RESPONSIVE ─── */
+
+/* 1. SIGNUP — hide right panel on mobile */
+@media (max-width: 768px) {
+  .signup-container {
+    flex-direction: column !important;
+  }
+  .signup-right-panel {
+    display: none !important;
+  }
+  .signup-left-panel {
+    flex: 1 !important;
+    padding: 24px !important;
+    max-width: 100% !important;
+  }
+}
+
+/* 2. EXPLORER — 2 columns on mobile */
+@media (max-width: 768px) {
+  .explore-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+  .explore-sidebar {
+    display: none !important;
+  }
+  .explore-main {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+}
+
+/* 3. LOT STICKY HEADER — compact on mobile */
+@media (max-width: 768px) {
+  .lot-sticky-header {
+    padding: 0 12px !important;
+    gap: 8px !important;
+  }
+  .lot-sticky-header .lot-badges {
+    display: none !important;
+  }
+}
+
+/* 4. LANDING FEATURES — 1 column on mobile */
+@media (max-width: 768px) {
+  .landing-features-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+  .landing-section {
+    padding: 40px 24px !important;
+  }
+  .landing-hero {
+    grid-template-columns: 1fr !important;
+    padding: 40px 24px !important;
+  }
+  .landing-hero-right {
+    display: none !important;
+  }
+}
+
+/* 5. GENERAL MOBILE FIXES */
+@media (max-width: 768px) {
+  /* Prevent horizontal scroll */
+  body { overflow-x: hidden !important; }
+
+  /* Intelligence page tables */
+  .intelligence-table {
+    overflow-x: auto !important;
+    display: block !important;
+  }
+
+  /* Artist detail 2-col layout */
+  .artist-detail-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ─── MOBILE FIXES ROUND 2 ─── */
+
+@media (max-width: 768px) {
+
+  /* LANDING — reduce side padding */
+  .landing-hero,
+  .landing-section {
+    padding: 40px 20px !important;
+  }
+
+  /* LANDING — stats strip full width */
+  .landing-urgency-strip {
+    padding: 0 16px !important;
+  }
+
+  /* LOT DETAIL — hero stack vertically */
+  .lot-hero-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .lot-hero-image {
+    min-height: 250px !important;
+  }
+  .lot-hero-info {
+    padding: 20px 16px !important;
+  }
+
+  /* LOT DETAIL — KPI cards: 2 cols on mobile */
+  .lot-kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* SIGNUP — reduce left padding */
+  .signup-left-panel > div {
+    padding: 20px 24px !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ═══════════════════════════════════════
+   NAUTILUS — COMPLETE MOBILE FIX
+   All changes are mobile-only (max-width: 768px)
+   Desktop is NOT affected
+═══════════════════════════════════════ */
+
+@media (max-width: 768px) {
+
+  /* ── GLOBAL ── */
+  body { overflow-x: hidden !important; }
+
+  /* ── LANDING — padding fix ── */
+  .landing-hero,
+  .landing-section,
+  .landing-signals-section,
+  .landing-gated-section,
+  .landing-momentum-section,
+  .landing-cta-section {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+  .landing-header {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+  .landing-urgency-strip {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  /* ── LANDING — grid collapse ── */
+  .landing-signals-grid,
+  .landing-gated-grid,
+  .landing-testimonials-grid,
+  .landing-trust-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .landing-momentum-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .landing-featured-testimonial {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── LOGIN — hide right panel ── */
+  .login-container {
+    flex-direction: column !important;
+  }
+  .login-right-panel {
+    display: none !important;
+  }
+  .login-left-panel {
+    flex: 1 !important;
+    width: 100% !important;
+  }
+  .login-left-panel > div {
+    padding: 20px 24px !important;
+    max-width: 100% !important;
+  }
+
+  /* ── LOT DETAIL HERO ── */
+  .lot-hero-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .lot-hero-image {
+    min-height: 280px !important;
+    max-height: 400px !important;
+  }
+  .lot-hero-info {
+    padding: 20px 16px !important;
+  }
+  .lot-kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* ── ARTIST DETAIL ── */
+  .artist-detail-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .artist-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* ── INTELLIGENCE PAGE ── */
+  .intelligence-two-col {
+    grid-template-columns: 1fr !important;
+  }
+  .intelligence-table-wrap {
+    overflow-x: auto !important;
+    display: block !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* ── DASHBOARD ── */
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .dashboard-sidebar {
+    display: none !important;
+  }
+
+  /* ── SIGNAL FEED ── */
+  .signal-feed-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .signal-feed-sidebar {
+    display: none !important;
+  }
+
+  /* ── PORTFOLIO ── */
+  .portfolio-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── GENERAL ── */
+  .hide-mobile { display: none !important; }
+  .full-width-mobile { width: 100% !important; }
+}

@@ -93,6 +93,25 @@ export default function OpportunityDetail() {
   const heroRef = useRef<HTMLDivElement>(null);
   const isFr = i18n.language?.startsWith('fr');
 
+  const translateDueDiligence = (text: string) => {
+    if (!isFr) return text;
+    const map: Record<string, string> = {
+      'No provenance listed': 'Aucune provenance renseignée',
+      'Ownership history not documented — verify chain of title before bidding': "Historique de propriété non documenté — vérifiez la chaîne de titre avant d'enchérir",
+      'Limited documentation': 'Documentation limitée',
+      'No medium or dimensions listed — physical characteristics unverified': 'Aucun médium ni dimensions renseignés — caractéristiques physiques non vérifiées',
+      'Provenance flags detected — verify title and ownership history before bidding': "Signaux de provenance détectés — vérifiez le titre et l'historique avant d'enchérir",
+      'Rapid resale detected': 'Revente rapide détectée',
+      'Same work sold at Contemporary Day Auction in 2026 — back at auction within 2 years': 'Même œuvre vendue à la Contemporary Day Auction en 2026 — retour aux enchères en moins de 2 ans',
+      'High consignment volume at this house — oversupply may compress resale prices': 'Volume de consignation élevé — la suroffre peut comprimer les prix de revente',
+      'Estimate far below market median': 'Estimation bien en dessous de la médiane du marché',
+      "Estimate is 7% of artist's median hammer (€22K) — verify attribution": "Estimation à 7% de la médiane de l'artiste (€22K) — vérifiez l'attribution",
+      'Standard art market illiquidity — minimum 3–5 year hold recommended': 'Illiquidité standard — durée de détention minimale recommandée : 3 à 5 ans',
+      "Buyer's premium and storage fees increase total acquisition cost": "Les frais acheteur et de stockage augmentent le coût total d'acquisition",
+    };
+    return map[text] || text;
+  };
+
   useEffect(() => {
     fetch(`${BACKEND}/api/lots/daily-unlock`)
       .then(r => r.json())
@@ -492,9 +511,9 @@ export default function OpportunityDetail() {
                 {upsidePct > 0 ? '+' : ''}{upsidePct.toFixed(0)}%
               </div>
               {netGain > 0 && (
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: GD, marginTop: '4px' }}>net +{netGain.toFixed(0)}% after costs</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: GD, marginTop: '4px' }}>{isFr ? `net +${netGain.toFixed(0)}% après frais` : `net +${netGain.toFixed(0)}% after costs`}</div>
               )}
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#6B7280', marginTop: '2px' }}>needs +{breakEvenGain.toFixed(0)}% breakeven</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#6B7280', marginTop: '2px' }}>{isFr ? `Nécessite +${breakEvenGain.toFixed(0)}% pour atteindre le seuil` : `needs +${breakEvenGain.toFixed(0)}% breakeven`}</div>
             </div>
 
             {/* RISK */}
@@ -502,7 +521,7 @@ export default function OpportunityDetail() {
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>{t('lot.risk')}</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: riskColor, lineHeight: 1 }}>{riskLabel}</div>
               {riskFlagCount > 0 && (
-                <div style={{ fontSize: '9px', color: '#6B7280', marginTop: '5px' }}>{riskFlagCount} flag{riskFlagCount > 1 ? 's' : ''}</div>
+                <div style={{ fontSize: '9px', color: '#6B7280', marginTop: '5px' }}>{riskFlagCount} {isFr ? `signal${riskFlagCount > 1 ? 's' : ''}` : `flag${riskFlagCount > 1 ? 's' : ''}`}</div>
               )}
             </div>
 
@@ -841,9 +860,9 @@ export default function OpportunityDetail() {
                     {(provRisk.flags as { code: string; severity: string; label: string; detail: string }[]).map((f, i) => (
                       <div key={f.code}>
                         <div style={{ fontSize: '13px', fontWeight: 600, color: f.severity === 'HIGH' ? AMB : f.severity === 'MEDIUM' ? AMB : LTT2, marginBottom: '3px' }}>
-                          ● {f.label}
+                          ● {translateDueDiligence(f.label)}
                         </div>
-                        <div style={{ fontSize: '11px', color: '#92400E', lineHeight: 1.5, marginBottom: i < provRisk.flags.length - 1 ? '8px' : 0 }}>{f.detail}</div>
+                        <div style={{ fontSize: '11px', color: '#92400E', lineHeight: 1.5, marginBottom: i < provRisk.flags.length - 1 ? '8px' : 0 }}>{translateDueDiligence(f.detail)}</div>
                       </div>
                     ))}
                   </div>
@@ -1140,7 +1159,7 @@ export default function OpportunityDetail() {
                             border: `1px solid ${risk.sev === 'HIGH' ? '#FECACA' : risk.sev === 'MED' ? '#FDE68A' : LTB}`,
                             padding: '2px 6px', borderRadius: '3px', flexShrink: 0, marginTop: '2px',
                           }}>{risk.sev}</span>
-                          <span style={{ fontSize: '13px', color: LTT1, lineHeight: 1.5 }}>{risk.text}</span>
+                          <span style={{ fontSize: '13px', color: LTT1, lineHeight: 1.5 }}>{translateDueDiligence(risk.text)}</span>
                         </div>
                       ))}
                     </div>

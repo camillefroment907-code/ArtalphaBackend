@@ -53,7 +53,7 @@ function RightPanel() {
   ];
 
   return (
-    <div style={{ flex: '0 0 50%', background: '#0A1628', backgroundImage: panelBg, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 52px' }}>
+    <div className="signup-right-panel" style={{ flex: '0 0 50%', background: '#0A1628', backgroundImage: panelBg, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 52px' }}>
       {/* Vignette */}
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.45) 100%)', pointerEvents: 'none' }} />
 
@@ -189,9 +189,9 @@ export default function Signup() {
   const passwordMismatch = confirmPassword.length > 0 && password !== confirmPassword;
 
   return (
-    <div style={{ display: 'flex', height: '100vh', maxHeight: '100vh', overflow: 'hidden', background: '#FAFAFA' }}>
+    <div className="signup-container" style={{ display: 'flex', height: '100vh', maxHeight: '100vh', overflow: 'hidden', background: '#FAFAFA' }}>
       {/* Left — form */}
-      <div style={{ flex: '0 0 50%', background: 'white', display: 'flex', flexDirection: 'column', overflowY: 'hidden' }}>
+      <div className="signup-left-panel" style={{ flex: '0 0 50%', background: 'white', display: 'flex', flexDirection: 'column', overflowY: 'hidden' }}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '20px 72px', maxWidth: '480px', margin: '0 auto', width: '100%' }}>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px', lineHeight: 1.2 }}>
             Get access to the platform

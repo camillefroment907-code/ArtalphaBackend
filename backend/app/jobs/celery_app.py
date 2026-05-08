@@ -127,6 +127,18 @@ celery_app.conf.update(
             "schedule": crontab(minute="0", hour="3", day_of_month="1"),
             "options": {"queue": "default"},
         },
+        # Every 15 minutes: check for auction subscriptions going live soon
+        "check-auction-reminders-every-15min": {
+            "task": "check_auction_reminders",
+            "schedule": crontab(minute="*/15"),
+            "options": {"queue": "default"},
+        },
+        # Wednesday 10am UTC: generate weekly art market opportunities blog post
+        "generate-blog-wednesday-10am": {
+            "task": "generate_weekly_blog_post",
+            "schedule": crontab(hour=10, minute=0, day_of_week=3),
+            "options": {"queue": "default"},
+        },
     },
     task_routes={
         "app.jobs.tasks.poll_and_score_lots": {"queue": "default"},

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { getToken, getUserPlan } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
@@ -23,6 +24,7 @@ interface ApiResponse {
 }
 
 export default function Emerging() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [artists, setArtists] = useState<EmergingArtist[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,10 +76,10 @@ export default function Emerging() {
             ◆ NAUTILUS RADAR
           </div>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 36, color: 'var(--text)', margin: '0 0 12px 0', fontWeight: 400 }}>
-            Emerging Artists — Detected Before the Market
+            {t('emerging.title')}
           </h1>
           <p style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.7, margin: 0, maxWidth: 560 }}>
-            A curated selection of artists tracked before their market ignites.
+            {t('emerging.subtitle')}
           </p>
         </div>
 
@@ -144,10 +146,10 @@ export default function Emerging() {
               }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.2em', marginBottom: 10 }}>
-                    INVESTOR+ FEATURE
+                    {t('emerging.paywallTitle')}
                   </div>
                   <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, color: 'var(--text)', marginBottom: 18 }}>
-                    {lockedCount} more emerging artists detected
+                    {t('emerging.paywallSub', { count: lockedCount })}
                   </div>
                   <button
                     onClick={() => navigate('/app/pricing')}
@@ -158,7 +160,7 @@ export default function Emerging() {
                       cursor: 'pointer', letterSpacing: '0.04em',
                     }}
                   >
-                    INVESTOR+ · UNLOCK →
+                    {t('emerging.paywallCta')}
                   </button>
                 </div>
               </div>
@@ -179,7 +181,7 @@ export default function Emerging() {
                     opacity: loadingMore ? 0.5 : 1,
                   }}
                 >
-                  {loadingMore ? 'LOADING...' : 'LOAD MORE'}
+                  {loadingMore ? t('common.loading') : t('emerging.loadMore')}
                 </button>
               </div>
             )}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { useTranslation } from 'react-i18next';
 import { getUser, getUserPlan } from "../../lib/auth";
 import { WelcomeTour } from '../components/WelcomeTour';
 
@@ -30,7 +31,7 @@ const LIVE_SORT_MAP: Record<string, { by: string; dir: string }> = {
 };
 const ALPHA_SORT_MAP: Record<string, { by: string; dir: string }> = {
   "deal_score_desc":   { by: "deal_score",    dir: "desc" },
-  "upside_desc":       { by: "deal_score",    dir: "desc" },
+  "upside_desc":       { by: "pct_below_low_estimate", dir: "desc" },
   "auction_date_asc":  { by: "auction_date",  dir: "asc"  },
   "price_asc":         { by: "current_price", dir: "asc"  },
   "created_at_desc":   { by: "created_at",    dir: "desc" },
@@ -150,7 +151,7 @@ async function loadSourceStats(): Promise<SourceStat[]> {
 function getDateParams(filter: string): Record<string, string> {
   const now = new Date();
   const today = now.toISOString().split("T")[0];
-  if (filter === "today") return { auction_date_from: today, auction_date_to: today };
+  if (filter === "today") return { auction_date_from: today, auction_date_to: today + "T23:59:59" };
   if (filter === "3days") { const d = new Date(now); d.setDate(d.getDate() + 3); return { auction_date_from: today, auction_date_to: d.toISOString().split("T")[0] }; }
   if (filter === "week")  { const d = new Date(now); d.setDate(d.getDate() + 7); return { auction_date_from: today, auction_date_to: d.toISOString().split("T")[0] }; }
   if (filter === "month") { const d = new Date(now); d.setMonth(d.getMonth() + 1); return { auction_date_from: today, auction_date_to: d.toISOString().split("T")[0] }; }
@@ -351,6 +352,7 @@ function LiveListRow({ lot, onClick }: { lot: MappedLot; onClick: () => void }) 
 
 // ── Explore component ─────────────────────────────────────────
 export default function Explore() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const exploreTab = (searchParams.get('tab') || 'best') as ExploreTab;
@@ -388,6 +390,8 @@ export default function Explore() {
   const [sources, setSources]         = useState<string[]>([]);
   const [sortBy, setSortBy]           = useState(searchParams.get('sort_by') || 'created_at');
   const [sortDir, setSortDir]         = useState(searchParams.get('sort_dir') || 'desc');
+  const [artist, setArtist]           = useState(searchParams.get('artist') || '');
+  const [auctionHouse, setAuctionHouse] = useState(searchParams.get('auction_house') || '');
 
   const resetFilters = () => {
     setMinScore(0); setMaxScore(0); setMinPrice(0); setMaxPrice(0);
@@ -407,10 +411,12 @@ export default function Explore() {
       if (sortBy && sortBy !== 'deal_score') p.set('sort_by', sortBy); else p.delete('sort_by');
       if (sortDir && sortDir !== 'desc') p.set('sort_dir', sortDir); else p.delete('sort_dir');
       if (dateFilter && dateFilter !== 'all') p.set('date', dateFilter); else p.delete('date');
+      if (artist) p.set('artist', artist); else p.delete('artist');
+      if (auctionHouse) p.set('auction_house', auctionHouse); else p.delete('auction_house');
       return p;
     }, { replace: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, sortBy, sortDir, dateFilter]);
+  }, [category, sortBy, sortDir, dateFilter, artist, auctionHouse]);
 
   // Fetch recommendations for "For You" tab
   useEffect(() => {
@@ -525,14 +531,28 @@ export default function Explore() {
         if (minPrice > 0)    p.set('min_price', String(minPrice));
         if (maxPrice > 0)    p.set('max_price', String(maxPrice));
         if (category)        p.set('category', CATEGORY_API_MAP[category] || category);
-        if (sources.length)  p.set('sources', sources.join(','));
-        if (search.trim())   p.set('search', search.trim());
-        if (provenance)      p.set('provenance', PROVENANCE_KEYWORD_MAP[provenance] || provenance);
+        if (sources.length)    p.set('sources', sources.join(','));
+        if (search.trim())     p.set('search', search.trim());
+        if (provenance)        p.set('provenance', PROVENANCE_KEYWORD_MAP[provenance] || provenance);
+        if (artist.trim())     p.set('artist', artist.trim());
+        if (auctionHouse.trim()) p.set('auction_house', auctionHouse.trim());
         Object.entries(getDateParams(dateFilter)).forEach(([k, v]) => p.set(k, v));
 
-        const url = exploreTab === 'primary'
-          ? `${BACKEND}/api/lots/primary?page_size=24`
-          : `${BACKEND}/api/lots?${p.toString()}`;
+        let url: string;
+        if (exploreTab === 'primary') {
+          const pp = new URLSearchParams();
+          pp.set('page_size', '24');
+          if (category) pp.set('category', CATEGORY_API_MAP[category] || category);
+          if (search.trim()) pp.set('search', search.trim());
+          if (minPrice > 0) pp.set('min_price', String(minPrice));
+          if (maxPrice > 0) pp.set('max_price', String(maxPrice));
+          if (sortBy) pp.set('sort_by', sortBy);
+          if (sortDir) pp.set('sort_dir', sortDir);
+          if (provenance) pp.set('provenance', PROVENANCE_KEYWORD_MAP[provenance] || provenance);
+          url = `${BACKEND}/api/lots/primary?${pp.toString()}`;
+        } else {
+          url = `${BACKEND}/api/lots?${p.toString()}`;
+        }
 
         const token = getToken();
         const resp = await fetch(url, {
@@ -553,29 +573,48 @@ export default function Explore() {
     }, 300);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exploreTab, refreshKey, minScore, maxScore, minPrice, maxPrice, category, provenance, sources, search, sortBy, sortDir, dateFilter]);
+  }, [exploreTab, refreshKey, minScore, maxScore, minPrice, maxPrice, category, provenance, sources, search, sortBy, sortDir, dateFilter, artist, auctionHouse]);
 
   const loadMore = async () => {
     if (loadingMore || currentPage >= totalPages) return;
     const nextPage = currentPage + 1;
     setLoadingMore(true);
     try {
-      const p: Record<string, any> = {
-        page: nextPage, page_size: 24,
-        sort_by: sortBy, sort_dir: sortDir,
-        search: search.trim() || undefined,
-        provenance: provenance ? (PROVENANCE_KEYWORD_MAP[provenance] || provenance) : undefined,
-        min_price: minPrice > 0 ? minPrice : undefined,
-        max_price: maxPrice > 0 ? maxPrice : undefined,
-        category: category ? (CATEGORY_API_MAP[category] || category) : undefined,
-        sources: sources.length ? sources.join(',') : undefined,
-      };
-      if (exploreTab === 'best') p.min_score = Math.max(minScore, 60);
-      else if (minScore > 0) p.min_score = minScore;
-      const data = await fetchLotsFromAPI(p);
-      setLots(prev => [...prev, ...data.items.map(mapLot)]);
-      setCurrentPage(nextPage);
-    } catch { /* silent */ } finally { setLoadingMore(false); }
+      if (exploreTab === 'primary') {
+        const pp = new URLSearchParams();
+        pp.set('page', String(nextPage));
+        pp.set('page_size', '24');
+        if (category) pp.set('category', CATEGORY_API_MAP[category] || category);
+        if (search.trim()) pp.set('search', search.trim());
+        if (minPrice > 0) pp.set('min_price', String(minPrice));
+        if (maxPrice > 0) pp.set('max_price', String(maxPrice));
+        if (sortBy) pp.set('sort_by', sortBy);
+        if (sortDir) pp.set('sort_dir', sortDir);
+        if (provenance) pp.set('provenance', PROVENANCE_KEYWORD_MAP[provenance] || provenance);
+        const res = await fetch(`${BACKEND}/api/lots/primary?${pp.toString()}`);
+        const data = await res.json();
+        setLots(prev => [...prev, ...data.items.map(mapLot)]);
+        setCurrentPage(nextPage);
+      } else {
+        const p: Record<string, any> = {
+          page: nextPage, page_size: 24,
+          sort_by: sortBy, sort_dir: sortDir,
+          search: search.trim() || undefined,
+          provenance: provenance ? (PROVENANCE_KEYWORD_MAP[provenance] || provenance) : undefined,
+          min_price: minPrice > 0 ? minPrice : undefined,
+          max_price: maxPrice > 0 ? maxPrice : undefined,
+          category: category ? (CATEGORY_API_MAP[category] || category) : undefined,
+          sources: sources.length ? sources.join(',') : undefined,
+          artist: artist.trim() || undefined,
+          auction_house: auctionHouse.trim() || undefined,
+        };
+        if (exploreTab === 'best') p.min_score = Math.max(minScore, 60);
+        else if (minScore > 0) p.min_score = minScore;
+        const data = await fetchLotsFromAPI(p);
+        setLots(prev => [...prev, ...data.items.map(mapLot)]);
+        setCurrentPage(nextPage);
+      }
+    } catch { } finally { setLoadingMore(false); }
   };
 
   const cols = viewMode === "list" ? 1 : viewMode === "grid" ? (tab === "live" ? 5 : 4) : (tab === "live" ? 4 : 3);
@@ -602,11 +641,11 @@ export default function Explore() {
         {/* LEFT: Tab pills */}
         <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
           {([
-            { key: 'best', label: 'Best Lots' },
-            { key: 'auctions', label: 'All Auctions' },
-            { key: 'primary', label: 'Primary Market' },
-            { key: 'convictions', label: 'Convictions' },
-            { key: 'for-you', label: '✦ For You' },
+            { key: 'best', label: t('explorer.tabBestLots') },
+            { key: 'auctions', label: t('explorer.tabAllAuctions') },
+            { key: 'primary', label: t('explorer.tabPrimary') },
+            { key: 'convictions', label: t('explorer.tabConvictions') },
+            { key: 'for-you', label: t('explorer.tabForYou') },
           ] as { key: ExploreTab; label: string }[]).map(({ key, label }) => (
             <button
               key={key}
@@ -648,7 +687,7 @@ export default function Explore() {
               <circle cx="9" cy="7" r="1.5" fill="currentColor" stroke="none" />
               <circle cx="4" cy="11" r="1.5" fill="currentColor" stroke="none" />
             </svg>
-            Filters
+            {t('explorer.filters')}
             {hasActiveFilters && (
               <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: showFilters ? 'white' : 'var(--gold)', display: 'inline-block' }} />
             )}
@@ -681,7 +720,7 @@ export default function Explore() {
         {/* Sidebar — slide-in filter panel */}
         {showFilters && (
           <div
-            className="no-scrollbar"
+            className="no-scrollbar explore-sidebar"
             style={{
               width: '220px', minWidth: '220px',
               height: '100%', overflowY: 'auto', overflowX: 'hidden',
@@ -692,10 +731,10 @@ export default function Explore() {
           >
             {/* Filter header — sticky */}
             <div style={{ padding: '14px 16px', borderBottom: '1px solid #E8E4DD', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text)' }}>Filters</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text)' }}>{t('explorer.filters')}</span>
               {hasActiveFilters && (
                 <button onClick={resetFilters} style={{ fontSize: '11px', color: 'var(--electric)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
-                  Reset
+                  {t('explorer.reset')}
                 </button>
               )}
             </div>
@@ -704,13 +743,13 @@ export default function Explore() {
 
               {/* 1 — SIGNAL TIER */}
               <div style={{ marginBottom: '6px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Signal Tier</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>{t('explorer.filterSignalTier')}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   {([
-                    { label: 'All',         minVal: 0,  maxVal: 0,  badge: null },
-                    { label: 'Exceptional', minVal: 80, maxVal: 0,  badge: 'EXCEP.', badgeColor: '#C0392B', badgeBg: 'rgba(192,57,43,0.08)' },
-                    { label: 'Strong',      minVal: 65, maxVal: 79, badge: 'STRONG', badgeColor: 'var(--navy)', badgeBg: 'rgba(26,42,68,0.08)' },
-                    { label: 'Interesting', minVal: 45, maxVal: 64, badge: 'INT.',   badgeColor: '#64748B', badgeBg: 'rgba(100,116,139,0.08)' },
+                    { label: t('explorer.tierAll'),         minVal: 0,  maxVal: 0,  badge: null },
+                    { label: t('explorer.tierExceptional'), minVal: 80, maxVal: 0,  badge: 'EXCEP.', badgeColor: '#C0392B', badgeBg: 'rgba(192,57,43,0.08)' },
+                    { label: t('explorer.tierStrong'),      minVal: 65, maxVal: 79, badge: 'STRONG', badgeColor: 'var(--navy)', badgeBg: 'rgba(26,42,68,0.08)' },
+                    { label: t('explorer.tierInteresting'), minVal: 45, maxVal: 64, badge: 'INT.',   badgeColor: '#64748B', badgeBg: 'rgba(100,116,139,0.08)' },
                   ] as { label: string; minVal: number; maxVal: number; badge: string | null; badgeColor?: string; badgeBg?: string }[]).map(({ label, minVal, maxVal, badge, badgeColor, badgeBg }) => {
                     const active = minScore === minVal && maxScore === maxVal;
                     return (
@@ -727,10 +766,10 @@ export default function Explore() {
 
               {/* 2 — BUDGET */}
               <div style={{ marginBottom: '6px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Budget</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>{t('explorer.filterBudget')}</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                   {([
-                    { label: 'Any', min: 0, max: 0 },
+                    { label: t('explorer.budgetAny'), min: 0, max: 0 },
                     { label: '<€1K', min: 0, max: 1000 },
                     { label: '€1K–5K', min: 1000, max: 5000 },
                     { label: '€5K–20K', min: 5000, max: 20000 },
@@ -756,7 +795,7 @@ export default function Explore() {
 
               {/* 3 — CATEGORY */}
               <div style={{ marginBottom: '6px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Category</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>{t('explorer.filterCategory')}</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                   {['Paintings', 'Prints', 'Drawings', 'Sculpture', 'Photography', 'Street Art', 'Jewelry', 'Watches', 'Furniture', 'Ceramics', 'Books', 'Asian Art', 'Maroquinerie'].map(cat => (
                     <button key={cat} onClick={() => {
@@ -772,29 +811,17 @@ export default function Explore() {
               </div>
               <div style={{ borderBottom: '1px solid #E8E4DD', margin: '12px 0' }} />
 
-              {/* 4 — PROVENANCE */}
-              <div style={{ marginBottom: '6px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Provenance</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                  {Object.keys(PROVENANCE_KEYWORD_MAP).map(p => (
-                    <button key={p} onClick={() => setProvenance(provenance === p ? '' : p)}
-                      style={{ padding: '4px 8px', borderRadius: '20px', fontSize: '11px', cursor: 'pointer', background: provenance === p ? 'var(--navy)' : 'transparent', color: provenance === p ? 'white' : 'var(--text-2)', border: `1px solid ${provenance === p ? 'var(--navy)' : 'var(--border)'}`, transition: 'all 0.12s', whiteSpace: 'nowrap' }}>
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ borderBottom: '1px solid #E8E4DD', margin: '12px 0' }} />
+              {/* 4 — PROVENANCE (hidden — data not available yet) */}
 
               {/* 5 — AUCTION DATE */}
               <div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Auction Date</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>{t('explorer.filterAuctionDate')}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   {([
-                    { label: 'All dates', value: 'all' },
-                    { label: 'Today', value: 'today' },
-                    { label: 'This week', value: 'week' },
-                    { label: 'This month', value: 'month' },
+                    { label: t('explorer.dateAll'), value: 'all' },
+                    { label: t('explorer.dateToday'), value: 'today' },
+                    { label: t('explorer.dateThisWeek'), value: 'week' },
+                    { label: t('explorer.dateThisMonth'), value: 'month' },
                   ] as { label: string; value: string }[]).map(({ label, value }) => (
                     <button key={value} onClick={() => setDateFilter(value)}
                       style={{ padding: '6px 8px', borderRadius: '5px', border: `1px solid ${dateFilter === value ? 'var(--navy)' : 'transparent'}`, background: dateFilter === value ? 'rgba(26,42,68,0.05)' : 'transparent', cursor: 'pointer', textAlign: 'left', fontSize: '12px', color: dateFilter === value ? 'var(--navy)' : 'var(--text-2)', fontWeight: dateFilter === value ? 600 : 400, transition: 'all 0.1s' }}>
@@ -807,14 +834,15 @@ export default function Explore() {
 
               {/* 6 — SORT BY */}
               <div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>Sort by</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>{t('explorer.sortBy')}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   {([
-                    { label: 'Best signal',     by: 'deal_score',    dir: 'desc' },
-                    { label: 'Newest first',    by: 'created_at',    dir: 'desc' },
-                    { label: 'Oldest first',    by: 'created_at',    dir: 'asc'  },
-                    { label: 'Price: low → high', by: 'current_price', dir: 'asc'  },
-                    { label: 'Price: high → low', by: 'current_price', dir: 'desc' },
+                    { label: t('explorer.sortBestSignal'),  by: 'deal_score',              dir: 'desc' },
+                    { label: t('explorer.sortBestUpside'),  by: 'pct_below_low_estimate',  dir: 'desc' },
+                    { label: t('explorer.sortNewest'),      by: 'created_at',              dir: 'desc' },
+                    { label: t('explorer.sortOldest'),      by: 'created_at',              dir: 'asc'  },
+                    { label: t('explorer.sortPriceLow'),    by: 'current_price',           dir: 'asc'  },
+                    { label: t('explorer.sortPriceHigh'),   by: 'current_price',           dir: 'desc' },
                   ] as { label: string; by: string; dir: string }[]).map(({ label, by, dir }) => {
                     const active = sortBy === by && sortDir === dir;
                     return (
@@ -832,19 +860,18 @@ export default function Explore() {
         )}
 
         {/* Main */}
-        <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+        <main className="explore-main" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
           {/* Convictions paywall for free users */}
           {exploreTab === "convictions" && !isAdmin && userPlan === "free" ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: "60px 20px", textAlign: "center" }}>
               <div style={{ fontSize: "32px", marginBottom: "20px" }}>★</div>
-              <div style={{ fontFamily: "var(--font-serif)", fontSize: "22px", color: "var(--text)", marginBottom: "10px" }}>Convictions IA</div>
+              <div style={{ fontFamily: "var(--font-serif)", fontSize: "22px", color: "var(--text)", marginBottom: "10px" }}>{t('explorer.tabConvictions')}</div>
               <p style={{ fontSize: "13px", color: "var(--text-2)", marginBottom: "28px", lineHeight: 1.7, maxWidth: "380px" }}>
-                Our curated high-conviction picks are reserved for Starter and above. Upgrade to access Nautilus AI's top-rated opportunities.
+                {t('explorer.descConvictions')}
               </p>
               <button onClick={() => navigate("/app/pricing")} style={{ fontSize: "13px", padding: "12px 36px", marginBottom: "10px", background: "#2563EB", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 600 }}>
-                Get Investor access — €19/mo →
+                {t('explorer.forYouPaywallCta')}
               </button>
-              <div style={{fontSize:12,color:'#999',marginTop:8}}>Founding price · Increases to €49 at launch</div>
             </div>
           ) : (
             <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "0 24px 60px" }}>
@@ -899,7 +926,7 @@ export default function Explore() {
                     </button>
                   )}
                   <button onClick={resetFilters} style={{ fontSize: '11px', color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: '3px 4px' }}>
-                    Clear all
+                    {t('explorer.clearAll')}
                   </button>
                 </div>
               )}
@@ -907,11 +934,11 @@ export default function Explore() {
               {/* Per-tab description */}
               {!loading && (
                 <div style={{ padding: hasActiveFilters ? '4px 0 4px' : '12px 0 4px', fontSize: '12px', color: 'var(--text-3)', fontStyle: 'italic', lineHeight: 1.5 }}>
-                  {exploreTab === 'best' && 'Lots priced below their real market value — ranked by conviction score.'}
-                  {exploreTab === 'auctions' && 'Every lot currently on the market, across all tracked auction houses.'}
-                  {exploreTab === 'primary' && 'Gallery and primary market listings — buy directly from galleries and artists.'}
-                  {exploreTab === 'convictions' && 'AI-selected opportunities with score ≥ 75 — our highest-conviction signals.'}
-                  {exploreTab === 'for-you' && 'Your personalized market intelligence — updated every 6 hours based on your collector profile.'}
+                  {exploreTab === 'best' && t('explorer.descBestLots')}
+                  {exploreTab === 'auctions' && t('explorer.descAllAuctions')}
+                  {exploreTab === 'primary' && t('explorer.descPrimary')}
+                  {exploreTab === 'convictions' && t('explorer.descConvictions')}
+                  {exploreTab === 'for-you' && t('explorer.descForYou')}
                 </div>
               )}
               {/* Count line */}
@@ -922,7 +949,7 @@ export default function Explore() {
                   </div>
                   {(exploreTab === 'best' || exploreTab === 'auctions') && (
                     <div style={{ fontSize: '11px', color: '#C9C5BC', fontFamily: 'var(--font-mono)', marginTop: '2px', letterSpacing: '0.03em', opacity: 0.7 }}>
-                      Across Christie's, Sotheby's, Drouot, Heritage Auctions and 2+ auction houses
+                      {t('explorer.auctionHousesNote')}
                     </div>
                   )}
                 </div>
@@ -931,7 +958,7 @@ export default function Explore() {
               {/* Primary market label */}
               {exploreTab === 'primary' && (
                 <div style={{ fontSize: '12px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', marginBottom: '16px' }}>
-                  Gallery & dealer offerings — fixed-price works available directly from galleries worldwide
+                  {t('explorer.descPrimary')}
                 </div>
               )}
 
@@ -942,16 +969,16 @@ export default function Explore() {
               {exploreTab !== 'for-you' && !loading && hasError && lots.length === 0 && (
                 <div style={{ textAlign: "center", padding: "60px 40px", display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                   <div style={{ fontFamily: "var(--font-serif)", fontSize: "18px", color: "var(--text)" }}>
-                    Unable to connect
+                    {t('explorer.connectionError')}
                   </div>
                   <p style={{ fontSize: "13px", color: "var(--text-3)", margin: 0, maxWidth: '280px' }}>
-                    Check your connection and try again.
+                    {t('explorer.connectionErrorSub')}
                   </p>
                   <button
                     onClick={doFetch}
                     style={{ padding: "10px 24px", background: "var(--navy)", color: "white", border: "none", borderRadius: "6px", fontSize: "13px", fontWeight: 700, cursor: "pointer", marginTop: '4px' }}
                   >
-                    Retry
+                    {t('explorer.tryAgain')}
                   </button>
                 </div>
               )}
@@ -962,33 +989,33 @@ export default function Explore() {
                 <div style={{ padding: '8px 0' }}>
                   {!isAdmin && !["investor", "pro", "elite", "institutional"].includes(userPlan) ? (
                     <div style={{textAlign:'center',padding:'64px 24px',background:'#f8f8f6',borderRadius:8,marginTop:32,border:'1px solid #e8e4dc'}}>
-                      <div style={{fontSize:11,letterSpacing:'0.2em',color:'#C6A85A',marginBottom:12,fontWeight:700}}>INVESTOR+ FEATURE</div>
-                      <div style={{fontSize:22,fontFamily:'Georgia,serif',color:'#1A2A44',marginBottom:12}}>Personalized recommendations require an Investor plan</div>
-                      <a href="/app/pricing" style={{display:'inline-block',background:'#2563EB',color:'#fff',padding:'14px 32px',fontSize:13,fontWeight:600,textDecoration:'none',borderRadius:4}}>Get Investor access — €19/mo →</a>
+                      <div style={{fontSize:11,letterSpacing:'0.2em',color:'#C6A85A',marginBottom:12,fontWeight:700}}>{t('explorer.forYouPaywallTitle')}</div>
+                      <div style={{fontSize:22,fontFamily:'Georgia,serif',color:'#1A2A44',marginBottom:12}}>{t('explorer.forYouPaywallSub')}</div>
+                      <a href="/app/pricing" style={{display:'inline-block',background:'#2563EB',color:'#fff',padding:'14px 32px',fontSize:13,fontWeight:600,textDecoration:'none',borderRadius:4}}>{t('explorer.forYouPaywallCta')}</a>
                     </div>
                   ) : (
                   <>
                   {recoLoading && <NautilusLoader label="SCANNING..." />}
                   {!recoLoading && !getToken() && (
                     <div style={{ textAlign: 'center', padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)' }}>Sign in to see your recommendations</div>
-                      <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0, maxWidth: '300px' }}>Nautilus builds a personalized collector profile for you — sign in to unlock.</p>
+                      <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)' }}>{t('explorer.signInForRecs')}</div>
+                      <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0, maxWidth: '300px' }}>{t('explorer.signInForRecsSub')}</p>
                       <button onClick={() => navigate('/app/login')} style={{ background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '6px', padding: '12px 28px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '4px' }}>
-                        Sign in
+                        {t('common.signIn')}
                       </button>
                     </div>
                   )}
                   {!recoLoading && recoDone && getToken() && recos.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)' }}>Your recommendations are being generated</div>
-                      <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0, maxWidth: '320px' }}>Add works to your portfolio and tell Larry your preferences to unlock personalized recommendations.</p>
-                      <p style={{ fontSize: '12px', color: 'var(--text-3)', margin: 0 }}>This usually takes less than 7 days of activity on the platform.</p>
+                      <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)' }}>{t('explorer.recsBeingGenerated')}</div>
+                      <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0, maxWidth: '320px' }}>{t('explorer.recsBeingGeneratedSub')}</p>
+                      <p style={{ fontSize: '12px', color: 'var(--text-3)', margin: 0 }}>{t('explorer.recsEta')}</p>
                       <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '4px' }}>
                         <button onClick={() => navigate('/app/portfolio')} style={{ background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '6px', padding: '12px 24px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
-                          Add to portfolio →
+                          {t('explorer.addToPortfolio')}
                         </button>
                         <button onClick={() => navigate('/app/agent')} style={{ background: 'transparent', color: 'var(--navy)', border: '1px solid rgba(10,22,40,0.2)', borderRadius: '6px', padding: '12px 24px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
-                          Talk to Larry
+                          {t('explorer.talkToLarry')}
                         </button>
                       </div>
                     </div>
@@ -1063,7 +1090,7 @@ export default function Explore() {
               {/* Grid view */}
               {exploreTab !== 'for-you' && !loading && !hasError && lots.length > 0 && viewMode !== "list" && (
                 <>
-                  <div className="animate-stagger" style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap, width: "100%" }}>
+                  <div className="animate-stagger explore-grid" style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap, width: "100%" }}>
                     {visibleLots.map((lot, i) => (
                       <div key={lot.id} className="fade-up" style={{ animationDelay: `${Math.min(i * 0.04, 0.4)}s`, minWidth: 0 }}>
                         {tab === "live" ? <LiveCard lot={lot} onClick={() => navigate(`/app/opportunities/${lot.id}`)} /> : <AlphaCard lot={lot} onClick={() => navigate(`/app/opportunities/${lot.id}`)} locked={false} />}
@@ -1090,19 +1117,19 @@ export default function Explore() {
                       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(250,250,250,0) 0%, rgba(250,250,250,0.98) 25%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", paddingBottom: "40px" }}>
                         <div style={{ textAlign: "center", maxWidth: "440px", padding: "0 24px" }}>
                           <div style={{ fontFamily: "var(--font-serif)", fontSize: "24px", color: "var(--text)", marginBottom: "10px" }}>
-                            500+ opportunities available
+                            {t('explorer.upsellHeading')}
                           </div>
                           <p style={{ fontSize: "14px", color: "var(--text-2)", marginBottom: "24px", lineHeight: 1.7 }}>
                             {userPlan === "free"
-                              ? `You're seeing ${visibleLimit} of 500+ lots. Upgrade to unlock the full market intelligence platform.`
-                              : "Upgrade to Investor for unlimited access."
+                              ? t('explorer.unlockSub', { visible: visibleLimit, total: '500+' })
+                              : t('explorer.unlockSub', { visible: visibleLimit, total: '500+' })
                             }
                           </p>
                           <button onClick={() => navigate("/app/pricing")} className="btn-electric" style={{ fontSize: "13px", padding: "14px 40px", width: "100%", justifyContent: "center", marginBottom: "12px" }}>
-                            Get full access →
+                            {t('explorer.unlockCta')}
                           </button>
                           <div style={{ fontSize: "11px", color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>
-                            Founding price — €19/mo · Cancel anytime · Instant access
+                            {t('explorer.unlockFrom')}
                           </div>
                         </div>
                       </div>
@@ -1111,7 +1138,7 @@ export default function Explore() {
 
                   {!loading && !hasError && lots.length > 0 && currentPage < totalPages && (
                     <div style={{ display: "flex", justifyContent: "center", marginTop: "32px" }}>
-                      <button onClick={loadMore} disabled={loadingMore} className="btn btn-ghost" style={{ fontSize: "12px", padding: "10px 32px" }}>{loadingMore ? "Loading…" : "Load more"}</button>
+                      <button onClick={loadMore} disabled={loadingMore} className="btn btn-ghost" style={{ fontSize: "12px", padding: "10px 32px" }}>{loadingMore ? t('explorer.loading') : t('explorer.loadMore')}</button>
                     </div>
                   )}
 

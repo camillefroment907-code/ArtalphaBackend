@@ -259,7 +259,7 @@ async def list_lots(
     market_type: Optional[str] = Query(None, pattern="^(auction|primary|gallery)$"),
     min_confidence: Optional[float] = Query(None, ge=0, le=100),
     low_supply: bool = Query(False),
-    sort_by: str = Query("deal_score", pattern="^(deal_score|auction_date|created_at|current_price)$"),
+    sort_by: str = Query("deal_score", pattern="^(deal_score|auction_date|created_at|current_price|pct_below_low_estimate)$"),
     sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user_optional),
@@ -620,9 +620,56 @@ async def get_top_deals(
 
 @router.get("/count")
 @limiter.limit("10/minute")
-async def get_lot_count(request: Request, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(func.count(Lot.id)))
+async def get_lot_count(
+    request: Request,
+    market_type: Optional[str] = Query(None, pattern="^(auction|primary|gallery)$"),
+    db: AsyncSession = Depends(get_db),
+):
+    filters = []
+    if market_type:
+        try:
+            filters.append(Lot.market_type == MarketType[market_type.upper()])
+        except KeyError:
+            pass
+    stmt = select(func.count(Lot.id)).where(*filters) if filters else select(func.count(Lot.id))
+    result = await db.execute(stmt)
     return {"total": result.scalar() or 0}
+
+
+@router.get("/closing-today")
+async def get_closing_today(
+    days: int = Query(7, ge=1, le=30),
+    min_score: float = Query(60, ge=0, le=100),
+    limit: int = Query(8, ge=1, le=30),
+    db: AsyncSession = Depends(get_db),
+):
+    """Lots auctioning within `days` days, sorted by deal_score DESC. No auth required."""
+    now = datetime.utcnow()
+    cutoff = now + timedelta(days=days)
+
+    stmt = (
+        select(Lot)
+        .options(selectinload(Lot.artist))
+        .where(
+            and_(
+                Lot.deal_score >= min_score,
+                Lot.auction_date >= now,
+                Lot.auction_date <= cutoff,
+                Lot.market_type == MarketType.AUCTION,
+            )
+        )
+        .order_by(desc(Lot.deal_score))
+        .limit(limit)
+    )
+
+    result = await db.execute(stmt)
+    lots = result.scalars().all()
+
+    return {
+        "items": [lot_to_list_dict(lot) for lot in lots],
+        "total": len(lots),
+        "days": days,
+    }
 
 
 @router.get("/stats", response_model=DashboardStats)
@@ -646,6 +693,9 @@ async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
     alerts_today = await db.execute(
         select(func.count(Alert.id)).where(Alert.sent_at >= today_start)
     )
+    sources_result = await db.execute(
+        select(func.count(func.distinct(Lot.source))).where(Lot.status == LotStatus.UPCOMING)
+    )
 
     return DashboardStats(
         total_lots_tracked=total.scalar() or 0,
@@ -653,7 +703,7 @@ async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
         avg_deal_score=round(avg_score.scalar() or 0, 1),
         top_deal_score=round(top_score.scalar() or 0, 1),
         alerts_sent_today=alerts_today.scalar() or 0,
-        sources_active=3,
+        sources_active=sources_result.scalar() or 0,
     )
 
 
@@ -905,6 +955,7 @@ async def get_primary_lots(
     max_price: Optional[float] = None,
     category: Optional[str] = None,
     search: Optional[str] = None,
+    provenance: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user_optional),
 ):
@@ -930,6 +981,12 @@ async def get_primary_lots(
         filters.append(or_(
             Lot.title.ilike(f"%{search}%"),
             Lot.artist_name_raw.ilike(f"%{search}%"),
+        ))
+    if provenance:
+        filters.append(or_(
+            Lot.artist_name_raw.ilike(f"%{provenance}%"),
+            Lot.medium.ilike(f"%{provenance}%"),
+            Lot.description.ilike(f"%{provenance}%"),
         ))
 
     sort_col = {
