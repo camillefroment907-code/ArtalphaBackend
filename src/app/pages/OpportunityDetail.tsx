@@ -5,7 +5,7 @@ import { getPlanLimits, getToken, getUserPlan } from '../../lib/auth';
 import { AIAnalyst } from '../components/AIAnalyst';
 import {
   ComposedChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
-  ReferenceLine, ResponsiveContainer,
+  ReferenceLine, ResponsiveContainer, LineChart, Line,
 } from 'recharts';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
@@ -226,6 +226,15 @@ export default function OpportunityDetail() {
     _projMap[years]?.projected_value_eur ?? Math.round(price * Math.pow(1 + projCagr / 100, years));
   const projGainPct = (years: number): number =>
     _projMap[years]?.gain_pct ?? (price > 0 ? ((proj(years) - price) / price) * 100 : 0);
+  const chartData = [
+    { year: isFr ? "Aujourd'hui" : 'Now', optimistic: price, value: price, conservative: price },
+    ...[1, 3, 5, 10].map(y => ({
+      year: `${y}${isFr ? 'an' : 'yr'}`,
+      optimistic:   _projMap[y]?.optimistic_eur   ?? Math.round(price * (1 + (projCagr * 1.5) / 100) ** y),
+      value:        _projMap[y]?.projected_value_eur ?? Math.round(price * (1 + projCagr / 100) ** y),
+      conservative: _projMap[y]?.conservative_eur ?? Math.round(price * (1 + (projCagr * 0.3) / 100) ** y),
+    })),
+  ];
 
   const isUpcoming = lot.status === 'upcoming' || lot.status === 'preview' ||
     (lot.auction_date && new Date(lot.auction_date) > new Date() && !lot.status);
@@ -1174,21 +1183,22 @@ export default function OpportunityDetail() {
                         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>{lot.projection.artist_tier.replace('_', ' ')}</span>
                       )}
                     </div>
-                    {visibleYears.map((y: number) => {
-                      const val = proj(y);
-                      const pct = projGainPct(y);
-                      const w   = maxProjVal > 0 ? Math.min((val / maxProjVal) * 100, 100) : 0;
-                      return (
-                        <div key={y} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, minWidth: '30px', flexShrink: 0 }}>{y}Y</span>
-                          <div style={{ flex: 1, height: '3px', background: LTB, borderRadius: '2px', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', borderRadius: '2px', width: `${w}%`, background: GOLD }} />
-                          </div>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT1, fontWeight: 600, minWidth: '44px', textAlign: 'right', flexShrink: 0 }}>{fmt(val)}</span>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: GL, minWidth: '54px', textAlign: 'right', flexShrink: 0 }}>+{pct.toFixed(0)}%</span>
-                        </div>
-                      );
-                    })}
+                    <ResponsiveContainer width="100%" height={220}>
+                      <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                        <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                        <YAxis tickFormatter={(v: number) => `€${v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v}`} tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} width={48} />
+                        <Tooltip formatter={(val: number, name: string) => [`€${Number(val).toLocaleString()}`, name === 'optimistic' ? (isFr ? '🟢 Optimiste' : '🟢 Optimistic') : name === 'value' ? '🟡 Base' : (isFr ? '🔴 Pessimiste' : '🔴 Pessimistic')]} contentStyle={{ background: '#1A2A44', border: 'none', borderRadius: 8, fontSize: 12, color: 'white' }} />
+                        <ReferenceLine y={price} stroke="#E8E4DC" strokeDasharray="4 2" />
+                        <Line type="monotone" dataKey="optimistic" stroke="#16A34A" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="value" stroke="#B8922A" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="conservative" stroke="#DC2626" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                    <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 8 }}>
+                      <span style={{ fontSize: 11, color: '#16A34A' }}>● {isFr ? 'Optimiste' : 'Optimistic'}</span>
+                      <span style={{ fontSize: 11, color: '#B8922A' }}>● Base</span>
+                      <span style={{ fontSize: 11, color: '#DC2626' }}>● {isFr ? 'Pessimiste' : 'Pessimistic'}</span>
+                    </div>
                     {lot.projection?.sell_recommendation && (
                       <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '6px', padding: '8px 12px', marginTop: '6px' }}>
                         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GL, letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>{isFr ? 'SORTIE OPTIMALE' : 'OPTIMAL EXIT'} · </span>
