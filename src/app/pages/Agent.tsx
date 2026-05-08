@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { getToken, getPlanLimits } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
@@ -224,6 +225,8 @@ export default function Agent() {
 
 function AgentPage() {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
   const token = getToken();
 
   // ── Data state ────────────────────────────────────────────────
@@ -457,39 +460,43 @@ function AgentPage() {
               fontFamily: 'var(--font-mono)', fontSize: '11px',
               color: 'var(--text-3)', letterSpacing: '0.06em', margin: 0,
             }}>
-              Your AI analyst monitors the market 24/7 and surfaces matching opportunities
+              {isFr
+                ? 'Votre analyste surveille le marché 24h/24 et remonte les opportunités correspondantes'
+                : 'Your AI analyst monitors the market 24/7 and surfaces matching opportunities'}
             </p>
           </div>
           {limits?.can_create && (
             <button
-              className="btn-electric"
-              style={{ fontSize: '12px', padding: '9px 18px', letterSpacing: '0.04em', flexShrink: 0 }}
+              style={{
+                fontSize: '12px', padding: '9px 18px', letterSpacing: '0.06em',
+                flexShrink: 0, background: '#1A2A44', color: 'white',
+                border: 'none', borderRadius: '2px', cursor: 'pointer',
+                fontFamily: 'var(--font-mono)', fontWeight: 600,
+              }}
               onClick={showCreateForm ? closeForm : openCreateForm}
             >
-              {showCreateForm ? '× Close' : '+ New Strategy'}
+              {showCreateForm
+                ? (isFr ? '× FERMER' : '× CLOSE')
+                : (isFr ? '+ NOUVELLE STRATÉGIE' : '+ NEW STRATEGY')}
             </button>
           )}
         </div>
 
-        {/* 4-tile KPI grid */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-          border: '1px solid var(--border)', borderRadius: '8px',
-          overflow: 'hidden', gap: '1px', background: 'var(--border)',
-        }}>
+        {/* KPI row */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           {[
-            { label: 'Strategies',       value: String(alerts.length),                           sub: `of ${maxStrategies} max`   },
-            { label: 'Recommendations',  value: String(recs.length),                             sub: 'this cycle'                },
-            { label: 'Conviction Avg',   value: avgConviction > 0 ? `${avgConviction}/100` : '—', sub: 'across signals'            },
-          ].map(({ label, value, sub }) => (
-            <div key={label} style={{ background: 'white', padding: '16px 20px' }}>
+            { label: isFr ? 'Stratégies' : 'Strategies', value: String(alerts.length), sub: `${isFr ? 'sur' : 'of'} ${maxStrategies} max` },
+            { label: isFr ? 'Recommandations' : 'Recommendations', value: String(recs.length), sub: isFr ? 'ce cycle' : 'this cycle' },
+            { label: isFr ? 'Conviction Moy.' : 'Conviction Avg', value: avgConviction > 0 ? `${avgConviction}/100` : '—', sub: isFr ? 'par signal' : 'across signals' },
+          ].map(({ label, value, sub }, i) => (
+            <div key={label} style={{ flex: 1, padding: '4px 20px', borderLeft: i > 0 ? '1px solid var(--border)' : 'none' }}>
               <div style={{
                 fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.12em',
-                textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '6px',
+                textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '5px',
               }}>{label}</div>
               <div style={{
-                fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700,
-                color: 'var(--navy)', marginBottom: '3px',
+                fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700,
+                color: 'var(--navy)', marginBottom: '2px',
               }}>{value}</div>
               <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>{sub}</div>
             </div>
@@ -505,7 +512,7 @@ function AgentPage() {
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
               <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 400, color: 'var(--navy)', margin: 0 }}>
-                AI Recommendations
+                {isFr ? 'Recommandations IA' : 'AI Recommendations'}
               </h2>
               {unreadCount > 0 && (
                 <span style={{
@@ -518,7 +525,7 @@ function AgentPage() {
               )}
             </div>
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--electric)', letterSpacing: '0.08em' }}>
-              RANKED BY CONVICTION SCORE
+              {isFr ? 'CLASSÉES PAR SCORE DE CONVICTION' : 'RANKED BY CONVICTION SCORE'}
             </span>
           </div>
 
@@ -529,30 +536,25 @@ function AgentPage() {
                 style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)', background: 'none', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 10px', cursor: 'pointer' }}
                 onClick={() => setFilterAlertId(null)}
               >
-                × All strategies
+                {isFr ? '× Toutes les stratégies' : '× All strategies'}
               </button>
             </div>
           )}
 
           {/* Empty state */}
           {recs.length === 0 ? (
-            <div style={{ background: 'var(--navy)', borderRadius: '8px', padding: '48px 40px', textAlign: 'center' }}>
-              <Logo variant="symbol" color="white" size={32} />
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 400, color: 'white', margin: '20px 0 8px' }}>
-                Your analyst is working
-              </h3>
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', marginBottom: '32px', lineHeight: 1.65, maxWidth: '320px', margin: '0 auto 32px' }}>
-                Once you create a strategy, the agent scans every new auction lot and returns AI-graded signals here.
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '240px', margin: '0 auto', textAlign: 'left' }}>
-                {['Nautilus AI analysis', 'Conviction scoring'].map(item => (
-                  <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ color: 'var(--gold)', fontSize: '8px', flexShrink: 0 }}>◆</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.06em' }}>
-                      {item}
-                    </span>
-                  </div>
-                ))}
+            <div style={{
+              padding: '64px 40px', textAlign: 'center',
+              border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg-subtle)',
+            }}>
+              <div style={{ fontSize: '30px', color: 'var(--text-3)', marginBottom: '16px', letterSpacing: '-0.02em' }}>◈</div>
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--text-2)', marginBottom: '8px' }}>
+                {isFr ? 'Votre analyste est prêt.' : 'Your analyst is ready.'}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.7, maxWidth: '280px', margin: '0 auto' }}>
+                {isFr
+                  ? 'Créez une stratégie pour recevoir vos premiers signaux.'
+                  : 'Create a strategy to receive your first signals.'}
               </div>
             </div>
           ) : (
@@ -651,7 +653,7 @@ function AgentPage() {
                         </span>
                         {rec.estimated_return_pct != null && (
                           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>
-                            {rec.estimated_return_pct > 0 ? '+' : ''}{rec.estimated_return_pct.toFixed(0)}% est. return
+                            {rec.estimated_return_pct > 0 ? '+' : ''}{rec.estimated_return_pct.toFixed(0)}% {isFr ? 'retour est.' : 'est. return'}
                           </span>
                         )}
                       </div>
@@ -665,7 +667,7 @@ function AgentPage() {
                         )}
                         {rec.lot_id && (
                           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--electric)', letterSpacing: '0.04em' }}>
-                            View lot →
+                            {isFr ? 'Voir le lot →' : 'View lot →'}
                           </span>
                         )}
                         {!rec.is_acted_on && rec.verdict !== 'PASS' && (
@@ -677,12 +679,12 @@ function AgentPage() {
                               padding: '3px 8px', cursor: 'pointer', letterSpacing: '0.04em',
                             }}
                           >
-                            Mark acted
+                            {isFr ? 'Marqué comme traité' : 'Mark acted'}
                           </button>
                         )}
                         {rec.is_acted_on && (
                           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', letterSpacing: '0.04em' }}>
-                            ✓ Acted
+                            {isFr ? '✓ Traité' : '✓ Acted'}
                           </span>
                         )}
                       </div>
@@ -698,10 +700,10 @@ function AgentPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '16px' }}>
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 400, color: 'var(--navy)', margin: 0 }}>
-              Strategies
+              {isFr ? 'Stratégies' : 'Strategies'}
             </h2>
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', letterSpacing: '0.06em' }}>
-              {activeAlerts} active
+              {activeAlerts} {isFr ? 'actif(s)' : 'active'}
             </span>
           </div>
 
@@ -711,18 +713,24 @@ function AgentPage() {
               borderRadius: '6px', padding: '40px 24px', textAlign: 'center',
             }}>
               <p style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', color: 'var(--text-2)', marginBottom: '8px' }}>
-                No strategies yet
+                {isFr ? 'Aucune stratégie' : 'No strategies yet'}
               </p>
               <p style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.6, marginBottom: '20px' }}>
-                Create your first strategy to start receiving AI-graded opportunities.
+                {isFr
+                  ? 'Créez votre première stratégie pour recevoir des opportunités notées par IA.'
+                  : 'Create your first strategy to start receiving AI-graded opportunities.'}
               </p>
               {limits?.can_create && (
                 <button
-                  className="btn-electric"
-                  style={{ fontSize: '12px', padding: '8px 18px' }}
+                  style={{
+                    fontSize: '12px', padding: '8px 18px', background: '#1A2A44',
+                    color: 'white', border: 'none', borderRadius: '2px',
+                    cursor: 'pointer', fontFamily: 'var(--font-mono)', fontWeight: 600,
+                    letterSpacing: '0.06em',
+                  }}
                   onClick={openCreateForm}
                 >
-                  + New Strategy
+                  {isFr ? '+ NOUVELLE STRATÉGIE' : '+ NEW STRATEGY'}
                 </button>
               )}
             </div>
@@ -740,8 +748,12 @@ function AgentPage() {
                     : alert.budget_max_eur ? `≤ ${fmt(alert.budget_max_eur)}` : `≥ ${fmt(alert.budget_min_eur)}`;
                   chips.push({ label: s, bg: 'var(--gold-subtle)', color: 'var(--gold-dim)' });
                 }
-                if (alert.investment_horizon)
-                  chips.push({ label: HORIZON_LABELS[alert.investment_horizon] ?? alert.investment_horizon, bg: 'var(--bg-subtle)', color: 'var(--text-3)' });
+                if (alert.investment_horizon) {
+                  const horizonLabels = isFr
+                    ? { short: 'Court terme', medium: 'Moyen terme', long: 'Long terme' }
+                    : { short: 'Short term', medium: 'Medium term', long: 'Long term' };
+                  chips.push({ label: horizonLabels[alert.investment_horizon as keyof typeof horizonLabels] ?? alert.investment_horizon, bg: 'var(--bg-subtle)', color: 'var(--text-3)' });
+                }
 
                 return (
                   <div
@@ -772,7 +784,7 @@ function AgentPage() {
                           padding: '3px 7px', cursor: 'pointer', letterSpacing: '0.04em', flexShrink: 0,
                         }}
                       >
-                        {alert.is_active ? 'Pause' : 'Resume'}
+                        {alert.is_active ? (isFr ? 'Pause' : 'Pause') : (isFr ? 'Reprendre' : 'Resume')}
                       </button>
                       <button
                         onClick={() => { if (window.confirm(`Delete "${alert.name}"?`)) handleDelete(alert.id); }}
@@ -808,7 +820,9 @@ function AgentPage() {
                         background: alert.is_active ? 'var(--electric)' : 'var(--border)',
                       }} />
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', letterSpacing: '0.04em' }}>
-                        {alert.is_active ? 'Scanning · Updated every 15 min' : 'Paused'}
+                        {alert.is_active
+                          ? (isFr ? 'Actif · Mis à jour toutes les 15 min' : 'Scanning · Updated every 15 min')
+                          : (isFr ? 'En pause' : 'Paused')}
                       </span>
                       {alert.recommendation_count > 0 && (
                         <button
@@ -839,13 +853,13 @@ function AgentPage() {
                     }} />
                   </div>
                   <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', margin: 0 }}>
-                    {limits.used}/{limits.max} strategies used
+                    {limits.used}/{limits.max} {isFr ? 'stratégies utilisées' : 'strategies used'}
                     {limits.used >= limits.max && (
                       <button
                         onClick={() => navigate('/app/pricing')}
                         style={{ marginLeft: '8px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--gold-dim)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                       >
-                        Upgrade →
+                        {isFr ? 'Mettre à niveau →' : 'Upgrade →'}
                       </button>
                     )}
                   </p>
@@ -865,10 +879,12 @@ function AgentPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
               <div>
                 <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 400, color: 'var(--navy)', margin: '0 0 4px' }}>
-                  New Investment Strategy
+                  {isFr ? "Nouvelle Stratégie d'Investissement" : 'New Investment Strategy'}
                 </h3>
                 <p style={{ fontSize: '11px', color: 'var(--text-3)', margin: 0, fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
-                  Your AI analyst scans every 15 min and alerts you instantly
+                  {isFr
+                    ? 'Votre analyste IA scrute toutes les 15 min et vous alerte instantanément'
+                    : 'Your AI analyst scans every 15 min and alerts you instantly'}
                 </p>
               </div>
               <button onClick={closeForm} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--text-3)', padding: '4px 8px', lineHeight: 1 }}>×</button>
@@ -887,7 +903,7 @@ function AgentPage() {
 
                 {/* 1. Category chips */}
                 <div style={{ marginBottom: '18px' }}>
-                  <label style={lbl}>Category</label>
+                  <label style={lbl}>{isFr ? 'Catégorie' : 'Category'}</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
                     {['Paintings', 'Sculptures', 'Prints & Multiples', 'Photography', 'Drawings', 'Contemporary', 'Modern'].map(cat => (
                       <button
@@ -909,13 +925,13 @@ function AgentPage() {
 
                 {/* 2. Artists */}
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={lbl}>Artists (optional)</label>
+                  <label style={lbl}>{isFr ? 'Artistes (optionnel)' : 'Artists (optional)'}</label>
                   <input style={inp} value={fartist} onChange={e => setFartist(e.target.value)} placeholder="Chagall, Wou-Ki, Basquiat..." />
                 </div>
 
                 {/* 3. Budget */}
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={lbl}>Budget range</label>
+                  <label style={lbl}>{isFr ? 'Budget' : 'Budget range'}</label>
                   <select
                     style={{ ...inp, cursor: 'pointer' }}
                     value={fbudgetRange}
@@ -928,7 +944,7 @@ function AgentPage() {
                       else { const [mn, mx] = v.split('-'); setFbudgetMin(mn); setFbudgetMax(mx); }
                     }}
                   >
-                    <option value="">Any budget</option>
+                    <option value="">{isFr ? 'Tout budget' : 'Any budget'}</option>
                     <option value="-5000">&lt; €5K</option>
                     <option value="5000-20000">€5K – €20K</option>
                     <option value="20000-100000">€20K – €100K</option>
@@ -939,27 +955,38 @@ function AgentPage() {
 
                 {/* 4. Conviction slider */}
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={lbl}>Alert me when score ≥ {fconviction}/100</label>
+                  <label style={lbl}>{isFr ? `M'alerter si score ≥ ${fconviction}/100` : `Alert me when score ≥ ${fconviction}/100`}</label>
                   <input
                     type="range" min={60} max={95} step={5}
                     value={fconviction}
                     onChange={e => setFconviction(parseInt(e.target.value, 10))}
                     style={{ width: '100%', accentColor: '#1A2A44', marginBottom: '4px' }}
                   />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-3)', marginBottom: '4px' }}>
+                    <span>{isFr ? '60 — sélectif' : '60 — selective'}</span>
+                    <span>{isFr ? '95 — très sélectif' : '95 — very selective'}</span>
+                  </div>
                   <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>
-                    Higher = fewer but stronger signals
+                    {isFr ? 'Plus élevé = moins de signaux mais plus forts' : 'Higher = fewer but stronger signals'}
                   </div>
                 </div>
 
                 {/* 5. Time horizon */}
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={lbl}>Investment horizon</label>
+                  <label style={lbl}>{isFr ? "Horizon d'investissement" : 'Investment horizon'}</label>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    {[
-                      { value: 'short', label: 'Quick flip', sub: '<6mo' },
-                      { value: 'medium', label: 'Medium', sub: '6–24mo' },
-                      { value: 'long', label: 'Long term', sub: '2y+' },
-                    ].map(({ value, label, sub }) => (
+                    {(isFr
+                      ? [
+                          { value: 'short', label: 'Revente rapide', sub: '<6mo' },
+                          { value: 'medium', label: 'Moyen terme', sub: '6–24mo' },
+                          { value: 'long', label: 'Long terme', sub: '2a+' },
+                        ]
+                      : [
+                          { value: 'short', label: 'Quick flip', sub: '<6mo' },
+                          { value: 'medium', label: 'Medium', sub: '6–24mo' },
+                          { value: 'long', label: 'Long term', sub: '2y+' },
+                        ]
+                    ).map(({ value, label, sub }) => (
                       <label key={value} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '9px 6px', border: `1px solid ${fhorizon === value ? '#1A2A44' : 'var(--border)'}`, borderRadius: '6px', cursor: 'pointer', background: fhorizon === value ? 'rgba(26,42,68,0.04)' : 'transparent', transition: 'all 0.12s' }}>
                         <input type="radio" name="horizon" value={value} checked={fhorizon === value} onChange={() => setFhorizon(value)} style={{ display: 'none' }} />
                         <span style={{ fontSize: '12px', fontWeight: 600, color: fhorizon === value ? '#1A2A44' : 'var(--text-2)' }}>{label}</span>
@@ -971,14 +998,16 @@ function AgentPage() {
 
                 {/* 6. Strategy name */}
                 <div style={{ marginBottom: '8px' }}>
-                  <label style={lbl}>Strategy name *</label>
+                  <label style={lbl}>{isFr ? 'Nom de la stratégie *' : 'Strategy name *'}</label>
                   <input
                     style={{ ...inp, borderColor: fnameError ? '#C0392B' : 'var(--border)' }}
                     value={fname}
                     onChange={e => { setFname(e.target.value); if (e.target.value.trim()) setFnameError(''); }}
-                    placeholder={fcategory ? `My ${fcategory} strategy` : 'e.g. Impressionist paintings under €10K'}
+                    placeholder={isFr
+                      ? (fcategory ? `Ma stratégie ${fcategory}` : 'ex. Peintures impressionnistes < €10K')
+                      : (fcategory ? `My ${fcategory} strategy` : 'e.g. Impressionist paintings under €10K')}
                   />
-                  {fnameError && <div style={{ fontSize: '11px', color: '#C0392B', marginTop: '4px' }}>{fnameError}</div>}
+                  {fnameError && <div style={{ fontSize: '11px', color: '#C0392B', marginTop: '4px' }}>{isFr ? 'Requis' : 'Required'}</div>}
                 </div>
 
               </form>
@@ -986,41 +1015,46 @@ function AgentPage() {
               {/* RIGHT — preview + CTA */}
               <div>
                 <div style={{ background: '#1A2A44', padding: 20, borderLeft: '3px solid #C6A85A', borderRadius: '4px' }}>
-                  <div style={{ color: 'rgba(198,168,90,0.6)', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8, fontFamily: 'var(--font-mono)' }}>SIGNAL PREVIEW</div>
+                  <div style={{ color: 'rgba(198,168,90,0.6)', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8, fontFamily: 'var(--font-mono)' }}>{isFr ? 'APERÇU DU SIGNAL' : 'SIGNAL PREVIEW'}</div>
                   <div style={{ display: 'inline-block', background: '#C6A85A', color: '#1A2A44', fontSize: 10, fontWeight: 700, padding: '3px 10px', marginBottom: 10, letterSpacing: '0.06em' }}>84/100 · EXCEPTIONAL</div>
                   <div style={{ color: '#999', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 3, fontFamily: 'var(--font-mono)' }}>MARC CHAGALL</div>
                   <div style={{ color: 'white', fontFamily: 'Georgia,serif', fontSize: 15, marginBottom: 6 }}>Lithographie originale, 1972</div>
                   <div style={{ color: '#aaa', fontSize: 11, marginBottom: 12 }}>Capitolium Art · Est. €1,000–2,000</div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
-                    <span style={{ color: 'white', fontWeight: 600, fontSize: 12 }}>Fair value: €3,500–5,000</span>
-                    <span style={{ background: '#EAF4EE', color: '#1F6B3A', fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>+120% upside</span>
+                    <span style={{ color: 'white', fontWeight: 600, fontSize: 12 }}>{isFr ? 'Valeur estimée : €3,500–5,000' : 'Fair value: €3,500–5,000'}</span>
+                    <span style={{ background: '#EAF4EE', color: '#1F6B3A', fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>{isFr ? '+120% potentiel' : '+120% upside'}</span>
                   </div>
                   <div style={{ borderTop: '1px solid rgba(198,168,90,0.2)', paddingTop: 10, color: 'rgba(198,168,90,0.6)', fontSize: 10, fontFamily: 'var(--font-mono)' }}>
-                    This is what a match looks like in your inbox.
+                    {isFr
+                      ? 'Voici à quoi ressemble un signal dans votre boîte mail.'
+                      : 'This is what a match looks like in your inbox.'}
                   </div>
                 </div>
-                <div style={{ marginTop: 10, color: '#888', fontSize: 11, lineHeight: 1.6 }}>
-                  Scan frequency: Every 15 min · Email alerts: Immediate · Max 5 alerts/week
-                </div>
-
                 <div style={{ marginTop: '18px' }}>
                   <button
                     type="submit"
                     form="strategy-form"
-                    className="btn-electric"
-                    style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: '13px' }}
+                    style={{
+                      width: '100%', display: 'flex', justifyContent: 'center', padding: '13px',
+                      fontSize: '13px', background: '#1A2A44', color: 'white',
+                      border: 'none', borderRadius: '2px', cursor: saving ? 'not-allowed' : 'pointer',
+                      fontFamily: 'var(--font-mono)', fontWeight: 600, letterSpacing: '0.06em',
+                      opacity: saving ? 0.7 : 1,
+                    }}
                     disabled={saving}
-                    onClick={() => { if (!fname.trim()) setFnameError('Required'); }}
+                    onClick={() => { if (!fname.trim()) setFnameError(isFr ? 'Requis' : 'Required'); }}
                   >
-                    {saving ? 'Launching…' : 'Activate this strategy →'}
+                    {saving
+                      ? (isFr ? 'Lancement…' : 'Launching…')
+                      : (isFr ? 'Activer cette stratégie →' : 'Activate this strategy →')}
                   </button>
                   <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-3)', marginTop: '7px' }}>
-                    Your analyst starts scanning immediately
+                    {isFr ? 'Votre analyste commence immédiatement' : 'Your analyst starts scanning immediately'}
                   </div>
                 </div>
 
                 <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'flex-end' }}>
-                  <button type="button" onClick={closeForm} style={ghostBtn}>Cancel</button>
+                  <button type="button" onClick={closeForm} style={ghostBtn}>{isFr ? 'Annuler' : 'Cancel'}</button>
                 </div>
               </div>
 
