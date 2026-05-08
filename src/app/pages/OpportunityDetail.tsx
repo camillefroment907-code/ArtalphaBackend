@@ -889,6 +889,9 @@ export default function OpportunityDetail() {
               const premiumMultiplier = getBuyerPremium(lot.auction_house_name || '');
               const basePrice = lot.estimate_high || lot.estimate_low || lot.current_price || null;
               const maxBid = basePrice ? Math.round(basePrice * premiumMultiplier) : null;
+              const avoidAbove = lot.real_cost?.breakeven_hammer
+                ? Math.round(lot.real_cost.breakeven_hammer * 0.85)
+                : null;
               const score = lot.deal_score || 0;
               const timingSignal = score >= 80 ? (isFr ? 'Fort — enchérissez maintenant' : 'Strong — bid now') : score >= 65 ? (isFr ? 'Bonne entrée' : 'Good entry') : (isFr ? 'Attendez une baisse' : 'Wait for lower');
               const timingColor = score >= 80 ? GD : score >= 65 ? GOLD : RED;
@@ -896,7 +899,7 @@ export default function OpportunityDetail() {
                 (provRisk?.flags?.length || 0) > 0
                   ? isFr ? `${provRisk!.flags.length} signal${provRisk!.flags.length > 1 ? 's' : ''} de due diligence détecté${provRisk!.flags.length > 1 ? 's' : ''} — vérifier avant d'enchérir.` : `${provRisk!.flags.length} due diligence flag${provRisk!.flags.length > 1 ? 's' : ''} detected — review before bidding.`
                   : isFr ? 'Aucun problème de provenance ou de conformité détecté.' : 'No provenance or compliance flags detected on this lot.',
-                lot.oracle?.signal === 'BUY_NOW' ? `Oracle signal: BUY NOW · ${lot.oracle.target_upside ? `+${lot.oracle.target_upside}% target upside` : 'strong conviction'}` : null,
+                lot.oracle?.signal === 'BUY_NOW' ? `${isFr ? 'Signal Oracle : ACHETEZ MAINTENANT' : 'Oracle signal: BUY NOW'} · ${lot.oracle.target_upside ? `+${lot.oracle.target_upside}% ${isFr ? 'potentiel cible' : 'target upside'}` : (isFr ? 'forte conviction' : 'strong conviction')}` : null,
               ].filter(Boolean) as string[];
               const content = (
                 <div style={{ padding: '20px 24px' }}>
@@ -906,10 +909,11 @@ export default function OpportunityDetail() {
                       <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', marginBottom: '6px' }}>{isFr ? 'TIMING' : 'TIMING'}</div>
                       <div style={{ fontSize: '13px', fontWeight: 700, color: timingColor }}>{timingSignal}</div>
                     </div>
-                    {maxBid && (
+                    {(avoidAbove || maxBid) && (
                       <div style={{ background: LT, border: `1px solid ${LTB}`, borderRadius: '6px', padding: '10px 14px', flex: 1, minWidth: '120px' }}>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', marginBottom: '6px' }}>{isFr ? 'ENCHÈRE MAX' : 'MAX BID'}</div>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: LTT1 }}>{sym}{maxBid.toLocaleString()}</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', marginBottom: '6px' }}>{avoidAbove ? (isFr ? "ENCHÉRISSEZ JUSQU'À" : 'BID UP TO') : (isFr ? 'ENCHÈRE MAX' : 'MAX BID')}</div>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: LTT1 }}>{sym}{(avoidAbove ?? maxBid)!.toLocaleString()}</div>
+                        {avoidAbove && <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>{isFr ? "Au-delà, le potentiel s'annule" : 'Beyond this, upside is erased'}</div>}
                       </div>
                     )}
                     <div style={{ background: LT, border: `1px solid ${LTB}`, borderRadius: '6px', padding: '10px 14px', flex: 1, minWidth: '120px' }}>
@@ -972,11 +976,6 @@ export default function OpportunityDetail() {
                 <>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '14px' }}>{isFr ? 'COMMENT ENCHÉRIR' : 'HOW TO BID'}</div>
                   <div style={{ fontSize: '13px', color: LTT2, marginBottom: '6px' }}>→ {isFr ? 'Entrée cible :' : 'Target entry:'} {currencySymbol}{targetEntry?.toLocaleString()}</div>
-                  {avoidAbove && (
-                    <div style={{ fontSize: '13px', color: LTT2, marginBottom: '6px' }}>
-                      → {isFr ? 'Évitez au-dessus de :' : 'Avoid above:'} {currencySymbol}{avoidAbove.toLocaleString()}<span style={{ color: RED }}> ({isFr ? 'annule le potentiel' : 'erases upside'})</span>
-                    </div>
-                  )}
                   <div style={{ fontSize: '13px', color: LTT2, marginBottom: '6px' }}>→ {isFr ? "Timing d'enchère : dernières minutes — évitez d'enchérir tôt" : 'Bid timing: final minutes — avoid early bidding'}</div>
                   <div style={{ fontSize: '13px', color: LTT2 }}>→ {isFr ? "Conviction max : enchérissez jusqu'à" : 'Max conviction: bid up to'} {currencySymbol}{lot.estimate_low?.toLocaleString() || 'estimate low'}</div>
                 </>
