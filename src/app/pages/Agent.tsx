@@ -376,9 +376,9 @@ function AgentPage() {
         <div style={{ display: 'flex', alignItems: 'center' }}>
           {[
             { label: isFr ? 'Stratégies actives' : 'Active strategies', value: String(activeAlerts) },
-            { label: isFr ? 'Signaux détectés' : 'Signals detected',   value: String(recs.length) },
+            { label: isFr ? 'Signaux détectés' : 'Signals detected',   value: String(recs.length), hint: recs.length === 0 && activeAlerts > 0 },
             { label: isFr ? 'Conviction moy.' : 'Avg conviction',      value: avgConviction > 0 ? `${avgConviction}/100` : '—' },
-          ].map(({ label, value }, i) => (
+          ].map(({ label, value, hint }, i) => (
             <div key={label} style={{ flex: 1, padding: '4px 0', paddingLeft: i > 0 ? '28px' : 0, borderLeft: i > 0 ? '1px solid var(--border)' : 'none', marginLeft: i > 0 ? '28px' : 0 }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '5px' }}>
                 {label}
@@ -386,6 +386,11 @@ function AgentPage() {
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '24px', fontWeight: 700, color: '#1A2A44' }}>
                 {value}
               </div>
+              {hint && (
+                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>
+                  {isFr ? "Essayez score ≥ 65 pour voir plus d'opportunités" : 'Try score ≥ 65 for more opportunities'}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -508,7 +513,7 @@ function AgentPage() {
                       <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
                         {alert.recommendation_count > 0
                           ? (isFr ? `${alert.recommendation_count} signal(s) reçu(s)` : `${alert.recommendation_count} signal(s)`)
-                          : (isFr ? 'Aucun signal pour l\'instant' : 'No signal yet')}
+                          : (isFr ? 'En attente — élargissez les critères si besoin' : 'Waiting — try broadening criteria')}
                       </span>
                     </div>
                   </div>
@@ -747,8 +752,8 @@ function AgentPage() {
             {matchCount !== null && (
               <div style={{ textAlign: 'center', fontSize: '13px', color: '#B8922A', marginTop: '20px', marginBottom: '12px' }}>
                 {isFr
-                  ? `${matchCount} lots correspondent actuellement à ces critères`
-                  : `${matchCount} lots currently match these criteria`}
+                  ? `~${Math.round(matchCount / 4).toLocaleString()} signaux estimés cette semaine`
+                  : `~${Math.round(matchCount / 4).toLocaleString()} estimated signals this week`}
               </div>
             )}
 
