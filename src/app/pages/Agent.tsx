@@ -410,13 +410,23 @@ function AgentPage() {
         {/* ── STRATEGIES LIST ────────────────────────────────── */}
         <div>
           {/* Section header */}
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '3px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontFamily: 'monospace', letterSpacing: '0.12em', color: '#6B7280' }}>
               {isFr ? 'MES STRATÉGIES' : 'MY STRATEGIES'}
             </div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)' }}>
-              {alerts.length} {isFr ? 'sur' : 'of'} {maxStrategies} max · {activeAlerts} {isFr ? 'actif(s)' : 'active'}
-            </div>
+            {limits?.can_create && (
+              <button
+                onClick={openCreateForm}
+                style={{
+                  fontSize: 11, fontFamily: 'monospace', letterSpacing: '0.08em',
+                  color: '#1A2A44', background: 'none',
+                  border: '1px solid #1A2A44', borderRadius: 2,
+                  padding: '6px 14px', cursor: 'pointer',
+                }}
+              >
+                {isFr ? '+ NOUVELLE STRATÉGIE' : '+ NEW STRATEGY'}
+              </button>
+            )}
           </div>
 
           {/* Cards */}
@@ -547,22 +557,6 @@ function AgentPage() {
             </div>
           )}
 
-          {/* + NOUVELLE STRATÉGIE button */}
-          {limits?.can_create && (
-            <button
-              onClick={openCreateForm}
-              style={{
-                width: '100%', padding: '14px', fontSize: '11px',
-                background: '#1A2A44', color: 'white',
-                border: 'none', borderRadius: '2px', cursor: 'pointer',
-                fontFamily: 'var(--font-mono)', fontWeight: 700,
-                letterSpacing: '0.14em', textTransform: 'uppercase',
-                marginTop: '4px',
-              }}
-            >
-              {isFr ? '+ NOUVELLE STRATÉGIE' : '+ NEW STRATEGY'}
-            </button>
-          )}
         </div>
 
         {fallbackLots.length > 0 && (
@@ -637,6 +631,24 @@ function AgentPage() {
                   </div>
                 </a>
               ))}
+            </div>
+            <div style={{ marginTop: 20, padding: '16px 20px', background: '#FAFAF8', borderRadius: 8, border: '1px solid #E8E4DC', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: 13, color: '#6B7280' }}>
+                {isFr
+                  ? 'Ces opportunités correspondent à vos intérêts ? Créez une stratégie pour être alerté automatiquement.'
+                  : 'Interested in opportunities like these? Create a strategy to get alerted automatically.'}
+              </div>
+              <button
+                onClick={openCreateForm}
+                style={{
+                  fontSize: 11, fontFamily: 'monospace', letterSpacing: '0.08em',
+                  color: 'white', background: '#1A2A44',
+                  border: 'none', borderRadius: 2,
+                  padding: '8px 16px', cursor: 'pointer', flexShrink: 0, marginLeft: 16,
+                }}
+              >
+                {isFr ? 'CRÉER UNE STRATÉGIE →' : 'CREATE STRATEGY →'}
+              </button>
             </div>
           </div>
         )}
