@@ -419,9 +419,9 @@ function AgentPage() {
                 onClick={openCreateForm}
                 style={{
                   fontSize: 11, fontFamily: 'monospace', letterSpacing: '0.08em',
-                  color: '#1A2A44', background: 'none',
+                  color: '#1A2A44', background: '#F8F9FA',
                   border: '1px solid #1A2A44', borderRadius: 2,
-                  padding: '6px 14px', cursor: 'pointer',
+                  padding: '8px 16px', cursor: 'pointer', fontWeight: 600,
                 }}
               >
                 {isFr ? '+ NOUVELLE STRATÉGIE' : '+ NEW STRATEGY'}
@@ -632,19 +632,33 @@ function AgentPage() {
                 </a>
               ))}
             </div>
-            <div style={{ marginTop: 20, padding: '16px 20px', background: '#FAFAF8', borderRadius: 8, border: '1px solid #E8E4DC', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: 13, color: '#6B7280' }}>
-                {isFr
-                  ? 'Ces opportunités correspondent à vos intérêts ? Créez une stratégie pour être alerté automatiquement.'
-                  : 'Interested in opportunities like these? Create a strategy to get alerted automatically.'}
+            <div style={{
+              marginTop: 24,
+              padding: '24px 28px',
+              background: 'linear-gradient(135deg, #1A2A44 0%, #243552 100%)',
+              borderRadius: 8,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 20,
+            }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: 'white', marginBottom: 4, fontFamily: 'Georgia, serif' }}>
+                  {isFr ? 'Ces opportunités vous intéressent ?' : 'Interested in these opportunities?'}
+                </div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)' }}>
+                  {isFr
+                    ? "Créez une stratégie et soyez alerté dès qu'un lot correspondant apparaît."
+                    : 'Create a strategy and get alerted the moment a matching lot appears.'}
+                </div>
               </div>
               <button
                 onClick={openCreateForm}
                 style={{
-                  fontSize: 11, fontFamily: 'monospace', letterSpacing: '0.08em',
-                  color: 'white', background: '#1A2A44',
+                  fontSize: 12, fontFamily: 'monospace', letterSpacing: '0.1em', fontWeight: 700,
+                  color: '#1A2A44', background: 'white',
                   border: 'none', borderRadius: 2,
-                  padding: '8px 16px', cursor: 'pointer', flexShrink: 0, marginLeft: 16,
+                  padding: '12px 20px', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
                 }}
               >
                 {isFr ? 'CRÉER UNE STRATÉGIE →' : 'CREATE STRATEGY →'}
