@@ -300,7 +300,7 @@ export default function Portfolio() {
     annualBudget: '', expectedReturn: '',
     preferredStyles: '', preferredRegions: '',
     goals: '', currency: 'EUR',
-    language: localStorage.getItem('i18nextLng') || 'en',
+    language: localStorage.getItem('i18nextLng') || (navigator.language?.startsWith('fr') ? 'fr' : 'en'),
   });
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
@@ -801,6 +801,7 @@ export default function Portfolio() {
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       localStorage.setItem('i18nextLng', settingsForm.language);
+      i18n.changeLanguage(settingsForm.language);
       setSettingsSaved(true);
       setTimeout(() => setSettingsSaved(false), 3000);
     } catch { /* silent */ }
@@ -2298,7 +2299,7 @@ export default function Portfolio() {
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Language</label>
                   <select style={inputStyle}
                     value={settingsForm.language}
-                    onChange={e => { localStorage.setItem('i18nextLng', e.target.value); setSettingsForm(f => ({ ...f, language: e.target.value })); }}>
+                    onChange={e => { localStorage.setItem('i18nextLng', e.target.value); i18n.changeLanguage(e.target.value); setSettingsForm(f => ({ ...f, language: e.target.value })); }}>
                     <option value="en">English</option>
                     <option value="fr">Français</option>
                   </select>
