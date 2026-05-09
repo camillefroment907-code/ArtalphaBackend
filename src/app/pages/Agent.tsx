@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { getToken, getPlanLimits } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
-import { Logo } from '../components/Logo';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -44,16 +43,9 @@ interface LotPreview {
 interface Recommendation {
   id: string;
   alert_id: string;
-  alert_name?: string | null;
-  lot_id?: string | null;
   verdict: 'STRONG_BUY' | 'BUY' | 'WATCH' | 'PASS';
   conviction_score: number;
   reasoning: string;
-  bull_case?: string | null;
-  bear_case?: string | null;
-  suggested_max_price_eur?: number | null;
-  estimated_return_pct?: number | null;
-  hold_period_months?: number | null;
   is_read: boolean;
   is_acted_on: boolean;
   created_at: string;
@@ -76,11 +68,15 @@ function fmt(v?: number | null): string {
   return `€${v.toLocaleString('fr-FR')}`;
 }
 
-const HORIZON_LABELS: Record<string, string> = {
-  short: 'Court terme',
-  medium: 'Moyen terme',
-  long: 'Long terme',
-};
+const CATEGORIES = [
+  { en: 'Paintings',         fr: 'Peintures' },
+  { en: 'Sculptures',        fr: 'Sculptures' },
+  { en: 'Prints & Multiples',fr: 'Estampes' },
+  { en: 'Photography',       fr: 'Photographie' },
+  { en: 'Drawings',          fr: 'Dessins' },
+  { en: 'Contemporary',      fr: 'Art contemporain' },
+  { en: 'Modern',            fr: 'Art moderne' },
+];
 
 // ── Locked page ───────────────────────────────────────────────────────────────
 
@@ -88,10 +84,7 @@ function LockedPage() {
   const navigate = useNavigate();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-
-      {/* Top — 40% navy */}
       <div style={{ flex: '0 0 40vh', background: '#0A1628', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 64px', position: 'relative', overflow: 'hidden' }}>
-        {/* Subtle grid */}
         <div style={{ position: 'absolute', inset: 0, opacity: 0.03, backgroundImage: 'linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)', backgroundSize: '48px 48px' }} />
         <div style={{ position: 'relative', maxWidth: '680px', width: '100%' }}>
           <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.22em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '14px' }}>
@@ -115,11 +108,8 @@ function LockedPage() {
         </div>
       </div>
 
-      {/* Bottom — 60% white, 3 columns */}
       <div style={{ flex: '1', background: '#FAFAFA', padding: '40px 64px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px', maxWidth: '960px', margin: '0 auto' }}>
-
-          {/* Column 1 — Features */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '4px' }}>
               How it works
@@ -139,7 +129,6 @@ function LockedPage() {
             ))}
           </div>
 
-          {/* Column 2 — Sample alert card */}
           <div>
             <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '12px' }}>
               Sample signal
@@ -153,12 +142,7 @@ function LockedPage() {
                 <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>Zao Wou-Ki</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '14px' }}>Composition abstraite, 1972 · Oil on canvas</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '14px' }}>
-                  {[
-                    { label: 'Estimate', value: '€45–60k' },
-                    { label: 'Target price', value: '€38k' },
-                    { label: 'Upside', value: '+31%' },
-                    { label: 'Closes in', value: '14h' },
-                  ].map(({ label, value }) => (
+                  {[{ label: 'Estimate', value: '€45–60k' }, { label: 'Target price', value: '€38k' }, { label: 'Upside', value: '+31%' }, { label: 'Closes in', value: '14h' }].map(({ label, value }) => (
                     <div key={label} style={{ background: 'var(--bg-subtle)', borderRadius: '6px', padding: '8px 10px' }}>
                       <div style={{ fontSize: '10px', color: 'var(--text-3)', marginBottom: '2px' }}>{label}</div>
                       <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{value}</div>
@@ -175,7 +159,6 @@ function LockedPage() {
             </div>
           </div>
 
-          {/* Column 3 — Coming soon */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '4px' }}>
               What's included
@@ -188,27 +171,21 @@ function LockedPage() {
             ].map(({ title, live }) => (
               <div key={title} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'white', border: '1px solid var(--border)', borderRadius: '8px' }}>
                 <span style={{ fontSize: '13px', color: 'var(--text)', fontWeight: 500 }}>{title}</span>
-                {live ? (
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#16a34a', fontFamily: 'var(--font-mono)', background: 'rgba(22,163,74,0.08)', padding: '2px 7px', borderRadius: '4px' }}>LIVE</span>
-                ) : (
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', background: 'var(--bg-subtle)', padding: '2px 7px', borderRadius: '4px' }}>SOON</span>
-                )}
+                {live
+                  ? <span style={{ fontSize: '10px', fontWeight: 700, color: '#16a34a', fontFamily: 'var(--font-mono)', background: 'rgba(22,163,74,0.08)', padding: '2px 7px', borderRadius: '4px' }}>LIVE</span>
+                  : <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', background: 'var(--bg-subtle)', padding: '2px 7px', borderRadius: '4px' }}>SOON</span>
+                }
               </div>
             ))}
-            {/* Social proof */}
             <div style={{ marginTop: '8px', padding: '16px', background: '#0A1628', borderRadius: '8px' }}>
               <div style={{ fontFamily: 'var(--font-serif)', fontSize: '13px', color: 'white', fontStyle: 'italic', marginBottom: '8px', lineHeight: 1.65 }}>
                 "The first time it flagged a Zao Wou-Ki 31% below market average, I thought it was a mistake. It wasn't."
               </div>
-              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)' }}>
-                — Nautilus Investor member
-              </div>
+              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)' }}>— Nautilus Investor member</div>
             </div>
           </div>
-
         </div>
       </div>
-
     </div>
   );
 }
@@ -228,35 +205,33 @@ function AgentPage() {
   const { i18n } = useTranslation();
   const isFr = i18n.language?.startsWith('fr');
   const token = getToken();
+  const headers = { Authorization: `Bearer ${token}` };
 
   // ── Data state ────────────────────────────────────────────────
   const [limits, setLimits]   = useState<Limits | null>(null);
   const [alerts, setAlerts]   = useState<AgentAlert[]>([]);
   const [recs, setRecs]       = useState<Recommendation[]>([]);
+  const [topLots, setTopLots] = useState<LotPreview[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ── Form state ────────────────────────────────────────────────
+  // ── UI state ──────────────────────────────────────────────────
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingAlert, setEditingAlert]     = useState<AgentAlert | null>(null);
-  const [saving, setSaving]   = useState(false);
+  const [hoveredAlertId, setHoveredAlertId] = useState<string | null>(null);
+  const [saving, setSaving]     = useState(false);
   const [formError, setFormError] = useState('');
-  const [formStep, setFormStep]   = useState(1);
+  const [matchCount, setMatchCount] = useState<number | null>(null);
 
-  // Form fields
-  const [fname, setFname]           = useState('');
-  const [fartist, setFartist]       = useState('');
-  const [fcategory, setFcategory]   = useState('');
-  const [fbudgetMin, setFbudgetMin] = useState('');
-  const [fbudgetMax, setFbudgetMax] = useState('');
-  const [fbudgetRange, setFbudgetRange] = useState('');
-  const [fhorizon, setFhorizon]     = useState('medium');
+  // ── Form fields ───────────────────────────────────────────────
+  const [fname, setFname]             = useState('');
+  const [fartist, setFartist]         = useState('');
+  const [fcategories, setFcategories] = useState<string[]>([]);
+  const [fkeywords, setFkeywords]     = useState('');
+  const [fbudgetMin, setFbudgetMin]   = useState('');
+  const [fbudgetMax, setFbudgetMax]   = useState('');
+  const [fhorizon, setFhorizon]       = useState('medium');
   const [fconviction, setFconviction] = useState(70);
+  const [frisk, setFrisk]             = useState('medium');
   const [fnameError, setFnameError]   = useState('');
-
-  const recsRef = useRef<HTMLDivElement>(null);
-  const [filterAlertId, setFilterAlertId] = useState<string | null>(null);
-
-  const headers = { Authorization: `Bearer ${token}` };
 
   // ── API ───────────────────────────────────────────────────────
 
@@ -274,36 +249,52 @@ function AgentPage() {
 
   useEffect(() => { loadAll(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    fetch(`${BACKEND}/api/lots?status=upcoming&sort_by=deal_score&sort_dir=desc&page_size=3`, { headers })
+      .then(r => r.ok ? r.json() : { lots: [] })
+      .then(d => setTopLots(d.lots || []))
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Debounced match count when form is open
+  useEffect(() => {
+    if (!showCreateForm) return;
+    const timer = setTimeout(async () => {
+      try {
+        const r = await fetch(
+          `${BACKEND}/api/lots?status=upcoming&min_score=${fconviction}&page_size=1`,
+          { headers },
+        );
+        if (r.ok) {
+          const d = await r.json();
+          setMatchCount(d.total ?? d.count ?? null);
+        }
+      } catch { /* ignore */ }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [fconviction, showCreateForm]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function resetForm() {
-    setFname(''); setFartist(''); setFcategory('');
-    setFbudgetMin(''); setFbudgetMax(''); setFbudgetRange('');
-    setFhorizon('medium'); setFconviction(70);
-    setFnameError(''); setFormStep(1); setFormError('');
+    setFname(''); setFartist(''); setFcategories([]); setFkeywords('');
+    setFbudgetMin(''); setFbudgetMax('');
+    setFhorizon('medium'); setFconviction(70); setFrisk('medium');
+    setFnameError(''); setFormError(''); setMatchCount(null);
   }
 
-  function openCreateForm() {
-    resetForm();
-    setEditingAlert(null);
-    setShowCreateForm(true);
-  }
-
-  function closeForm() {
-    setShowCreateForm(false);
-    setEditingAlert(null);
-    resetForm();
-  }
+  function openCreateForm() { resetForm(); setShowCreateForm(true); }
+  function closeForm()       { setShowCreateForm(false); resetForm(); }
 
   function buildPayload() {
     return {
       name: fname,
       artist_name: fartist || null,
-      category: fcategory || null,
+      category: fcategories.length > 0 ? fcategories.join(', ') : null,
       subcategory: null,
-      keywords: [],
+      keywords: fkeywords ? fkeywords.split(',').map(k => k.trim()).filter(Boolean) : [],
       budget_min_eur: fbudgetMin ? parseFloat(fbudgetMin) : null,
       budget_max_eur: fbudgetMax ? parseFloat(fbudgetMax) : null,
       investment_horizon: fhorizon,
-      risk_tolerance: 'medium',
+      risk_tolerance: frisk,
       min_conviction_score: fconviction,
       notify_email: true,
     };
@@ -311,30 +302,11 @@ function AgentPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!fname.trim()) { setFnameError('Required'); return; }
+    if (!fname.trim()) { setFnameError(isFr ? 'Requis' : 'Required'); return; }
     setSaving(true); setFormError('');
     try {
       const res = await fetch(`${BACKEND}/api/agent/alerts`, {
         method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildPayload()),
-      });
-      if (!res.ok) { const err = await res.json(); throw new Error(err.detail ?? 'Error'); }
-      closeForm();
-      await loadAll();
-    } catch (e: unknown) {
-      setFormError(e instanceof Error ? e.message : 'Error');
-    }
-    setSaving(false);
-  }
-
-  async function handleUpdate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!editingAlert) return;
-    setSaving(true); setFormError('');
-    try {
-      const res = await fetch(`${BACKEND}/api/agent/alerts/${editingAlert.id}`, {
-        method: 'PATCH',
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify(buildPayload()),
       });
@@ -361,70 +333,25 @@ function AgentPage() {
     setAlerts(prev => prev.map(a => a.id === id ? { ...a, is_active: val } : a));
   }
 
-  function handleScrollToRecs(alertId: string) {
-    setFilterAlertId(alertId);
-    recsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  function handleRead(id: string) {
-    setRecs(prev => prev.map(r => r.id === id ? { ...r, is_read: true } : r));
-  }
-
-  function handleActed(id: string) {
-    setRecs(prev => prev.map(r => r.id === id ? { ...r, is_acted_on: true } : r));
-  }
-
-  async function markRead(recId: string) {
-    await fetch(`${BACKEND}/api/agent/recommendations/${recId}/read`, {
-      method: 'PATCH', headers: { Authorization: `Bearer ${token}` },
-    });
-    handleRead(recId);
-  }
-
-  async function markActed(recId: string) {
-    await fetch(`${BACKEND}/api/agent/recommendations/${recId}/acted`, {
-      method: 'PATCH', headers: { Authorization: `Bearer ${token}` },
-    });
-    handleActed(recId);
-  }
-
   // ── Derived ───────────────────────────────────────────────────
 
-  const filteredRecs   = filterAlertId ? recs.filter(r => r.alert_id === filterAlertId) : recs;
-  const unreadCount    = recs.filter(r => !r.is_read).length;
-  const activeAlerts   = alerts.filter(a => a.is_active).length;
-  const avgConviction  = recs.length > 0
+  const activeAlerts  = alerts.filter(a => a.is_active).length;
+  const avgConviction = recs.length > 0
     ? Math.round(recs.reduce((s, r) => s + r.conviction_score, 0) / recs.length) : 0;
-  const maxStrategies  = limits?.max === 9999 ? '∞' : String(limits?.max ?? '—');
+  const maxStrategies = limits?.max === 9999 ? '∞' : String(limits?.max ?? '—');
 
-  function verdictColor(v: string) {
-    if (v === 'STRONG_BUY') return 'var(--gold)';
-    if (v === 'BUY') return 'var(--electric)';
-    return 'var(--text-3)';
-  }
-  function verdictLabel(v: string) {
-    if (v === 'STRONG_BUY') return 'STRONG BUY';
-    if (v === 'BUY') return 'BUY';
-    if (v === 'WATCH') return 'WATCH';
-    return 'PASS';
-  }
+  // ── Shared styles ─────────────────────────────────────────────
 
-  // shared styles
   const inp: React.CSSProperties = {
-    width: '100%', padding: '9px 12px', fontSize: '13px',
-    border: '1px solid var(--border)', borderRadius: '6px',
-    background: 'var(--bg-subtle)', color: 'var(--navy)',
+    width: '100%', padding: '10px 12px', fontSize: '13px',
+    border: '1px solid #E8E4DC', borderRadius: '6px',
+    background: 'white', color: '#1A2A44',
     fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
   };
   const lbl: React.CSSProperties = {
-    display: 'block', fontSize: '10px', fontFamily: 'var(--font-mono)',
-    letterSpacing: '0.08em', textTransform: 'uppercase',
-    color: 'var(--text-3)', marginBottom: '5px',
-  };
-  const ghostBtn: React.CSSProperties = {
-    fontFamily: 'var(--font-mono)', fontSize: '12px', padding: '9px 16px',
-    background: 'none', border: '1px solid var(--border)', borderRadius: '6px',
-    cursor: 'pointer', color: 'var(--text-2)', letterSpacing: '0.04em',
+    display: 'block', fontSize: '9px', fontFamily: 'var(--font-mono)',
+    letterSpacing: '0.14em', textTransform: 'uppercase',
+    color: 'var(--text-3)', marginBottom: '7px',
   };
 
   // ── Loading ───────────────────────────────────────────────────
@@ -439,387 +366,158 @@ function AgentPage() {
 
   // ── Render ────────────────────────────────────────────────────
 
-  // Suppress unused warning for handleUpdate and editingAlert in case edit UI is wired later
-  void handleUpdate; void editingAlert;
-
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
 
-      {/* ── 2. PAGE HEADER ───────────────────────────────────── */}
-      <div style={{ padding: '32px 40px 24px', borderBottom: '1px solid var(--border)', background: 'white' }}>
-        {/* Title row */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' }}>
-          <div>
-            <h1 style={{
-              fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 400,
-              color: 'var(--navy)', margin: '0 0 4px',
-            }}>
-              Intelligence
-            </h1>
-            <p style={{
-              fontFamily: 'var(--font-mono)', fontSize: '11px',
-              color: 'var(--text-3)', letterSpacing: '0.06em', margin: 0,
-            }}>
-              {isFr
-                ? 'Votre analyste surveille le marché 24h/24 et remonte les opportunités correspondantes'
-                : 'Your AI analyst monitors the market 24/7 and surfaces matching opportunities'}
-            </p>
-          </div>
-          {limits?.can_create && (
-            <button
-              style={{
-                fontSize: '12px', padding: '9px 18px', letterSpacing: '0.06em',
-                flexShrink: 0, background: '#1A2A44', color: 'white',
-                border: 'none', borderRadius: '2px', cursor: 'pointer',
-                fontFamily: 'var(--font-mono)', fontWeight: 600,
-              }}
-              onClick={showCreateForm ? closeForm : openCreateForm}
-            >
-              {showCreateForm
-                ? (isFr ? '× FERMER' : '× CLOSE')
-                : (isFr ? '+ NOUVELLE STRATÉGIE' : '+ NEW STRATEGY')}
-            </button>
-          )}
-        </div>
+      {/* ── PAGE HEADER ─────────────────────────────────────── */}
+      <div style={{ padding: '32px 40px 28px', borderBottom: '1px solid var(--border)', background: 'white' }}>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 400, color: '#1A2A44', margin: '0 0 6px' }}>
+          Intelligence
+        </h1>
+        <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: '0 0 28px', lineHeight: 1.6 }}>
+          {isFr
+            ? "Soyez alerté dès qu'un lot correspondant à vos critères apparaît sur le marché."
+            : 'Get alerted the moment a matching lot appears on the market.'}
+        </p>
 
-        {/* KPI row */}
+        {/* Stats row */}
         <div style={{ display: 'flex', alignItems: 'center' }}>
           {[
-            { label: isFr ? 'Stratégies' : 'Strategies', value: String(alerts.length), sub: `${isFr ? 'sur' : 'of'} ${maxStrategies} max` },
-            { label: isFr ? 'Recommandations' : 'Recommendations', value: String(recs.length), sub: isFr ? 'ce cycle' : 'this cycle' },
-            { label: isFr ? 'Conviction Moy.' : 'Conviction Avg', value: avgConviction > 0 ? `${avgConviction}/100` : '—', sub: isFr ? 'par signal' : 'across signals' },
-          ].map(({ label, value, sub }, i) => (
-            <div key={label} style={{ flex: 1, padding: '4px 20px', borderLeft: i > 0 ? '1px solid var(--border)' : 'none' }}>
-              <div style={{
-                fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.12em',
-                textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '5px',
-              }}>{label}</div>
-              <div style={{
-                fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700,
-                color: 'var(--navy)', marginBottom: '2px',
-              }}>{value}</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>{sub}</div>
+            { label: isFr ? 'Stratégies actives' : 'Active strategies', value: String(activeAlerts) },
+            { label: isFr ? 'Signaux détectés' : 'Signals detected',   value: String(recs.length) },
+            { label: isFr ? 'Conviction moy.' : 'Avg conviction',      value: avgConviction > 0 ? `${avgConviction}/100` : '—' },
+          ].map(({ label, value }, i) => (
+            <div key={label} style={{ flex: 1, padding: '4px 0', paddingLeft: i > 0 ? '28px' : 0, borderLeft: i > 0 ? '1px solid var(--border)' : 'none', marginLeft: i > 0 ? '28px' : 0 }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '5px' }}>
+                {label}
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '24px', fontWeight: 700, color: '#1A2A44' }}>
+                {value}
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── 3. MAIN GRID ─────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '24px', padding: '24px 40px', alignItems: 'start' }}>
+      {/* ── TWO-COLUMN GRID ─────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '32px', padding: '32px 40px', alignItems: 'start' }}>
 
-        {/* LEFT — RECOMMENDATIONS */}
-        <div ref={recsRef}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 400, color: 'var(--navy)', margin: 0 }}>
-                {isFr ? 'Recommandations IA' : 'AI Recommendations'}
-              </h2>
-              {unreadCount > 0 && (
-                <span style={{
-                  fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em',
-                  color: 'var(--electric)', background: 'var(--electric-subtle)',
-                  border: '1px solid var(--electric-border)', padding: '2px 7px', borderRadius: '3px',
-                }}>
-                  {unreadCount} NEW
-                </span>
-              )}
-            </div>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--electric)', letterSpacing: '0.08em' }}>
-              {isFr ? 'CLASSÉES PAR SCORE DE CONVICTION' : 'RANKED BY CONVICTION SCORE'}
-            </span>
-          </div>
-
-          {/* Filter chip */}
-          {filterAlertId && (
-            <div style={{ marginBottom: '12px' }}>
-              <button
-                style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)', background: 'none', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 10px', cursor: 'pointer' }}
-                onClick={() => setFilterAlertId(null)}
-              >
-                {isFr ? '× Toutes les stratégies' : '× All strategies'}
-              </button>
-            </div>
-          )}
-
-          {recs.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {filteredRecs.map(rec => {
-                const vColor = verdictColor(rec.verdict);
-                const vLabel = verdictLabel(rec.verdict);
-                return (
-                  <div
-                    key={rec.id}
-                    onClick={() => {
-                      if (!rec.is_read) markRead(rec.id);
-                      if (rec.lot_id) navigate(`/app/opportunities/${rec.lot_id}`);
-                    }}
-                    style={{
-                      background: 'white', border: '1px solid var(--border)',
-                      borderLeft: `3px solid ${vColor}`, borderRadius: '6px',
-                      padding: '18px 20px', cursor: rec.lot_id ? 'pointer' : 'default',
-                      transition: 'box-shadow 0.15s ease',
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; }}
-                  >
-                    {/* Top row */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '10px' }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        {rec.alert_name && (
-                          <div style={{
-                            display: 'inline-block', fontFamily: 'var(--font-mono)', fontSize: '9px',
-                            letterSpacing: '0.1em', textTransform: 'uppercase',
-                            color: 'var(--gold-dim)', background: 'var(--gold-subtle)',
-                            border: '1px solid var(--gold-border)', padding: '2px 7px',
-                            borderRadius: '3px', marginBottom: '8px',
-                          }}>
-                            {rec.alert_name}
-                          </div>
-                        )}
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: vColor, marginBottom: '4px' }}>
-                          {vLabel}
-                        </div>
-                        {rec.lot?.artist_name_raw && (
-                          <div style={{
-                            fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700,
-                            color: 'var(--navy)', letterSpacing: '0.06em', textTransform: 'uppercase',
-                            marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          }}>
-                            {rec.lot.artist_name_raw}
-                          </div>
-                        )}
-                        {rec.lot?.title && (
-                          <div style={{
-                            fontFamily: 'var(--font-serif)', fontSize: '15px', color: 'var(--text)',
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          }}>
-                            {rec.lot.title}
-                          </div>
-                        )}
-                      </div>
-                      {/* Conviction block */}
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: vColor, lineHeight: 1 }}>
-                          {rec.conviction_score}
-                        </div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: 'var(--text-3)', letterSpacing: '0.1em', marginTop: '2px' }}>
-                          CONVICTION
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Conviction bar */}
-                    <div style={{ height: '2px', background: 'var(--border)', borderRadius: '1px', marginBottom: '12px', overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%', borderRadius: '1px',
-                        width: `${rec.conviction_score}%`,
-                        background: rec.conviction_score >= 80 ? 'var(--gold)' : 'var(--electric)',
-                        transition: 'width 0.6s ease',
-                      }} />
-                    </div>
-
-                    {/* Reasoning */}
-                    {rec.reasoning && (
-                      <div style={{
-                        fontSize: '12px', color: 'var(--text-2)', fontStyle: 'italic',
-                        lineHeight: 1.65, padding: '10px 12px',
-                        background: 'var(--bg-subtle)', borderRadius: '4px', marginBottom: '12px',
-                      }}>
-                        {rec.reasoning}
-                      </div>
-                    )}
-
-                    {/* Bottom row */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                      <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 600, color: 'var(--navy)' }}>
-                          {fmt(rec.lot?.current_price ?? rec.lot?.estimate_low)}
-                        </span>
-                        {rec.estimated_return_pct != null && (
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>
-                            {rec.estimated_return_pct > 0 ? '+' : ''}{rec.estimated_return_pct.toFixed(0)}% {isFr ? 'retour est.' : 'est. return'}
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        {!rec.is_read && (
-                          <span style={{
-                            fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em',
-                            color: 'var(--navy)', background: 'var(--navy-subtle)',
-                            border: '1px solid var(--border)', padding: '2px 6px', borderRadius: '3px',
-                          }}>NEW</span>
-                        )}
-                        {rec.lot_id && (
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--electric)', letterSpacing: '0.04em' }}>
-                            {isFr ? 'Voir le lot →' : 'View lot →'}
-                          </span>
-                        )}
-                        {!rec.is_acted_on && rec.verdict !== 'PASS' && (
-                          <button
-                            onClick={e => { e.stopPropagation(); markActed(rec.id); }}
-                            style={{
-                              fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)',
-                              background: 'none', border: '1px solid var(--border)', borderRadius: '3px',
-                              padding: '3px 8px', cursor: 'pointer', letterSpacing: '0.04em',
-                            }}
-                          >
-                            {isFr ? 'Marqué comme traité' : 'Mark acted'}
-                          </button>
-                        )}
-                        {rec.is_acted_on && (
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', letterSpacing: '0.04em' }}>
-                            {isFr ? '✓ Traité' : '✓ Acted'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* RIGHT — STRATEGIES */}
+        {/* ── LEFT: STRATEGIES LIST ──────────────────────────── */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 400, color: 'var(--navy)', margin: 0 }}>
-              {isFr ? 'Stratégies' : 'Strategies'}
-            </h2>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', letterSpacing: '0.06em' }}>
-              {activeAlerts} {isFr ? 'actif(s)' : 'active'}
-            </span>
+          {/* Section header */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '3px' }}>
+              {isFr ? 'MES STRATÉGIES' : 'MY STRATEGIES'}
+            </div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)' }}>
+              {alerts.length} {isFr ? 'sur' : 'of'} {maxStrategies} max · {activeAlerts} {isFr ? 'actif(s)' : 'active'}
+            </div>
           </div>
 
+          {/* Cards */}
           {alerts.length === 0 ? (
-            <div style={{
-              background: 'var(--bg-subtle)', border: '1px dashed var(--border)',
-              borderRadius: '6px', padding: '40px 24px', textAlign: 'center',
-            }}>
-              <p style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', color: 'var(--text-2)', marginBottom: '8px' }}>
-                {isFr ? 'Aucune stratégie' : 'No strategies yet'}
-              </p>
-              <p style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.6, marginBottom: '20px' }}>
-                {isFr
-                  ? 'Créez votre première stratégie pour recevoir des opportunités notées par IA.'
-                  : 'Create your first strategy to start receiving AI-graded opportunities.'}
-              </p>
-              {limits?.can_create && (
-                <button
-                  style={{
-                    fontSize: '12px', padding: '8px 18px', background: '#1A2A44',
-                    color: 'white', border: 'none', borderRadius: '2px',
-                    cursor: 'pointer', fontFamily: 'var(--font-mono)', fontWeight: 600,
-                    letterSpacing: '0.06em',
-                  }}
-                  onClick={openCreateForm}
-                >
-                  {isFr ? '+ NOUVELLE STRATÉGIE' : '+ NEW STRATEGY'}
-                </button>
-              )}
+            <div style={{ padding: '48px 0', textAlign: 'center' }}>
+              <div style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '4px' }}>
+                {isFr ? 'Aucune stratégie configurée.' : 'No strategies configured yet.'}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-3)', opacity: 0.6 }}>
+                {isFr ? 'Créez votre première stratégie ci-dessous.' : 'Create your first strategy below.'}
+              </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div>
               {alerts.map(alert => {
-                const chips: { label: string; bg: string; color: string }[] = [];
-                if (alert.artist_name)
-                  chips.push({ label: alert.artist_name, bg: 'var(--navy-subtle)', color: 'var(--navy)' });
-                if (alert.category)
-                  chips.push({ label: alert.category, bg: 'var(--bg-subtle)', color: 'var(--text-2)' });
-                if (alert.budget_min_eur || alert.budget_max_eur) {
-                  const s = alert.budget_min_eur && alert.budget_max_eur
-                    ? `${fmt(alert.budget_min_eur)}–${fmt(alert.budget_max_eur)}`
-                    : alert.budget_max_eur ? `≤ ${fmt(alert.budget_max_eur)}` : `≥ ${fmt(alert.budget_min_eur)}`;
-                  chips.push({ label: s, bg: 'var(--gold-subtle)', color: 'var(--gold-dim)' });
-                }
-                if (alert.investment_horizon) {
-                  const horizonLabels = isFr
-                    ? { short: 'Court terme', medium: 'Moyen terme', long: 'Long terme' }
-                    : { short: 'Short term', medium: 'Medium term', long: 'Long term' };
-                  chips.push({ label: horizonLabels[alert.investment_horizon as keyof typeof horizonLabels] ?? alert.investment_horizon, bg: 'var(--bg-subtle)', color: 'var(--text-3)' });
-                }
+                const isHovered = hoveredAlertId === alert.id;
+                const horizonLabel: Record<string, string> = isFr
+                  ? { short: 'Court terme', medium: 'Moyen terme', long: 'Long terme' }
+                  : { short: 'Short term', medium: 'Medium term', long: 'Long term' };
 
                 return (
                   <div
                     key={alert.id}
+                    onMouseEnter={() => setHoveredAlertId(alert.id)}
+                    onMouseLeave={() => setHoveredAlertId(null)}
                     style={{
-                      background: 'white', border: '1px solid var(--border)', borderRadius: '6px',
-                      padding: '16px', opacity: alert.is_active ? 1 : 0.6, transition: 'opacity 0.2s',
+                      background: 'white',
+                      border: '1px solid #E8E4DC',
+                      borderRadius: '8px',
+                      padding: '20px',
+                      marginBottom: '12px',
+                      opacity: alert.is_active ? 1 : 0.6,
+                      transition: 'box-shadow 0.15s ease, opacity 0.2s',
+                      boxShadow: isHovered ? '0 4px 20px rgba(0,0,0,0.09)' : '0 1px 3px rgba(0,0,0,0.04)',
                     }}
                   >
-                    {/* Name row */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: chips.length > 0 ? '10px' : '8px' }}>
-                      <div style={{
-                        width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
-                        background: alert.is_active ? 'var(--electric)' : 'var(--border)',
-                        animation: alert.is_active ? 'pulseDot 2s infinite' : 'none',
-                      }} />
-                      <span style={{
-                        fontSize: '13px', fontWeight: 600, color: 'var(--navy)',
-                        flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>
+                    {/* Name row + hover actions */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px', gap: '12px' }}>
+                      <span style={{ fontSize: '16px', fontWeight: 700, color: '#1A2A44', flex: 1, lineHeight: 1.3 }}>
                         {alert.name}
                       </span>
-                      <button
-                        onClick={() => handleToggle(alert.id, !alert.is_active)}
-                        style={{
-                          fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)',
-                          background: 'none', border: '1px solid var(--border)', borderRadius: '3px',
-                          padding: '3px 7px', cursor: 'pointer', letterSpacing: '0.04em', flexShrink: 0,
-                        }}
-                      >
-                        {alert.is_active ? (isFr ? 'Pause' : 'Pause') : (isFr ? 'Reprendre' : 'Resume')}
-                      </button>
-                      <button
-                        onClick={() => { if (window.confirm(`Delete "${alert.name}"?`)) handleDelete(alert.id); }}
-                        style={{
-                          fontSize: '15px', color: '#C0392B', background: 'none', border: 'none',
-                          cursor: 'pointer', padding: '2px 5px', lineHeight: 1, flexShrink: 0,
-                        }}
-                      >×</button>
-                    </div>
-
-                    {/* Criteria chips */}
-                    {chips.length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '10px' }}>
-                        {chips.map(chip => (
-                          <span
-                            key={chip.label}
-                            style={{
-                              fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em',
-                              padding: '3px 8px', borderRadius: '3px',
-                              background: chip.bg, color: chip.color, border: '1px solid var(--border)',
-                            }}
-                          >
-                            {chip.label}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Activity line */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div style={{
-                        width: '4px', height: '4px', borderRadius: '50%', flexShrink: 0,
-                        background: alert.is_active ? 'var(--electric)' : 'var(--border)',
-                      }} />
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', letterSpacing: '0.04em' }}>
-                        {alert.is_active
-                          ? (isFr ? 'Actif · Mis à jour toutes les 15 min' : 'Scanning · Updated every 15 min')
-                          : (isFr ? 'En pause' : 'Paused')}
-                      </span>
-                      {alert.recommendation_count > 0 && (
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', opacity: isHovered ? 1 : 0, transition: 'opacity 0.15s ease', flexShrink: 0 }}>
                         <button
-                          onClick={() => handleScrollToRecs(alert.id)}
+                          onClick={() => handleToggle(alert.id, !alert.is_active)}
                           style={{
-                            marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: '10px',
-                            color: 'var(--gold-dim)', background: 'none', border: 'none',
-                            cursor: 'pointer', padding: 0, letterSpacing: '0.04em',
+                            fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)',
+                            background: 'none', border: '1px solid #E8E4DC', borderRadius: '3px',
+                            padding: '4px 9px', cursor: 'pointer', letterSpacing: '0.04em',
                           }}
                         >
-                          {alert.recommendation_count} signals →
+                          {alert.is_active ? (isFr ? 'Pause' : 'Pause') : (isFr ? 'Reprendre' : 'Resume')}
                         </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm(isFr ? `Supprimer "${alert.name}" ?` : `Delete "${alert.name}"?`))
+                              handleDelete(alert.id);
+                          }}
+                          style={{ fontSize: '17px', color: '#C0392B', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 5px', lineHeight: 1 }}
+                        >×</button>
+                      </div>
+                    </div>
+
+                    {/* Tags */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '14px' }}>
+                      {alert.category && (
+                        <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', padding: '3px 8px', borderRadius: '3px', background: 'rgba(26,42,68,0.06)', color: '#1A2A44', border: '1px solid rgba(26,42,68,0.12)' }}>
+                          {alert.category}
+                        </span>
                       )}
+                      {alert.artist_name && (
+                        <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', padding: '3px 8px', borderRadius: '3px', background: 'var(--bg-subtle)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>
+                          {alert.artist_name}
+                        </span>
+                      )}
+                      {(alert.budget_min_eur || alert.budget_max_eur) && (
+                        <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', padding: '3px 8px', borderRadius: '3px', background: 'rgba(198,168,90,0.08)', color: '#9A7A2A', border: '1px solid rgba(198,168,90,0.2)' }}>
+                          {alert.budget_min_eur && alert.budget_max_eur
+                            ? `${fmt(alert.budget_min_eur)} – ${fmt(alert.budget_max_eur)}`
+                            : alert.budget_max_eur ? `≤ ${fmt(alert.budget_max_eur)}` : `≥ ${fmt(alert.budget_min_eur)}`}
+                        </span>
+                      )}
+                      {alert.min_conviction_score != null && (
+                        <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', padding: '3px 8px', borderRadius: '3px', background: 'var(--electric-subtle)', color: 'var(--electric)', border: '1px solid var(--electric-border)' }}>
+                          ≥ {alert.min_conviction_score}
+                        </span>
+                      )}
+                      {alert.investment_horizon && (
+                        <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', padding: '3px 8px', borderRadius: '3px', background: 'var(--bg-subtle)', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
+                          {horizonLabel[alert.investment_horizon] ?? alert.investment_horizon}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Status + last signal */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: alert.is_active ? '#16A34A' : '#D1D5DB', flexShrink: 0 }} />
+                        <span style={{ fontSize: '11px', color: alert.is_active ? '#16A34A' : 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
+                          {alert.is_active ? (isFr ? 'Actif' : 'Active') : (isFr ? 'En pause' : 'Paused')}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                        {alert.recommendation_count > 0
+                          ? (isFr ? `${alert.recommendation_count} signal(s) reçu(s)` : `${alert.recommendation_count} signal(s)`)
+                          : (isFr ? 'Aucun signal pour l\'instant' : 'No signal yet')}
+                      </span>
                     </div>
                   </div>
                 );
@@ -827,22 +525,14 @@ function AgentPage() {
 
               {/* Limits bar */}
               {limits && limits.max < 9999 && (
-                <div style={{ padding: '4px 0 8px' }}>
-                  <div style={{ height: '2px', background: 'var(--border)', borderRadius: '1px', marginBottom: '6px', overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%', borderRadius: '1px',
-                      width: `${Math.min(100, (limits.used / limits.max) * 100)}%`,
-                      background: limits.used >= limits.max ? 'var(--gold)' : 'var(--navy)',
-                      transition: 'width 0.4s ease',
-                    }} />
+                <div style={{ marginBottom: '12px' }}>
+                  <div style={{ height: '2px', background: 'var(--border)', borderRadius: '1px', marginBottom: '5px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: '1px', width: `${Math.min(100, (limits.used / limits.max) * 100)}%`, background: limits.used >= limits.max ? 'var(--gold)' : '#1A2A44', transition: 'width 0.4s ease' }} />
                   </div>
                   <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', margin: 0 }}>
                     {limits.used}/{limits.max} {isFr ? 'stratégies utilisées' : 'strategies used'}
                     {limits.used >= limits.max && (
-                      <button
-                        onClick={() => navigate('/app/pricing')}
-                        style={{ marginLeft: '8px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--gold-dim)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                      >
+                      <button onClick={() => navigate('/app/pricing')} style={{ marginLeft: '8px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--gold-dim)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                         {isFr ? 'Mettre à niveau →' : 'Upgrade →'}
                       </button>
                     )}
@@ -851,202 +541,361 @@ function AgentPage() {
               )}
             </div>
           )}
+
+          {/* + NOUVELLE STRATÉGIE button */}
+          {limits?.can_create && (
+            <button
+              onClick={showCreateForm ? closeForm : openCreateForm}
+              style={{
+                width: '100%', padding: '14px', fontSize: '11px',
+                background: showCreateForm ? 'white' : '#1A2A44',
+                color: showCreateForm ? 'var(--text-3)' : 'white',
+                border: showCreateForm ? '1px solid #E8E4DC' : 'none',
+                borderRadius: '2px', cursor: 'pointer',
+                fontFamily: 'var(--font-mono)', fontWeight: 700,
+                letterSpacing: '0.14em', textTransform: 'uppercase',
+                transition: 'all 0.15s ease', marginTop: '4px',
+              }}
+            >
+              {showCreateForm ? (isFr ? '× FERMER' : '× CLOSE') : (isFr ? '+ NOUVELLE STRATÉGIE' : '+ NEW STRATEGY')}
+            </button>
+          )}
         </div>
-      </div>
 
-      {/* ── 4. CREATE FORM ───────────────────────────────────── */}
-      {showCreateForm && (
-        <div style={{ margin: '0 40px 40px' }}>
-          <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '28px 32px' }}>
+        {/* ── RIGHT: FORM or LIVE PREVIEW ─────────────────────── */}
+        <div>
+          {showCreateForm ? (
 
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-              <div>
-                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 400, color: 'var(--navy)', margin: '0 0 4px' }}>
-                  {isFr ? "Nouvelle Stratégie d'Investissement" : 'New Investment Strategy'}
-                </h3>
-                <p style={{ fontSize: '11px', color: 'var(--text-3)', margin: 0, fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
+            // ── CREATION FORM ───────────────────────────────────
+            <div style={{ background: 'white', border: '1px solid #E8E4DC', borderRadius: '10px', padding: '28px', position: 'sticky', top: '24px' }}>
+              <div style={{ marginBottom: '24px' }}>
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 400, color: '#1A2A44', margin: '0 0 6px' }}>
+                  {isFr ? 'Nouvelle stratégie' : 'New Strategy'}
+                </h2>
+                <p style={{ fontSize: '12px', color: 'var(--text-3)', margin: 0, lineHeight: 1.65 }}>
                   {isFr
-                    ? 'Votre analyste IA scrute toutes les 15 min et vous alerte instantanément'
-                    : 'Your AI analyst scans every 15 min and alerts you instantly'}
+                    ? 'Nautilus analyse chaque nouveau lot et vous alerte instantanément par email.'
+                    : 'Nautilus scans every new lot and alerts you instantly by email.'}
                 </p>
               </div>
-              <button onClick={closeForm} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--text-3)', padding: '4px 8px', lineHeight: 1 }}>×</button>
-            </div>
 
-            {formError && (
-              <div style={{ fontSize: '12px', color: '#C0392B', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', padding: '10px 14px', borderRadius: '6px', marginBottom: '20px' }}>
-                {formError}
-              </div>
-            )}
+              {formError && (
+                <div style={{ fontSize: '12px', color: '#C0392B', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', padding: '10px 14px', borderRadius: '6px', marginBottom: '20px' }}>
+                  {formError}
+                </div>
+              )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '32px', alignItems: 'start' }}>
+              <form id="strategy-form" onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-              {/* LEFT — form */}
-              <form id="strategy-form" onSubmit={handleCreate}>
-
-                {/* 1. Category chips */}
-                <div style={{ marginBottom: '18px' }}>
-                  <label style={lbl}>{isFr ? 'Catégorie' : 'Category'}</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
-                    {['Paintings', 'Sculptures', 'Prints & Multiples', 'Photography', 'Drawings', 'Contemporary', 'Modern'].map(cat => (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setFcategory(fcategory === cat ? '' : cat)}
-                        style={{
-                          padding: '5px 12px', fontSize: '12px', borderRadius: '4px', cursor: 'pointer',
-                          border: '1px solid var(--border)',
-                          background: fcategory === cat ? '#1A2A44' : '#F5F4F0',
-                          color: fcategory === cat ? '#C6A85A' : '#888',
-                          fontWeight: fcategory === cat ? 600 : 400,
-                          transition: 'all 0.12s',
-                        }}
-                      >{cat}</button>
-                    ))}
-                  </div>
+                {/* 1. Strategy name — border-bottom only */}
+                <div>
+                  <input
+                    style={{
+                      width: '100%', padding: '8px 0', fontSize: '16px',
+                      border: 'none', borderBottom: `2px solid ${fnameError ? '#C0392B' : '#E8E4DC'}`,
+                      background: 'transparent', color: '#1A2A44',
+                      fontFamily: 'var(--font-serif)', outline: 'none', boxSizing: 'border-box',
+                    }}
+                    value={fname}
+                    onChange={e => { setFname(e.target.value); if (e.target.value.trim()) setFnameError(''); }}
+                    placeholder={isFr ? 'ex. Estampes japonaises sous €5K' : 'e.g. Japanese prints under €5K'}
+                  />
+                  {fnameError && <div style={{ fontSize: '11px', color: '#C0392B', marginTop: '4px' }}>{fnameError}</div>}
                 </div>
 
                 {/* 2. Artists */}
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={lbl}>{isFr ? 'Artistes (optionnel)' : 'Artists (optional)'}</label>
-                  <input style={inp} value={fartist} onChange={e => setFartist(e.target.value)} placeholder="Chagall, Wou-Ki, Basquiat..." />
+                <div>
+                  <label style={lbl}>{isFr ? 'ARTISTE(S)' : 'ARTIST(S)'}</label>
+                  <input style={inp} value={fartist} onChange={e => setFartist(e.target.value)} placeholder="Chagall, Basquiat, Wou-Ki..." />
+                  <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>
+                    {isFr ? 'Laissez vide pour tous les artistes' : 'Leave empty for all artists'}
+                  </div>
                 </div>
 
-                {/* 3. Budget */}
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={lbl}>{isFr ? 'Budget' : 'Budget range'}</label>
-                  <select
-                    style={{ ...inp, cursor: 'pointer' }}
-                    value={fbudgetRange}
-                    onChange={e => {
-                      const v = e.target.value;
-                      setFbudgetRange(v);
-                      if (!v) { setFbudgetMin(''); setFbudgetMax(''); }
-                      else if (v === '-5000') { setFbudgetMin(''); setFbudgetMax('5000'); }
-                      else if (v === '500000-') { setFbudgetMin('500000'); setFbudgetMax(''); }
-                      else { const [mn, mx] = v.split('-'); setFbudgetMin(mn); setFbudgetMax(mx); }
-                    }}
-                  >
-                    <option value="">{isFr ? 'Tout budget' : 'Any budget'}</option>
-                    <option value="-5000">&lt; €5K</option>
-                    <option value="5000-20000">€5K – €20K</option>
-                    <option value="20000-100000">€20K – €100K</option>
-                    <option value="100000-500000">€100K – €500K</option>
-                    <option value="500000-">€500K+</option>
-                  </select>
+                {/* 3. Category — multi-select pills */}
+                <div>
+                  <label style={lbl}>{isFr ? 'CATÉGORIE' : 'CATEGORY'}</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {CATEGORIES.map(cat => {
+                      const sel = fcategories.includes(cat.en);
+                      return (
+                        <button
+                          key={cat.en}
+                          type="button"
+                          onClick={() => setFcategories(prev =>
+                            prev.includes(cat.en) ? prev.filter(c => c !== cat.en) : [...prev, cat.en]
+                          )}
+                          style={{
+                            padding: '5px 12px', fontSize: '11px', borderRadius: '4px', cursor: 'pointer',
+                            border: `1px solid ${sel ? '#1A2A44' : '#E8E4DC'}`,
+                            background: sel ? '#1A2A44' : 'white',
+                            color: sel ? 'white' : '#1A2A44',
+                            fontWeight: sel ? 600 : 400,
+                            transition: 'all 0.12s',
+                          }}
+                        >
+                          {isFr ? cat.fr : cat.en}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                {/* 4. Conviction slider */}
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={lbl}>{isFr ? `M'alerter si score ≥ ${fconviction}/100` : `Alert me when score ≥ ${fconviction}/100`}</label>
+                {/* 4. Keywords */}
+                <div>
+                  <label style={lbl}>{isFr ? 'MOTS-CLÉS LIBRES' : 'FREE KEYWORDS'}</label>
+                  <input
+                    style={inp}
+                    value={fkeywords}
+                    onChange={e => setFkeywords(e.target.value)}
+                    placeholder={isFr ? 'Drouot, lithographie, impressionniste...' : "Christie's, lithograph, impressionist..."}
+                  />
+                  <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px', lineHeight: 1.5 }}>
+                    {isFr
+                      ? 'Maison de vente, médium, période, nationalité...'
+                      : 'Auction house, medium, period, nationality...'}
+                  </div>
+                </div>
+
+                {/* 5. Budget — two inline inputs */}
+                <div>
+                  <label style={lbl}>{isFr ? 'BUDGET' : 'BUDGET'}</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <input
+                      style={inp} type="number" min={0}
+                      value={fbudgetMin} onChange={e => setFbudgetMin(e.target.value)}
+                      placeholder="Min (€)"
+                    />
+                    <input
+                      style={inp} type="number" min={0}
+                      value={fbudgetMax} onChange={e => setFbudgetMax(e.target.value)}
+                      placeholder={isFr ? 'Max (€) — sans limite' : 'Max (€) — no limit'}
+                    />
+                  </div>
+                </div>
+
+                {/* 6. Conviction score */}
+                <div>
+                  <label style={lbl}>{isFr ? 'SCORE MINIMUM' : 'MINIMUM SCORE'} — {fconviction}/100</label>
                   <input
                     type="range" min={60} max={95} step={5}
                     value={fconviction}
                     onChange={e => setFconviction(parseInt(e.target.value, 10))}
-                    style={{ width: '100%', accentColor: '#1A2A44', marginBottom: '4px' }}
+                    style={{ width: '100%', accentColor: '#1A2A44', marginBottom: '6px' }}
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-3)', marginBottom: '4px' }}>
-                    <span>{isFr ? '60 — sélectif' : '60 — selective'}</span>
-                    <span>{isFr ? '95 — très sélectif' : '95 — very selective'}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-3)', marginBottom: '5px' }}>
+                    <span>{isFr ? '60 — plus de signaux' : '60 — more signals'}</span>
+                    <span>{isFr ? '95 — signaux premium uniquement' : '95 — premium signals only'}</span>
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>
-                    {isFr ? 'Plus élevé = moins de signaux mais plus forts' : 'Higher = fewer but stronger signals'}
-                  </div>
+                  {matchCount !== null && (
+                    <div style={{ fontSize: '11px', color: 'var(--electric)', fontFamily: 'var(--font-mono)' }}>
+                      {isFr ? `${matchCount} lots correspondent actuellement` : `${matchCount} lots currently match`}
+                    </div>
+                  )}
                 </div>
 
-                {/* 5. Time horizon */}
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={lbl}>{isFr ? "Horizon d'investissement" : 'Investment horizon'}</label>
+                {/* 7. Investment horizon */}
+                <div>
+                  <label style={lbl}>{isFr ? 'HORIZON' : 'HORIZON'}</label>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     {(isFr
                       ? [
-                          { value: 'short', label: 'Revente rapide', sub: '<6mo' },
-                          { value: 'medium', label: 'Moyen terme', sub: '6–24mo' },
-                          { value: 'long', label: 'Long terme', sub: '2a+' },
+                          { value: 'short',  label: 'Court terme (<6 mois)' },
+                          { value: 'medium', label: 'Moyen terme (6–24 mois)' },
+                          { value: 'long',   label: 'Long terme (2 ans+)' },
                         ]
                       : [
-                          { value: 'short', label: 'Quick flip', sub: '<6mo' },
-                          { value: 'medium', label: 'Medium', sub: '6–24mo' },
-                          { value: 'long', label: 'Long term', sub: '2y+' },
+                          { value: 'short',  label: 'Short (<6mo)' },
+                          { value: 'medium', label: 'Medium (6–24mo)' },
+                          { value: 'long',   label: 'Long (2yr+)' },
                         ]
-                    ).map(({ value, label, sub }) => (
-                      <label key={value} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '9px 6px', border: `1px solid ${fhorizon === value ? '#1A2A44' : 'var(--border)'}`, borderRadius: '6px', cursor: 'pointer', background: fhorizon === value ? 'rgba(26,42,68,0.04)' : 'transparent', transition: 'all 0.12s' }}>
-                        <input type="radio" name="horizon" value={value} checked={fhorizon === value} onChange={() => setFhorizon(value)} style={{ display: 'none' }} />
-                        <span style={{ fontSize: '12px', fontWeight: 600, color: fhorizon === value ? '#1A2A44' : 'var(--text-2)' }}>{label}</span>
-                        <span style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '2px' }}>{sub}</span>
-                      </label>
-                    ))}
+                    ).map(({ value, label }) => {
+                      const sel = fhorizon === value;
+                      return (
+                        <button key={value} type="button" onClick={() => setFhorizon(value)}
+                          style={{
+                            flex: 1, padding: '8px 4px', fontSize: '10px', cursor: 'pointer',
+                            border: `1px solid ${sel ? '#1A2A44' : '#E8E4DC'}`,
+                            borderRadius: '4px',
+                            background: sel ? '#1A2A44' : 'white',
+                            color: sel ? 'white' : 'var(--text-2)',
+                            fontFamily: 'var(--font-mono)', letterSpacing: '0.02em',
+                            transition: 'all 0.12s', textAlign: 'center', lineHeight: 1.4,
+                          }}
+                        >{label}</button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* 6. Strategy name */}
-                <div style={{ marginBottom: '8px' }}>
-                  <label style={lbl}>{isFr ? 'Nom de la stratégie *' : 'Strategy name *'}</label>
-                  <input
-                    style={{ ...inp, borderColor: fnameError ? '#C0392B' : 'var(--border)' }}
-                    value={fname}
-                    onChange={e => { setFname(e.target.value); if (e.target.value.trim()) setFnameError(''); }}
-                    placeholder={isFr
-                      ? (fcategory ? `Ma stratégie ${fcategory}` : 'ex. Peintures impressionnistes < €10K')
-                      : (fcategory ? `My ${fcategory} strategy` : 'e.g. Impressionist paintings under €10K')}
-                  />
-                  {fnameError && <div style={{ fontSize: '11px', color: '#C0392B', marginTop: '4px' }}>{isFr ? 'Requis' : 'Required'}</div>}
+                {/* 8. Risk tolerance */}
+                <div>
+                  <label style={lbl}>{isFr ? 'TOLÉRANCE AU RISQUE' : 'RISK TOLERANCE'}</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {(isFr
+                      ? [{ value: 'low', label: 'Faible' }, { value: 'medium', label: 'Moyen' }, { value: 'high', label: 'Élevé' }]
+                      : [{ value: 'low', label: 'Low' },    { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }]
+                    ).map(({ value, label }) => {
+                      const sel = frisk === value;
+                      return (
+                        <button key={value} type="button" onClick={() => setFrisk(value)}
+                          style={{
+                            flex: 1, padding: '8px 4px', fontSize: '11px', cursor: 'pointer',
+                            border: `1px solid ${sel ? '#1A2A44' : '#E8E4DC'}`,
+                            borderRadius: '4px',
+                            background: sel ? '#1A2A44' : 'white',
+                            color: sel ? 'white' : 'var(--text-2)',
+                            fontFamily: 'var(--font-mono)', letterSpacing: '0.04em',
+                            transition: 'all 0.12s',
+                          }}
+                        >{label}</button>
+                      );
+                    })}
+                  </div>
                 </div>
 
               </form>
 
-              {/* RIGHT — preview + CTA */}
-              <div>
-                <div style={{ background: '#1A2A44', padding: 20, borderLeft: '3px solid #C6A85A', borderRadius: '4px' }}>
-                  <div style={{ color: 'rgba(198,168,90,0.6)', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8, fontFamily: 'var(--font-mono)' }}>{isFr ? 'APERÇU DU SIGNAL' : 'SIGNAL PREVIEW'}</div>
-                  <div style={{ display: 'inline-block', background: '#C6A85A', color: '#1A2A44', fontSize: 10, fontWeight: 700, padding: '3px 10px', marginBottom: 10, letterSpacing: '0.06em' }}>84/100 · EXCEPTIONAL</div>
-                  <div style={{ color: '#999', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 3, fontFamily: 'var(--font-mono)' }}>MARC CHAGALL</div>
-                  <div style={{ color: 'white', fontFamily: 'Georgia,serif', fontSize: 15, marginBottom: 6 }}>Lithographie originale, 1972</div>
-                  <div style={{ color: '#aaa', fontSize: 11, marginBottom: 12 }}>Capitolium Art · Est. €1,000–2,000</div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
-                    <span style={{ color: 'white', fontWeight: 600, fontSize: 12 }}>{isFr ? 'Valeur estimée : €3,500–5,000' : 'Fair value: €3,500–5,000'}</span>
-                    <span style={{ background: '#EAF4EE', color: '#1F6B3A', fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>{isFr ? '+120% potentiel' : '+120% upside'}</span>
-                  </div>
-                  <div style={{ borderTop: '1px solid rgba(198,168,90,0.2)', paddingTop: 10, color: 'rgba(198,168,90,0.6)', fontSize: 10, fontFamily: 'var(--font-mono)' }}>
-                    {isFr
-                      ? 'Voici à quoi ressemble un signal dans votre boîte mail.'
-                      : 'This is what a match looks like in your inbox.'}
-                  </div>
-                </div>
-                <div style={{ marginTop: '18px' }}>
-                  <button
-                    type="submit"
-                    form="strategy-form"
-                    style={{
-                      width: '100%', display: 'flex', justifyContent: 'center', padding: '13px',
-                      fontSize: '13px', background: '#1A2A44', color: 'white',
-                      border: 'none', borderRadius: '2px', cursor: saving ? 'not-allowed' : 'pointer',
-                      fontFamily: 'var(--font-mono)', fontWeight: 600, letterSpacing: '0.06em',
-                      opacity: saving ? 0.7 : 1,
-                    }}
-                    disabled={saving}
-                    onClick={() => { if (!fname.trim()) setFnameError(isFr ? 'Requis' : 'Required'); }}
-                  >
-                    {saving
-                      ? (isFr ? 'Lancement…' : 'Launching…')
-                      : (isFr ? 'Activer cette stratégie →' : 'Activate this strategy →')}
-                  </button>
-                  <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-3)', marginTop: '7px' }}>
-                    {isFr ? 'Votre analyste commence immédiatement' : 'Your analyst starts scanning immediately'}
-                  </div>
-                </div>
-
-                <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'flex-end' }}>
-                  <button type="button" onClick={closeForm} style={ghostBtn}>{isFr ? 'Annuler' : 'Cancel'}</button>
+              {/* Submit */}
+              <div style={{ marginTop: '24px' }}>
+                <button
+                  type="submit"
+                  form="strategy-form"
+                  disabled={saving}
+                  onClick={() => { if (!fname.trim()) setFnameError(isFr ? 'Requis' : 'Required'); }}
+                  style={{
+                    width: '100%', padding: '14px', fontSize: '11px',
+                    background: '#1A2A44', color: 'white',
+                    border: 'none', borderRadius: '2px',
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    fontFamily: 'var(--font-mono)', fontWeight: 700,
+                    letterSpacing: '0.14em', textTransform: 'uppercase',
+                    opacity: saving ? 0.7 : 1, transition: 'opacity 0.15s',
+                  }}
+                >
+                  {saving ? (isFr ? 'LANCEMENT…' : 'LAUNCHING…') : (isFr ? 'ACTIVER LA STRATÉGIE →' : 'ACTIVATE STRATEGY →')}
+                </button>
+                <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-3)', marginTop: '8px' }}>
+                  {isFr ? 'Votre analyste commence à scanner immédiatement' : 'Your analyst starts scanning immediately'}
                 </div>
               </div>
 
+              {/* Signal preview */}
+              <div style={{ marginTop: '24px', background: '#1A2A44', padding: '16px 18px', borderLeft: '3px solid #C6A85A', borderRadius: '4px' }}>
+                <div style={{ color: 'rgba(198,168,90,0.6)', fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px', fontFamily: 'var(--font-mono)' }}>
+                  {isFr ? 'APERÇU DU SIGNAL' : 'SIGNAL PREVIEW'}
+                </div>
+                <div style={{ display: 'inline-block', background: '#C6A85A', color: '#1A2A44', fontSize: '10px', fontWeight: 700, padding: '3px 10px', marginBottom: '10px', letterSpacing: '0.06em' }}>
+                  84/100 · EXCEPTIONAL
+                </div>
+                <div style={{ color: '#999', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '3px', fontFamily: 'var(--font-mono)' }}>MARC CHAGALL</div>
+                <div style={{ color: 'white', fontFamily: 'Georgia, serif', fontSize: '14px', marginBottom: '5px' }}>Lithographie originale, 1972</div>
+                <div style={{ color: '#aaa', fontSize: '11px', marginBottom: '10px' }}>Capitolium Art · Est. €1,000–2,000</div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
+                  <span style={{ color: 'white', fontWeight: 600, fontSize: '12px' }}>
+                    {isFr ? 'Valeur estimée : €3,500–5,000' : 'Fair value: €3,500–5,000'}
+                  </span>
+                  <span style={{ background: '#EAF4EE', color: '#1F6B3A', fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>
+                    {isFr ? '+120% potentiel' : '+120% upside'}
+                  </span>
+                </div>
+                <div style={{ borderTop: '1px solid rgba(198,168,90,0.2)', paddingTop: '10px', color: 'rgba(198,168,90,0.6)', fontSize: '10px', fontFamily: 'var(--font-mono)' }}>
+                  {isFr ? 'Voici à quoi ressemble un signal dans votre boîte mail.' : 'This is what a match looks like in your inbox.'}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
 
+          ) : (
+
+            // ── LIVE MARKET PREVIEW ─────────────────────────────
+            <div style={{ background: '#1A2A44', borderRadius: '10px', overflow: 'hidden', position: 'sticky', top: '24px' }}>
+              {/* Header */}
+              <div style={{ padding: '22px 24px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#16A34A', flexShrink: 0 }} />
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>
+                    {isFr ? 'EN DIRECT' : 'LIVE'}
+                  </span>
+                </div>
+                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 400, color: 'white', margin: 0 }}>
+                  {isFr ? 'Marché en direct' : 'Live Market'}
+                </h3>
+              </div>
+
+              {/* Lots */}
+              <div style={{ padding: '0 24px' }}>
+                {topLots.length === 0 ? (
+                  <div style={{ padding: '32px 0', textAlign: 'center' }}>
+                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-mono)' }}>
+                      {isFr ? 'Chargement...' : 'Loading...'}
+                    </div>
+                  </div>
+                ) : topLots.map((lot, i) => (
+                  <div
+                    key={lot.id}
+                    onClick={() => navigate(`/app/opportunities/${lot.id}`)}
+                    style={{
+                      padding: '16px 0',
+                      borderBottom: i < topLots.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                      cursor: 'pointer', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px',
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {lot.artist_name_raw && (
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', marginBottom: '3px' }}>
+                          {lot.artist_name_raw}
+                        </div>
+                      )}
+                      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '14px', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px' }}>
+                        {lot.title}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>
+                        {fmt(lot.estimate_low)}{lot.estimate_high ? ` – ${fmt(lot.estimate_high)}` : ''}
+                      </div>
+                    </div>
+                    {lot.deal_score != null && (
+                      <div style={{
+                        flexShrink: 0,
+                        background: lot.deal_score >= 80 ? 'rgba(198,168,90,0.15)' : 'rgba(255,255,255,0.07)',
+                        border: `1px solid ${lot.deal_score >= 80 ? 'rgba(198,168,90,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                        borderRadius: '4px', padding: '5px 9px', textAlign: 'center',
+                      }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: lot.deal_score >= 80 ? '#C6A85A' : 'rgba(255,255,255,0.6)', lineHeight: 1 }}>
+                          {Math.round(lot.deal_score)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer */}
+              <div style={{ padding: '18px 24px 22px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', margin: '0 0 14px', lineHeight: 1.6 }}>
+                  {isFr
+                    ? 'Créez une stratégie pour être alerté sur ces opportunités'
+                    : 'Create a strategy to get alerted on these opportunities'}
+                </p>
+                {limits?.can_create && (
+                  <button
+                    onClick={openCreateForm}
+                    style={{
+                      width: '100%', padding: '11px', fontSize: '10px',
+                      background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)',
+                      border: '1px solid rgba(255,255,255,0.12)', borderRadius: '4px',
+                      cursor: 'pointer', fontFamily: 'var(--font-mono)', fontWeight: 700,
+                      letterSpacing: '0.1em', textTransform: 'uppercase', transition: 'all 0.15s',
+                    }}
+                  >
+                    {isFr ? '+ CRÉER UNE STRATÉGIE' : '+ CREATE STRATEGY'}
+                  </button>
+                )}
+              </div>
+            </div>
+
+          )}
+        </div>
+      </div>
     </div>
   );
 }
