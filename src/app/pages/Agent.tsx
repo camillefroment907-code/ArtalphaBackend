@@ -369,34 +369,75 @@ function AgentPage() {
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
 
-      {/* ── PAGE HEADER ─────────────────────────────────────── */}
-      <div style={{ padding: '32px 40px 28px', borderBottom: '1px solid var(--border)', background: 'white' }}>
-        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 400, color: '#1A2A44', margin: '0 0 6px' }}>
-          Intelligence
-        </h1>
-        <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: '0 0 28px', lineHeight: 1.6 }}>
-          {isFr
-            ? "Soyez alerté dès qu'un lot correspondant à vos critères apparaît sur le marché."
-            : 'Get alerted the moment a matching lot appears on the market.'}
-        </p>
+      {/* ── HEADER DARK ─────────────────────────────────────── */}
+      <div style={{ background: '#0A1628', padding: '20px 32px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.2em', color: 'rgba(198,168,90,0.65)', textTransform: 'uppercase', marginBottom: 4 }}>
+              Nautilus · Intelligence
+            </div>
+            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 400, color: 'white', margin: 0, lineHeight: 1.2 }}>
+              Intelligence
+            </h1>
+          </div>
+          {limits?.can_create && (
+            <button
+              onClick={openCreateForm}
+              onMouseEnter={e => (e.currentTarget.style.background = '#1d4ed8')}
+              onMouseLeave={e => (e.currentTarget.style.background = '#2563EB')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: '#2563EB', color: 'white',
+                border: 'none', borderRadius: 4,
+                padding: '9px 18px', cursor: 'pointer',
+                fontFamily: 'var(--font-mono)', fontSize: '11px',
+                letterSpacing: '0.08em', fontWeight: 600,
+                transition: 'background 0.15s',
+              }}
+            >
+              {isFr ? '+ NOUVELLE STRATÉGIE' : '+ NEW STRATEGY'}
+            </button>
+          )}
+        </div>
 
         {/* Stats row */}
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 0, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14 }}>
           {[
-            { label: isFr ? 'Stratégies actives' : 'Active strategies', value: String(activeAlerts) },
-            { label: isFr ? 'Signaux détectés' : 'Signals detected',   value: String(recs.length), hint: recs.length === 0 && activeAlerts > 0 },
-            { label: isFr ? 'Conviction moy.' : 'Avg conviction',      value: avgConviction > 0 ? `${avgConviction}/100` : '—' },
+            {
+              label: isFr ? 'Stratégies actives' : 'Active strategies',
+              value: String(activeAlerts),
+              hint: null,
+            },
+            {
+              label: isFr ? 'Signaux détectés' : 'Signals detected',
+              value: String(recs.length),
+              hint: recs.length === 0 && activeAlerts > 0
+                ? (isFr ? 'Élargir les critères' : 'Try broadening criteria')
+                : null,
+            },
+            {
+              label: isFr ? 'Conviction moy.' : 'Avg conviction',
+              value: avgConviction > 0 ? `${avgConviction}/100` : '—',
+              hint: null,
+            },
           ].map(({ label, value, hint }, i) => (
-            <div key={label} style={{ flex: 1, padding: '16px 0', paddingLeft: i > 0 ? '28px' : 0, borderLeft: i > 0 ? '1px solid var(--border)' : 'none', marginLeft: i > 0 ? '28px' : 0 }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '5px' }}>
+            <div
+              key={label}
+              style={{
+                paddingRight: 28,
+                marginRight: 28,
+                borderRight: i < 2 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+              }}
+            >
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 3 }}>
                 {label}
               </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: '#1A2A44' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 500, color: value === '—' ? 'rgba(255,255,255,0.2)' : 'white' }}>
                 {value}
               </div>
               {hint && (
-                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>
-                  {isFr ? "Essayez score ≥ 65 pour voir plus d'opportunités" : 'Try score ≥ 65 for more opportunities'}
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.25)', marginTop: 2, letterSpacing: '0.04em' }}>
+                  {hint}
                 </div>
               )}
             </div>
@@ -404,271 +445,388 @@ function AgentPage() {
         </div>
       </div>
 
-      {/* ── SINGLE COLUMN ───────────────────────────────────── */}
-      <div style={{ maxWidth: '100%', padding: '0 40px' }}>
+      {/* ── 3-COLUMN BODY ───────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr 220px', minHeight: 'calc(100vh - 140px)' }}>
 
-        {/* ── STRATEGIES LIST ────────────────────────────────── */}
-        <div>
-          {/* Section header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontFamily: 'monospace', letterSpacing: '0.12em', color: '#6B7280' }}>
-              {isFr ? 'MES STRATÉGIES' : 'MY STRATEGIES'}
-            </div>
-            {limits?.can_create && (
-              <button
-                onClick={openCreateForm}
-                onMouseEnter={e => (e.currentTarget.style.background = '#F3F4F6')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#F8F9FA')}
-                style={{
-                  fontSize: 11, fontFamily: 'monospace', letterSpacing: '0.08em',
-                  color: '#1A2A44', background: '#F8F9FA',
-                  border: '1px solid #1A2A44', borderRadius: 2,
-                  padding: '8px 16px', cursor: 'pointer', fontWeight: 600,
-                }}
-              >
-                {isFr ? '+ NOUVELLE STRATÉGIE' : '+ NEW STRATEGY'}
-              </button>
-            )}
+        {/* ── COL LEFT : MES STRATÉGIES ───────────────────────── */}
+        <div style={{ borderRight: '1px solid var(--border)', background: 'white', padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 0 }}>
+
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+            {isFr ? 'Mes stratégies' : 'My strategies'}
           </div>
 
-          {/* Cards */}
           {alerts.length === 0 ? (
-            <div style={{ padding: '48px 0', textAlign: 'center' }}>
-              <div style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '4px' }}>
-                {isFr ? 'Aucune stratégie configurée.' : 'No strategies configured yet.'}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '32px 12px' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 16, lineHeight: 1.6 }}>
+                {isFr
+                  ? 'Aucune stratégie. Créez-en une pour être alerté dès qu\'un lot correspond à vos critères.'
+                  : 'No strategies yet. Create one to get alerted the moment a matching lot appears.'}
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-3)', opacity: 0.6 }}>
-                {isFr ? 'Créez votre première stratégie ci-dessous.' : 'Create your first strategy below.'}
-              </div>
-            </div>
-          ) : (
-            <div>
-              {alerts.map(alert => {
-                const isHovered = hoveredAlertId === alert.id;
-                const horizonLabel: Record<string, string> = isFr
-                  ? { short: 'Court terme', medium: 'Moyen terme', long: 'Long terme' }
-                  : { short: 'Short term', medium: 'Medium term', long: 'Long term' };
-
-                return (
-                  <div
-                    key={alert.id}
-                    onMouseEnter={() => setHoveredAlertId(alert.id)}
-                    onMouseLeave={() => setHoveredAlertId(null)}
-                    style={{
-                      background: 'white',
-                      border: '1px solid #E8E4DC',
-                      borderRadius: '8px',
-                      padding: '20px',
-                      marginBottom: '12px',
-                      opacity: alert.is_active ? 1 : 0.6,
-                      transition: 'box-shadow 0.15s ease, opacity 0.2s',
-                      boxShadow: isHovered ? '0 4px 20px rgba(0,0,0,0.09)' : '0 1px 3px rgba(0,0,0,0.04)',
-                    }}
-                  >
-                    {/* Name row + hover actions */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px', gap: '12px' }}>
-                      <span style={{ fontSize: '16px', fontWeight: 700, color: '#1A2A44', flex: 1, lineHeight: 1.3 }}>
-                        {alert.name}
-                      </span>
-                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', opacity: isHovered ? 1 : 0, transition: 'opacity 0.15s ease', flexShrink: 0 }}>
-                        <button
-                          onClick={() => handleToggle(alert.id, !alert.is_active)}
-                          style={{
-                            fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)',
-                            background: 'none', border: '1px solid #E8E4DC', borderRadius: '3px',
-                            padding: '4px 9px', cursor: 'pointer', letterSpacing: '0.04em',
-                          }}
-                        >
-                          {alert.is_active ? (isFr ? 'Pause' : 'Pause') : (isFr ? 'Reprendre' : 'Resume')}
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (window.confirm(isFr ? `Supprimer "${alert.name}" ?` : `Delete "${alert.name}"?`))
-                              handleDelete(alert.id);
-                          }}
-                          style={{ fontSize: '17px', color: '#C0392B', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 5px', lineHeight: 1 }}
-                        >×</button>
-                      </div>
-                    </div>
-
-                    {/* Tags */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '14px' }}>
-                      {alert.category && (
-                        <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', padding: '3px 8px', borderRadius: '3px', background: 'rgba(26,42,68,0.06)', color: '#1A2A44', border: '1px solid rgba(26,42,68,0.12)' }}>
-                          {alert.category}
-                        </span>
-                      )}
-                      {alert.artist_name && (
-                        <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', padding: '3px 8px', borderRadius: '3px', background: 'var(--bg-subtle)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>
-                          {alert.artist_name}
-                        </span>
-                      )}
-                      {(alert.budget_min_eur || alert.budget_max_eur) && (
-                        <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', padding: '3px 8px', borderRadius: '3px', background: 'rgba(198,168,90,0.08)', color: '#9A7A2A', border: '1px solid rgba(198,168,90,0.2)' }}>
-                          {alert.budget_min_eur && alert.budget_max_eur
-                            ? `${fmt(alert.budget_min_eur)} – ${fmt(alert.budget_max_eur)}`
-                            : alert.budget_max_eur ? `≤ ${fmt(alert.budget_max_eur)}` : `≥ ${fmt(alert.budget_min_eur)}`}
-                        </span>
-                      )}
-                      {alert.min_conviction_score != null && (
-                        <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', padding: '3px 8px', borderRadius: '3px', background: 'var(--electric-subtle)', color: 'var(--electric)', border: '1px solid var(--electric-border)' }}>
-                          ≥ {alert.min_conviction_score}
-                        </span>
-                      )}
-                      {alert.investment_horizon && (
-                        <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', padding: '3px 8px', borderRadius: '3px', background: 'var(--bg-subtle)', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
-                          {horizonLabel[alert.investment_horizon] ?? alert.investment_horizon}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Status + last signal */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: alert.is_active ? '#16A34A' : '#D1D5DB', flexShrink: 0 }} />
-                        <span style={{ fontSize: '11px', color: alert.is_active ? '#16A34A' : 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
-                          {alert.is_active ? (isFr ? 'Actif' : 'Active') : (isFr ? 'En pause' : 'Paused')}
-                        </span>
-                      </div>
-                      <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-                        {alert.recommendation_count > 0
-                          ? (isFr ? `${alert.recommendation_count} signal(s) reçu(s)` : `${alert.recommendation_count} signal(s)`)
-                          : (isFr ? 'En attente — élargissez les critères si besoin' : 'Waiting — try broadening criteria')}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Limits bar */}
-              {limits && limits.max < 9999 && (
-                <div style={{ marginBottom: '12px' }}>
-                  <div style={{ height: '2px', background: 'var(--border)', borderRadius: '1px', marginBottom: '5px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', borderRadius: '1px', width: `${Math.min(100, (limits.used / limits.max) * 100)}%`, background: limits.used >= limits.max ? 'var(--gold)' : '#1A2A44', transition: 'width 0.4s ease' }} />
-                  </div>
-                  <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', margin: 0 }}>
-                    {limits.used}/{limits.max} {isFr ? 'stratégies utilisées' : 'strategies used'}
-                    {limits.used >= limits.max && (
-                      <button onClick={() => navigate('/app/pricing')} style={{ marginLeft: '8px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--gold-dim)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                        {isFr ? 'Mettre à niveau →' : 'Upgrade →'}
-                      </button>
-                    )}
-                  </p>
-                </div>
+              {limits?.can_create && (
+                <button
+                  onClick={openCreateForm}
+                  style={{
+                    background: '#2563EB', color: 'white', border: 'none', borderRadius: 4,
+                    padding: '8px 16px', fontSize: '11px', fontFamily: 'var(--font-mono)',
+                    letterSpacing: '0.06em', cursor: 'pointer',
+                  }}
+                >
+                  {isFr ? 'Créer une stratégie' : 'Create a strategy'}
+                </button>
               )}
             </div>
-          )}
+          ) : (
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+                {alerts.map(alert => {
+                  const isHovered = hoveredAlertId === alert.id;
+                  const horizonLabel: Record<string, string> = isFr
+                    ? { short: 'Court terme', medium: 'Moyen terme', long: 'Long terme' }
+                    : { short: 'Short term', medium: 'Medium term', long: 'Long term' };
 
-        </div>
-
-        {fallbackLots.length > 0 && (
-          <div style={{ marginTop: 40, borderTop: '1px solid #E8E4DC', paddingTop: 32 }}>
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 18, fontFamily: 'Georgia, serif', fontWeight: 600, color: '#1A2A44', marginBottom: 4 }}>
-                {isFr ? '🔥 Opportunités du moment' : '🔥 Live Opportunities'}
-              </div>
-              <div style={{ fontSize: 13, color: '#6B7280' }}>
-                {isFr
-                  ? `${fallbackLots.length} opportunités score 80+ identifiées — créez une stratégie pour être alerté instantanément.`
-                  : `${fallbackLots.length} score 80+ opportunities identified — create a strategy to get alerted instantly.`}
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {fallbackLots.map(lot => (
-                <a key={lot.id} href={`/app/opportunities/${lot.id}`} style={{ textDecoration: 'none', display: 'block' }}>
-                  <div style={{
-                    display: 'flex', alignItems: 'stretch', gap: 0,
-                    background: 'white',
-                    border: '1px solid #E8E4DC',
-                    borderLeft: `4px solid ${lot.deal_score >= 85 ? '#C0392B' : lot.deal_score >= 75 ? '#B8922A' : '#6B7280'}`,
-                    borderRadius: 8,
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    transition: 'box-shadow 0.15s',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.10)')}
-                  onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
-                  >
-                    {lot.image_url && (
-                      <img src={lot.image_url} alt="" style={{ width: 110, height: 110, objectFit: 'cover', flexShrink: 0 }} />
-                    )}
-                    <div style={{ flex: 1, padding: '16px 20px', minWidth: 0 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                        <div>
-                          <div style={{ fontSize: 10, fontFamily: 'monospace', letterSpacing: '0.1em', color: '#9CA3AF', marginBottom: 3 }}>
-                            {lot.artist_name_raw?.toUpperCase()}
-                          </div>
-                          <div style={{ fontSize: 15, fontWeight: 600, color: '#1A2A44', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 380 }}>
-                            {lot.title}
-                          </div>
-                        </div>
-                        <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
-                          <div style={{
-                            fontSize: 22, fontWeight: 700, fontFamily: 'monospace',
-                            color: lot.deal_score >= 85 ? '#C0392B' : lot.deal_score >= 75 ? '#B8922A' : '#1A2A44'
-                          }}>
-                            {Math.round(lot.deal_score)}
-                            <span style={{ fontSize: 12, fontWeight: 400, color: '#9CA3AF' }}>/100</span>
-                          </div>
-                          <div style={{
-                            display: 'inline-block', fontSize: 10, fontFamily: 'monospace', letterSpacing: '0.08em',
-                            padding: '2px 8px', borderRadius: 2, marginTop: 2,
-                            background: lot.deal_score >= 85 ? 'rgba(192,57,43,0.10)' : 'rgba(184,146,42,0.10)',
-                            color: lot.deal_score >= 85 ? '#C0392B' : '#B8922A',
-                          }}>
-                            {lot.deal_score >= 85 ? (isFr ? '🔥 EXCEPTIONNEL' : '🔥 EXCEPTIONAL') : (isFr ? '📈 FORT POTENTIEL' : '📈 STRONG UPSIDE')}
-                          </div>
+                  return (
+                    <div
+                      key={alert.id}
+                      onMouseEnter={() => setHoveredAlertId(alert.id)}
+                      onMouseLeave={() => setHoveredAlertId(null)}
+                      style={{
+                        background: 'white',
+                        border: '1px solid var(--border)',
+                        borderRadius: 6,
+                        padding: '14px',
+                        opacity: alert.is_active ? 1 : 0.55,
+                        transition: 'box-shadow 0.15s ease',
+                        boxShadow: isHovered ? '0 2px 12px rgba(0,0,0,0.08)' : 'none',
+                      }}
+                    >
+                      {/* Name + actions */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8, gap: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#1A2A44', flex: 1, lineHeight: 1.3 }}>
+                          {alert.name}
+                        </span>
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center', opacity: isHovered ? 1 : 0, transition: 'opacity 0.15s', flexShrink: 0 }}>
+                          <button
+                            onClick={() => handleToggle(alert.id, !alert.is_active)}
+                            style={{
+                              fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-3)',
+                              background: 'none', border: '1px solid var(--border)', borderRadius: 2,
+                              padding: '3px 7px', cursor: 'pointer', letterSpacing: '0.04em',
+                            }}
+                          >
+                            {alert.is_active ? (isFr ? 'Pause' : 'Pause') : (isFr ? 'Reprendre' : 'Resume')}
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm(isFr ? `Supprimer "${alert.name}" ?` : `Delete "${alert.name}"?`))
+                                handleDelete(alert.id);
+                            }}
+                            style={{ fontSize: 16, color: '#C0392B', background: 'none', border: 'none', cursor: 'pointer', padding: '0 3px', lineHeight: 1 }}
+                          >×</button>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-                        <span style={{ fontSize: 12, color: '#6B7280' }}>{lot.auction_house_name}</span>
-                        {lot.estimate_low && <span style={{ fontSize: 12, color: '#6B7280' }}>Est. €{lot.estimate_low.toLocaleString()}</span>}
-                        {lot.pct_below_low_estimate && (
-                          <span style={{ fontSize: 12, fontWeight: 600, color: '#16A34A' }}>
-                            +{Math.round(lot.pct_below_low_estimate)}% {isFr ? 'potentiel' : 'upside'}
+
+                      {/* Tags */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
+                        {alert.category && (
+                          <span style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', padding: '2px 7px', borderRadius: 2, background: 'rgba(26,42,68,0.06)', color: '#1A2A44', border: '1px solid rgba(26,42,68,0.12)' }}>
+                            {alert.category}
+                          </span>
+                        )}
+                        {alert.artist_name && (
+                          <span style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', padding: '2px 7px', borderRadius: 2, background: 'var(--bg-subtle)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>
+                            {alert.artist_name}
+                          </span>
+                        )}
+                        {(alert.budget_min_eur || alert.budget_max_eur) && (
+                          <span style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', padding: '2px 7px', borderRadius: 2, background: 'rgba(198,168,90,0.07)', color: '#9A7A2A', border: '1px solid rgba(198,168,90,0.18)' }}>
+                            {alert.budget_min_eur && alert.budget_max_eur
+                              ? `${fmt(alert.budget_min_eur)} – ${fmt(alert.budget_max_eur)}`
+                              : alert.budget_max_eur ? `≤ ${fmt(alert.budget_max_eur)}` : `≥ ${fmt(alert.budget_min_eur)}`}
+                          </span>
+                        )}
+                        {alert.min_conviction_score != null && (
+                          <span style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', padding: '2px 7px', borderRadius: 2, background: 'var(--electric-subtle)', color: 'var(--electric)', border: '1px solid var(--electric-border)' }}>
+                            ≥ {alert.min_conviction_score}
+                          </span>
+                        )}
+                        {alert.investment_horizon && (
+                          <span style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', padding: '2px 7px', borderRadius: 2, background: 'var(--bg-subtle)', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
+                            {horizonLabel[alert.investment_horizon] ?? alert.investment_horizon}
                           </span>
                         )}
                       </div>
+
+                      {/* Status */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <div style={{
+                            width: 5, height: 5, borderRadius: '50%', flexShrink: 0,
+                            background: alert.is_active ? '#16A34A' : '#D1D5DB',
+                            boxShadow: alert.is_active ? '0 0 0 2px rgba(22,163,74,0.2)' : 'none',
+                          }} />
+                          <span style={{ fontSize: '10px', color: alert.is_active ? '#16A34A' : 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
+                            {alert.is_active ? (isFr ? 'Scanning…' : 'Scanning…') : (isFr ? 'En pause' : 'Paused')}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '9px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                          {alert.recommendation_count > 0
+                            ? `${alert.recommendation_count} signal${alert.recommendation_count > 1 ? 's' : ''}`
+                            : (isFr ? 'Aucun signal' : 'No signals')}
+                        </span>
+                      </div>
                     </div>
+                  );
+                })}
+              </div>
+
+              {/* Limits bar */}
+              {limits && limits.max < 9999 && (
+                <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+                  <div style={{ height: '2px', background: 'var(--border)', borderRadius: 1, marginBottom: 5, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%', borderRadius: 1,
+                      width: `${Math.min(100, (limits.used / limits.max) * 100)}%`,
+                      background: limits.used >= limits.max ? 'var(--gold)' : '#2563EB',
+                      transition: 'width 0.4s ease',
+                    }} />
                   </div>
-                </a>
-              ))}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-3)', margin: 0 }}>
+                      {limits.used}/{limits.max} {isFr ? 'stratégies' : 'strategies'}
+                    </p>
+                    {limits.used >= limits.max && (
+                      <button
+                        onClick={() => navigate('/app/pricing')}
+                        style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#2563EB', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                      >
+                        {isFr ? 'Upgrade →' : 'Upgrade →'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* New strategy button */}
+              {limits?.can_create && (
+                <button
+                  onClick={openCreateForm}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = '#2563EB')}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+                  style={{
+                    marginTop: 10, width: '100%', padding: '9px',
+                    fontSize: '10px', fontFamily: 'var(--font-mono)',
+                    letterSpacing: '0.08em', color: '#2563EB',
+                    background: 'transparent',
+                    border: '1px dashed var(--border)',
+                    borderRadius: 4, cursor: 'pointer',
+                    transition: 'border-color 0.15s',
+                  }}
+                >
+                  {isFr ? '+ NOUVELLE STRATÉGIE' : '+ NEW STRATEGY'}
+                </button>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* ── COL CENTRE : SIGNAL FEED ────────────────────────── */}
+        <div style={{ padding: '20px 24px', background: 'var(--bg)' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+            {isFr ? 'Signal feed · Score 80+' : 'Signal feed · Score 80+'}
+          </div>
+
+          {fallbackLots.length === 0 ? (
+            <div style={{ padding: '48px 0', textAlign: 'center' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                {isFr ? 'Aucune opportunité détectée pour le moment.' : 'No opportunities detected right now.'}
+              </div>
             </div>
-            <div style={{
-              marginTop: 32,
-              padding: '20px 24px',
-              background: '#F9FAFB',
-              border: '1px solid #E8E4DC',
-              borderRadius: 8,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 20,
-            }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 500, color: '#1A2A44', marginBottom: 4 }}>
-                  {isFr ? 'Ces opportunités vous intéressent ?' : 'Interested in these opportunities?'}
+          ) : (
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {fallbackLots.map(lot => (
+                  <a
+                    key={lot.id}
+                    href={`/app/opportunities/${lot.id}`}
+                    style={{ textDecoration: 'none', display: 'block' }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex', alignItems: 'stretch',
+                        background: 'white',
+                        border: '1px solid var(--border)',
+                        borderLeft: `3px solid ${lot.deal_score >= 85 ? '#C0392B' : '#B8922A'}`,
+                        borderRadius: '0 6px 6px 0',
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        transition: 'box-shadow 0.15s',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.09)')}
+                      onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+                    >
+                      {lot.image_url && (
+                        <img src={lot.image_url} alt="" style={{ width: 88, height: 88, objectFit: 'cover', flexShrink: 0 }} />
+                      )}
+                      <div style={{ flex: 1, padding: '12px 16px', minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: 'var(--text-3)', marginBottom: 3 }}>
+                            {lot.artist_name_raw?.toUpperCase()}
+                          </div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: '#1A2A44', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 340, marginBottom: 5 }}>
+                            {lot.title}
+                          </div>
+                          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{lot.auction_house_name}</span>
+                            {lot.estimate_low && (
+                              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Est. €{lot.estimate_low.toLocaleString()}</span>
+                            )}
+                            {lot.pct_below_low_estimate && (
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#16A34A' }}>
+                                +{Math.round(lot.pct_below_low_estimate)}% {isFr ? 'potentiel' : 'upside'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{
+                            fontFamily: 'var(--font-mono)', fontSize: 22, fontWeight: 700,
+                            color: lot.deal_score >= 85 ? '#C0392B' : '#B8922A',
+                            lineHeight: 1,
+                          }}>
+                            {Math.round(lot.deal_score)}
+                            <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-3)' }}>/100</span>
+                          </div>
+                          <div style={{
+                            display: 'inline-block', fontSize: '9px', fontFamily: 'var(--font-mono)',
+                            letterSpacing: '0.07em', padding: '2px 7px', borderRadius: 2, marginTop: 4,
+                            background: lot.deal_score >= 85 ? 'rgba(192,57,43,0.09)' : 'rgba(184,146,42,0.09)',
+                            color: lot.deal_score >= 85 ? '#C0392B' : '#B8922A',
+                          }}>
+                            {lot.deal_score >= 85
+                              ? (isFr ? 'EXCEPTIONNEL' : 'EXCEPTIONAL')
+                              : (isFr ? 'FORT POTENTIEL' : 'STRONG UPSIDE')}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+
+              {/* CTA inline — bleu, bien intégré */}
+              <div style={{
+                marginTop: 16,
+                background: '#2563EB',
+                borderRadius: 6,
+                padding: '16px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 16,
+              }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'white', marginBottom: 3 }}>
+                    {isFr ? 'Ces opportunités vous intéressent ?' : 'Interested in these opportunities?'}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>
+                    {isFr
+                      ? 'Créez une stratégie — votre analyste vous alertera en temps réel.'
+                      : 'Create a strategy and get alerted the moment a match appears.'}
+                  </div>
                 </div>
-                <div style={{ fontSize: 13, color: '#6B7280' }}>
-                  {isFr
-                    ? "Créez une stratégie pour être alerté automatiquement."
-                    : "Create a strategy to get alerted automatically."}
-                </div>
+                <button
+                  onClick={openCreateForm}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+                  style={{
+                    background: 'rgba(255,255,255,0.12)',
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.25)',
+                    borderRadius: 4,
+                    padding: '9px 18px',
+                    fontSize: '11px',
+                    fontFamily: 'var(--font-mono)',
+                    letterSpacing: '0.08em',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    transition: 'background 0.15s',
+                  }}
+                >
+                  {isFr ? 'Créer une stratégie →' : 'Create a strategy →'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── COL DROITE : MARKET PULSE ───────────────────────── */}
+        <div style={{ borderLeft: '1px solid var(--border)', background: 'white', padding: '20px 16px' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+            Market Pulse
+          </div>
+
+          {/* Live indicator */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 18 }}>
+            <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#16A34A', boxShadow: '0 0 0 3px rgba(22,163,74,0.15)', flexShrink: 0 }} />
+            <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: '#16A34A', letterSpacing: '0.06em' }}>
+              {isFr ? 'Données live' : 'Live data'}
+            </span>
+          </div>
+
+          {/* Stats */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 8 }}>
+              {isFr ? 'Marché' : 'Market'}
+            </div>
+            {[
+              { label: isFr ? 'Lots upcoming' : 'Upcoming lots', value: '31 558' },
+              { label: isFr ? 'Score 80+' : 'Score 80+',         value: String(fallbackLots.length) },
+              { label: isFr ? 'Vendus (30j)' : 'Sold (30d)',     value: '5 261' },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{label}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: '#1A2A44' }}>{value}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* My stats */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 8 }}>
+              {isFr ? 'Mon analyste' : 'My analyst'}
+            </div>
+            {[
+              { label: isFr ? 'Stratégies actives' : 'Active strategies', value: String(activeAlerts) },
+              { label: isFr ? 'Signaux reçus'       : 'Signals received',  value: String(recs.length) },
+              { label: isFr ? 'Conviction moy.'     : 'Avg conviction',    value: avgConviction > 0 ? `${avgConviction}/100` : '—' },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{label}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: value === '—' ? 'var(--text-3)' : '#1A2A44' }}>{value}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Upgrade nudge if at limit */}
+          {limits && limits.max < 9999 && limits.used >= limits.max && (
+            <div style={{ background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(37,99,235,0.15)', borderRadius: 4, padding: '12px 14px' }}>
+              <div style={{ fontSize: 11, color: '#1d4ed8', fontWeight: 600, marginBottom: 4 }}>
+                {isFr ? 'Limite atteinte' : 'Plan limit reached'}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 10, lineHeight: 1.5 }}>
+                {isFr ? `${limits.used}/${limits.max} stratégies utilisées.` : `${limits.used}/${limits.max} strategies used.`}
               </div>
               <button
-                onClick={openCreateForm}
-                style={{
-                  fontSize: 13, fontWeight: 600,
-                  color: 'white', background: '#1A2A44',
-                  border: 'none', borderRadius: 6,
-                  padding: '10px 20px', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
-                }}
+                onClick={() => navigate('/app/pricing')}
+                style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: '#2563EB', background: 'none', border: 'none', cursor: 'pointer', padding: 0, letterSpacing: '0.04em' }}
               >
-                {isFr ? 'Créer une stratégie' : 'Create a strategy'}
+                {isFr ? 'Mettre à niveau →' : 'Upgrade →'}
               </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* ── MODAL: CREATION FORM ────────────────────────── */}
