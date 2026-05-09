@@ -3,6 +3,14 @@ import { initReactI18next } from 'react-i18next';
 import en from './locales/en';
 import fr from './locales/fr';
 
+// Browser is French → always use French, regardless of stored value
+const browserIsFr = navigator.language?.startsWith('fr');
+const stored = localStorage.getItem('i18nextLng');
+const lang = browserIsFr ? 'fr' : (stored || 'en');
+
+// Keep localStorage in sync
+localStorage.setItem('i18nextLng', lang);
+
 i18n
   .use(initReactI18next)
   .init({
@@ -11,15 +19,7 @@ i18n
     supportedLngs: ['en', 'fr'],
     initImmediate: false,
     interpolation: { escapeValue: false },
-    lng: localStorage.getItem('i18nextLng') || (navigator.language?.startsWith('fr') ? 'fr' : 'en'),
+    lng: lang,
   });
-
-console.log('i18n initialized with language:', i18n.language);
-
-// Force language from localStorage on every load
-const storedLang = localStorage.getItem('i18nextLng');
-if (storedLang && storedLang !== i18n.language) {
-  i18n.changeLanguage(storedLang);
-}
 
 export default i18n;

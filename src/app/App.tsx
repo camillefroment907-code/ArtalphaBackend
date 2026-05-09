@@ -19,10 +19,9 @@ export default function App() {
   const [, forceUpdate] = useState(0);
 
   useEffect(() => {
-    // Force correct language on mount
-    const stored = localStorage.getItem('i18nextLng');
-    const browserLang = navigator.language?.startsWith('fr') ? 'fr' : 'en';
-    const targetLang = stored || browserLang;
+    // Browser French → always French; otherwise use stored or English
+    const targetLang = navigator.language?.startsWith('fr') ? 'fr' : (localStorage.getItem('i18nextLng') || 'en');
+    localStorage.setItem('i18nextLng', targetLang);
     if (i18n.language !== targetLang) {
       i18n.changeLanguage(targetLang);
     }
