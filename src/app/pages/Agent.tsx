@@ -250,7 +250,7 @@ function AgentPage() {
   useEffect(() => { loadAll(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    fetch(`${BACKEND}/api/lots?status=upcoming&min_score=80&sort_by=deal_score&sort_dir=desc&page_size=3`)
+    fetch(`${BACKEND}/api/lots?status=upcoming&min_score=80&sort_by=deal_score&sort_dir=desc&page_size=5`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.items) setFallbackLots(d.items); })
       .catch(() => {});
@@ -387,11 +387,11 @@ function AgentPage() {
             { label: isFr ? 'Signaux détectés' : 'Signals detected',   value: String(recs.length), hint: recs.length === 0 && activeAlerts > 0 },
             { label: isFr ? 'Conviction moy.' : 'Avg conviction',      value: avgConviction > 0 ? `${avgConviction}/100` : '—' },
           ].map(({ label, value, hint }, i) => (
-            <div key={label} style={{ flex: 1, padding: '4px 0', paddingLeft: i > 0 ? '28px' : 0, borderLeft: i > 0 ? '1px solid var(--border)' : 'none', marginLeft: i > 0 ? '28px' : 0 }}>
+            <div key={label} style={{ flex: 1, padding: '16px 0', paddingLeft: i > 0 ? '28px' : 0, borderLeft: i > 0 ? '1px solid var(--border)' : 'none', marginLeft: i > 0 ? '28px' : 0 }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '5px' }}>
                 {label}
               </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '24px', fontWeight: 700, color: '#1A2A44' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: '#1A2A44' }}>
                 {value}
               </div>
               {hint && (
@@ -405,7 +405,7 @@ function AgentPage() {
       </div>
 
       {/* ── SINGLE COLUMN ───────────────────────────────────── */}
-      <div style={{ maxWidth: '720px', margin: '0 auto', padding: '32px 40px' }}>
+      <div style={{ maxWidth: '100%', padding: '0 40px' }}>
 
         {/* ── STRATEGIES LIST ────────────────────────────────── */}
         <div>
@@ -567,55 +567,72 @@ function AgentPage() {
 
         {fallbackLots.length > 0 && (
           <div style={{ marginTop: 40, borderTop: '1px solid #E8E4DC', paddingTop: 32 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div>
-                <div style={{ fontSize: 11, fontFamily: 'monospace', letterSpacing: '0.12em', color: '#B8922A', marginBottom: 4 }}>
-                  {isFr ? '● OPPORTUNITÉS DU MOMENT' : '● LIVE OPPORTUNITIES'}
-                </div>
-                <div style={{ fontSize: 13, color: '#6B7280' }}>
-                  {isFr ? 'Créez une stratégie pour être alerté sur ces lots dès leur apparition.' : 'Create a strategy to get alerted on lots like these instantly.'}
-                </div>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 18, fontFamily: 'Georgia, serif', fontWeight: 600, color: '#1A2A44', marginBottom: 4 }}>
+                {isFr ? '🔥 Opportunités du moment' : '🔥 Live Opportunities'}
+              </div>
+              <div style={{ fontSize: 13, color: '#6B7280' }}>
+                {isFr
+                  ? `${fallbackLots.length} opportunités score 80+ identifiées — créez une stratégie pour être alerté instantanément.`
+                  : `${fallbackLots.length} score 80+ opportunities identified — create a strategy to get alerted instantly.`}
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {fallbackLots.map(lot => (
-                <a key={lot.id} href={`/app/opportunities/${lot.id}`} style={{ textDecoration: 'none' }}>
+                <a key={lot.id} href={`/app/opportunities/${lot.id}`} style={{ textDecoration: 'none', display: 'block' }}>
                   <div style={{
-                    display: 'flex', alignItems: 'center', gap: 16,
-                    background: 'white', border: '1px solid #E8E4DC', borderRadius: 8,
-                    padding: '16px 20px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'stretch', gap: 0,
+                    background: 'white',
+                    border: '1px solid #E8E4DC',
+                    borderLeft: `4px solid ${lot.deal_score >= 85 ? '#C0392B' : lot.deal_score >= 75 ? '#B8922A' : '#6B7280'}`,
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                    cursor: 'pointer',
                     transition: 'box-shadow 0.15s',
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.08)')}
+                  onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.10)')}
                   onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
                   >
                     {lot.image_url && (
-                      <img src={lot.image_url} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
+                      <img src={lot.image_url} alt="" style={{ width: 110, height: 110, objectFit: 'cover', flexShrink: 0 }} />
                     )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 11, color: '#9CA3AF', fontFamily: 'monospace', letterSpacing: '0.08em', marginBottom: 2 }}>
-                        {lot.artist_name_raw?.toUpperCase()}
-                      </div>
-                      <div style={{ fontSize: 14, color: '#1A2A44', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {lot.title}
-                      </div>
-                      <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
-                        {lot.auction_house_name} · {lot.estimate_low ? `€${lot.estimate_low.toLocaleString()}` : ''}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{
-                        fontSize: 13, fontWeight: 700,
-                        color: lot.deal_score >= 80 ? '#C0392B' : '#B8922A',
-                        fontFamily: 'monospace'
-                      }}>
-                        {Math.round(lot.deal_score)}/100
-                      </div>
-                      {lot.pct_below_low_estimate && (
-                        <div style={{ fontSize: 11, color: '#16A34A', marginTop: 2 }}>
-                          +{Math.round(lot.pct_below_low_estimate)}% {isFr ? 'potentiel' : 'upside'}
+                    <div style={{ flex: 1, padding: '16px 20px', minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                        <div>
+                          <div style={{ fontSize: 10, fontFamily: 'monospace', letterSpacing: '0.1em', color: '#9CA3AF', marginBottom: 3 }}>
+                            {lot.artist_name_raw?.toUpperCase()}
+                          </div>
+                          <div style={{ fontSize: 15, fontWeight: 600, color: '#1A2A44', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 380 }}>
+                            {lot.title}
+                          </div>
                         </div>
-                      )}
+                        <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
+                          <div style={{
+                            fontSize: 22, fontWeight: 700, fontFamily: 'monospace',
+                            color: lot.deal_score >= 85 ? '#C0392B' : lot.deal_score >= 75 ? '#B8922A' : '#1A2A44'
+                          }}>
+                            {Math.round(lot.deal_score)}
+                            <span style={{ fontSize: 12, fontWeight: 400, color: '#9CA3AF' }}>/100</span>
+                          </div>
+                          <div style={{
+                            display: 'inline-block', fontSize: 10, fontFamily: 'monospace', letterSpacing: '0.08em',
+                            padding: '2px 8px', borderRadius: 2, marginTop: 2,
+                            background: lot.deal_score >= 85 ? 'rgba(192,57,43,0.10)' : 'rgba(184,146,42,0.10)',
+                            color: lot.deal_score >= 85 ? '#C0392B' : '#B8922A',
+                          }}>
+                            {lot.deal_score >= 85 ? (isFr ? '🔥 EXCEPTIONNEL' : '🔥 EXCEPTIONAL') : (isFr ? '📈 FORT POTENTIEL' : '📈 STRONG UPSIDE')}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, color: '#6B7280' }}>{lot.auction_house_name}</span>
+                        {lot.estimate_low && <span style={{ fontSize: 12, color: '#6B7280' }}>Est. €{lot.estimate_low.toLocaleString()}</span>}
+                        {lot.pct_below_low_estimate && (
+                          <span style={{ fontSize: 12, fontWeight: 600, color: '#16A34A' }}>
+                            +{Math.round(lot.pct_below_low_estimate)}% {isFr ? 'potentiel' : 'upside'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </a>
