@@ -373,12 +373,13 @@ function AgentPage() {
       <div style={{ background: '#0A1628', padding: '20px 32px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.2em', color: 'rgba(198,168,90,0.65)', textTransform: 'uppercase', marginBottom: 4 }}>
-              Nautilus · Intelligence
-            </div>
-            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 400, color: 'white', margin: 0, lineHeight: 1.2 }}>
-              Intelligence
-            </h1>
+           <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.2em', color: 'rgba(198,168,90,0.65)', textTransform: 'uppercase', marginBottom: 4 }}>
+  {isFr ? 'Alertes · Temps réel' : 'Alerts · Real-time'}
+</div>
+<h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 400, color: 'white', margin: 0, lineHeight: 1.2 }}>
+  {isFr ? 'Mon analyste IA' : 'My AI Analyst'}
+</h1>
+            
           </div>
           {limits?.can_create && (
             <button
