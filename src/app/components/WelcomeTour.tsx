@@ -40,7 +40,7 @@ export function WelcomeTour({ onClose }: WelcomeTourProps) {
     {
       tag: "L'AVANTAGE",
       title: 'Vous agissez avant que le marché ne se réveille.',
-      body: 'La plupart des acheteurs découvrent les opportunités après la foule. Nautilus les fait remonter 2–4 semaines plus tôt. C'est cette fenêtre qui génère les profits.',
+      body: "La plupart des acheteurs découvrent les opportunités après la foule. Nautilus les fait remonter 2–4 semaines plus tôt. C'est cette fenêtre qui génère les profits.",
       cta: undefined,
     },
     {
