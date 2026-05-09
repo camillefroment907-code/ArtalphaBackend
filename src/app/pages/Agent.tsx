@@ -219,6 +219,7 @@ function AgentPage() {
   const [saving, setSaving]     = useState(false);
   const [formError, setFormError] = useState('');
   const [matchCount, setMatchCount] = useState<number | null>(null);
+  const [fallbackLots, setFallbackLots] = useState<any[]>([]);
 
   // ── Form fields ───────────────────────────────────────────────
   const [fname, setFname]             = useState('');
@@ -247,6 +248,13 @@ function AgentPage() {
   }
 
   useEffect(() => { loadAll(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    fetch(`${BACKEND}/api/lots?status=upcoming&min_score=80&sort_by=deal_score&sort_dir=desc&page_size=3`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.items) setFallbackLots(d.items); })
+      .catch(() => {});
+  }, []);
 
   // Debounced match count when form is open
   useEffect(() => {
@@ -556,6 +564,65 @@ function AgentPage() {
             </button>
           )}
         </div>
+
+        {fallbackLots.length > 0 && (
+          <div style={{ marginTop: 40, borderTop: '1px solid #E8E4DC', paddingTop: 32 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: 11, fontFamily: 'monospace', letterSpacing: '0.12em', color: '#B8922A', marginBottom: 4 }}>
+                  {isFr ? '● OPPORTUNITÉS DU MOMENT' : '● LIVE OPPORTUNITIES'}
+                </div>
+                <div style={{ fontSize: 13, color: '#6B7280' }}>
+                  {isFr ? 'Créez une stratégie pour être alerté sur ces lots dès leur apparition.' : 'Create a strategy to get alerted on lots like these instantly.'}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {fallbackLots.map(lot => (
+                <a key={lot.id} href={`/app/opportunities/${lot.id}`} style={{ textDecoration: 'none' }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 16,
+                    background: 'white', border: '1px solid #E8E4DC', borderRadius: 8,
+                    padding: '16px 20px', cursor: 'pointer',
+                    transition: 'box-shadow 0.15s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.08)')}
+                  onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+                  >
+                    {lot.image_url && (
+                      <img src={lot.image_url} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 11, color: '#9CA3AF', fontFamily: 'monospace', letterSpacing: '0.08em', marginBottom: 2 }}>
+                        {lot.artist_name_raw?.toUpperCase()}
+                      </div>
+                      <div style={{ fontSize: 14, color: '#1A2A44', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {lot.title}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
+                        {lot.auction_house_name} · {lot.estimate_low ? `€${lot.estimate_low.toLocaleString()}` : ''}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{
+                        fontSize: 13, fontWeight: 700,
+                        color: lot.deal_score >= 80 ? '#C0392B' : '#B8922A',
+                        fontFamily: 'monospace'
+                      }}>
+                        {Math.round(lot.deal_score)}/100
+                      </div>
+                      {lot.pct_below_low_estimate && (
+                        <div style={{ fontSize: 11, color: '#16A34A', marginTop: 2 }}>
+                          +{Math.round(lot.pct_below_low_estimate)}% {isFr ? 'potentiel' : 'upside'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── MODAL: CREATION FORM ────────────────────────── */}
