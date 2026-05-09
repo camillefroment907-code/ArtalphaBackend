@@ -3,55 +3,56 @@ import { Logo } from '../components/Logo';
 import { LarryFace } from '../components/Larry';
 import { useNavigate } from 'react-router';
 import { getToken } from '../../lib/auth';
+import { useTranslation } from 'react-i18next';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
 const PROFILES = [
-  { value: 'first_time',    icon: '🌱', label: 'First acquisition',          sub: 'Starting your collection' },
-  { value: 'collector',     icon: '🖼️', label: 'Active collector',            sub: 'Buying regularly, you know the market' },
-  { value: 'investor',      icon: '📈', label: 'Financial investor',          sub: 'Returns and portfolio diversification' },
-  { value: 'family_office', icon: '🏛️', label: 'Family office / Institution', sub: 'Structured allocation, large ticket' },
+  { value: 'first_time',    icon: '🌱', label: 'First acquisition',          labelFr: 'Première acquisition',          sub: 'Starting your collection',                    subFr: 'Vous débutez votre collection' },
+  { value: 'collector',     icon: '🖼️', label: 'Active collector',            labelFr: 'Collectionneur actif',           sub: 'Buying regularly, you know the market',       subFr: 'Vous achetez régulièrement, vous connaissez le marché' },
+  { value: 'investor',      icon: '📈', label: 'Financial investor',          labelFr: 'Investisseur financier',         sub: 'Returns and portfolio diversification',       subFr: 'Rendements et diversification de portefeuille' },
+  { value: 'family_office', icon: '🏛️', label: 'Family office / Institution', labelFr: 'Family office / Institution',   sub: 'Structured allocation, large ticket',         subFr: 'Allocation structurée, grands tickets' },
 ];
 
 const BUDGETS = [
-  { key: 'under_1k',   label: '< €1 000',           sub: 'Prints, emerging artists',        icon: '◇' },
-  { key: '1k_5k',      label: '€1 000 – €5 000',    sub: 'Emerging & mid-market',            icon: '◈' },
-  { key: '5k_20k',     label: '€5 000 – €20 000',   sub: 'Established emerging artists',     icon: '◆' },
-  { key: '20k_100k',   label: '€20 000 – €100 000', sub: 'Blue-chip & post-war masters',     icon: '◆◆' },
-  { key: 'above_100k', label: '> €100 000',          sub: 'Institutional grade',              icon: '◆◆◆' },
+  { key: 'under_1k',   label: '< €1 000',           sub: 'Prints, emerging artists',        subFr: 'Estampes, artistes émergents',       icon: '◇' },
+  { key: '1k_5k',      label: '€1 000 – €5 000',    sub: 'Emerging & mid-market',            subFr: 'Émergent & mid-market',              icon: '◈' },
+  { key: '5k_20k',     label: '€5 000 – €20 000',   sub: 'Established emerging artists',     subFr: 'Artistes émergents établis',         icon: '◆' },
+  { key: '20k_100k',   label: '€20 000 – €100 000', sub: 'Blue-chip & post-war masters',     subFr: "Blue-chip & maîtres d'après-guerre", icon: '◆◆' },
+  { key: 'above_100k', label: '> €100 000',          sub: 'Institutional grade',              subFr: 'Grade institutionnel',               icon: '◆◆◆' },
 ];
 
 const HORIZONS = [
-  { value: 'short',  icon: '⚡', label: 'Short term',  detail: '< 2 years',  sub: 'Rotation and quick arbitrage' },
-  { value: 'medium', icon: '◎', label: 'Medium term', detail: '2–5 years',  sub: 'Appreciation with managed risk' },
-  { value: 'long',   icon: '◉', label: 'Long term',   detail: '5+ years',   sub: 'Wealth, estate, heritage' },
+  { value: 'short',  icon: '⚡', label: 'Short term',  labelFr: 'Court terme',  detail: '< 2 years',  detailFr: '< 2 ans',  sub: 'Rotation and quick arbitrage',          subFr: 'Rotation et arbitrage rapide' },
+  { value: 'medium', icon: '◎', label: 'Medium term', labelFr: 'Moyen terme', detail: '2–5 years',  detailFr: '2–5 ans',  sub: 'Appreciation with managed risk',        subFr: 'Appréciation avec risque maîtrisé' },
+  { value: 'long',   icon: '◉', label: 'Long term',   labelFr: 'Long terme',  detail: '5+ years',   detailFr: '5+ ans',   sub: 'Wealth, estate, heritage',              subFr: 'Patrimoine, succession, héritage' },
 ];
 
 const CATEGORIES = [
-  { label: 'Paintings',          icon: '🖌️' },
-  { label: 'Prints & Editions',  icon: '🖨️' },
-  { label: 'Sculpture',          icon: '🗿' },
-  { label: 'Photography',        icon: '📷' },
-  { label: 'Works on Paper',     icon: '📄' },
-  { label: 'Street Art',         icon: '🎭' },
-  { label: 'NFT & Digital',      icon: '💾' },
-  { label: 'Design & Furniture', icon: '🪑' },
+  { label: 'Paintings',          labelFr: 'Peintures',           icon: '🖌️' },
+  { label: 'Prints & Editions',  labelFr: 'Estampes & Éditions', icon: '🖨️' },
+  { label: 'Sculpture',          labelFr: 'Sculpture',           icon: '🗿' },
+  { label: 'Photography',        labelFr: 'Photographie',        icon: '📷' },
+  { label: 'Works on Paper',     labelFr: 'Œuvres sur papier',   icon: '📄' },
+  { label: 'Street Art',         labelFr: 'Street Art',          icon: '🎭' },
+  { label: 'NFT & Digital',      labelFr: 'NFT & Art numérique', icon: '💾' },
+  { label: 'Design & Furniture', labelFr: 'Design & Mobilier',   icon: '🪑' },
 ];
 
 const MOTIVATIONS = [
-  { value: 'return',     icon: '📊', label: 'Financial return',      sub: 'Buy undervalued, sell above market' },
-  { value: 'passion',    icon: '❤️', label: 'Passion first',          sub: 'Love for art, living with the pieces' },
-  { value: 'both',       icon: '⚖️', label: 'Both in balance',        sub: 'Investment AND aesthetic pleasure' },
-  { value: 'patrimony',  icon: '🏛️', label: 'Patrimony & estate',     sub: 'Long-term wealth, heritage transmission' },
+  { value: 'return',    icon: '📊', label: 'Financial return',   labelFr: 'Rendement financier',    sub: 'Buy undervalued, sell above market',          subFr: 'Acheter sous-évalué, revendre au prix de marché' },
+  { value: 'passion',   icon: '❤️', label: 'Passion first',       labelFr: 'Passion avant tout',     sub: 'Love for art, living with the pieces',        subFr: "Amour de l'art, vivre avec les œuvres" },
+  { value: 'both',      icon: '⚖️', label: 'Both in balance',     labelFr: 'Les deux en équilibre',  sub: 'Investment AND aesthetic pleasure',           subFr: 'Investissement ET plaisir esthétique' },
+  { value: 'patrimony', icon: '🏛️', label: 'Patrimony & estate',  labelFr: 'Patrimoine & succession', sub: 'Long-term wealth, heritage transmission',    subFr: 'Patrimoine à long terme, transmission' },
 ];
 
 const CHALLENGES = [
-  { value: 'finding_deals',    icon: '🔍', label: 'Finding undervalued lots',   sub: 'Too much noise, too little signal' },
-  { value: 'pricing_info',     icon: '📉', label: 'Knowing if the price is fair', sub: 'No reference point, hard to benchmark' },
-  { value: 'timing',           icon: '⏱️', label: 'Acting at the right moment',  sub: 'Good lots sell fast, I miss them' },
-  { value: 'advisory',         icon: '🤝', label: 'Lack of trusted advice',      sub: 'Hard to find unbiased expertise' },
+  { value: 'finding_deals',  icon: '🔍', label: 'Finding undervalued lots',     labelFr: 'Trouver des lots sous-évalués',     sub: 'Too much noise, too little signal',           subFr: 'Trop de bruit, trop peu de signaux' },
+  { value: 'pricing_info',   icon: '📉', label: 'Knowing if the price is fair', labelFr: 'Savoir si le prix est juste',       sub: 'No reference point, hard to benchmark',      subFr: 'Pas de référence, difficile de benchmarker' },
+  { value: 'timing',         icon: '⏱️', label: 'Acting at the right moment',   labelFr: 'Agir au bon moment',               sub: 'Good lots sell fast, I miss them',            subFr: 'Les bons lots se vendent vite, je les rate' },
+  { value: 'advisory',       icon: '🤝', label: 'Lack of trusted advice',       labelFr: 'Manque de conseils de confiance',  sub: 'Hard to find unbiased expertise',            subFr: 'Difficile de trouver une expertise impartiale' },
 ];
 
 // 6 profile steps + 2 post-profile screens (preview + Larry) + confirmation
@@ -61,6 +62,8 @@ const TOTAL_STEPS = 6;
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
   const [step, setStep]               = useState(0);
   const [collectorType, setType]      = useState<string | null>(null);
   const [budget, setBudget]           = useState<string | null>(null);
@@ -176,22 +179,24 @@ export default function Onboarding() {
               <Logo variant="symbol" color="white" size={40} />
             </div>
             <h1 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '36px', fontWeight: 600, color: '#0A1628', margin: '0 0 12px', lineHeight: 1.2 }}>
-              Welcome to Nautilus
+              {isFr ? 'Bienvenue sur Nautilus' : 'Welcome to Nautilus'}
             </h1>
             <div style={{ width: '40px', height: '2px', background: '#C6A85A', margin: '0 auto 20px' }} />
             <p style={{ fontSize: '15px', color: '#666', lineHeight: 1.7, margin: '0 0 12px', maxWidth: '400px', marginLeft: 'auto', marginRight: 'auto' }}>
-              6 quick questions to build your collector profile.
+              {isFr ? '6 questions rapides pour construire votre profil de collectionneur.' : '6 quick questions to build your collector profile.'}
             </p>
             <p style={{ fontSize: '13px', color: '#aaa', lineHeight: 1.6, margin: '0 0 44px', maxWidth: '380px', marginLeft: 'auto', marginRight: 'auto', fontFamily: 'var(--font-mono, monospace)' }}>
-              Takes under 2 minutes · Used to personalise your deal flow
+              {isFr ? 'Moins de 2 minutes · Pour personnaliser votre flux de deals' : 'Takes under 2 minutes · Used to personalise your deal flow'}
             </p>
             <button onClick={goNext} style={{ padding: '15px 48px', background: '#2563EB', color: '#FFFFFF', border: 'none', fontSize: '13px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', borderRadius: '8px' }}
               onMouseEnter={e => (e.currentTarget.style.background = '#1D4ED8')}
               onMouseLeave={e => (e.currentTarget.style.background = '#2563EB')}>
-              Get started →
+              {isFr ? 'Commencer →' : 'Get started →'}
             </button>
             <div style={{ marginTop: '16px' }}>
-              <button onClick={handleSkip} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#bbb', cursor: 'pointer' }}>Skip for now</button>
+              <button onClick={handleSkip} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#bbb', cursor: 'pointer' }}>
+                {isFr ? "Passer pour l'instant" : 'Skip for now'}
+              </button>
             </div>
           </div>
         )}
@@ -199,7 +204,9 @@ export default function Onboarding() {
         {/* ── Step 1: Collector type ──────────────────────────────────────── */}
         {step === 1 && (
           <div>
-            <StepHeader step={1} total={TOTAL_STEPS} question="Who are you as a collector?" hint="This shapes everything — deal flow, alerts, recommendations." />
+            <StepHeader isFr={isFr} step={1} total={TOTAL_STEPS}
+              question={isFr ? 'Quel type de collectionneur êtes-vous ?' : 'Who are you as a collector?'}
+              hint={isFr ? 'Cela définit tout — flux de deals, alertes, recommandations.' : 'This shapes everything — deal flow, alerts, recommendations.'} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '40px' }}>
               {PROFILES.map(p => (
                 <button key={p.value} style={tile(collectorType === p.value)}
@@ -207,19 +214,21 @@ export default function Onboarding() {
                   onMouseEnter={e => tileHover(collectorType === p.value, e)}
                   onMouseLeave={e => tileLeave(collectorType === p.value, e)}>
                   <div style={{ fontSize: '26px', marginBottom: '10px', lineHeight: 1 }}>{p.icon}</div>
-                  <div style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '14px', fontWeight: 700, marginBottom: '5px', color: 'inherit' }}>{p.label}</div>
-                  <div style={{ fontSize: '11px', opacity: 0.6, lineHeight: 1.4 }}>{p.sub}</div>
+                  <div style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '14px', fontWeight: 700, marginBottom: '5px', color: 'inherit' }}>{isFr ? p.labelFr : p.label}</div>
+                  <div style={{ fontSize: '11px', opacity: 0.6, lineHeight: 1.4 }}>{isFr ? p.subFr : p.sub}</div>
                 </button>
               ))}
             </div>
-            <StepFooter step={1} total={TOTAL_STEPS} onBack={null} onNext={collectorType ? goNext : undefined} onSkip={goNext} canNext={!!collectorType} />
+            <StepFooter isFr={isFr} step={1} total={TOTAL_STEPS} onBack={null} onNext={collectorType ? goNext : undefined} onSkip={goNext} canNext={!!collectorType} />
           </div>
         )}
 
         {/* ── Step 2: Budget ──────────────────────────────────────────────── */}
         {step === 2 && (
           <div>
-            <StepHeader step={2} total={TOTAL_STEPS} question="What is your typical budget per acquisition?" hint="This calibrates the price range of deals we surface for you." />
+            <StepHeader isFr={isFr} step={2} total={TOTAL_STEPS}
+              question={isFr ? 'Quel est votre budget typique par acquisition ?' : 'What is your typical budget per acquisition?'}
+              hint={isFr ? 'Cela calibre la fourchette de prix des deals que nous vous proposons.' : 'This calibrates the price range of deals we surface for you.'} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '40px' }}>
               {BUDGETS.map(b => (
                 <button key={b.key} style={{ ...tile(budget === b.key), display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px' }}
@@ -229,20 +238,22 @@ export default function Onboarding() {
                   <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: '10px', opacity: 0.4, letterSpacing: '0.06em', flexShrink: 0, width: '24px', textAlign: 'center' }}>{b.icon}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '16px', fontWeight: 700, marginBottom: '2px', color: 'inherit' }}>{b.label}</div>
-                    <div style={{ fontSize: '11px', opacity: 0.55, lineHeight: 1.3 }}>{b.sub}</div>
+                    <div style={{ fontSize: '11px', opacity: 0.55, lineHeight: 1.3 }}>{isFr ? b.subFr : b.sub}</div>
                   </div>
                   {budget === b.key && <div style={{ fontSize: '16px', flexShrink: 0, color: '#C6A85A' }}>✓</div>}
                 </button>
               ))}
             </div>
-            <StepFooter step={2} total={TOTAL_STEPS} onBack={goBack} onNext={budget ? goNext : undefined} onSkip={goNext} canNext={!!budget} />
+            <StepFooter isFr={isFr} step={2} total={TOTAL_STEPS} onBack={goBack} onNext={budget ? goNext : undefined} onSkip={goNext} canNext={!!budget} />
           </div>
         )}
 
         {/* ── Step 3: Investment horizon ──────────────────────────────────── */}
         {step === 3 && (
           <div>
-            <StepHeader step={3} total={TOTAL_STEPS} question="What is your investment time horizon?" hint="Shapes how we weight liquidity versus appreciation in scoring." />
+            <StepHeader isFr={isFr} step={3} total={TOTAL_STEPS}
+              question={isFr ? "Quel est votre horizon d'investissement ?" : 'What is your investment time horizon?'}
+              hint={isFr ? 'Détermine comment nous pondérons liquidité et appréciation dans le scoring.' : 'Shapes how we weight liquidity versus appreciation in scoring.'} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '40px' }}>
               {HORIZONS.map(h => (
                 <button key={h.value} style={{ ...tile(horizon === h.value), display: 'flex', alignItems: 'center', gap: '20px', padding: '20px 24px' }}
@@ -251,43 +262,47 @@ export default function Onboarding() {
                   onMouseLeave={e => tileLeave(horizon === h.value, e)}>
                   <div style={{ fontSize: '22px', flexShrink: 0 }}>{h.icon}</div>
                   <div style={{ flex: 1, textAlign: 'left' }}>
-                    <div style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '16px', fontWeight: 700, marginBottom: '3px', color: 'inherit' }}>{h.label}</div>
-                    <div style={{ fontSize: '11px', opacity: 0.6, lineHeight: 1.4 }}>{h.sub}</div>
+                    <div style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '16px', fontWeight: 700, marginBottom: '3px', color: 'inherit' }}>{isFr ? h.labelFr : h.label}</div>
+                    <div style={{ fontSize: '11px', opacity: 0.6, lineHeight: 1.4 }}>{isFr ? h.subFr : h.sub}</div>
                   </div>
                   <div style={{ flexShrink: 0, padding: '4px 12px', background: horizon === h.value ? 'rgba(198,168,90,0.25)' : 'rgba(0,0,0,0.06)', color: horizon === h.value ? '#C6A85A' : 'inherit', borderRadius: '20px', fontSize: '11px', fontWeight: 700, fontFamily: 'var(--font-mono, monospace)', opacity: horizon === h.value ? 1 : 0.5, transition: 'all 0.15s' }}>
-                    {h.detail}
+                    {isFr ? h.detailFr : h.detail}
                   </div>
                 </button>
               ))}
             </div>
-            <StepFooter step={3} total={TOTAL_STEPS} onBack={goBack} onNext={horizon ? goNext : undefined} onSkip={goNext} canNext={!!horizon} />
+            <StepFooter isFr={isFr} step={3} total={TOTAL_STEPS} onBack={goBack} onNext={horizon ? goNext : undefined} onSkip={goNext} canNext={!!horizon} />
           </div>
         )}
 
         {/* ── Step 4: Categories ──────────────────────────────────────────── */}
         {step === 4 && (
           <div>
-            <StepHeader step={4} total={TOTAL_STEPS} question="Which categories interest you?" hint="Select all that apply — we'll weight your deal flow accordingly." />
+            <StepHeader isFr={isFr} step={4} total={TOTAL_STEPS}
+              question={isFr ? 'Quelles catégories vous intéressent ?' : 'Which categories interest you?'}
+              hint={isFr ? "Sélectionnez tout ce qui s'applique — nous pondérerons votre flux en conséquence." : "Select all that apply — we'll weight your deal flow accordingly."} />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '40px' }}>
-              {CATEGORIES.map(({ label, icon }) => {
+              {CATEGORIES.map(({ label, labelFr, icon }) => {
                 const selected = categories.includes(label);
                 return (
                   <button key={label} onClick={() => toggleCategory(label)} style={{ padding: '10px 18px', borderRadius: '24px', border: selected ? '2px solid #0A1628' : '1px solid #E4E2DC', background: selected ? '#0A1628' : '#FFFFFF', color: selected ? '#FFFFFF' : '#444', fontSize: '13px', fontWeight: selected ? 600 : 400, cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '6px' }}
                     onMouseEnter={e => { if (!selected) { (e.currentTarget as HTMLButtonElement).style.borderColor = '#0A1628'; (e.currentTarget as HTMLButtonElement).style.background = '#F5F4F0'; } }}
                     onMouseLeave={e => { if (!selected) { (e.currentTarget as HTMLButtonElement).style.borderColor = '#E4E2DC'; (e.currentTarget as HTMLButtonElement).style.background = '#FFFFFF'; } }}>
-                    <span>{icon}</span> {label}
+                    <span>{icon}</span> {isFr ? labelFr : label}
                   </button>
                 );
               })}
             </div>
-            <StepFooter step={4} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onSkip={goNext} canNext={true} />
+            <StepFooter isFr={isFr} step={4} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onSkip={goNext} canNext={true} />
           </div>
         )}
 
         {/* ── Step 5: Primary motivation ──────────────────────────────────── */}
         {step === 5 && (
           <div>
-            <StepHeader step={5} total={TOTAL_STEPS} question="Why do you collect art?" hint="Your motivation determines how we score and rank opportunities for you." />
+            <StepHeader isFr={isFr} step={5} total={TOTAL_STEPS}
+              question={isFr ? "Pourquoi collectionnez-vous de l'art ?" : 'Why do you collect art?'}
+              hint={isFr ? 'Votre motivation détermine comment nous scorons et classons les opportunités.' : 'Your motivation determines how we score and rank opportunities for you.'} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '40px' }}>
               {MOTIVATIONS.map(m => (
                 <button key={m.value} style={tile(motivation === m.value)}
@@ -295,19 +310,21 @@ export default function Onboarding() {
                   onMouseEnter={e => tileHover(motivation === m.value, e)}
                   onMouseLeave={e => tileLeave(motivation === m.value, e)}>
                   <div style={{ fontSize: '26px', marginBottom: '10px', lineHeight: 1 }}>{m.icon}</div>
-                  <div style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '14px', fontWeight: 700, marginBottom: '5px', color: 'inherit' }}>{m.label}</div>
-                  <div style={{ fontSize: '11px', opacity: 0.6, lineHeight: 1.4 }}>{m.sub}</div>
+                  <div style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '14px', fontWeight: 700, marginBottom: '5px', color: 'inherit' }}>{isFr ? m.labelFr : m.label}</div>
+                  <div style={{ fontSize: '11px', opacity: 0.6, lineHeight: 1.4 }}>{isFr ? m.subFr : m.sub}</div>
                 </button>
               ))}
             </div>
-            <StepFooter step={5} total={TOTAL_STEPS} onBack={goBack} onNext={motivation ? goNext : undefined} onSkip={goNext} canNext={!!motivation} />
+            <StepFooter isFr={isFr} step={5} total={TOTAL_STEPS} onBack={goBack} onNext={motivation ? goNext : undefined} onSkip={goNext} canNext={!!motivation} />
           </div>
         )}
 
         {/* ── Step 6: Main challenge ──────────────────────────────────────── */}
         {step === 6 && (
           <div>
-            <StepHeader step={6} total={TOTAL_STEPS} question="What's your biggest challenge today?" hint="Nautilus is built around this exact problem. Let's make sure we solve it." />
+            <StepHeader isFr={isFr} step={6} total={TOTAL_STEPS}
+              question={isFr ? "Quel est votre plus grand défi aujourd'hui ?" : "What's your biggest challenge today?"}
+              hint={isFr ? 'Nautilus est construit autour de ce problème. Assurons-nous de le résoudre.' : "Nautilus is built around this exact problem. Let's make sure we solve it."} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '40px' }}>
               {CHALLENGES.map(c => (
                 <button key={c.value} style={tile(challenge === c.value)}
@@ -315,12 +332,12 @@ export default function Onboarding() {
                   onMouseEnter={e => tileHover(challenge === c.value, e)}
                   onMouseLeave={e => tileLeave(challenge === c.value, e)}>
                   <div style={{ fontSize: '26px', marginBottom: '10px', lineHeight: 1 }}>{c.icon}</div>
-                  <div style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '14px', fontWeight: 700, marginBottom: '5px', color: 'inherit' }}>{c.label}</div>
-                  <div style={{ fontSize: '11px', opacity: 0.6, lineHeight: 1.4 }}>{c.sub}</div>
+                  <div style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '14px', fontWeight: 700, marginBottom: '5px', color: 'inherit' }}>{isFr ? c.labelFr : c.label}</div>
+                  <div style={{ fontSize: '11px', opacity: 0.6, lineHeight: 1.4 }}>{isFr ? c.subFr : c.sub}</div>
                 </button>
               ))}
             </div>
-            <StepFooter step={6} total={TOTAL_STEPS} onBack={goBack} onNext={challenge ? goNext : undefined} onSkip={goNext} canNext={!!challenge} />
+            <StepFooter isFr={isFr} step={6} total={TOTAL_STEPS} onBack={goBack} onNext={challenge ? goNext : undefined} onSkip={goNext} canNext={!!challenge} />
           </div>
         )}
 
@@ -329,13 +346,13 @@ export default function Onboarding() {
           <div>
             <div style={{ marginBottom: '32px' }}>
               <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C6A85A', marginBottom: '12px', fontFamily: 'var(--font-mono, monospace)' }}>
-                BASED ON YOUR PROFILE
+                {isFr ? 'BASÉ SUR VOTRE PROFIL' : 'BASED ON YOUR PROFILE'}
               </div>
               <h2 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '26px', fontWeight: 600, color: '#0A1628', margin: '0 0 8px', lineHeight: 1.3 }}>
-                Here's a taste of your deal flow.
+                {isFr ? 'Un aperçu de votre flux de deals.' : "Here's a taste of your deal flow."}
               </h2>
               <p style={{ fontSize: '13px', color: '#888', margin: 0, lineHeight: 1.6 }}>
-                Live lots scored by Nautilus, filtered to your profile. Each artist appears once.
+                {isFr ? 'Lots en direct scorés par Nautilus, filtrés selon votre profil. Un artiste par entrée.' : 'Live lots scored by Nautilus, filtered to your profile. Each artist appears once.'}
               </p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '36px' }}>
@@ -368,16 +385,18 @@ export default function Onboarding() {
                 </div>
               )) : (
                 <div style={{ textAlign: 'center', padding: '40px 0', color: '#bbb', fontSize: '13px', fontFamily: 'var(--font-mono, monospace)' }}>
-                  Loading your personalized lots…
+                  {isFr ? 'Chargement de vos lots personnalisés…' : 'Loading your personalized lots…'}
                 </div>
               )}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <button onClick={goBack} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#888', cursor: 'pointer', padding: 0 }}>← Back</button>
+              <button onClick={goBack} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#888', cursor: 'pointer', padding: 0 }}>
+                {isFr ? '← Retour' : '← Back'}
+              </button>
               <button onClick={goNext} style={{ padding: '13px 32px', background: '#2563EB', color: '#FFFFFF', border: 'none', fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer', borderRadius: '8px' }}
                 onMouseEnter={e => (e.currentTarget.style.background = '#1D4ED8')}
                 onMouseLeave={e => (e.currentTarget.style.background = '#2563EB')}>
-                Continue →
+                {isFr ? 'Continuer →' : 'Continue →'}
               </button>
             </div>
           </div>
@@ -389,10 +408,14 @@ export default function Onboarding() {
             <div style={{ display: 'flex', justifyContent: 'center', margin: '0 auto 24px', filter: 'drop-shadow(0 8px 32px rgba(10,22,40,0.3))' }}>
               <LarryFace size={100} />
             </div>
-            <h2 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '28px', fontWeight: 600, color: '#0A1628', margin: '0 0 8px', lineHeight: 1.2 }}>Meet Larry.</h2>
+            <h2 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '28px', fontWeight: 600, color: '#0A1628', margin: '0 0 8px', lineHeight: 1.2 }}>
+              {isFr ? 'Rencontrez Larry.' : 'Meet Larry.'}
+            </h2>
             <div style={{ width: '40px', height: '2px', background: '#C6A85A', margin: '0 auto 20px' }} />
             <p style={{ fontSize: '14px', color: '#555', lineHeight: 1.7, margin: '0 0 28px', maxWidth: '380px', marginLeft: 'auto', marginRight: 'auto' }}>
-              Larry is your private art market analyst. He knows every lot, every artist trajectory, every market signal — and he works exclusively for you.
+              {isFr
+                ? "Larry est votre analyste privé du marché de l'art. Il connaît chaque lot, chaque trajectoire d'artiste, chaque signal de marché — et il travaille exclusivement pour vous."
+                : "Larry is your private art market analyst. He knows every lot, every artist trajectory, every market signal — and he works exclusively for you."}
             </p>
             <div style={{ background: '#F5F4F0', border: '1px solid #E4E2DC', borderRadius: '12px', padding: '20px 24px', marginBottom: '36px', textAlign: 'left', maxWidth: '380px', marginLeft: 'auto', marginRight: 'auto' }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
@@ -401,18 +424,22 @@ export default function Onboarding() {
                 </div>
                 <div>
                   <div style={{ fontSize: '13px', color: '#333', lineHeight: 1.6, fontStyle: 'italic', marginBottom: '8px' }}>
-                    "I've spent years analyzing auction results across Christie's, Sotheby's, Drouot, and 27 other markets. Tell me what you collect — I'll find what others miss."
+                    {isFr
+                      ? "\"J'ai passé des années à analyser les résultats d'enchères chez Christie's, Sotheby's, Drouot et 27 autres marchés. Dites-moi ce que vous collectionnez — je trouverai ce que les autres ratent.\""
+                      : "\"I've spent years analyzing auction results across Christie's, Sotheby's, Drouot, and 27 other markets. Tell me what you collect — I'll find what others miss.\""}
                   </div>
                   <div style={{ fontSize: '10px', color: '#bbb', fontFamily: 'var(--font-mono, monospace)' }}>Larry · Nautilus AI Advisor</div>
                 </div>
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '380px', margin: '0 auto' }}>
-              <button onClick={goBack} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#888', cursor: 'pointer', padding: 0 }}>← Back</button>
+              <button onClick={goBack} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#888', cursor: 'pointer', padding: 0 }}>
+                {isFr ? '← Retour' : '← Back'}
+              </button>
               <button onClick={goNext} style={{ padding: '13px 32px', background: '#2563EB', color: '#FFFFFF', border: 'none', fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer', borderRadius: '8px' }}
                 onMouseEnter={e => (e.currentTarget.style.background = '#1D4ED8')}
                 onMouseLeave={e => (e.currentTarget.style.background = '#2563EB')}>
-                Continue →
+                {isFr ? 'Continuer →' : 'Continue →'}
               </button>
             </div>
           </div>
@@ -424,18 +451,20 @@ export default function Onboarding() {
             <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#0A1628', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px', boxShadow: '0 8px 32px rgba(10,22,40,0.2)' }}>
               <Logo variant="symbol" color="white" size={40} />
             </div>
-            <h1 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '30px', fontWeight: 600, color: '#0A1628', margin: '0 0 12px', lineHeight: 1.2 }}>Your profile is ready.</h1>
+            <h1 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '30px', fontWeight: 600, color: '#0A1628', margin: '0 0 12px', lineHeight: 1.2 }}>
+              {isFr ? 'Votre profil est prêt.' : 'Your profile is ready.'}
+            </h1>
             <div style={{ width: '40px', height: '2px', background: '#C6A85A', margin: '0 auto 32px' }} />
 
             {/* Summary grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1px', background: '#E4E2DC', border: '1px solid #E4E2DC', borderRadius: '10px', overflow: 'hidden', marginBottom: '40px' }}>
               {[
-                { label: 'Profile',    value: PROFILES.find(p => p.value === collectorType)?.label ?? '—' },
-                { label: 'Budget',     value: BUDGETS.find(b => b.key === budget)?.label ?? '—' },
-                { label: 'Horizon',    value: HORIZONS.find(h => h.value === horizon)?.label ?? '—' },
-                { label: 'Focus',      value: categories.length > 0 ? `${categories.length} categories` : 'All' },
-                { label: 'Motivation', value: MOTIVATIONS.find(m => m.value === motivation)?.label ?? '—' },
-                { label: 'Challenge',  value: CHALLENGES.find(c => c.value === challenge)?.label ?? '—' },
+                { label: isFr ? 'Profil' : 'Profile',        value: PROFILES.find(p => p.value === collectorType)?.[isFr ? 'labelFr' : 'label'] ?? '—' },
+                { label: isFr ? 'Budget' : 'Budget',         value: BUDGETS.find(b => b.key === budget)?.label ?? '—' },
+                { label: isFr ? 'Horizon' : 'Horizon',       value: HORIZONS.find(h => h.value === horizon)?.[isFr ? 'labelFr' : 'label'] ?? '—' },
+                { label: isFr ? 'Focus' : 'Focus',           value: categories.length > 0 ? `${categories.length} ${isFr ? 'catégories' : 'categories'}` : (isFr ? 'Tout' : 'All') },
+                { label: isFr ? 'Motivation' : 'Motivation', value: MOTIVATIONS.find(m => m.value === motivation)?.[isFr ? 'labelFr' : 'label'] ?? '—' },
+                { label: isFr ? 'Défi' : 'Challenge',        value: CHALLENGES.find(c => c.value === challenge)?.[isFr ? 'labelFr' : 'label'] ?? '—' },
               ].map(item => (
                 <div key={item.label} style={{ background: '#FFFFFF', padding: '16px 14px' }}>
                   <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C6A85A', marginBottom: '5px', fontFamily: 'var(--font-mono, monospace)' }}>{item.label}</div>
@@ -447,7 +476,7 @@ export default function Onboarding() {
             <button onClick={handleComplete} disabled={saving} style={{ padding: '15px 48px', background: '#2563EB', color: '#FFFFFF', border: 'none', fontSize: '13px', fontWeight: 700, letterSpacing: '0.1em', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, borderRadius: '8px', marginBottom: '16px' }}
               onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLButtonElement).style.background = '#1D4ED8'; }}
               onMouseLeave={e => { if (!saving) (e.currentTarget as HTMLButtonElement).style.background = '#2563EB'; }}>
-              {saving ? 'Saving…' : 'See my opportunities →'}
+              {saving ? (isFr ? 'Enregistrement…' : 'Saving…') : (isFr ? 'Voir mes opportunités →' : 'See my opportunities →')}
             </button>
           </div>
         )}
@@ -459,11 +488,11 @@ export default function Onboarding() {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function StepHeader({ step, total, question, hint }: { step: number; total: number; question: string; hint?: string }) {
+function StepHeader({ isFr, step, total, question, hint }: { isFr: boolean; step: number; total: number; question: string; hint?: string }) {
   return (
     <div style={{ marginBottom: '28px' }}>
       <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C6A85A', marginBottom: '12px', fontFamily: 'var(--font-mono, monospace)' }}>
-        STEP {step} OF {total}
+        {isFr ? `ÉTAPE ${step} SUR ${total}` : `STEP ${step} OF ${total}`}
       </div>
       <h2 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontSize: '24px', fontWeight: 600, color: '#0A1628', margin: '0 0 8px', lineHeight: 1.3 }}>
         {question}
@@ -474,6 +503,7 @@ function StepHeader({ step, total, question, hint }: { step: number; total: numb
 }
 
 interface StepFooterProps {
+  isFr: boolean;
   step: number;
   total: number;
   onBack: (() => void) | null;
@@ -482,20 +512,24 @@ interface StepFooterProps {
   canNext: boolean;
 }
 
-function StepFooter({ onBack, onNext, onSkip, canNext }: StepFooterProps) {
+function StepFooter({ isFr, onBack, onNext, onSkip, canNext }: StepFooterProps) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
       <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
         {onBack && (
-          <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#888', cursor: 'pointer', padding: 0 }}>← Back</button>
+          <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#888', cursor: 'pointer', padding: 0 }}>
+            {isFr ? '← Retour' : '← Back'}
+          </button>
         )}
-        <button onClick={onSkip} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#ccc', cursor: 'pointer', padding: 0 }}>Skip</button>
+        <button onClick={onSkip} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#ccc', cursor: 'pointer', padding: 0 }}>
+          {isFr ? 'Passer' : 'Skip'}
+        </button>
       </div>
       {canNext && onNext && (
         <button onClick={onNext} style={{ padding: '12px 28px', background: '#2563EB', color: '#FFFFFF', border: 'none', fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer', borderRadius: '8px' }}
           onMouseEnter={e => (e.currentTarget.style.background = '#1D4ED8')}
           onMouseLeave={e => (e.currentTarget.style.background = '#2563EB')}>
-          Continue →
+          {isFr ? 'Continuer →' : 'Continue →'}
         </button>
       )}
     </div>

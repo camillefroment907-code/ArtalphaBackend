@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Logo } from './Logo';
+import { useTranslation } from 'react-i18next';
 
 const API = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -8,45 +9,78 @@ interface WelcomeTourProps {
   onClose: () => void;
 }
 
-const TOUR_STEPS = [
-  {
-    tag: 'WELCOME TO NAUTILUS',
-    title: 'The art market has a dirty secret.',
-    body: "Every week, hundreds of artworks sell 20–50% below their real market value. Not because they're bad — because most buyers don't have the data. Until now.",
-    cta: undefined,
-  },
-  {
-    tag: 'HOW YOU MAKE MONEY',
-    title: 'Buy undervalued. Sell at market price.',
-    body: 'Nautilus scores every lot from 0 to 100. A score above 65 means the work is priced below what comparable sales suggest. You buy the gap — and profit when the market corrects.',
-    cta: undefined,
-  },
-  {
-    tag: 'YOUR AI ANALYST',
-    title: 'You set the strategy. Larry does the work.',
-    body: 'Define your budget and preferences once. Larry — your private AI analyst — monitors every auction house 24/7 and alerts you the moment a matching opportunity appears.',
-    cta: undefined,
-  },
-  {
-    tag: 'THE EDGE',
-    title: 'You act before the market wakes up.',
-    body: 'Most buyers discover opportunities after the crowd. Nautilus surfaces them 2–4 weeks early. That window is where the money is made.',
-    cta: undefined,
-  },
-  {
-    tag: 'START NOW',
-    title: 'Your first opportunities are ready.',
-    body: "Based on your profile, Nautilus has already identified matching lots. Explore them now — and upgrade when you're ready to unlock the full suite.",
-    cta: 'Show me the opportunities →',
-  },
-];
-
 export function WelcomeTour({ onClose }: WelcomeTourProps) {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
   const [slide, setSlide] = useState(0);
   const [visible, setVisible] = useState(true);
   const [lots, setLots] = useState<any[]>([]);
   const [lotCount, setLotCount] = useState<string | null>(null);
+
+  const TOUR_STEPS = isFr ? [
+    {
+      tag: 'BIENVENUE SUR NAUTILUS',
+      title: "Le marché de l'art a un secret bien gardé.",
+      body: "Chaque semaine, des centaines d'œuvres se vendent 20–50% en dessous de leur vraie valeur de marché. Pas parce qu'elles sont mauvaises — mais parce que la plupart des acheteurs n'ont pas les données. Jusqu'à maintenant.",
+      cta: undefined,
+    },
+    {
+      tag: "COMMENT VOUS GAGNEZ DE L'ARGENT",
+      title: 'Achetez sous-évalué. Revendez au prix de marché.',
+      body: "Nautilus score chaque lot de 0 à 100. Un score supérieur à 65 signifie que l'œuvre est sous-évaluée par rapport aux ventes comparables. Vous achetez l'écart — et profitez de la correction du marché.",
+      cta: undefined,
+    },
+    {
+      tag: 'VOTRE ANALYSTE IA',
+      title: 'Vous définissez la stratégie. Larry fait le travail.',
+      body: "Définissez votre budget et vos préférences une fois. Larry — votre analyste IA privé — surveille chaque maison de vente 24h/24 et vous alerte dès qu'une opportunité correspondante apparaît.",
+      cta: undefined,
+    },
+    {
+      tag: "L'AVANTAGE",
+      title: 'Vous agissez avant que le marché ne se réveille.',
+      body: 'La plupart des acheteurs découvrent les opportunités après la foule. Nautilus les fait remonter 2–4 semaines plus tôt. C'est cette fenêtre qui génère les profits.',
+      cta: undefined,
+    },
+    {
+      tag: 'COMMENCER MAINTENANT',
+      title: 'Vos premières opportunités sont prêtes.',
+      body: "Sur la base de votre profil, Nautilus a déjà identifié des lots correspondants. Explorez-les maintenant — et passez à la version supérieure quand vous êtes prêt à débloquer la suite complète.",
+      cta: 'Voir mes opportunités →',
+    },
+  ] : [
+    {
+      tag: 'WELCOME TO NAUTILUS',
+      title: 'The art market has a dirty secret.',
+      body: "Every week, hundreds of artworks sell 20–50% below their real market value. Not because they're bad — because most buyers don't have the data. Until now.",
+      cta: undefined,
+    },
+    {
+      tag: 'HOW YOU MAKE MONEY',
+      title: 'Buy undervalued. Sell at market price.',
+      body: 'Nautilus scores every lot from 0 to 100. A score above 65 means the work is priced below what comparable sales suggest. You buy the gap — and profit when the market corrects.',
+      cta: undefined,
+    },
+    {
+      tag: 'YOUR AI ANALYST',
+      title: 'You set the strategy. Larry does the work.',
+      body: 'Define your budget and preferences once. Larry — your private AI analyst — monitors every auction house 24/7 and alerts you the moment a matching opportunity appears.',
+      cta: undefined,
+    },
+    {
+      tag: 'THE EDGE',
+      title: 'You act before the market wakes up.',
+      body: 'Most buyers discover opportunities after the crowd. Nautilus surfaces them 2–4 weeks early. That window is where the money is made.',
+      cta: undefined,
+    },
+    {
+      tag: 'START NOW',
+      title: 'Your first opportunities are ready.',
+      body: "Based on your profile, Nautilus has already identified matching lots. Explore them now — and upgrade when you're ready to unlock the full suite.",
+      cta: 'Show me the opportunities →',
+    },
+  ];
 
   useEffect(() => {
     fetch(`${API}/api/lots/public?limit=5&sort=deal_score`)
@@ -63,7 +97,7 @@ export function WelcomeTour({ onClose }: WelcomeTourProps) {
         const n = data?.total ?? data?.count ?? null;
         if (n && n > 0) {
           const label = n >= 1000 ? `${Math.floor(n / 100) / 10}K+` : `${n}`;
-          setLotCount(`${label} lots analyzed this week`);
+          setLotCount(isFr ? `${label} lots analysés cette semaine` : `${label} lots analyzed this week`);
         }
       })
       .catch(() => {});
@@ -74,9 +108,9 @@ export function WelcomeTour({ onClose }: WelcomeTourProps) {
 
   // Dynamic metric per slide
   const metric: string | null = (() => {
-    if (slide === 0) return lotCount ?? '674 lots analyzed this week';
-    if (slide === 1) return 'Avg. +31% upside on score 65+ lots';
-    if (slide === 3) return '24 days avg. lead time vs market';
+    if (slide === 0) return lotCount ?? (isFr ? '674 lots analysés cette semaine' : '674 lots analyzed this week');
+    if (slide === 1) return isFr ? 'Moy. +31% potentiel sur les lots score 65+' : 'Avg. +31% upside on score 65+ lots';
+    if (slide === 3) return isFr ? '24 jours d'avance moy. vs le marché' : '24 days avg. lead time vs market';
     return null;
   })();
 
@@ -171,7 +205,7 @@ export function WelcomeTour({ onClose }: WelcomeTourProps) {
                     </div>
                     {(heroLot.pct_below_low_estimate ?? 0) > 0 && (
                       <div style={{ background: 'rgba(37,99,235,0.9)', padding: '4px 10px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '11px', fontWeight: 700, color: 'white' }}>
-                        +{Math.round(heroLot.pct_below_low_estimate)}% upside
+                        +{Math.round(heroLot.pct_below_low_estimate)}% {isFr ? 'potentiel' : 'upside'}
                       </div>
                     )}
                   </div>
@@ -252,7 +286,7 @@ export function WelcomeTour({ onClose }: WelcomeTourProps) {
                 cursor: slide === 0 ? 'default' : 'pointer', padding: 0,
               }}
             >
-              ← Prev
+              {isFr ? '← Préc.' : '← Prev'}
             </button>
 
             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -283,7 +317,7 @@ export function WelcomeTour({ onClose }: WelcomeTourProps) {
               onMouseEnter={e => (e.currentTarget.style.background = '#1d4ed8')}
               onMouseLeave={e => (e.currentTarget.style.background = '#2563EB')}
             >
-              {isLast ? (current.cta ?? 'Get started →') : 'Next →'}
+              {isLast ? (current.cta ?? (isFr ? 'Commencer →' : 'Get started →')) : (isFr ? 'Suivant →' : 'Next →')}
             </button>
           </div>
 
@@ -292,7 +326,7 @@ export function WelcomeTour({ onClose }: WelcomeTourProps) {
               onClick={handleClose}
               style={{ background: 'none', border: 'none', fontSize: '11px', color: '#bbb', cursor: 'pointer', textDecoration: 'underline' }}
             >
-              Skip tour
+              {isFr ? 'Passer le tour' : 'Skip tour'}
             </button>
           </div>
         </div>
