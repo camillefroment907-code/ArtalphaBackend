@@ -417,6 +417,8 @@ function AgentPage() {
             {limits?.can_create && (
               <button
                 onClick={openCreateForm}
+                onMouseEnter={e => (e.currentTarget.style.background = '#F3F4F6')}
+                onMouseLeave={e => (e.currentTarget.style.background = '#F8F9FA')}
                 style={{
                   fontSize: 11, fontFamily: 'monospace', letterSpacing: '0.08em',
                   color: '#1A2A44', background: '#F8F9FA',
@@ -633,9 +635,10 @@ function AgentPage() {
               ))}
             </div>
             <div style={{
-              marginTop: 24,
-              padding: '24px 28px',
-              background: 'linear-gradient(135deg, #1A2A44 0%, #243552 100%)',
+              marginTop: 32,
+              padding: '20px 24px',
+              background: '#F9FAFB',
+              border: '1px solid #E8E4DC',
               borderRadius: 8,
               display: 'flex',
               justifyContent: 'space-between',
@@ -643,25 +646,25 @@ function AgentPage() {
               gap: 20,
             }}>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 600, color: 'white', marginBottom: 4, fontFamily: 'Georgia, serif' }}>
+                <div style={{ fontSize: 14, fontWeight: 500, color: '#1A2A44', marginBottom: 4 }}>
                   {isFr ? 'Ces opportunités vous intéressent ?' : 'Interested in these opportunities?'}
                 </div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)' }}>
+                <div style={{ fontSize: 13, color: '#6B7280' }}>
                   {isFr
-                    ? "Créez une stratégie et soyez alerté dès qu'un lot correspondant apparaît."
-                    : 'Create a strategy and get alerted the moment a matching lot appears.'}
+                    ? "Créez une stratégie pour être alerté automatiquement."
+                    : "Create a strategy to get alerted automatically."}
                 </div>
               </div>
               <button
                 onClick={openCreateForm}
                 style={{
-                  fontSize: 12, fontFamily: 'monospace', letterSpacing: '0.1em', fontWeight: 700,
-                  color: '#1A2A44', background: 'white',
-                  border: 'none', borderRadius: 2,
-                  padding: '12px 20px', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
+                  fontSize: 13, fontWeight: 600,
+                  color: 'white', background: '#1A2A44',
+                  border: 'none', borderRadius: 6,
+                  padding: '10px 20px', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
                 }}
               >
-                {isFr ? 'CRÉER UNE STRATÉGIE →' : 'CREATE STRATEGY →'}
+                {isFr ? 'Créer une stratégie' : 'Create a strategy'}
               </button>
             </div>
           </div>
