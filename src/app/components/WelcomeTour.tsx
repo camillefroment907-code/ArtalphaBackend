@@ -110,7 +110,7 @@ export function WelcomeTour({ onClose }: WelcomeTourProps) {
   const metric: string | null = (() => {
     if (slide === 0) return lotCount ?? (isFr ? '674 lots analysés cette semaine' : '674 lots analyzed this week');
     if (slide === 1) return isFr ? 'Moy. +31% potentiel sur les lots score 65+' : 'Avg. +31% upside on score 65+ lots';
-    if (slide === 3) return isFr ? '24 jours d'avance moy. vs le marché' : '24 days avg. lead time vs market';
+    if (slide === 3) return isFr ? "24 jours d'avance moy. vs le marché" : '24 days avg. lead time vs market';
     return null;
   })();
 
