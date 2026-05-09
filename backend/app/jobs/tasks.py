@@ -877,18 +877,50 @@ async def _run_ai_agents_async():
                 )
                 top_rec = top_rec_result.scalar_one_or_none()
                 if top_rec and top_rec.lot:
-                    await send_deal_alert_email(
-                        to_email=user.email,
-                        lot_title=top_rec.lot.title or "Untitled",
-                        artist_name=top_rec.lot.artist_name_raw or "Unknown",
-                        price=float(top_rec.lot.current_price or top_rec.lot.estimate_low or 0),
-                        estimate=float(top_rec.lot.estimate_high or top_rec.lot.estimate_low or 0),
-                        deal_score=int(top_rec.lot.deal_score or 0),
-                        upside_pct=float(top_rec.lot.pct_below_low_estimate or 0),
-                        lot_url=top_rec.lot.url or "",
-                        lot_id=str(top_rec.lot.id),
-                        lang="fr",
+                    lot = top_rec.lot
+                    est_low = lot.estimate_low or 0
+                    est_high = lot.estimate_high or est_low
+                    estimate_range = (
+                        f"€{est_low:,.0f} – €{est_high:,.0f}" if est_low else "N/A"
                     )
+                    sale_date = (
+                        lot.auction_date.strftime("%d %b %Y")
+                        if lot.auction_date else "TBD"
+                    )
+                    days_until_close = (
+                        max(0, (lot.auction_date - datetime.utcnow()).days)
+                        if lot.auction_date else 0
+                    )
+                    lot_url = f"https://www.get-nautilus.com/app/opportunities/{lot.id}"
+                    try:
+                        await send_deal_alert_email(
+                            to_email=user.email,
+                            artist_name=lot.artist_name_raw or "Unknown Artist",
+                            score=int(lot.deal_score or 0),
+                            auction_house=lot.auction_house_name or "",
+                            lot_title=lot.title or "Untitled",
+                            sale_date=sale_date,
+                            location="",
+                            estimate_range=estimate_range,
+                            upside_pct=int(lot.pct_below_low_estimate or 0),
+                            lot_url=lot_url,
+                            days_until_close=days_until_close,
+                            user_id=str(user.id),
+                        )
+                        logger.info(
+                            "agent_email_sent",
+                            user_id=str(user.id),
+                            alert_id=str(alert.id),
+                            lot_id=str(lot.id),
+                            score=int(lot.deal_score or 0),
+                        )
+                    except Exception as email_err:
+                        logger.error(
+                            "agent_email_failed",
+                            user_id=str(user.id),
+                            lot_id=str(lot.id),
+                            error=str(email_err),
+                        )
 
         await session.commit()
         logger.info("AI agents complete", total_recommendations=total_recs)
