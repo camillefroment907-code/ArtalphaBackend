@@ -391,10 +391,10 @@ function AgentPage() {
         </div>
       </div>
 
-      {/* ── TWO-COLUMN GRID ─────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '32px', padding: '32px 40px', alignItems: 'start' }}>
+      {/* ── SINGLE COLUMN ───────────────────────────────────── */}
+      <div style={{ maxWidth: '720px', margin: '0 auto', padding: '32px 40px' }}>
 
-        {/* ── LEFT: STRATEGIES LIST ──────────────────────────── */}
+        {/* ── STRATEGIES LIST ────────────────────────────────── */}
         <div>
           {/* Section header */}
           <div style={{ marginBottom: '20px' }}>
@@ -551,8 +551,6 @@ function AgentPage() {
             </button>
           )}
         </div>
-
-        {null}
       </div>
 
       {/* ── MODAL: CREATION FORM ────────────────────────── */}
