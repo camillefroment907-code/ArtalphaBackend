@@ -1398,7 +1398,7 @@ async def get_closing_today(
     filters = [
         Lot.auction_date <= cutoff,
         Lot.auction_date >= datetime.utcnow(),
-        Lot.status == LotStatus.UPCOMING,
+        Lot.hammer_price.is_(None),
     ]
     if min_score > 0:
         filters.append(Lot.deal_score >= min_score)
