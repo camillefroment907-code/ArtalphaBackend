@@ -383,6 +383,10 @@ async def trigger_agent_run(
     plan = await _get_user_plan(current_user, db)
     if current_user.email.strip() not in _ADMIN_EMAILS:
         raise HTTPException(403, "Admin only.")
+    import traceback
     from app.jobs.tasks import _run_ai_agents_async
-    await _run_ai_agents_async()
-    return {"status": "done"}
+    try:
+        await _run_ai_agents_async()
+        return {"status": "done"}
+    except Exception as exc:
+        return {"status": "error", "detail": str(exc), "trace": traceback.format_exc()}
