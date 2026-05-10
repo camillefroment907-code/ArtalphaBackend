@@ -838,7 +838,6 @@ async def _run_ai_agents_async():
                 and_(
                     Lot.scored_at >= lookback,
                     Lot.deal_score >= 45,
-                    Lot.status == LotStatus.UPCOMING,
                 )
             )
             .order_by(Lot.deal_score.desc())
