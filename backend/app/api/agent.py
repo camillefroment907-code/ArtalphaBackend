@@ -373,3 +373,16 @@ async def get_unread_count(
         )
     )
     return {"count": result.scalar() or 0}
+
+
+@router.post("/trigger-run", status_code=200)
+async def trigger_agent_run(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = await _get_user_plan(current_user, db)
+    if current_user.email.strip() not in _ADMIN_EMAILS:
+        raise HTTPException(403, "Admin only.")
+    from app.jobs.tasks import _run_ai_agents_async
+    await _run_ai_agents_async()
+    return {"status": "done"}

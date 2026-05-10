@@ -220,6 +220,7 @@ function AgentPage() {
   const [formError, setFormError] = useState('');
   const [matchCount, setMatchCount] = useState<number | null>(null);
   const [fallbackLots, setFallbackLots] = useState<any[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   // ── Form fields ───────────────────────────────────────────────
   const [fname, setFname]             = useState('');
@@ -517,10 +518,7 @@ function AgentPage() {
                             {alert.is_active ? (isFr ? 'Pause' : 'Pause') : (isFr ? 'Reprendre' : 'Resume')}
                           </button>
                           <button
-                            onClick={() => {
-                              if (window.confirm(isFr ? `Supprimer "${alert.name}" ?` : `Delete "${alert.name}"?`))
-                                handleDelete(alert.id);
-                            }}
+                            onClick={() => setConfirmDelete(alert.id)}
                             style={{ fontSize: 16, color: '#C0392B', background: 'none', border: 'none', cursor: 'pointer', padding: '0 3px', lineHeight: 1 }}
                           >×</button>
                         </div>
@@ -1077,6 +1075,62 @@ function AgentPage() {
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {confirmDelete && (
+        <div
+          onClick={() => setConfirmDelete(null)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(10,22,40,0.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000, backdropFilter: 'blur(2px)',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'white', borderRadius: 8, padding: '28px 32px',
+              width: 360, boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', color: 'var(--text-3)', marginBottom: 12 }}>
+              SUPPRIMER LA STRATÉGIE
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#1A2A44', marginBottom: 8 }}>
+              {isFr ? 'Confirmer la suppression' : 'Confirm deletion'}
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 24, lineHeight: 1.6 }}>
+              {isFr
+                ? 'Cette stratégie et toutes ses recommandations seront supprimées définitivement.'
+                : 'This strategy and all its recommendations will be permanently deleted.'}
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setConfirmDelete(null)}
+                style={{
+                  padding: '9px 18px', fontSize: 13, borderRadius: 4,
+                  background: 'transparent', border: '1px solid var(--border)',
+                  color: 'var(--text-2)', cursor: 'pointer',
+                  fontFamily: 'var(--font-mono)', letterSpacing: '0.04em',
+                }}
+              >
+                {isFr ? 'Annuler' : 'Cancel'}
+              </button>
+              <button
+                onClick={() => { handleDelete(confirmDelete); setConfirmDelete(null); }}
+                style={{
+                  padding: '9px 18px', fontSize: 13, borderRadius: 4,
+                  background: '#C0392B', border: 'none',
+                  color: 'white', cursor: 'pointer', fontWeight: 600,
+                  fontFamily: 'var(--font-mono)', letterSpacing: '0.04em',
+                }}
+              >
+                {isFr ? 'Supprimer' : 'Delete'}
+              </button>
+            </div>
           </div>
         </div>
       )}
