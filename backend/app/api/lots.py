@@ -1384,6 +1384,38 @@ async def get_public_lots(
     }
 
 
+@router.get("/closing-today")
+async def get_closing_today(
+    days: int = 1,
+    limit: int = 50,
+    min_score: float = 0,
+    db: AsyncSession = Depends(get_db),
+):
+    """Lots closing within N days, ordered by auction_date asc."""
+    from sqlalchemy import asc
+
+    cutoff = datetime.utcnow() + timedelta(days=days)
+    filters = [
+        Lot.auction_date <= cutoff,
+        Lot.auction_date >= datetime.utcnow(),
+        Lot.status == LotStatus.UPCOMING,
+    ]
+    if min_score > 0:
+        filters.append(Lot.deal_score >= min_score)
+
+    result = await db.execute(
+        select(Lot)
+        .where(and_(*filters))
+        .order_by(asc(Lot.auction_date))
+        .limit(limit)
+    )
+    lots = result.scalars().all()
+    return {
+        "total": len(lots),
+        "items": [lot_to_list_dict(lot) for lot in lots],
+    }
+
+
 @router.get("/{lot_id}")
 async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
