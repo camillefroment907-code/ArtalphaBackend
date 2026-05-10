@@ -806,6 +806,7 @@ async def _run_ai_agents_async():
             select(AgentAlert, User, Subscription)
             .join(User, AgentAlert.user_id == User.id)
             .join(Subscription, User.id == Subscription.user_id, isouter=True)
+            .options(selectinload(User.preferences))
             .where(
                 and_(
                     AgentAlert.is_active == True,  # noqa: E712
@@ -891,6 +892,9 @@ async def _run_ai_agents_async():
                         if lot.auction_date else 0
                     )
                     lot_url = f"https://www.get-nautilus.com/app/opportunities/{lot.id}"
+                    lang = "fr"
+                    if user.preferences and user.preferences.language:
+                        lang = user.preferences.language
                     try:
                         await send_deal_alert_email(
                             to_email=user.email,
@@ -905,6 +909,7 @@ async def _run_ai_agents_async():
                             lot_url=lot_url,
                             days_until_close=days_until_close,
                             user_id=str(user.id),
+                            lang=lang,
                         )
                         logger.info(
                             "agent_email_sent",

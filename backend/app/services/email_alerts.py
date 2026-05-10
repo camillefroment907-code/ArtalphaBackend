@@ -28,9 +28,11 @@ async def send_alert_exceptional_email(
     upside_pct: int, lot_url: str, days_until_close: int,
     user_id: Optional[str] = None, db=None,
     lot_image_url: Optional[str] = None,
+    lang: str = "fr",
 ) -> bool:
     """Email 19 — exceptional lot for followed artist (score >= 80)"""
     if not await _pref_ok(user_id, "exceptional_opportunity", db): return False
+    is_fr = lang == "fr"
     image_block = (
         f'<div style="padding:0 0 24px 0;">'
         f'<a href="{lot_url}" style="display:block;">'
@@ -39,10 +41,29 @@ async def send_alert_exceptional_email(
         f'</a>'
         f'</div>'
     ) if lot_image_url else ""
+    _label     = "OPPORTUNITÉ EXCEPTIONNELLE" if is_fr else "EXCEPTIONAL OPPORTUNITY"
+    _h1        = f"{artist_name} est en vente aux enchères." if is_fr else f"{artist_name} is going up for auction."
+    _body      = (
+        f"Une œuvre de <strong>{artist_name}</strong> a été identifiée par Nautilus avec un score de conviction de <strong>{score}/100</strong>. C'est l'un des signaux les plus forts de la semaine."
+        if is_fr else
+        f"A work by <strong>{artist_name}</strong> has been identified by Nautilus with a conviction score of <strong>{score}/100</strong>. This is one of the strongest signals we've seen this week."
+    )
+    _upside    = "de potentiel vs comparables" if is_fr else "upside vs comparables"
+    _cta       = "Voir cette opportunité" if is_fr else "View this opportunity"
+    _closing   = (
+        f"Ce lot se clôture dans {days_until_close} jour(s). Les scores au-dessus de 80 représentent nos signaux de plus haute conviction."
+        if is_fr else
+        f"This lot closes in {days_until_close} day(s). Conviction scores above 80 represent our highest confidence signals."
+    )
+    _subject   = (
+        f"ALERTE — {artist_name} score {score}/100 chez {auction_house}"
+        if is_fr else
+        f"ALERT — {artist_name} scoring {score}/100 at {auction_house}"
+    )
     content = f"""
-{label("EXCEPTIONAL OPPORTUNITY")}
-<h1>{artist_name} is going up for auction.</h1>
-<p>A work by <strong>{artist_name}</strong> has been identified by Nautilus with a conviction score of <strong>{score}/100</strong>. This is one of the strongest signals we've seen this week.</p>
+{label(_label)}
+<h1>{_h1}</h1>
+<p>{_body}</p>
 {image_block}<table cellpadding="0" cellspacing="0" width="100%" style="margin:20px 0;">
 <tr><td style="background:#F5F4F0;border-left:3px solid #C6A85A;padding:20px 24px;border-radius:0 8px 8px 0;">
   <div style="font-size:10px;color:#888;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:6px;">{artist_name.upper()}</div>
@@ -61,14 +82,13 @@ async def send_alert_exceptional_email(
       </td>
     </tr>
   </table>
-  <div style="font-size:13px;color:#2D7A4F;font-weight:500;">&#8593; +{upside_pct}% upside vs comparables</div>
+  <div style="font-size:13px;color:#2D7A4F;font-weight:500;">&#8593; +{upside_pct}% {_upside}</div>
 </td></tr>
 </table>
-<div style="text-align:center;">{cta("View this opportunity", lot_url, gold=True)}</div>
-<p style="color:#888888;font-size:13px;">This lot closes in {days_until_close} day(s). Conviction scores above 80 represent our highest confidence signals.</p>
+<div style="text-align:center;">{cta(_cta, lot_url, gold=True)}</div>
+<p style="color:#888888;font-size:13px;">{_closing}</p>
 """
-    return await send_email(to_email, f"ALERT — {artist_name} scoring {score}/100 at {auction_house}",
-                            html_email(content, f"Alert: {artist_name}"), ALERT_FROM)
+    return await send_email(to_email, _subject, html_email(content, f"Alert: {artist_name}"), ALERT_FROM)
 
 
 async def send_price_gap_alert_email(
