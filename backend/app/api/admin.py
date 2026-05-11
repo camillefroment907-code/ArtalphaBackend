@@ -1523,7 +1523,7 @@ async def get_finance(
     plan_prices = {"investor": 29, "pro": 49, "institutional": 199, "family_office": 149}
     rows = (await db.execute(
         select(Subscription.plan, func.count(Subscription.id))
-        .where(Subscription.status == SubscriptionStatus.active)
+        .where(Subscription.status == SubscriptionStatus.ACTIVE)
         .group_by(Subscription.plan)
     )).all()
     plan_counts = {str(r[0].value): r[1] for r in rows}
@@ -1599,7 +1599,7 @@ async def update_user_plan(
     await db.execute(
         update(Subscription)
         .where(Subscription.user_id == user_id)
-        .values(plan=new_plan, status=SubscriptionStatus.active)
+        .values(plan=new_plan, status=SubscriptionStatus.ACTIVE)
     )
     await db.commit()
     return {"status": "updated", "user_id": user_id, "new_plan": new_plan_str}
@@ -1615,7 +1615,7 @@ async def revoke_subscription(
     await db.execute(
         update(Subscription)
         .where(Subscription.user_id == user_id)
-        .values(status=SubscriptionStatus.canceled)
+        .values(status=SubscriptionStatus.CANCELED)
     )
     await db.commit()
     return {"status": "revoked", "user_id": user_id}
