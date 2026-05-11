@@ -970,10 +970,10 @@ export default function Portfolio() {
             </div>
 
             {showAddModal && (
-              <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,22,40,0.65)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px', overflowY: 'auto' }}
                 onClick={e => { if (e.target === e.currentTarget) setShowAddModal(false); }}
               >
-                <div style={{ background: 'white', borderRadius: 12, width: '520px', maxWidth: '92vw', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
+                <div style={{ background: 'white', borderRadius: 12, width: '520px', maxWidth: '92vw', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)', margin: 'auto' }}>
                   <div style={{ background: '#0A1628', padding: '22px 26px', borderRadius: '12px 12px 0 0' }}>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.18em', color: 'rgba(198,168,90,0.7)', textTransform: 'uppercase', marginBottom: 8 }}>
                       Nautilus · Collection
