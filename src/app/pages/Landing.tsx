@@ -178,7 +178,7 @@ export default function Landing() {
   const [lotCount, setLotCount]             = useState<number | null>(null);
   const [showStickyCTA, setShowStickyCTA]   = useState(false);
   const [closingSoonCount, setClosingSoonCount] = useState<number>(0);
-  const [bottomStats, setBottomStats] = useState({ total: 28677, closing: 3, exceptional: 12 });
+  const [bottomStats, setBottomStats] = useState<{ total: number | null, closing: number | null, exceptional: number | null }>({ total: null, closing: null, exceptional: null });
 
   useEffect(() => {
     // Public top lots for landing page preview (no auth required)
@@ -913,16 +913,16 @@ export default function Landing() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C6A85A', animation: 'pulseDot 2s infinite' }} />
             <span style={{ fontSize: '12px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
-              {bottomStats.total.toLocaleString('fr-FR')} lots suivis cette semaine
+              {bottomStats.total !== null ? bottomStats.total.toLocaleString('fr-FR') : '—'} lots suivis cette semaine
             </span>
           </div>
           <span style={{ color: 'var(--border)' }}>·</span>
           <span style={{ fontSize: '12px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
-            {bottomStats.exceptional} opportunités exceptionnelles identifiées
+            {bottomStats.exceptional !== null ? bottomStats.exceptional : '—'} opportunités exceptionnelles identifiées
           </span>
           <span style={{ color: 'var(--border)' }}>·</span>
           <span style={{ fontSize: '12px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
-            {bottomStats.closing} clôturent dans 48h
+            {bottomStats.closing !== null ? bottomStats.closing : '—'} clôturent dans 48h
           </span>
         </div>
       </div>

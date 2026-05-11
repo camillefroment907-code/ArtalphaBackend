@@ -1340,48 +1340,30 @@ async def get_auction_calendar(
 # ── Public endpoint (no auth) — MUST be before /{lot_id} to avoid route shadowing ──────────────
 
 @router.get("/public")
-@limiter.limit("20/minute")
 async def get_public_lots(
-    request: Request,
-    limit: int = Query(default=3, le=6),
-    sort: str = Query(default="deal_score"),
+    limit: int = Query(default=8, le=12),
+    sort: str = "deal_score",
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Public (unauthenticated) endpoint returning top N lots by deal_score.
-    Used by landing page Today's Signals section.
-    Returns minimal fields only — no sensitive pricing context.
-    """
-    order_col = desc(Lot.deal_score) if sort == "deal_score" else desc(Lot.created_at)
+    """Public endpoint — no auth required. Returns top lots for landing page."""
+    from sqlalchemy import desc
+
+    order_col = Lot.deal_score if sort == "deal_score" else Lot.created_at
+
     result = await db.execute(
         select(Lot)
-        .where(and_(
-            Lot.status.in_([LotStatus.UPCOMING, LotStatus.LIVE]),
-            Lot.market_type == MarketType.AUCTION,
-            Lot.deal_score.isnot(None),
-            Lot.title.isnot(None),
-        ))
-        .order_by(order_col)
-        .limit(min(limit, 3) * 2)
+        .where(
+            and_(
+                Lot.deal_score >= 75,
+                Lot.image_url.isnot(None),
+                Lot.hammer_price.is_(None),
+            )
+        )
+        .order_by(desc(order_col))
+        .limit(limit)
     )
-    lots = result.scalars().all()[:min(limit, 3)]
-    return {
-        "lots": [
-            {
-                "id": str(l.id),
-                "title": l.title,
-                "artist_name_raw": l.artist_name_raw,
-                "deal_score": l.deal_score,
-                "estimate_low": l.estimate_low,
-                "estimate_high": l.estimate_high,
-                "auction_house_name": l.auction_house_name,
-                "auction_date": l.auction_date.isoformat() if l.auction_date else None,
-                "image_url": l.image_url,
-                "category": l.category,
-            }
-            for l in lots
-        ]
-    }
+    lots = result.scalars().all()
+    return {"lots": [lot_to_list_dict(lot) for lot in lots]}
 
 
 @router.get("/closing-today")
