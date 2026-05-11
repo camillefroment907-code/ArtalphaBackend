@@ -1862,10 +1862,52 @@ export default function Portfolio() {
                           </div>
                           <div style={{ display: 'flex', gap: 8 }}>
                             <a href={h.url} target="_blank" rel="noopener noreferrer"
+                              onClick={async () => {
+                                try {
+                                  await fetch(`${BACKEND}/api/agent/track-event`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+                                    body: JSON.stringify({
+                                      event_type: 'sale_modal_click',
+                                      entity_type: 'auction_house',
+                                      entity_id: h.name,
+                                      properties: {
+                                        artwork_id: saleModal.id,
+                                        artwork_title: saleModal.title,
+                                        artist_name: saleModal.artist_name,
+                                        estimated_value: saleModal.estimated_current_value_eur || saleModal.purchase_price_eur,
+                                        auction_house: h.name,
+                                        price_tier: price >= 100000 ? '>100k' : price >= 20000 ? '20k-100k' : price >= 5000 ? '5k-20k' : '<5k',
+                                      }
+                                    })
+                                  });
+                                } catch {}
+                              }}
                               style={{ flex: 1, background: i === 0 ? '#2563EB' : 'transparent', color: i === 0 ? 'white' : 'var(--color-text-secondary)', border: i === 0 ? 'none' : '0.5px solid var(--color-border-tertiary)', borderRadius: 4, padding: '8px 0', fontSize: 11, fontFamily: 'var(--font-mono)', cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', letterSpacing: '0.05em' }}>
                               {currentLang === 'fr' ? 'Déposer mon œuvre →' : 'Submit my artwork →'}
                             </a>
                             <a href={`mailto:${h.contact}?subject=${encodeURIComponent(`Demande d'estimation - ${saleModal.artist_name} - ${saleModal.title}`)}&body=${encodeURIComponent(`Bonjour,\n\nJe souhaite faire estimer et mettre en vente l'œuvre suivante :\n\nArtiste : ${saleModal.artist_name}\nTitre : ${saleModal.title}\nAnnée : ${saleModal.year_created || 'N/A'}\nMédium : ${saleModal.medium || 'N/A'}\nValeur estimée : €${Math.round(saleModal.estimated_current_value_eur || saleModal.purchase_price_eur || 0).toLocaleString('fr-FR')}\n\nCordialement`)}`}
+                              onClick={async () => {
+                                try {
+                                  await fetch(`${BACKEND}/api/agent/track-event`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+                                    body: JSON.stringify({
+                                      event_type: 'sale_modal_email_click',
+                                      entity_type: 'auction_house',
+                                      entity_id: h.name,
+                                      properties: {
+                                        artwork_id: saleModal.id,
+                                        artwork_title: saleModal.title,
+                                        artist_name: saleModal.artist_name,
+                                        estimated_value: saleModal.estimated_current_value_eur || saleModal.purchase_price_eur,
+                                        auction_house: h.name,
+                                        price_tier: price >= 100000 ? '>100k' : price >= 20000 ? '20k-100k' : price >= 5000 ? '5k-20k' : '<5k',
+                                      }
+                                    })
+                                  });
+                                } catch {}
+                              }}
                               style={{ background: 'transparent', color: 'var(--color-text-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 4, padding: '8px 14px', fontSize: 11, fontFamily: 'var(--font-mono)', cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
                               ✉ Email
                             </a>

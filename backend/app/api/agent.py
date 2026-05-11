@@ -1,7 +1,7 @@
 """
 AI Agent API — Investor plan and above.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func, delete
 from sqlalchemy.orm import selectinload
@@ -14,7 +14,7 @@ from app.api.auth_utils import get_current_user
 from app.config import get_settings
 from app.models.db_models import (
     User, AgentAlert, AgentRecommendation,
-    Subscription, SubscriptionStatus,
+    Subscription, SubscriptionStatus, UserEvent,
 )
 
 router = APIRouter(prefix="/agent", tags=["agent"])
@@ -390,3 +390,24 @@ async def trigger_agent_run(
         return {"status": "done"}
     except Exception as exc:
         return {"status": "error", "detail": str(exc), "trace": traceback.format_exc()}
+
+
+@router.post("/track-event", status_code=201)
+async def track_event(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from datetime import datetime
+    body = await request.json()
+    event = UserEvent(
+        user_id=current_user.id,
+        event_type=body.get('event_type'),
+        entity_type=body.get('entity_type'),
+        entity_id=str(body.get('entity_id', '')),
+        properties=body.get('properties', {}),
+        created_at=datetime.utcnow(),
+    )
+    db.add(event)
+    await db.commit()
+    return {"status": "ok"}
