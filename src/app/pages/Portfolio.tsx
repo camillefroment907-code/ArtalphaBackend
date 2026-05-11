@@ -281,6 +281,9 @@ export default function Portfolio() {
   // ── AI Analysis ────────────────────────────────────────────
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [collectorBadge, setCollectorBadge] = useState<{
+    label: string; rank: number; color: string; topPct: string;
+  } | null>(null);
 
   // ── Watchlist ──────────────────────────────────────────────
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
@@ -378,7 +381,19 @@ export default function Portfolio() {
         fetch(`${BACKEND}/api/collection/items`, { headers: authHeaders() }),
       ]);
       if (statsRes.ok) setPortfolioStats(await statsRes.json());
-      if (itemsRes.ok) setPortfolioItems(await itemsRes.json());
+      if (itemsRes.ok) {
+        const items = await itemsRes.json();
+        setPortfolioItems(items);
+        const totalVal = items.reduce((sum: number, item: any) =>
+          sum + (item.current_estimated_value_eur || item.purchase_price_eur || 0), 0);
+        const badge =
+          totalVal >= 1_000_000 ? { label: 'Mécène', rank: 5, color: '#C6A85A', topPct: 'Top 1%' } :
+          totalVal >= 200_000   ? { label: 'Grand Collectionneur', rank: 4, color: '#C6A85A', topPct: 'Top 8%' } :
+          totalVal >= 50_000    ? { label: 'Amateur éclairé', rank: 3, color: '#1A2A44', topPct: 'Top 22%' } :
+          totalVal >= 5_000     ? { label: 'Collectionneur', rank: 2, color: '#6B7280', topPct: 'Top 45%' } :
+                                  { label: 'Curieux', rank: 1, color: '#9CA3AF', topPct: '' };
+        setCollectorBadge(badge);
+      }
     } catch { /* silent */ } finally {
       setPortfolioLoading(false);
     }
@@ -891,6 +906,26 @@ export default function Portfolio() {
                 </div>
               ))}
             </div>
+
+            {collectorBadge && (
+              <div style={{
+                display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
+                background: '#0A1628', borderRadius: 8, padding: '10px 18px',
+                marginBottom: 16,
+              }}>
+                <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'rgba(198,168,90,0.7)', marginBottom: 4 }}>
+                  {currentLang === 'fr' ? 'STATUT COLLECTIONNEUR' : 'COLLECTOR STATUS'}
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 500, color: 'white', marginBottom: 2 }}>
+                  ✦ {collectorBadge.label}
+                </div>
+                {collectorBadge.topPct && (
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
+                    {collectorBadge.topPct} {currentLang === 'fr' ? 'des membres' : 'of members'}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Collection header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
