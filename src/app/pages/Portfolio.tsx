@@ -529,21 +529,29 @@ export default function Portfolio() {
         body: JSON.stringify({
           artist_name: newArtwork.artist_name,
           title: newArtwork.title,
-          year: newArtwork.year ? parseInt(newArtwork.year) : null,
-          medium: newArtwork.medium,
+          year_created: newArtwork.year_created || null,
+          medium: newArtwork.medium || null,
           purchase_price_eur: parseFloat(newArtwork.purchase_price),
           current_estimated_value_eur: newArtwork.current_value ? parseFloat(newArtwork.current_value) : parseFloat(newArtwork.purchase_price),
-          purchase_date: newArtwork.acquisition_date,
-          purchase_source: newArtwork.acquisition_source,
-          target_sell_price: newArtwork.target_sell_price ? parseFloat(newArtwork.target_sell_price) : null,
-          target_sell_date: newArtwork.target_sell_date,
-          location: newArtwork.location,
-          condition: newArtwork.condition,
-          notes: newArtwork.notes,
+          purchase_date: newArtwork.purchase_date || null,
+          purchase_source: newArtwork.purchase_source || null,
+          purchase_auction_house: newArtwork.purchase_auction_house || null,
+          purchase_location: newArtwork.purchase_location || null,
+          country_of_origin: newArtwork.country_of_origin || null,
+          dimensions: newArtwork.dimensions || null,
+          condition: newArtwork.condition || null,
+          certificate_of_authenticity: newArtwork.certificate_of_authenticity === 'true',
+          authenticated_by: newArtwork.authenticated_by || null,
+          authentication_date: newArtwork.authentication_date || null,
+          catalogue_raisonne_reference: newArtwork.catalogue_raisonne_reference || null,
+          storage_location: newArtwork.storage_location || null,
+          insured_value_eur: newArtwork.insured_value_eur ? parseFloat(newArtwork.insured_value_eur) : null,
+          insurance_provider: newArtwork.insurance_provider || null,
+          notes: newArtwork.notes || null,
         }),
       });
       if (resp.ok) {
-        setNewArtwork({});
+        setNewArtwork({ artist_name: '', title: '', year_created: '', medium: '', purchase_price: '', current_value: '', purchase_date: '', purchase_source: '', purchase_auction_house: '', purchase_location: '', country_of_origin: '', dimensions: '', condition: '', certificate_of_authenticity: 'false', authenticated_by: '', authentication_date: '', catalogue_raisonne_reference: '', storage_location: '', insured_value_eur: '', insurance_provider: '', notes: '' });
         setShowAddModal(false);
         await loadPortfolio();
       }
@@ -941,7 +949,7 @@ export default function Portfolio() {
                   </a>
                 )}
                 <button
-                  onClick={() => { setNewArtwork({}); setShowAddModal(true); }}
+                  onClick={() => { setNewArtwork({ artist_name: '', title: '', year_created: '', medium: '', purchase_price: '', current_value: '', purchase_date: '', purchase_source: '', purchase_auction_house: '', purchase_location: '', country_of_origin: '', dimensions: '', condition: '', certificate_of_authenticity: 'false', authenticated_by: '', authentication_date: '', catalogue_raisonne_reference: '', storage_location: '', insured_value_eur: '', insurance_provider: '', notes: '' }); setShowAddModal(true); }}
                   style={{ padding: '8px 20px', background: 'var(--navy)', color: 'white', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}
                 >
                   {t('portfolio.addArtwork')}
@@ -957,83 +965,133 @@ export default function Portfolio() {
                   <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '6px' }}>Add artwork</h3>
                   <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '24px' }}>Track this work in your collection</p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Artist *</label>
-                      <input className="input" placeholder="e.g. Joan Miró" value={newArtwork.artist_name || ''} onChange={e => setNewArtwork(f => ({ ...f, artist_name: e.target.value }))} />
-                    </div>
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Title *</label>
-                      <input className="input" placeholder="e.g. Composition No. 12" value={newArtwork.title || ''} onChange={e => setNewArtwork(f => ({ ...f, title: e.target.value }))} />
+
+                    {/* ── SECTION 1 — Identification ── */}
+                    <div style={{ gridColumn: '1 / -1', fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 8, marginTop: 16, paddingBottom: 6, borderBottom: '0.5px solid var(--border)' }}>Identification</div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Artiste *</label>
+                      <input className="input" placeholder="Jean-Michel Basquiat" value={newArtwork.artist_name || ''} onChange={e => setNewArtwork(f => ({ ...f, artist_name: e.target.value }))} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Year</label>
-                      <input className="input" placeholder="e.g. 1968" value={newArtwork.year || ''} onChange={e => setNewArtwork(f => ({ ...f, year: e.target.value }))} />
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Titre *</label>
+                      <input className="input" placeholder="Untitled, 1982" value={newArtwork.title || ''} onChange={e => setNewArtwork(f => ({ ...f, title: e.target.value }))} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Medium</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Année de création</label>
+                      <input className="input" placeholder="1982" value={newArtwork.year_created || ''} onChange={e => setNewArtwork(f => ({ ...f, year_created: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Médium</label>
                       <select className="input" value={newArtwork.medium || ''} onChange={e => setNewArtwork(f => ({ ...f, medium: e.target.value }))}>
-                        <option value="">Select medium</option>
-                        <option value="Oil on canvas">Oil on canvas</option>
-                        <option value="Acrylic on canvas">Acrylic on canvas</option>
-                        <option value="Watercolor">Watercolor</option>
-                        <option value="Drawing">Drawing</option>
-                        <option value="Print / Lithograph">Print / Lithograph</option>
-                        <option value="Photography">Photography</option>
+                        <option value="">—</option>
+                        <option value="Peinture">Peinture</option>
                         <option value="Sculpture">Sculpture</option>
-                        <option value="Mixed media">Mixed media</option>
-                        <option value="Other">Other</option>
+                        <option value="Photographie">Photographie</option>
+                        <option value="Dessin">Dessin</option>
+                        <option value="Estampe">Estampe</option>
+                        <option value="Textile">Textile</option>
+                        <option value="Céramique">Céramique</option>
+                        <option value="Installation">Installation</option>
+                        <option value="Autre">Autre</option>
                       </select>
                     </div>
+
+                    {/* ── SECTION 2 — Acquisition ── */}
+                    <div style={{ gridColumn: '1 / -1', fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 8, marginTop: 16, paddingBottom: 6, borderBottom: '0.5px solid var(--border)' }}>Acquisition</div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Purchase price (€) *</label>
-                      <input className="input" type="number" placeholder="e.g. 12000" value={newArtwork.purchase_price || ''} onChange={e => setNewArtwork(f => ({ ...f, purchase_price: e.target.value }))} />
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Prix d'achat (€) *</label>
+                      <input className="input" type="number" placeholder="18000" value={newArtwork.purchase_price || ''} onChange={e => setNewArtwork(f => ({ ...f, purchase_price: e.target.value }))} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Est. current value (€)</label>
-                      <input className="input" type="number" placeholder="Leave blank if same" value={newArtwork.current_value || ''} onChange={e => setNewArtwork(f => ({ ...f, current_value: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Acquisition date</label>
-                      <input className="input" type="date" value={newArtwork.acquisition_date || ''} onChange={e => setNewArtwork(f => ({ ...f, acquisition_date: e.target.value }))} />
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Date d'achat</label>
+                      <input className="input" type="date" value={newArtwork.purchase_date || ''} onChange={e => setNewArtwork(f => ({ ...f, purchase_date: e.target.value }))} />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Source</label>
-                      <select className="input" value={newArtwork.acquisition_source || ''} onChange={e => setNewArtwork(f => ({ ...f, acquisition_source: e.target.value }))}>
-                        <option value="">Select source</option>
-                        <option value="auction">Auction house</option>
-                        <option value="gallery">Gallery</option>
-                        <option value="private">Private sale</option>
-                        <option value="art_fair">Art fair</option>
-                        <option value="online">Online platform</option>
-                        <option value="other">Other</option>
+                      <select className="input" value={newArtwork.purchase_source || ''} onChange={e => setNewArtwork(f => ({ ...f, purchase_source: e.target.value }))}>
+                        <option value="">—</option>
+                        <option value="auction">Vente aux enchères</option>
+                        <option value="gallery">Galerie</option>
+                        <option value="private">Particulier</option>
+                        <option value="art_fair">Foire d'art</option>
                       </select>
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Target exit price (€)</label>
-                      <input className="input" type="number" placeholder="e.g. 18000" value={newArtwork.target_sell_price || ''} onChange={e => setNewArtwork(f => ({ ...f, target_sell_price: e.target.value }))} />
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Maison de vente</label>
+                      <input className="input" placeholder="Christie's Paris" value={newArtwork.purchase_auction_house || ''} onChange={e => setNewArtwork(f => ({ ...f, purchase_auction_house: e.target.value }))} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Target exit date</label>
-                      <input className="input" type="date" value={newArtwork.target_sell_date || ''} onChange={e => setNewArtwork(f => ({ ...f, target_sell_date: e.target.value }))} />
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Lieu d'achat</label>
+                      <input className="input" placeholder="Paris, France" value={newArtwork.purchase_location || ''} onChange={e => setNewArtwork(f => ({ ...f, purchase_location: e.target.value }))} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Location</label>
-                      <input className="input" placeholder="e.g. Home, storage, on loan..." value={newArtwork.location || ''} onChange={e => setNewArtwork(f => ({ ...f, location: e.target.value }))} />
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Pays d'origine</label>
+                      <input className="input" placeholder="France" value={newArtwork.country_of_origin || ''} onChange={e => setNewArtwork(f => ({ ...f, country_of_origin: e.target.value }))} />
+                    </div>
+
+                    {/* ── SECTION 3 — Description physique ── */}
+                    <div style={{ gridColumn: '1 / -1', fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 8, marginTop: 16, paddingBottom: 6, borderBottom: '0.5px solid var(--border)' }}>Description physique</div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Dimensions</label>
+                      <input className="input" placeholder="120 × 90 cm" value={newArtwork.dimensions || ''} onChange={e => setNewArtwork(f => ({ ...f, dimensions: e.target.value }))} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Condition</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>État</label>
                       <select className="input" value={newArtwork.condition || ''} onChange={e => setNewArtwork(f => ({ ...f, condition: e.target.value }))}>
-                        <option value="">Select</option>
-                        <option value="mint">Mint</option>
+                        <option value="">—</option>
                         <option value="excellent">Excellent</option>
-                        <option value="good">Good</option>
-                        <option value="fair">Fair</option>
+                        <option value="good">Bon</option>
+                        <option value="fair">Correct</option>
+                        <option value="restore">À restaurer</option>
                       </select>
+                    </div>
+
+                    {/* ── SECTION 4 — Authentification ── */}
+                    <div style={{ gridColumn: '1 / -1', fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 8, marginTop: 16, paddingBottom: 6, borderBottom: '0.5px solid var(--border)' }}>Authentification</div>
+                    <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <input type="checkbox" id="coa" checked={newArtwork.certificate_of_authenticity === 'true'} onChange={e => setNewArtwork(f => ({ ...f, certificate_of_authenticity: e.target.checked ? 'true' : 'false' }))} />
+                      <label htmlFor="coa" style={{ fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>Certificat d'authenticité</label>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Expertisé par</label>
+                      <input className="input" placeholder="Expert ou institution" value={newArtwork.authenticated_by || ''} onChange={e => setNewArtwork(f => ({ ...f, authenticated_by: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Date d'expertise</label>
+                      <input className="input" type="date" value={newArtwork.authentication_date || ''} onChange={e => setNewArtwork(f => ({ ...f, authentication_date: e.target.value }))} />
                     </div>
                     <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Notes</label>
-                      <textarea className="input" placeholder="Provenance, exhibitions, certificate of authenticity..." value={newArtwork.notes || ''} onChange={e => setNewArtwork(f => ({ ...f, notes: e.target.value }))} style={{ minHeight: '60px', resize: 'vertical' }} />
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Référence catalogue raisonné</label>
+                      <input className="input" placeholder="Cat. raisonné n°..." value={newArtwork.catalogue_raisonne_reference || ''} onChange={e => setNewArtwork(f => ({ ...f, catalogue_raisonne_reference: e.target.value }))} />
                     </div>
+
+                    {/* ── SECTION 5 — Conservation ── */}
+                    <div style={{ gridColumn: '1 / -1', fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 8, marginTop: 16, paddingBottom: 6, borderBottom: '0.5px solid var(--border)' }}>Conservation</div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Lieu de stockage</label>
+                      <select className="input" value={newArtwork.storage_location || ''} onChange={e => setNewArtwork(f => ({ ...f, storage_location: e.target.value }))}>
+                        <option value="">—</option>
+                        <option value="home">Domicile</option>
+                        <option value="vault">Coffre-fort</option>
+                        <option value="gallery">Galerie</option>
+                        <option value="loan">Prêt</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Valeur assurée (€)</label>
+                      <input className="input" type="number" placeholder="Valeur assurée (€)" value={newArtwork.insured_value_eur || ''} onChange={e => setNewArtwork(f => ({ ...f, insured_value_eur: e.target.value }))} />
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Assureur</label>
+                      <input className="input" placeholder="AXA Art" value={newArtwork.insurance_provider || ''} onChange={e => setNewArtwork(f => ({ ...f, insurance_provider: e.target.value }))} />
+                    </div>
+
+                    {/* ── SECTION 6 — Notes ── */}
+                    <div style={{ gridColumn: '1 / -1', fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 8, marginTop: 16, paddingBottom: 6, borderBottom: '0.5px solid var(--border)' }}>Notes</div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <textarea className="input" rows={3} placeholder="Provenance, expositions, historique..." value={newArtwork.notes || ''} onChange={e => setNewArtwork(f => ({ ...f, notes: e.target.value }))} style={{ resize: 'vertical' }} />
+                    </div>
+
                   </div>
                   <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
                     <button onClick={() => setShowAddModal(false)} style={{ flex: 1, padding: '11px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '13px', color: 'var(--text-2)', cursor: 'pointer' }}>
