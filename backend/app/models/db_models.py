@@ -506,7 +506,7 @@ class PortfolioItem(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", backref="portfolio_items")
-    lot = relationship("Lot", backref="portfolio_references")
+    lot = relationship("Lot", foreign_keys=[lot_id], backref="portfolio_references")
 
     __table_args__ = (
         Index("ix_portfolio_user_id", "user_id"),
