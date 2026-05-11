@@ -1006,7 +1006,7 @@ export default function Portfolio() {
             </div>
 
             {showAddModal && (
-              <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, overflowY: 'auto', padding: '40px 20px' }}
+              <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '5vh', overflowY: 'auto' }}
                 onClick={e => { if (e.target === e.currentTarget) setShowAddModal(false); }}
               >
                 <div style={{ background: 'white', borderRadius: 12, width: '520px', maxWidth: '92vw', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)', margin: '0 auto' }}>
@@ -1342,7 +1342,7 @@ export default function Portfolio() {
 
                 {/* Add card */}
                 <div
-                  onClick={() => { setShowAddModal(true); setAddError(''); }}
+                  onClick={() => { setNewArtwork({ artist_name: '', title: '', year_created: '', medium: '', purchase_price: '', current_value: '', purchase_date: '', purchase_source: '', purchase_auction_house: '', purchase_location: '', country_of_origin: '', dimensions: '', condition: '', certificate_of_authenticity: 'false', authenticated_by: '', authentication_date: '', catalogue_raisonne_reference: '', storage_location: '', insured_value_eur: '', insurance_provider: '', notes: '' }); setShowAddModal(true); setAddError(''); }}
                   style={{ background: 'var(--bg-subtle)', border: '2px dashed var(--border)', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', minHeight: '280px', gap: '8px', transition: 'all 0.2s' }}
                   onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = 'var(--navy)'; el.style.background = 'rgba(10,22,40,0.03)'; }}
                   onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = 'var(--border)'; el.style.background = 'var(--bg-subtle)'; }}
@@ -1350,8 +1350,8 @@ export default function Portfolio() {
                   <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <span style={{ fontSize: '22px', color: 'white', lineHeight: 1 }}>+</span>
                   </div>
-                  <span style={{ fontSize: '13px', color: 'var(--text-2)', fontWeight: 600 }}>Add artwork</span>
-                  <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>Track value & performance</span>
+                  <span style={{ fontSize: '13px', color: 'var(--text-2)', fontWeight: 600 }}>{currentLang === 'fr' ? 'Ajouter une œuvre' : 'Add artwork'}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>{currentLang === 'fr' ? 'Suivez vos œuvres et leur valeur' : 'Track value & performance'}</span>
                 </div>
               </div>
             )}
