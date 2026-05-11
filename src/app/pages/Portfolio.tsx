@@ -375,7 +375,7 @@ export default function Portfolio() {
     try {
       const [statsRes, itemsRes] = await Promise.all([
         fetch(`${BACKEND}/api/portfolio/stats`, { headers: authHeaders() }),
-        fetch(`${BACKEND}/api/portfolio/items`, { headers: authHeaders() }),
+        fetch(`${BACKEND}/api/collection/items`, { headers: authHeaders() }),
       ]);
       if (statsRes.ok) setPortfolioStats(await statsRes.json());
       if (itemsRes.ok) setPortfolioItems(await itemsRes.json());
@@ -482,7 +482,7 @@ export default function Portfolio() {
     setAddLoading(true);
     setAddError('');
     try {
-      const res = await fetch(`${BACKEND}/api/portfolio/items`, {
+      const res = await fetch(`${BACKEND}/api/collection/items`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({
@@ -508,7 +508,7 @@ export default function Portfolio() {
   const handleAddArtwork = async () => {
     if (!newArtwork.artist_name || !newArtwork.title || !newArtwork.purchase_price) return;
     try {
-      const resp = await fetch(`${BACKEND}/api/portfolio/items`, {
+      const resp = await fetch(`${BACKEND}/api/collection/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({
@@ -550,7 +550,7 @@ export default function Portfolio() {
   async function handleSaveEdit(itemId: string) {
     setEditLoading(true);
     try {
-      const res = await fetch(`${BACKEND}/api/portfolio/items/${itemId}`, {
+      const res = await fetch(`${BACKEND}/api/collection/items/${itemId}`, {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({
@@ -573,7 +573,7 @@ export default function Portfolio() {
   async function removeItem(itemId: string) {
     setDeletingId(itemId);
     try {
-      await fetch(`${BACKEND}/api/portfolio/items/${itemId}`, { method: 'DELETE', headers: authHeaders() });
+      await fetch(`${BACKEND}/api/collection/items/${itemId}`, { method: 'DELETE', headers: authHeaders() });
       await loadPortfolio();
     } catch { /* ignore */ } finally {
       setDeletingId(null);
@@ -587,7 +587,7 @@ export default function Portfolio() {
     reader.onload = async () => {
       const base64 = reader.result as string;
       try {
-        await fetch(`${BACKEND}/api/portfolio/items/${itemId}`, {
+        await fetch(`${BACKEND}/api/collection/items/${itemId}`, {
           method: 'PUT',
           headers: authHeaders(),
           body: JSON.stringify({ image_url: base64 }),
