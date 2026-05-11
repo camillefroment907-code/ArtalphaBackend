@@ -1079,9 +1079,9 @@ async def bulk_ingest(body: dict = None) -> Dict[str, Any]:
                 skip_purge=skip_purge,
                 skip_rationale=True,  # never generate per-lot rationales during bulk ingest
             )
-            logger.info("bulk_ingest_complete", limit_per_source=limit_per_source)
+            _log.info("bulk_ingest_complete", extra={"limit_per_source": limit_per_source})
         except Exception as e:
-            logger.error("bulk_ingest_failed", error=str(e))
+            _log.error("bulk_ingest_failed", extra={"error": str(e)})
 
     _asyncio.create_task(_run())
 
@@ -1144,10 +1144,10 @@ async def historical_ingest(body: dict = None) -> Dict[str, Any]:
                     if lot.external_id not in seen_ids:
                         seen_ids.add(lot.external_id)
                         all_lots.append(lot)
-                logger.info("historical_ingest_artmarketapi", count=len(all_lots))
+                _log.info("historical_ingest_artmarketapi", extra={"count": len(all_lots)})
             except Exception as e:
                 _log.error(f"historical-ingest ArtMarket API FAILED: {e}", exc_info=True)
-                logger.error("historical_ingest_artmarketapi_failed", error=str(e))
+                _log.error("historical_ingest_artmarketapi_failed", extra={"error": str(e)})
 
             # Invaluable — past sold lots
             try:
@@ -1159,15 +1159,15 @@ async def historical_ingest(body: dict = None) -> Dict[str, Any]:
                         seen_ids.add(lot.external_id)
                         all_lots.append(lot)
                         added += 1
-                logger.info("historical_ingest_invaluable_past", count=added)
+                _log.info("historical_ingest_invaluable_past", extra={"count": added})
             except Exception as e:
                 _log.warning(f"historical-ingest Invaluable skipped: {e}", exc_info=True)
-                logger.warning("historical_ingest_invaluable_past_skipped", error=str(e))
+                _log.warning("historical_ingest_invaluable_past_skipped", extra={"error": str(e)})
 
             _historical_status["lots_fetched"] = len(all_lots)
 
             if not all_lots:
-                logger.info("historical_ingest_complete", inserted=0, reason="no_new_lots")
+                _log.info("historical_ingest_complete", extra={"inserted": 0, "reason": "no_new_lots"})
                 return
 
             # Monkey-patch aggregator and run main pipeline
@@ -1184,11 +1184,11 @@ async def historical_ingest(body: dict = None) -> Dict[str, Any]:
             finally:
                 _agg.fetch_all_lots = _orig
 
-            logger.info("historical_ingest_complete", candidates=len(all_lots))
+            _log.info("historical_ingest_complete", extra={"candidates": len(all_lots)})
 
         except Exception as e:
             _log.error(f"historical-ingest FAILED: {e}", exc_info=True)
-            logger.error("historical_ingest_failed", error=str(e))
+            _log.error("historical_ingest_failed", extra={"error": str(e)})
             _historical_status["error"] = str(e)
         finally:
             _historical_status["running"] = False
@@ -1483,3 +1483,179 @@ async def enrich_artist_nationality(body: dict = None) -> Dict[str, Any]:
         "max_artists": max_artists,
         "message": "Nationality enrichment running. Poll GET /api/admin/enrich-artist-nationality/status.",
     }
+
+
+# ── Admin dashboard endpoints ─────────────────────────────────────────────────
+
+@router.get("/users")
+async def list_users(
+    limit: int = 50,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(verify_admin),
+):
+    q = select(
+        User.id, User.email, User.created_at,
+        Subscription.plan, Subscription.status,
+        Subscription.current_period_end,
+    ).outerjoin(Subscription, Subscription.user_id == User.id)
+    q = q.order_by(User.created_at.desc()).limit(limit).offset(offset)
+    rows = (await db.execute(q)).all()
+    total = (await db.execute(select(func.count(User.id)))).scalar()
+    return {
+        "users": [{
+            "id": str(r.id),
+            "email": r.email,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "plan": str(r.plan.value) if r.plan else "free",
+            "subscription_status": str(r.status.value) if r.status else None,
+            "subscription_end": r.current_period_end.isoformat() if r.current_period_end else None,
+        } for r in rows],
+        "total": total,
+    }
+
+
+@router.get("/finance")
+async def get_finance(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(verify_admin),
+):
+    plan_prices = {"investor": 29, "pro": 49, "institutional": 199, "family_office": 149}
+    rows = (await db.execute(
+        select(Subscription.plan, func.count(Subscription.id))
+        .where(Subscription.status == SubscriptionStatus.active)
+        .group_by(Subscription.plan)
+    )).all()
+    plan_counts = {str(r[0].value): r[1] for r in rows}
+    mrr = sum(plan_prices.get(plan, 0) * count for plan, count in plan_counts.items())
+    return {
+        "mrr": mrr,
+        "arr": mrr * 12,
+        "plan_counts": plan_counts,
+        "total_paying": sum(plan_counts.values()),
+    }
+
+
+@router.get("/tracking")
+async def get_tracking(
+    days: int = 30,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(verify_admin),
+):
+    from app.models.db_models import UserEvent
+    since = datetime.utcnow() - timedelta(days=days)
+    rows = (await db.execute(
+        select(UserEvent.entity_id, UserEvent.event_type, func.count(UserEvent.id).label("clicks"))
+        .where(
+            UserEvent.event_type.in_(["sale_modal_click", "sale_modal_email_click"]),
+            UserEvent.created_at >= since,
+        )
+        .group_by(UserEvent.entity_id, UserEvent.event_type)
+        .order_by(func.count(UserEvent.id).desc())
+    )).all()
+    total = (await db.execute(
+        select(func.count(UserEvent.id)).where(UserEvent.created_at >= since)
+    )).scalar()
+    return {
+        "auction_house_clicks": [{"house": r.entity_id, "event_type": r.event_type, "clicks": r.clicks} for r in rows],
+        "total_events_30d": total,
+        "days": days,
+    }
+
+
+@router.get("/data-quality")
+async def get_data_quality(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(verify_admin),
+):
+    total = (await db.execute(select(func.count(Lot.id)))).scalar() or 1
+    with_image = (await db.execute(select(func.count(Lot.id)).where(Lot.image_url.isnot(None)))).scalar()
+    with_category = (await db.execute(select(func.count(Lot.id)).where(Lot.category.isnot(None)))).scalar()
+    live = (await db.execute(select(func.count(Lot.id)).where(Lot.hammer_price.is_(None)))).scalar()
+    return {
+        "total_lots": total,
+        "with_image": with_image,
+        "with_image_pct": round(with_image / total * 100, 1),
+        "with_category": with_category,
+        "with_category_pct": round(with_category / total * 100, 1),
+        "live_lots": live,
+    }
+
+
+@router.patch("/users/{user_id}/plan")
+async def update_user_plan(
+    user_id: str,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(verify_admin),
+):
+    from sqlalchemy import update
+    from app.models.db_models import SubscriptionPlan
+    new_plan_str = body.get("plan")
+    try:
+        new_plan = SubscriptionPlan(new_plan_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid plan: {new_plan_str}")
+    await db.execute(
+        update(Subscription)
+        .where(Subscription.user_id == user_id)
+        .values(plan=new_plan, status=SubscriptionStatus.active)
+    )
+    await db.commit()
+    return {"status": "updated", "user_id": user_id, "new_plan": new_plan_str}
+
+
+@router.patch("/users/{user_id}/revoke")
+async def revoke_subscription(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(verify_admin),
+):
+    from sqlalchemy import update
+    await db.execute(
+        update(Subscription)
+        .where(Subscription.user_id == user_id)
+        .values(status=SubscriptionStatus.canceled)
+    )
+    await db.commit()
+    return {"status": "revoked", "user_id": user_id}
+
+
+@router.get("/nps")
+async def get_nps(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(verify_admin),
+):
+    from app.models.db_models import UserEvent
+    rows = (await db.execute(
+        select(UserEvent.properties)
+        .where(UserEvent.event_type == "nps_response")
+        .order_by(UserEvent.created_at.desc())
+        .limit(100)
+    )).scalars().all()
+    scores = [int(p["score"]) for p in rows if p and "score" in p]
+    if not scores:
+        return {"nps": None, "responses": 0, "promoters": 0, "detractors": 0, "passives": 0}
+    promoters = sum(1 for s in scores if s >= 9)
+    detractors = sum(1 for s in scores if s <= 6)
+    nps = round((promoters / len(scores) - detractors / len(scores)) * 100)
+    return {
+        "nps": nps,
+        "responses": len(scores),
+        "promoters": promoters,
+        "detractors": detractors,
+        "passives": len(scores) - promoters - detractors,
+    }
+
+
+@router.get("/costs")
+async def get_costs(_: dict = Depends(verify_admin)):
+    costs = [
+        {"tool": "Railway", "cost_eur": 18, "category": "Infra"},
+        {"tool": "Neon DB", "cost_eur": 19, "category": "Infra"},
+        {"tool": "Vercel", "cost_eur": 0, "category": "Infra"},
+        {"tool": "OpenAI GPT-4o-mini", "cost_eur": 45, "category": "IA"},
+        {"tool": "Resend", "cost_eur": 14, "category": "Email"},
+        {"tool": "Stripe fees", "cost_eur": 37, "category": "Paiement"},
+    ]
+    return {"costs": costs, "total_monthly_eur": sum(c["cost_eur"] for c in costs)}
