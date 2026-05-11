@@ -13,6 +13,19 @@ const adminHeaders = () => ({
 const fmt = (n: number | null | undefined) =>
   n != null ? Math.round(n).toLocaleString('fr-FR') : '—';
 
+const planColor = (p: string) =>
+  p === 'institutional' ? '#B8922A' : p === 'pro' ? '#16A34A' :
+  p === 'investor' ? '#2563EB' : '#6B7280';
+
+const exportCSV = (data: any[], filename: string) => {
+  if (!data.length) return;
+  const keys = Object.keys(data[0]);
+  const csv = [keys.join(','), ...data.map(r => keys.map(k => `"${r[k] ?? ''}"`).join(','))].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = filename; a.click();
+};
+
 const TABS = [
   'Synthèse', 'Users', 'Finance', 'Scraping',
   'Tracking', 'SEO', 'Coûts', 'Data', 'Blog'
@@ -25,6 +38,27 @@ export default function AdminDashboard() {
   const [costs, setCosts] = useState<any>(null);
   const [nps, setNps] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState<any[]>([]);
+
+  const handleUpgradePlan = async (userId: string, newPlan: string) => {
+    await fetch(`${BACKEND}/api/admin/users/${userId}/plan`, {
+      method: 'PATCH', headers: adminHeaders(),
+      body: JSON.stringify({ plan: newPlan })
+    });
+    const r = await fetch(`${BACKEND}/api/admin/users?limit=200`, { headers: adminHeaders() });
+    const d = await r.json();
+    setUsers(d.users || []);
+  };
+
+  const handleRevoke = async (userId: string, email: string) => {
+    if (!window.confirm(`Révoquer l'abonnement de ${email} ?`)) return;
+    await fetch(`${BACKEND}/api/admin/users/${userId}/revoke`, {
+      method: 'PATCH', headers: adminHeaders()
+    });
+    const r = await fetch(`${BACKEND}/api/admin/users?limit=200`, { headers: adminHeaders() });
+    const d = await r.json();
+    setUsers(d.users || []);
+  };
 
   useEffect(() => {
     const h = adminHeaders();
@@ -33,12 +67,14 @@ export default function AdminDashboard() {
       fetch(`${BACKEND}/api/admin/costs`, { headers: h }).then(r => r.json()),
       fetch(`${BACKEND}/api/admin/nps`, { headers: h }).then(r => r.json()),
       fetch(`${BACKEND}/api/admin/lot-count`, { headers: h }).then(r => r.json()),
-    ]).then(([fin, cst, n, lots]) => {
+      fetch(`${BACKEND}/api/admin/users?limit=200`, { headers: h }).then(r => r.json()),
+    ]).then(([fin, cst, n, lots, usr]) => {
       setFinance(fin);
       setCosts(cst);
       setNps(n);
       setSynthese(lots);
       setLoading(false);
+      setUsers(usr?.users || []);
     }).catch(() => setLoading(false));
   }, []);
 
@@ -139,7 +175,69 @@ export default function AdminDashboard() {
             )}
           </div>
         )}
-        {activeTab === 1 && <div style={{ color: '#666', fontFamily: 'var(--font-mono)', fontSize: 12 }}>Chargement Users...</div>}
+        {activeTab === 1 && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                {users.length} users · hors comptes internes
+              </div>
+              <button onClick={() => exportCSV(users, 'nautilus_users.csv')}
+                style={{ fontSize: 10, fontFamily: 'var(--font-mono)', padding: '6px 14px', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 4, background: 'transparent', cursor: 'pointer', color: 'var(--color-text-secondary)' }}>
+                ↓ Export CSV
+              </button>
+            </div>
+            <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 10, overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ borderBottom: '0.5px solid var(--color-border-tertiary)', background: 'var(--color-background-secondary)' }}>
+                    {['Email', 'Plan', 'Inscrit', 'Statut', 'Fin abonnement', 'Actions'].map(col => (
+                      <th key={col} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: 'var(--color-text-secondary)', fontWeight: 500, textTransform: 'uppercase' }}>{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map(u => (
+                    <tr key={u.id} style={{ borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
+                      <td style={{ padding: '10px 14px', color: 'var(--color-text-primary)' }}>{u.email}</td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', padding: '2px 8px', borderRadius: 3, background: `${planColor(u.plan)}22`, color: planColor(u.plan) }}>
+                          {u.plan || 'free'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px', color: 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                        {u.created_at ? new Date(u.created_at).toLocaleDateString('fr-FR') : '—'}
+                      </td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <span style={{ fontSize: 11, color: u.subscription_status === 'ACTIVE' ? '#16A34A' : '#B8922A' }}>
+                          {u.subscription_status || 'free'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px', color: 'var(--color-text-secondary)', fontSize: 11 }}>
+                        {u.subscription_end ? new Date(u.subscription_end).toLocaleDateString('fr-FR') : '—'}
+                      </td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <select onChange={e => e.target.value && handleUpgradePlan(u.id, e.target.value)}
+                            defaultValue=""
+                            style={{ fontSize: 10, fontFamily: 'var(--font-mono)', padding: '4px 8px', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 3, background: 'transparent', cursor: 'pointer', color: 'var(--color-text-secondary)' }}>
+                            <option value="" disabled>↑ Plan</option>
+                            {['free','investor','pro','family_office','institutional'].map(p => (
+                              <option key={p} value={p}>{p}</option>
+                            ))}
+                          </select>
+                          <button onClick={() => handleRevoke(u.id, u.email)}
+                            style={{ fontSize: 10, fontFamily: 'var(--font-mono)', padding: '4px 10px', border: '0.5px solid rgba(192,57,43,0.3)', borderRadius: 3, background: 'rgba(192,57,43,0.05)', color: '#C0392B', cursor: 'pointer' }}>
+                            Révoquer
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
         {activeTab === 2 && <div style={{ color: '#666', fontFamily: 'var(--font-mono)', fontSize: 12 }}>Chargement Finance...</div>}
         {activeTab === 3 && <div style={{ color: '#666', fontFamily: 'var(--font-mono)', fontSize: 12 }}>Chargement Scraping...</div>}
         {activeTab === 4 && <div style={{ color: '#666', fontFamily: 'var(--font-mono)', fontSize: 12 }}>Chargement Tracking...</div>}
