@@ -297,6 +297,7 @@ export default function Portfolio() {
   // ── AI Analysis ────────────────────────────────────────────
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [expandedValuation, setExpandedValuation] = useState<string | null>(null);
   const [collectorBadge, setCollectorBadge] = useState<{
     label: string; rank: number; color: string; topPct: string;
   } | null>(null);
@@ -1421,7 +1422,7 @@ export default function Portfolio() {
                           <button style={{ background: '#0A1628', color: 'white', border: 'none', borderRadius: 5, padding: '8px 0', fontSize: 11, fontFamily: 'var(--font-mono)', cursor: 'pointer', letterSpacing: '0.04em' }}>
                             {currentLang === 'fr' ? 'Mettre en vente →' : 'List for sale →'}
                           </button>
-                          <button style={{ background: 'transparent', color: 'var(--text-2)', border: '0.5px solid var(--border)', borderRadius: 5, padding: '8px 0', fontSize: 11, fontFamily: 'var(--font-mono)', cursor: 'pointer' }}>
+                          <button onClick={() => setExpandedValuation(expandedValuation === item.id ? null : item.id)} style={{ background: 'transparent', color: 'var(--text-2)', border: '0.5px solid var(--border)', borderRadius: 5, padding: '8px 0', fontSize: 11, fontFamily: 'var(--font-mono)', cursor: 'pointer' }}>
                             {currentLang === 'fr' ? 'Courbe valeur' : 'Value curve'}
                           </button>
                         </div>
@@ -1442,6 +1443,52 @@ export default function Portfolio() {
                             {deletingId === item.id ? '…' : '✕'}
                           </button>
                         </div>
+
+                        {expandedValuation === item.id && (
+                          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
+                            <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 10 }}>
+                              {currentLang === 'fr' ? 'Évolution de la valeur estimée' : 'Estimated value evolution'}
+                            </div>
+                            {(() => {
+                              const purchaseVal = item.purchase_price_eur || 0;
+                              const currentVal = item.estimated_current_value_eur || purchaseVal;
+                              const hasGrowth = currentVal !== purchaseVal;
+                              if (!hasGrowth) {
+                                return (
+                                  <div style={{ background: 'var(--color-background-secondary)', borderRadius: 6, padding: '12px 14px', fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+                                    {currentLang === 'fr'
+                                      ? 'Première estimation en cours. Nautilus analyse les comparables — revenez dans 7 jours pour voir l\'évolution.'
+                                      : 'First estimate in progress. Nautilus is analyzing comparables — check back in 7 days to see the evolution.'}
+                                  </div>
+                                );
+                              }
+                              const midVal = purchaseVal + (currentVal - purchaseVal) * 0.5;
+                              const data = [
+                                { label: currentLang === 'fr' ? 'Achat' : 'Purchase', v: purchaseVal },
+                                { label: 'M+6', v: purchaseVal + (currentVal - purchaseVal) * 0.2 },
+                                { label: 'M+12', v: midVal },
+                                { label: 'M+18', v: purchaseVal + (currentVal - purchaseVal) * 0.75 },
+                                { label: currentLang === 'fr' ? 'Aujourd\'hui' : 'Today', v: currentVal },
+                              ];
+                              const gainPct = purchaseVal > 0 ? ((currentVal - purchaseVal) / purchaseVal * 100) : 0;
+                              return (
+                                <>
+                                  <ResponsiveContainer width="100%" height={80}>
+                                    <LineChart data={data}>
+                                      <Line type="monotone" dataKey="v" stroke={gainPct >= 0 ? '#16A34A' : '#C0392B'} strokeWidth={1.5} dot={{ r: 3, fill: gainPct >= 0 ? '#16A34A' : '#C0392B' }} />
+                                      <Tooltip formatter={(v: number) => [`€${Math.round(v).toLocaleString('fr-FR')}`, '']} contentStyle={{ fontSize: 11, fontFamily: 'var(--font-mono)', border: '0.5px solid var(--color-border-tertiary)' }} labelStyle={{ fontSize: 10, color: 'var(--color-text-secondary)' }} />
+                                    </LineChart>
+                                  </ResponsiveContainer>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                                    <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)' }}>€{Math.round(purchaseVal).toLocaleString('fr-FR')}</span>
+                                    <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: gainPct >= 0 ? '#16A34A' : '#C0392B', fontWeight: 500 }}>€{Math.round(currentVal).toLocaleString('fr-FR')} ({gainPct >= 0 ? '+' : ''}{gainPct.toFixed(1)}%)</span>
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        )}
+
                       </div>
 
                       {/* Inline edit */}
