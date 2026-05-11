@@ -58,7 +58,13 @@ export async function registerApi(email: string, password: string, name?: string
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Registration failed (${res.status})`);
+    const detail = err.detail;
+    const msg = typeof detail === 'string'
+      ? detail
+      : Array.isArray(detail)
+      ? detail.map((e: any) => e.msg || String(e)).join(', ')
+      : `Registration failed (${res.status})`;
+    throw new Error(msg);
   }
   return res.json();
 }

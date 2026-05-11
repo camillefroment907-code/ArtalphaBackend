@@ -19,23 +19,34 @@ export default function BillingSuccess() {
   useSEO({ title: 'Subscription Confirmed · Nautilus', noindex: true });
 
   useEffect(() => {
+    let cancelled = false;
     const sync = async () => {
-      // Wait for Stripe webhook to process (3s gives the backend time to handle the event)
-      await new Promise((r) => setTimeout(r, 3000));
-      try {
-        const sub = await getSubscription();
-        const user = getUser();
-        if (user && sub.plan) {
-          setUser({ ...user, plan: sub.plan as any });
+      // Poll every 2s up to 16s for webhook to update the plan from 'free'
+      const MAX_ATTEMPTS = 8;
+      for (let i = 0; i < MAX_ATTEMPTS; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        if (cancelled) return;
+        try {
+          const sub = await getSubscription();
+          if (sub.plan && sub.plan !== "free") {
+            const user = getUser();
+            if (user) setUser({ ...user, plan: sub.plan as any });
+            if (!cancelled) {
+              setPlan(sub.plan);
+              setStatus("success");
+              setTimeout(() => { if (!cancelled) navigate("/app/opportunities"); }, 4000);
+            }
+            return;
+          }
+        } catch {
+          // keep polling
         }
-        setPlan(sub.plan || "");
-        setStatus("success");
-        setTimeout(() => navigate("/app/opportunities"), 4000);
-      } catch {
-        setStatus("error");
       }
+      // Payment succeeded but webhook hasn't synced yet after 16s
+      if (!cancelled) setStatus("error");
     };
     sync();
+    return () => { cancelled = true; };
   }, []);
 
   return (
