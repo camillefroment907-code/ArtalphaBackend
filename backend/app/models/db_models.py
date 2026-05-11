@@ -443,6 +443,60 @@ class PortfolioItem(Base):
     estimated_current_value_eur = Column(Float, nullable=True)
     last_valuation_at = Column(DateTime, nullable=True)
 
+    # Artwork identity
+    artist_id                   = Column(UUID(as_uuid=True), ForeignKey("artists.id", ondelete="SET NULL"), nullable=True)
+    matched_lot_id              = Column(UUID(as_uuid=True), ForeignKey("lots.id", ondelete="SET NULL"), nullable=True)
+    matched_confidence          = Column(Float, nullable=True)
+    edition                     = Column(String(200), nullable=True)
+    condition                   = Column(String(100), nullable=True)
+    provenance                  = Column(Text, nullable=True)
+
+    # Extended purchase info
+    purchase_auction_house      = Column(String(300), nullable=True)
+    purchase_location           = Column(String(300), nullable=True)
+
+    # Authentication & documentation
+    certificate_of_authenticity = Column(Boolean, default=False)
+    authenticated_by            = Column(String(300), nullable=True)
+    authentication_date         = Column(DateTime, nullable=True)
+    authentication_document_url = Column(String(500), nullable=True)
+    catalogue_raisonne_reference = Column(String(300), nullable=True)
+    image_urls                  = Column(JSON, default=list)
+    document_urls               = Column(JSON, default=list)
+
+    # Valuation (extended)
+    current_estimated_value_eur = Column(Float, nullable=True)
+    last_estimated_at           = Column(DateTime, nullable=True)
+    estimation_confidence       = Column(Float, nullable=True)
+
+    # Sale management
+    sale_status                 = Column(String(50), nullable=True)
+    recommended_auction_house   = Column(String(200), nullable=True)
+    recommended_reserve_price   = Column(Float, nullable=True)
+    recommended_sale_timing     = Column(String(100), nullable=True)
+    timing_reasoning            = Column(Text, nullable=True)
+
+    # Insurance & storage
+    insured_value_eur           = Column(Float, nullable=True)
+    insurance_provider          = Column(String(200), nullable=True)
+    insurance_expiry_date       = Column(DateTime, nullable=True)
+    storage_location            = Column(String(300), nullable=True)
+    last_condition_report_date  = Column(DateTime, nullable=True)
+
+    # Succession
+    beneficiary_name            = Column(String(200), nullable=True)
+    beneficiary_contact         = Column(String(200), nullable=True)
+    inheritance_notes           = Column(Text, nullable=True)
+
+    # History & compliance
+    previous_owners             = Column(JSON, default=list)
+    exhibition_history          = Column(JSON, default=list)
+    literature_references       = Column(JSON, default=list)
+    auction_history             = Column(JSON, default=list)
+    country_of_origin           = Column(String(100), nullable=True)
+    acquisition_tax_paid_eur    = Column(Float, nullable=True)
+    import_duties_eur           = Column(Float, nullable=True)
+
     # User data
     notes = Column(Text, nullable=True)
     is_for_sale = Column(Boolean, default=False)
@@ -758,6 +812,27 @@ class CollectorDNA(Base):
     saved_lot_ids      = Column(JSON, default=list)
     dismissed_lot_ids  = Column(JSON, default=list)
 
+    # Collector profile (self-declared + inferred)
+    nationality                  = Column(String(100), nullable=True)
+    country_of_residence         = Column(String(100), nullable=True)
+    profession                   = Column(String(200), nullable=True)
+    annual_art_budget_eur        = Column(Float, nullable=True)
+    total_collection_value_eur   = Column(Float, nullable=True)
+    years_collecting             = Column(Integer, nullable=True)
+    favorite_periods             = Column(JSON, default=list)
+    favorite_movements           = Column(JSON, default=list)
+    geographic_focus             = Column(JSON, default=list)
+    liquidity_preference         = Column(String(50), nullable=True)
+    target_return_pct            = Column(Float, nullable=True)
+    tax_jurisdiction             = Column(String(100), nullable=True)
+    preferred_auction_houses     = Column(JSON, default=list)
+    preferred_galleries          = Column(JSON, default=list)
+    profile_completeness_pct     = Column(Float, nullable=True)
+    onboarding_completed_at      = Column(DateTime, nullable=True)
+    last_active_at               = Column(DateTime, nullable=True)
+    total_lots_viewed_all        = Column(Integer, default=0)
+    avg_session_duration_s       = Column(Float, nullable=True)
+
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -1051,4 +1126,216 @@ class EmergingArtist(Base):
         UniqueConstraint("artist_name", name="uq_emerging_artist_name"),
         Index("ix_emerging_artists_momentum", "momentum_score"),
         Index("ix_emerging_artists_birth_year", "birth_year"),
+    )
+
+
+class CollectionValuation(Base):
+    """AI-generated or manual valuation for a collection item."""
+    __tablename__ = "collection_valuations"
+
+    id                    = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    collection_item_id    = Column(UUID(as_uuid=True), ForeignKey("portfolio_items.id", ondelete="CASCADE"), nullable=False)
+    user_id               = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    estimated_value_eur   = Column(Float, nullable=False)
+    estimation_date       = Column(DateTime, nullable=False)
+    method                = Column(String(100), nullable=True)   # comparables/gpt/hybrid
+    confidence            = Column(Float, nullable=True)
+    comparables_used      = Column(JSON, default=list)
+    comparable_lots_ids   = Column(JSON, default=list)
+    market_trend_3m       = Column(Float, nullable=True)
+    market_trend_12m      = Column(Float, nullable=True)
+    liquidity_score       = Column(Float, nullable=True)         # 0-100
+    best_time_to_sell     = Column(String(50), nullable=True)    # now/q1/q2/q3/q4/wait
+    market_context        = Column(Text, nullable=True)
+    created_at            = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_collection_valuations_item_id", "collection_item_id"),
+        Index("ix_collection_valuations_user_id", "user_id"),
+        Index("ix_collection_valuations_date",    "estimation_date"),
+    )
+
+
+class CollectionLoan(Base):
+    """Loan of a collection item to an institution."""
+    __tablename__ = "collection_loans"
+
+    id                   = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    collection_item_id   = Column(UUID(as_uuid=True), ForeignKey("portfolio_items.id", ondelete="CASCADE"), nullable=False)
+    user_id              = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    institution_name     = Column(String(300), nullable=False)
+    exhibition_name      = Column(String(300), nullable=True)
+    loan_start_date      = Column(DateTime, nullable=True)
+    loan_end_date        = Column(DateTime, nullable=True)
+    loan_status          = Column(String(50), default="active")  # active/returned/extended
+    contact_name         = Column(String(200), nullable=True)
+    contact_email        = Column(String(200), nullable=True)
+    insurance_value_eur  = Column(Float, nullable=True)
+    notes                = Column(Text, nullable=True)
+    document_url         = Column(String(500), nullable=True)
+    created_at           = Column(DateTime, default=datetime.utcnow)
+    updated_at           = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_collection_loans_item_id",  "collection_item_id"),
+        Index("ix_collection_loans_user_id",  "user_id"),
+        Index("ix_collection_loans_status",   "loan_status"),
+    )
+
+
+class CollectionIntervention(Base):
+    """Restoration, cleaning, or other physical intervention on a collection item."""
+    __tablename__ = "collection_interventions"
+
+    id                   = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    collection_item_id   = Column(UUID(as_uuid=True), ForeignKey("portfolio_items.id", ondelete="CASCADE"), nullable=False)
+    user_id              = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    intervention_type    = Column(String(100), nullable=False)   # restoration/cleaning/framing/authentication/expertise/photography
+    intervention_date    = Column(DateTime, nullable=True)
+    provider             = Column(String(300), nullable=True)
+    cost_eur             = Column(Float, nullable=True)
+    notes                = Column(Text, nullable=True)
+    document_url         = Column(String(500), nullable=True)
+    before_image_url     = Column(String(500), nullable=True)
+    after_image_url      = Column(String(500), nullable=True)
+    created_at           = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_collection_interventions_item_id", "collection_item_id"),
+        Index("ix_collection_interventions_user_id", "user_id"),
+    )
+
+
+class SaleRequest(Base):
+    """User request to sell a collection item via Nautilus."""
+    __tablename__ = "sale_requests"
+
+    id                             = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    collection_item_id             = Column(UUID(as_uuid=True), ForeignKey("portfolio_items.id", ondelete="CASCADE"), nullable=False)
+    user_id                        = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    status                         = Column(String(50), default="draft")    # draft/submitted/matched/negotiating/sold/cancelled
+    preferred_auction_house        = Column(String(200), nullable=True)
+    reserve_price_eur              = Column(Float, nullable=True)
+    nautilus_recommended_house     = Column(String(200), nullable=True)
+    nautilus_recommended_price     = Column(Float, nullable=True)
+    nautilus_recommended_timing    = Column(String(100), nullable=True)
+    comparable_lots                = Column(JSON, default=list)
+    market_analysis                = Column(Text, nullable=True)
+    catalogue_notice_fr            = Column(Text, nullable=True)
+    catalogue_notice_en            = Column(Text, nullable=True)
+    comparables_report_url         = Column(String(500), nullable=True)
+    valuation_certificate_url      = Column(String(500), nullable=True)
+    estimated_capital_gain_eur     = Column(Float, nullable=True)
+    tax_rate_applicable            = Column(Float, nullable=True)
+    net_proceeds_after_tax_eur     = Column(Float, nullable=True)
+    buyer_user_id                  = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    transaction_status             = Column(String(50), nullable=True)
+    escrow_status                  = Column(String(50), nullable=True)
+    submitted_at                   = Column(DateTime, nullable=True)
+    matched_at                     = Column(DateTime, nullable=True)
+    sold_at                        = Column(DateTime, nullable=True)
+    sold_price_eur                 = Column(Float, nullable=True)
+    commission_rate                = Column(Float, nullable=True)
+    created_at                     = Column(DateTime, default=datetime.utcnow)
+    updated_at                     = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_sale_requests_item_id",  "collection_item_id"),
+        Index("ix_sale_requests_user_id",  "user_id"),
+        Index("ix_sale_requests_status",   "status"),
+    )
+
+
+class SaleDocument(Base):
+    """AI-generated document (catalogue notice, comparables report, etc.) for a sale."""
+    __tablename__ = "sale_documents"
+
+    id                   = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sale_request_id      = Column(UUID(as_uuid=True), ForeignKey("sale_requests.id", ondelete="CASCADE"), nullable=True)
+    collection_item_id   = Column(UUID(as_uuid=True), ForeignKey("portfolio_items.id", ondelete="CASCADE"), nullable=False)
+    user_id              = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    document_type        = Column(String(100), nullable=False)   # catalogue_notice/comparables_report/valuation_certificate/pitch_auction_house
+    content_html         = Column(Text, nullable=True)
+    content_pdf_url      = Column(String(500), nullable=True)
+    generated_at         = Column(DateTime, nullable=False)
+    generated_by         = Column(String(100), nullable=True)    # e.g. gpt-4o
+    language             = Column(String(10), default="fr")
+    created_at           = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_sale_documents_sale_request_id",    "sale_request_id"),
+        Index("ix_sale_documents_collection_item_id", "collection_item_id"),
+        Index("ix_sale_documents_user_id",            "user_id"),
+    )
+
+
+class PortfolioAlert(Base):
+    """Configurable alert for collection portfolio events."""
+    __tablename__ = "portfolio_alerts"
+
+    id                  = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id             = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    collection_item_id  = Column(UUID(as_uuid=True), ForeignKey("portfolio_items.id", ondelete="CASCADE"), nullable=True)
+    alert_type          = Column(String(100), nullable=False)    # value_increase/value_decrease/best_time_to_sell/similar_lot_upcoming/artist_record_broken/insurance_expiry/loan_ending/market_peak
+    threshold           = Column(Float, nullable=True)
+    is_active           = Column(Boolean, default=True)
+    last_triggered_at   = Column(DateTime, nullable=True)
+    similar_lot_id      = Column(UUID(as_uuid=True), ForeignKey("lots.id", ondelete="SET NULL"), nullable=True)
+    trigger_metadata    = Column(JSON, default=dict)
+    created_at          = Column(DateTime, default=datetime.utcnow)
+    updated_at          = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_portfolio_alerts_user_id",  "user_id"),
+        Index("ix_portfolio_alerts_item_id",  "collection_item_id"),
+        Index("ix_portfolio_alerts_type",     "alert_type"),
+    )
+
+
+class UserEvent(Base):
+    """Granular product analytics event emitted by the frontend or backend."""
+    __tablename__ = "user_events"
+
+    id           = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id      = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    session_id   = Column(String(100), nullable=True)
+    event_type   = Column(String(100), nullable=False)   # view_lot/save_lot/dismiss_lot/generate_memo/view_artist/search/filter/click_cta/view_portfolio/add_artwork/request_valuation/request_sale/view_collection_item/view_sale_request/agent_alert_created/agent_alert_triggered
+    entity_type  = Column(String(50), nullable=True)     # lot/artist/collection_item/sale_request
+    entity_id    = Column(String(100), nullable=True)
+    properties   = Column(JSON, default=dict)
+    page         = Column(String(200), nullable=True)
+    referrer     = Column(String(500), nullable=True)
+    device       = Column(String(100), nullable=True)
+    country      = Column(String(10), nullable=True)
+    ip_hash      = Column(String(100), nullable=True)
+    created_at   = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_user_events_user_event_date", "user_id", "event_type", "created_at"),
+        Index("ix_user_events_session_id",      "session_id"),
+        Index("ix_user_events_entity",          "entity_type", "entity_id"),
+    )
+
+
+class PlatformMetric(Base):
+    """Daily platform KPI snapshot for internal dashboards."""
+    __tablename__ = "platform_metrics"
+
+    id                           = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    snapshot_date                = Column(DateTime, nullable=False, unique=True)
+    total_users                  = Column(Integer, default=0)
+    total_paying_users           = Column(Integer, default=0)
+    total_collection_items       = Column(Integer, default=0)
+    total_aum_eur                = Column(Float, default=0)
+    total_sale_requests          = Column(Integer, default=0)
+    total_valuations_generated   = Column(Integer, default=0)
+    avg_collection_value_eur     = Column(Float, nullable=True)
+    top_artists_held             = Column(JSON, default=dict)
+    geographic_distribution      = Column(JSON, default=dict)
+    total_agent_alerts           = Column(Integer, default=0)
+    total_agent_emails_sent      = Column(Integer, default=0)
+    created_at                   = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_platform_metrics_snapshot_date", "snapshot_date"),
     )
