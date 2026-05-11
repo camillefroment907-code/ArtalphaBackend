@@ -990,6 +990,45 @@ export default function Portfolio() {
               </div>
             </div>
 
+            {/* ── AI INSIGHT BLOCK ────────────────────────────── */}
+            {portfolioItems.length > 0 && (() => {
+              const topArtist = portfolioItems[0]?.artist_name || '';
+              const gainStr = returnPct > 0
+                ? (currentLang === 'fr' ? `en hausse de +${returnPct.toFixed(1)}%` : `up +${returnPct.toFixed(1)}%`)
+                : returnPct < 0
+                ? (currentLang === 'fr' ? `en baisse de ${returnPct.toFixed(1)}%` : `down ${returnPct.toFixed(1)}%`)
+                : (currentLang === 'fr' ? 'stable' : 'stable');
+              const signalStr = marketSentiment?.overall === 'BULLISH'
+                ? (currentLang === 'fr' ? 'Les signaux de liquidité restent solides.' : 'Liquidity signals remain strong.')
+                : marketSentiment?.overall === 'BEARISH'
+                ? (currentLang === 'fr' ? 'Prudence recommandée sur les nouveaux achats.' : 'Caution recommended on new purchases.')
+                : (currentLang === 'fr' ? 'Le marché évolue dans un contexte stable.' : 'The market is evolving in a stable context.');
+              const insight = currentLang === 'fr'
+                ? `Votre collection de ${portfolioItems.length} œuvre${portfolioItems.length > 1 ? 's' : ''} est ${gainStr} depuis l'acquisition${topArtist ? `, portée principalement par ${topArtist}` : ''}. ${signalStr}${portfolioItems.length < 3 ? ' Ajoutez davantage d\'œuvres pour affiner l\'analyse Nautilus.' : ' Continuez à suivre les opportunités pour optimiser votre allocation.'}`
+                : `Your collection of ${portfolioItems.length} artwork${portfolioItems.length > 1 ? 's' : ''} is ${gainStr} since acquisition${topArtist ? `, led by ${topArtist}` : ''}. ${signalStr}${portfolioItems.length < 3 ? ' Add more artworks to refine Nautilus analysis.' : ' Keep tracking opportunities to optimize your allocation.'}`;
+              return (
+                <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '18px 20px', marginBottom: 20, display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#0A1628', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                    <span style={{ color: 'rgba(198,168,90,0.8)', fontSize: 14 }}>◎</span>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'var(--color-text-secondary)', marginBottom: 6, textTransform: 'uppercase' }}>
+                      Nautilus Intelligence · {currentLang === 'fr' ? 'Analyse portfolio' : 'Portfolio analysis'}
+                    </div>
+                    <div style={{ fontSize: 14, color: 'var(--color-text-primary)', lineHeight: 1.6, fontFamily: 'var(--font-serif)' }}>
+                      {insight}
+                    </div>
+                  </div>
+                  <button
+                    onClick={generatePortfolioAnalysis}
+                    disabled={aiLoading}
+                    style={{ background: 'transparent', color: 'var(--color-text-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 5, padding: '7px 14px', fontSize: 10, fontFamily: 'var(--font-mono)', cursor: aiLoading ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {currentLang === 'fr' ? 'Analyse complète →' : 'Full analysis →'}
+                  </button>
+                </div>
+              );
+            })()}
+
             {/* ── MA COLLECTION subheading ─────────────────────── */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <div>
