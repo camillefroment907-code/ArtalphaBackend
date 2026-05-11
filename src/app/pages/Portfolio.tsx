@@ -43,7 +43,7 @@ interface PortfolioStats {
 interface PortfolioItem {
   id: string;
   title: string;
-  artist_name: string | null;
+  artist_name: string;
   medium: string | null;
   dimensions: string | null;
   image_url: string | null;
@@ -55,6 +55,18 @@ interface PortfolioItem {
   asking_price_eur: number | null;
   gain_pct: number | null;
   created_at: string | null;
+  purchase_source: string | null;
+  purchase_auction_house: string | null;
+  purchase_location: string | null;
+  country_of_origin: string | null;
+  certificate_of_authenticity: boolean | null;
+  authenticated_by: string | null;
+  storage_location: string | null;
+  insured_value_eur: number | null;
+  insurance_provider: string | null;
+  timing_reasoning: string | null;
+  recommended_sale_timing: string | null;
+  year_created: string | null;
 }
 
 interface WatchlistLot {
@@ -1146,81 +1158,118 @@ export default function Portfolio() {
                   const currentVal = item.estimated_current_value_eur || item.purchase_price_eur;
                   const gainPct = item.gain_pct ?? null;
                   return (
-                    <div key={item.id}
-                      style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', transition: 'box-shadow 0.2s, transform 0.2s' }}
-                      onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)'; el.style.transform = 'translateY(-2px)'; }}
-                      onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = 'none'; el.style.transform = 'none'; }}
-                    >
-                      {/* Image */}
-                      <div style={{ height: '180px', background: 'var(--bg-subtle)', position: 'relative', overflow: 'hidden' }}>
+                    <div key={item.id} style={{ borderRadius: 12, border: '0.5px solid var(--border)', overflow: 'hidden' }}>
+
+                      {/* Image zone */}
+                      <div style={{ height: 160, position: 'relative', overflow: 'hidden' }}>
                         {item.image_url ? (
                           <img src={item.image_url} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
-                          <label htmlFor={`img-${item.id}`} style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', gap: '6px' }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <span style={{ fontSize: '18px', color: 'var(--text-3)' }}>+</span>
-                            </div>
-                            <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>Add photo</span>
-                            <input id={`img-${item.id}`} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleImageUpload(item.id, e)} />
-                          </label>
+                          <div style={{ width: '100%', height: '100%', background: '#F0EBE0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'rgba(0,0,0,0.2)' }}>Photo à ajouter</span>
+                          </div>
                         )}
-                        {gainPct != null && (
-                          <div style={{ position: 'absolute', top: '8px', right: '8px', padding: '3px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 700, background: gainPct >= 0 ? 'rgba(26,122,74,0.9)' : 'rgba(192,57,43,0.9)', color: 'white', fontFamily: 'var(--font-mono)' }}>
-                            {gainPct >= 0 ? '+' : ''}{gainPct.toFixed(1)}%
+                        {item.recommended_sale_timing && (
+                          <div style={{ position: 'absolute', top: 8, left: 8, background: '#C0392B', color: 'white', fontSize: 9, fontWeight: 700, padding: '3px 7px', borderRadius: 3, fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>
+                            🔥 VENDRE MAINTENANT
+                          </div>
+                        )}
+                        {item.certificate_of_authenticity && (
+                          <div style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(22,163,74,0.9)', color: 'white', fontSize: 9, fontWeight: 700, padding: '3px 7px', borderRadius: 3, fontFamily: 'var(--font-mono)' }}>
+                            ✓ Authentifié
                           </div>
                         )}
                       </div>
 
-                      {/* Info */}
-                      <div style={{ padding: '14px 16px' }}>
-                        {item.artist_name && (
-                          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--navy)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '2px' }}>
-                            {item.artist_name}
-                          </div>
-                        )}
-                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: 'var(--text)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {item.title}
-                        </div>
-                        {item.medium && (
-                          <div style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '10px' }}>{item.medium}</div>
-                        )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: 'var(--text)' }}>
-                              {fmt(currentVal)}
+                      {/* Body */}
+                      <div style={{ padding: 16 }}>
+
+                        {/* Artist / title + value row */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                          <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+                            {item.artist_name && (
+                              <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-3)', marginBottom: 2 }}>
+                                {item.artist_name}
+                              </div>
+                            )}
+                            <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {item.title}
                             </div>
-                            {item.estimated_current_value_eur && item.estimated_current_value_eur !== item.purchase_price_eur && (
-                              <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>paid {fmt(item.purchase_price_eur)}</div>
+                          </div>
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: '#1A7A4A' }}>
+                              {fmt(item.estimated_current_value_eur || item.purchase_price_eur)}
+                            </div>
+                            {gainPct != null && (
+                              <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: gainPct >= 0 ? '#1A7A4A' : '#C0392B' }}>
+                                {gainPct >= 0 ? '+' : ''}{gainPct.toFixed(1)}%
+                              </div>
                             )}
                           </div>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button
-                              onClick={() => editingId === item.id ? setEditingId(null) : openEditModal(item)}
-                              style={{ padding: '4px 10px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '10px', color: 'var(--text-2)', cursor: 'pointer' }}
-                            >
-                              {editingId === item.id ? 'Close' : 'Edit'}
-                            </button>
-                            <button
-                              onClick={() => removeItem(item.id)}
-                              disabled={deletingId === item.id}
-                              style={{ padding: '4px 8px', background: 'transparent', border: '1px solid rgba(192,57,43,0.3)', borderRadius: '4px', fontSize: '10px', color: '#C0392B', cursor: deletingId === item.id ? 'not-allowed' : 'pointer', opacity: deletingId === item.id ? 0.5 : 1 }}
-                            >
-                              {deletingId === item.id ? '…' : '×'}
-                            </button>
-                          </div>
                         </div>
-                        {/* Market timing indicator */}
-                        {gainPct != null && (
-                          <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <div style={{
-                              width: '6px', height: '6px', borderRadius: '50%',
-                              background: gainPct >= 20 ? 'var(--electric)' : gainPct >= 10 ? 'var(--gold)' : 'var(--text-ghost)',
-                            }} />
-                            <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-                              {gainPct >= 20 ? 'SELL WINDOW' : gainPct >= 10 ? 'HOLD' : 'BUILDING VALUE'}
+
+                        {/* Tags row */}
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 10 }}>
+                          {item.medium && (
+                            <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', background: 'var(--bg-subtle)', border: '0.5px solid var(--border)', borderRadius: 3, padding: '2px 6px', color: 'var(--text-3)' }}>
+                              {item.medium}
                             </span>
+                          )}
+                          {item.dimensions && (
+                            <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', background: 'var(--bg-subtle)', border: '0.5px solid var(--border)', borderRadius: 3, padding: '2px 6px', color: 'var(--text-3)' }}>
+                              {item.dimensions}
+                            </span>
+                          )}
+                          {item.purchase_date && (
+                            <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', background: 'var(--bg-subtle)', border: '0.5px solid var(--border)', borderRadius: 3, padding: '2px 6px', color: 'var(--text-3)' }}>
+                              {new Date(item.purchase_date).getFullYear()}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Conseil Nautilus */}
+                        {item.timing_reasoning ? (
+                          <div style={{ background: 'rgba(192,57,43,0.06)', border: '0.5px solid rgba(192,57,43,0.2)', borderRadius: 5, padding: '8px 10px', marginBottom: 10 }}>
+                            <div style={{ fontSize: 8, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', color: '#C0392B', textTransform: 'uppercase', marginBottom: 4 }}>Conseil Nautilus Intelligence</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-2)', lineHeight: 1.5 }}>{item.timing_reasoning}</div>
+                          </div>
+                        ) : (
+                          <div style={{ background: 'var(--bg-subtle)', border: '0.5px solid var(--border)', borderRadius: 5, padding: '8px 10px', marginBottom: 10 }}>
+                            <div style={{ fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic' }}>
+                              {currentLang === 'fr' ? 'Nautilus analyse le marché...' : 'Nautilus is analysing the market...'}
+                            </div>
                           </div>
                         )}
+
+                        {/* Divider */}
+                        <div style={{ borderTop: '0.5px solid var(--border)', marginBottom: 10 }} />
+
+                        {/* 2-col action buttons */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
+                          <button style={{ background: '#0A1628', color: 'white', border: 'none', borderRadius: 5, padding: '8px 0', fontSize: 11, fontFamily: 'var(--font-mono)', cursor: 'pointer', letterSpacing: '0.04em' }}>
+                            {currentLang === 'fr' ? 'Mettre en vente →' : 'List for sale →'}
+                          </button>
+                          <button style={{ background: 'transparent', color: 'var(--text-2)', border: '0.5px solid var(--border)', borderRadius: 5, padding: '8px 0', fontSize: 11, fontFamily: 'var(--font-mono)', cursor: 'pointer' }}>
+                            {currentLang === 'fr' ? 'Courbe valeur' : 'Value curve'}
+                          </button>
+                        </div>
+
+                        {/* Edit / delete row */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+                          <button
+                            onClick={() => editingId === item.id ? setEditingId(null) : openEditModal(item)}
+                            style={{ fontSize: 10, color: 'var(--text-2)', background: 'transparent', border: '0.5px solid var(--border)', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+                          >
+                            {currentLang === 'fr' ? (editingId === item.id ? 'Fermer' : 'Modifier') : (editingId === item.id ? 'Close' : 'Edit')}
+                          </button>
+                          <button
+                            onClick={() => removeItem(item.id)}
+                            disabled={deletingId === item.id}
+                            style={{ fontSize: 10, color: '#C0392B', background: 'transparent', border: '0.5px solid rgba(192,57,43,0.3)', borderRadius: 4, padding: '4px 8px', cursor: deletingId === item.id ? 'not-allowed' : 'pointer', opacity: deletingId === item.id ? 0.5 : 1, fontFamily: 'var(--font-mono)' }}
+                          >
+                            {deletingId === item.id ? '…' : '✕'}
+                          </button>
+                        </div>
                       </div>
 
                       {/* Inline edit */}
