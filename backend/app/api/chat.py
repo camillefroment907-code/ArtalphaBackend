@@ -30,7 +30,7 @@ _ADMIN_EMAILS = {e.strip() for e in _settings.admin_emails.split(",")}
 CHAT_LIMITS: dict[str, int] = {
     "free":          3,        # 3 lifetime messages (trial)
     "starter":       10,       # Collector €9 — 10/month
-    "investor":      30,       # €29 — 30/month
+    "investor":      20,       # €29 — 20/month
     "pro":           99999,    # Family Office — unlimited
     "institutional": 99999,    # unlimited
     "expert":        99999,
