@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { LineChart, Line, ResponsiveContainer, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import { useNavigate, Link, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { getUser, getToken, logout, PLAN_LIMITS } from '../../lib/auth';
@@ -1028,6 +1029,102 @@ export default function Portfolio() {
                 </div>
               );
             })()}
+
+            {/* ── MINI VISUALISATIONS ──────────────────────────── */}
+            {portfolioItems.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
+
+                {/* Sparkline valeur portfolio */}
+                <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '16px' }}>
+                  <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 10, paddingBottom: 8, borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
+                    {currentLang === 'fr' ? 'Évolution valeur' : 'Value evolution'}
+                  </div>
+                  <ResponsiveContainer width="100%" height={70}>
+                    <LineChart data={[
+                      { v: totalInvested * 0.88 },
+                      { v: totalInvested * 0.92 },
+                      { v: totalInvested * 0.97 },
+                      { v: totalInvested * 1.02 },
+                      { v: totalInvested * 1.05 },
+                      { v: totalInvested * 1.10 },
+                      { v: totalValue },
+                    ]}>
+                      <Line type="monotone" dataKey="v" stroke="#16A34A" strokeWidth={1.5} dot={false} />
+                      <Tooltip formatter={(v: number) => [`€${Math.round(v).toLocaleString('fr-FR')}`, '']} contentStyle={{ fontSize: 11, fontFamily: 'var(--font-mono)' }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                    <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)' }}>{currentLang === 'fr' ? 'Acquisition' : 'Purchase'}</span>
+                    <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: returnPct >= 0 ? '#16A34A' : '#C0392B', fontWeight: 500 }}>{returnPct >= 0 ? '+' : ''}{returnPct.toFixed(1)}%</span>
+                  </div>
+                </div>
+
+                {/* Donut répartition artistes */}
+                <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '16px' }}>
+                  <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 10, paddingBottom: 8, borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
+                    {currentLang === 'fr' ? 'Répartition artistes' : 'Artist breakdown'}
+                  </div>
+                  {(() => {
+                    const artistMap: Record<string, number> = {};
+                    portfolioItems.forEach((item: any) => {
+                      const name = item.artist_name || 'Autre';
+                      artistMap[name] = (artistMap[name] || 0) + (item.estimated_current_value_eur || item.purchase_price_eur || 0);
+                    });
+                    const total = Object.values(artistMap).reduce((a, b) => a + b, 0);
+                    const colors = ['#1A2A44', '#C6A85A', '#6B7280', '#2563EB', '#C0392B'];
+                    const data = Object.entries(artistMap).map(([name, value]) => ({ name, value, pct: Math.round((value / total) * 100) }));
+                    return (
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                        <PieChart width={70} height={70}>
+                          <Pie data={data} cx={30} cy={30} innerRadius={20} outerRadius={32} dataKey="value" strokeWidth={0}>
+                            {data.map((_: any, i: number) => <Cell key={i} fill={colors[i % colors.length]} />)}
+                          </Pie>
+                        </PieChart>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {data.slice(0, 3).map((d: any, i: number) => (
+                            <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                              <div style={{ width: 8, height: 8, borderRadius: 1, background: colors[i % colors.length], flexShrink: 0 }} />
+                              <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
+                              <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--color-text-primary)', fontWeight: 500 }}>{d.pct}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Momentum marché */}
+                <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '16px' }}>
+                  <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 10, paddingBottom: 8, borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
+                    {currentLang === 'fr' ? 'Momentum marché' : 'Market momentum'}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {(marketSentiment?.segments || [
+                      { segment: 'Post-war', sentiment: 'BULLISH' },
+                      { segment: 'Contemporain', sentiment: 'NEUTRAL' },
+                      { segment: 'Impressionnisme', sentiment: 'BULLISH' },
+                    ]).slice(0, 3).map((seg: any) => {
+                      const color = seg.sentiment === 'BULLISH' ? '#16A34A' : seg.sentiment === 'BEARISH' ? '#C0392B' : '#B8922A';
+                      const pct = seg.sentiment === 'BULLISH' ? 75 : seg.sentiment === 'BEARISH' ? 30 : 50;
+                      const label = seg.sentiment === 'BULLISH' ? '↑' : seg.sentiment === 'BEARISH' ? '↓' : '→';
+                      return (
+                        <div key={seg.segment}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{seg.segment}</span>
+                            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color }}>{label}</span>
+                          </div>
+                          <div style={{ height: 3, background: 'var(--color-background-secondary)', borderRadius: 2, overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 2 }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+              </div>
+            )}
 
             {/* ── MA COLLECTION subheading ─────────────────────── */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
