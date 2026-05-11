@@ -1494,14 +1494,18 @@ async def list_users(
     db: AsyncSession = Depends(get_db),
     _: dict = Depends(verify_admin),
 ):
+    EXCLUDED = {"camillefroment907@gmail.com", "morganefroment14@gmail.com", "t.delamoriniere@gmail.com"}
     q = select(
         User.id, User.email, User.created_at,
         Subscription.plan, Subscription.status,
         Subscription.current_period_end,
     ).outerjoin(Subscription, Subscription.user_id == User.id)
+    q = q.where(User.email.notin_(EXCLUDED))
     q = q.order_by(User.created_at.desc()).limit(limit).offset(offset)
     rows = (await db.execute(q)).all()
-    total = (await db.execute(select(func.count(User.id)))).scalar()
+    total = (await db.execute(
+        select(func.count(User.id)).where(User.email.notin_(EXCLUDED))
+    )).scalar()
     return {
         "users": [{
             "id": str(r.id),
@@ -1520,19 +1524,29 @@ async def get_finance(
     db: AsyncSession = Depends(get_db),
     _: dict = Depends(verify_admin),
 ):
+    EXCLUDED = {"camillefroment907@gmail.com", "morganefroment14@gmail.com", "t.delamoriniere@gmail.com"}
     plan_prices = {"investor": 29, "pro": 49, "institutional": 199, "family_office": 149}
     rows = (await db.execute(
         select(Subscription.plan, func.count(Subscription.id))
-        .where(Subscription.status == SubscriptionStatus.ACTIVE)
+        .join(User, User.id == Subscription.user_id)
+        .where(
+            Subscription.status == SubscriptionStatus.ACTIVE,
+            User.email.notin_(EXCLUDED),
+        )
         .group_by(Subscription.plan)
     )).all()
     plan_counts = {str(r[0].value): r[1] for r in rows}
     mrr = sum(plan_prices.get(plan, 0) * count for plan, count in plan_counts.items())
+    total_users = (await db.execute(
+        select(func.count(User.id))
+        .where(User.email.notin_(EXCLUDED))
+    )).scalar()
     return {
         "mrr": mrr,
         "arr": mrr * 12,
         "plan_counts": plan_counts,
         "total_paying": sum(plan_counts.values()),
+        "total_users": total_users,
     }
 
 
