@@ -961,9 +961,21 @@ export default function Portfolio() {
               <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,22,40,0.65)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
                 onClick={e => { if (e.target === e.currentTarget) setShowAddModal(false); }}
               >
-                <div style={{ background: 'white', borderRadius: '12px', padding: '32px', width: '100%', maxWidth: '560px', maxHeight: '90vh', overflow: 'auto' }}>
-                  <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '6px' }}>Add artwork</h3>
-                  <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '24px' }}>Track this work in your collection</p>
+                <div style={{ background: 'white', borderRadius: 12, width: '520px', maxWidth: '92vw', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
+                  <div style={{ background: '#0A1628', padding: '22px 26px', borderRadius: '12px 12px 0 0' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.18em', color: 'rgba(198,168,90,0.7)', textTransform: 'uppercase', marginBottom: 8 }}>
+                      Nautilus · Collection
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 400, color: 'white', marginBottom: 4 }}>
+                      {currentLang === 'fr' ? 'Ajouter une œuvre' : 'Add artwork'}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                      {currentLang === 'fr'
+                        ? 'Suivez la valeur et les performances de votre collection'
+                        : 'Track value & performance of your collection'}
+                    </div>
+                  </div>
+                  <div style={{ padding: '20px 26px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
 
                     {/* ── SECTION 1 — Identification ── */}
@@ -1093,17 +1105,13 @@ export default function Portfolio() {
                     </div>
 
                   </div>
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                    <button onClick={() => setShowAddModal(false)} style={{ flex: 1, padding: '11px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '13px', color: 'var(--text-2)', cursor: 'pointer' }}>
-                      Cancel
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '16px 26px', borderTop: '0.5px solid var(--border)' }}>
+                    <button onClick={() => setShowAddModal(false)} style={{ background: 'transparent', color: 'var(--text-2)', border: '0.5px solid var(--border)', borderRadius: 5, padding: '9px 16px', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer' }}>
+                      {currentLang === 'fr' ? 'Annuler' : 'Cancel'}
                     </button>
-                    <button
-                      onClick={handleAddArtwork}
-                      disabled={!newArtwork.artist_name || !newArtwork.title || !newArtwork.purchase_price}
-                      className="btn-electric"
-                      style={{ flex: 2, fontSize: '13px', padding: '11px', justifyContent: 'center', borderRadius: '8px', opacity: (!newArtwork.artist_name || !newArtwork.title || !newArtwork.purchase_price) ? 0.4 : 1 }}
-                    >
-                      Add to collection →
+                    <button onClick={handleAddArtwork} disabled={!newArtwork.artist_name || !newArtwork.title || !newArtwork.purchase_price} style={{ background: '#2563EB', color: 'white', border: 'none', borderRadius: 5, padding: '9px 20px', fontSize: 12, fontFamily: 'var(--font-mono)', letterSpacing: '0.07em', cursor: 'pointer', opacity: (!newArtwork.artist_name || !newArtwork.title || !newArtwork.purchase_price) ? 0.4 : 1 }}>
+                      {currentLang === 'fr' ? 'Ajouter à ma collection →' : 'Add to collection →'}
                     </button>
                   </div>
                 </div>
