@@ -1239,6 +1239,9 @@ class SaleRequest(Base):
     created_at                     = Column(DateTime, default=datetime.utcnow)
     updated_at                     = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    user  = relationship("User", foreign_keys=[user_id],       backref="sale_requests")
+    buyer = relationship("User", foreign_keys=[buyer_user_id], backref="purchases")
+
     __table_args__ = (
         Index("ix_sale_requests_item_id",  "collection_item_id"),
         Index("ix_sale_requests_user_id",  "user_id"),
