@@ -234,7 +234,7 @@ function FeatureRow({ label, value, active }: { label: string; value: string; ac
 
 export default function Portfolio() {
   const navigate = useNavigate();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
   const user = getUser();
   const plan = user?.email === 'camillefroment907@gmail.com' ? 'pro' : (user?.plan ?? 'free');
@@ -300,7 +300,7 @@ export default function Portfolio() {
     annualBudget: '', expectedReturn: '',
     preferredStyles: '', preferredRegions: '',
     goals: '', currency: 'EUR',
-    language: localStorage.getItem('i18nextLng') || 'en',
+    language: localStorage.getItem('i18nextLng') || (navigator.language?.startsWith('fr') ? 'fr' : 'en'),
   });
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
@@ -353,13 +353,13 @@ export default function Portfolio() {
 
   // ── Tabs ───────────────────────────────────────────────────
   const TABS = [
-    { key: 'collection', label: 'Collection' },
-    { key: 'risk', label: 'Risk Analysis', soon: true },
-    { key: 'watchlist', label: watchlist.length > 0 ? `Watchlist (${watchlist.length})` : 'Watchlist' },
-    { key: 'artists', label: favoriteArtists.length > 0 ? `Artists (${favoriteArtists.length})` : 'Artists' },
-    { key: 'alerts', label: 'Alerts' },
-    { key: 'settings', label: 'Settings' },
-    { key: 'subscription', label: 'Subscription' },
+    { key: 'collection', label: t('portfolio.collection') },
+    { key: 'risk', label: t('portfolio.riskAnalysis'), soon: true },
+    { key: 'watchlist', label: watchlist.length > 0 ? `${t('portfolio.watchlist')} (${watchlist.length})` : t('portfolio.watchlist') },
+    { key: 'artists', label: favoriteArtists.length > 0 ? `${t('portfolio.artists')} (${favoriteArtists.length})` : t('portfolio.artists') },
+    { key: 'alerts', label: t('portfolio.alerts') },
+    { key: 'settings', label: t('portfolio.settings') },
+    { key: 'subscription', label: t('portfolio.subscription') },
   ];
 
   // ── Auth helper ────────────────────────────────────────────
@@ -801,6 +801,7 @@ export default function Portfolio() {
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       localStorage.setItem('i18nextLng', settingsForm.language);
+      i18n.changeLanguage(settingsForm.language);
       setSettingsSaved(true);
       setTimeout(() => setSettingsSaved(false), 3000);
     } catch { /* silent */ }
@@ -877,12 +878,12 @@ export default function Portfolio() {
         {activeTab === 'collection' && (
           <div className="animate-fade-in">
             {/* Stats row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+            <div className="portfolio-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
               {[
-                { label: 'Total invested', value: fmt(totalInvested) },
-                { label: 'Est. value today', value: fmt(totalValue) },
-                { label: 'Total return', value: `${returnPct >= 0 ? '+' : ''}${returnPct.toFixed(1)}%`, highlight: returnPct > 0 },
-                { label: 'Works tracked', value: String(portfolioItems.length) },
+                { label: t('portfolio.totalInvestedLabel'), value: fmt(totalInvested) },
+                { label: t('portfolio.estValueLabel'), value: fmt(totalValue) },
+                { label: t('portfolio.totalReturnLabel'), value: `${returnPct >= 0 ? '+' : ''}${returnPct.toFixed(1)}%`, highlight: returnPct > 0 },
+                { label: t('portfolio.worksTracked'), value: String(portfolioItems.length) },
               ].map(({ label, value, highlight }) => (
                 <div key={label} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px' }}>
                   <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>{label}</div>
@@ -893,7 +894,7 @@ export default function Portfolio() {
 
             {/* Collection header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', margin: 0 }}>My Collection</h2>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', margin: 0 }}>{t('portfolio.myCollectionTitle')}</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {portfolioItems.length > 0 && (
                   <a
@@ -901,14 +902,14 @@ export default function Portfolio() {
                     download="nautilus_portfolio.csv"
                     style={{ fontSize: '11px', color: 'var(--text-3)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
-                    ↓ Export CSV
+                    {t('portfolio.exportCsv')}
                   </a>
                 )}
                 <button
                   onClick={() => { setNewArtwork({}); setShowAddModal(true); }}
                   style={{ padding: '8px 20px', background: 'var(--navy)', color: 'white', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}
                 >
-                  + Add artwork
+                  {t('portfolio.addArtwork')}
                 </button>
               </div>
             </div>
@@ -2298,7 +2299,7 @@ export default function Portfolio() {
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Language</label>
                   <select style={inputStyle}
                     value={settingsForm.language}
-                    onChange={e => { localStorage.setItem('i18nextLng', e.target.value); setSettingsForm(f => ({ ...f, language: e.target.value })); }}>
+                    onChange={e => { localStorage.setItem('i18nextLng', e.target.value); i18n.changeLanguage(e.target.value); setSettingsForm(f => ({ ...f, language: e.target.value })); }}>
                     <option value="en">English</option>
                     <option value="fr">Français</option>
                   </select>

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { getToken } from '../../lib/auth';
-import { dailyLots } from '../../lib/dailyStats';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -14,40 +13,47 @@ export default function SignalFeed() {
   const [countdown, setCountdown] = useState<Record<string, string>>({});
   const [portfolioValue, setPortfolioValue] = useState(0);
   const [portfolioReturn, setPortfolioReturn] = useState(0);
-  const [lotCount, setLotCount] = useState<number>(dailyLots());
+  const [lotCount, setLotCount] = useState<number>(0);
+  const [watchlistCount, setWatchlistCount] = useState(0);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [refreshKey, setRefreshKey] = useState(0);
 
+  // Auto-refresh every 2 minutes
   useEffect(() => {
-    fetch('https://artalpha-backend-production.up.railway.app/api/n8n/health-check', {
-      headers: { 'x-api-key': 'eee50ac99b4fca0ff5c5c205fe3ed79a' },
-    })
-      .then(r => r.json())
-      .then(d => { if (d.lot_count) setLotCount(d.lot_count); })
-      .catch(() => {});
+    const interval = setInterval(() => {
+      setRefreshKey(k => k + 1);
+      setLastRefresh(new Date());
+    }, 2 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     const token = getToken();
     const h: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
 
-    // Urgent lots closing today
-    fetch(`${BACKEND}/api/lots/upcoming?days=1&page_size=3`, { headers: h })
+    // Dashboard stats — total lots, avg score, deals today, real source count
+    fetch(`${BACKEND}/api/lots/stats`)
+      .then(r => r.json())
+      .then((d: any) => {
+        setLotCount(d.total_lots_tracked || 0);
+        setMarketStats(prev => ({
+          ...prev,
+          exceptional: d.deals_detected_today ?? prev.exceptional,
+          avgScore: d.avg_deal_score ? Math.round(d.avg_deal_score) : prev.avgScore,
+        }));
+      })
+      .catch(() => {});
+
+    // Lots closing today (within 24h) — "Ventes à ne pas manquer"
+    fetch(`${BACKEND}/api/lots/closing-today?days=1&limit=5&min_score=55`)
       .then(r => r.json())
       .then(d => setUrgentLots(d.items || []))
       .catch(() => {});
 
-    // Top signals — exceptional only
-    fetch(`${BACKEND}/api/lots?sort_by=deal_score&sort_dir=desc&min_score=75&page_size=6`, { headers: h })
+    // Top deals coming up in next 30 days — "Top Ventes du Mois"
+    fetch(`${BACKEND}/api/lots/closing-today?days=30&limit=8&min_score=65`)
       .then(r => r.json())
-      .then(d => {
-        const items = d.items || d.lots || [];
-        setTopLots(items);
-        const scores = items.map((l: any) => l.deal_score || 0).filter(Boolean);
-        setMarketStats({
-          total: d.total || items.length,
-          exceptional: items.filter((l: any) => l.deal_score >= 80).length,
-          avgScore: scores.length ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) : 0,
-        });
-      })
+      .then(d => setTopLots(d.items || []))
       .catch(() => {});
 
     // Market sentiment
@@ -61,13 +67,21 @@ export default function SignalFeed() {
       .then(r => r.json())
       .then(d => {
         const items = d.items || d || [];
-        const invested = items.reduce((s: number, i: any) => s + (i.purchase_price || 0), 0);
-        const value = items.reduce((s: number, i: any) => s + (i.current_value || i.purchase_price || 0), 0);
+        const invested = items.reduce((s: number, i: any) => s + (i.purchase_price_eur || 0), 0);
+        const value = items.reduce((s: number, i: any) => s + (i.estimated_current_value_eur || i.purchase_price_eur || 0), 0);
         setPortfolioValue(value);
         setPortfolioReturn(invested > 0 ? ((value - invested) / invested * 100) : 0);
       })
       .catch(() => {});
-  }, []);
+
+    // Watchlist count (auth required)
+    if (token) {
+      fetch(`${BACKEND}/api/portfolio/watchlist`, { headers: h })
+        .then(r => r.ok ? r.json() : [])
+        .then((d: any) => setWatchlistCount(Array.isArray(d) ? d.length : 0))
+        .catch(() => {});
+    }
+  }, [refreshKey]);
 
   // Live countdown — updates every second
   useEffect(() => {
@@ -103,11 +117,11 @@ export default function SignalFeed() {
       {/* ═══ KPI BAR ═══ */}
       <div style={{ background: 'var(--navy)', height: '48px', display: 'flex', alignItems: 'stretch', flexShrink: 0, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         {[
-          { label: 'CLOSING TODAY', value: urgentLots.length > 0 ? `${urgentLots.length} LOTS` : '—', color: urgentLots.length > 0 ? '#EF4444' : 'rgba(255,255,255,0.3)', pulse: urgentLots.length > 0 },
-          { label: 'EXCEPTIONAL', value: `${marketStats.exceptional}`, color: '#C6A85A', pulse: false },
-          { label: 'AVG SCORE', value: `${marketStats.avgScore}/100`, color: 'white', pulse: false },
-          { label: 'MARKET', value: sentiment?.overall || 'NEUTRAL', color: sentiment?.overall === 'BULLISH' ? '#34D399' : 'rgba(255,255,255,0.6)', pulse: false },
-          { label: 'MY PORTFOLIO', value: `€${portfolioValue.toLocaleString()}`, color: portfolioReturn >= 0 ? '#34D399' : '#EF4444', pulse: false },
+          { label: 'CLÔTURE AUJOURD\'HUI', value: urgentLots.length > 0 ? `${urgentLots.length} LOTS` : '—', color: urgentLots.length > 0 ? '#EF4444' : 'rgba(255,255,255,0.3)', pulse: urgentLots.length > 0 },
+          { label: 'EXCEPTIONNEL', value: `${marketStats.exceptional}`, color: '#C6A85A', pulse: false },
+          { label: 'SCORE MOY.', value: `${marketStats.avgScore}/100`, color: 'white', pulse: false },
+          { label: 'MARCHÉ', value: sentiment?.overall || 'NEUTRAL', color: sentiment?.overall === 'BULLISH' ? '#34D399' : 'rgba(255,255,255,0.6)', pulse: false },
+          { label: 'MON PORTFOLIO', value: `€${portfolioValue.toLocaleString()}`, color: portfolioReturn >= 0 ? '#34D399' : '#EF4444', pulse: false },
         ].map(({ label, value, color, pulse }, i) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 24px', borderRight: i < 4 ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
             {pulse && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#EF4444', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />}
@@ -119,12 +133,14 @@ export default function SignalFeed() {
         ))}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', paddingRight: '24px' }}>
           <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34D399' }} />
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.35)' }}>LIVE</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.35)' }}>
+            LIVE · {lastRefresh.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+          </span>
         </div>
       </div>
 
       {/* ═══ BODY ═══ */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 300px', overflow: 'hidden' }}>
+      <div className="signal-feed-layout" style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 300px', overflow: 'hidden' }}>
 
         {/* LEFT — Signal stream */}
         <div style={{ overflowY: 'auto', padding: '20px 24px' }}>
@@ -135,7 +151,7 @@ export default function SignalFeed() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444', animation: 'pulse 1s infinite' }} />
                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#EF4444', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>
-                  CLOSING TODAY — ACT NOW
+                  VENTES À NE PAS MANQUER AUJOURD'HUI
                 </span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -194,12 +210,12 @@ export default function SignalFeed() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>
-                  ⚡ TOP SIGNALS THIS WEEK
+                  TOP VENTES DU MOIS
                 </span>
               </div>
               <button onClick={() => navigate('/app/explore?tab=best')}
                 style={{ fontSize: '11px', color: 'var(--electric)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
-                View all →
+                Voir tout →
               </button>
             </div>
 
@@ -263,17 +279,17 @@ export default function SignalFeed() {
         </div>
 
         {/* RIGHT SIDEBAR */}
-        <div style={{ background: 'white', borderLeft: '1px solid var(--border)', overflowY: 'auto' }}>
+        <div className="signal-feed-sidebar" style={{ background: 'white', borderLeft: '1px solid var(--border)', overflowY: 'auto' }}>
 
           {/* Market stats */}
           <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border)' }}>
             <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '14px' }}>
-              Market Activity
+              Activité du marché
             </div>
             {[
-              { label: 'Lots tracked', value: lotCount.toLocaleString(), sub: 'Global coverage' },
-              { label: 'Avg conviction', value: `${marketStats.avgScore}/100`, sub: 'Current selection' },
-              { label: 'Exceptional', value: `${marketStats.exceptional}`, sub: 'Score ≥ 80' },
+              { label: 'Lots aux enchères', value: lotCount > 0 ? lotCount.toLocaleString() : '—', sub: 'Suivi en temps réel' },
+              { label: 'Score moyen', value: `${marketStats.avgScore}/100`, sub: 'Sélection actuelle' },
+              { label: 'Exceptionnels', value: `${marketStats.exceptional}`, sub: 'Score ≥ 80' },
             ].map(({ label, value, sub }) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--border-light)' }}>
                 <div>
@@ -290,7 +306,7 @@ export default function SignalFeed() {
             <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>
-                  Sentiment
+                  Sentiment marché
                 </div>
                 <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', padding: '2px 8px', borderRadius: '3px', background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
                   {sentiment.overall}
@@ -311,13 +327,13 @@ export default function SignalFeed() {
           {/* Quick actions */}
           <div style={{ padding: '18px 20px' }}>
             <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '12px' }}>
-              Quick Actions
+              Actions rapides
             </div>
             {[
-              { icon: '⚡', label: 'Exceptional lots', sub: 'Score 80+', action: () => navigate('/app/explore?tab=best'), color: '#C6A85A' },
-              { icon: '⏱', label: 'Closing in 24h', sub: 'Act now', action: () => navigate('/app/explore?tab=live'), color: '#EF4444' },
-              { icon: '◆', label: 'Generate AI memo', sub: 'Any lot', action: () => navigate('/app/explore'), color: 'var(--electric)' },
-              { icon: '★', label: 'My watchlist', sub: `${0} lots`, action: () => navigate('/app/portfolio?tab=watchlist'), color: 'var(--navy)' },
+              { icon: '⚡', label: 'Lots exceptionnels', sub: 'Score 80+', action: () => navigate('/app/explore?tab=best'), color: '#C6A85A' },
+              { icon: '⏱', label: 'Clôture dans 24h', sub: 'Agir maintenant', action: () => navigate('/app/explore?tab=live'), color: '#EF4444' },
+              { icon: '◆', label: 'Générer un mémo IA', sub: 'N\'importe quel lot', action: () => navigate('/app/explore'), color: 'var(--electric)' },
+              { icon: '★', label: 'Ma liste de suivi', sub: `${watchlistCount} lots`, action: () => navigate('/app/portfolio?tab=watchlist'), color: 'var(--navy)' },
             ].map(({ icon, label, sub, action, color }) => (
               <button key={label} onClick={action} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: '6px', marginBottom: '6px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy)'; (e.currentTarget as HTMLButtonElement).style.background = 'white'; }}

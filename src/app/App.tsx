@@ -1,5 +1,6 @@
-import { Suspense } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { RouterProvider } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { router } from './routes';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CookieBanner } from './components/CookieBanner';
@@ -14,6 +15,24 @@ const SuspenseFallback = (
 );
 
 export default function App() {
+  const { i18n } = useTranslation();
+  const [, forceUpdate] = useState(0);
+
+  useEffect(() => {
+    // Browser French → always French; otherwise use stored or English
+    const targetLang = navigator.language?.startsWith('fr') ? 'fr' : (localStorage.getItem('i18nextLng') || 'en');
+    localStorage.setItem('i18nextLng', targetLang);
+    if (i18n.language !== targetLang) {
+      i18n.changeLanguage(targetLang);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handler = () => forceUpdate(n => n + 1);
+    i18n.on('languageChanged', handler);
+    return () => i18n.off('languageChanged', handler);
+  }, [i18n]);
+
   return (
     <ErrorBoundary>
       <Suspense fallback={SuspenseFallback}>

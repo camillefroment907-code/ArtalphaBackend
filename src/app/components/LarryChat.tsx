@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getPlanLimits, getToken } from '../../lib/auth';
+import { getPlanLimits, getToken, getUserPlan } from '../../lib/auth';
 import { LarryFace } from './Larry';
 import type { LarryVariant } from './Larry';
 
@@ -46,6 +46,13 @@ function shuffle<T>(arr: T[]): T[] {
 let _counter = 0;
 function uid() { return `m-${++_counter}-${Date.now()}`; }
 
+const QUICK_ACTIONS = [
+  { label: 'Max bid?',  msg: 'What is the maximum I should bid on this lot including buyer premium? Lead with a single number in euros.' },
+  { label: 'Worth it?', msg: 'Is this lot worth buying at current price? Answer YES or NO then one reason.' },
+  { label: 'Key risk?', msg: 'What is the single biggest risk with this lot? One sentence.' },
+  { label: 'Exit?',     msg: 'When and how should I resell? Give timeframe and target price.' },
+];
+
 const cleanLarry = (text: string) =>
   text
     .replace(/\s*—\s*Larry[\s\S]*$/im, '')
@@ -53,10 +60,18 @@ const cleanLarry = (text: string) =>
     .replace(/—\s*Larry/gi, '')
     .trim();
 
-export function LarryChat({ lotId }: LarryChatProps) {
+export function LarryChat({ lotId: existingLotId }: LarryChatProps) {
   const { t } = useTranslation();
+  const getCurrentLotId = () => {
+    const path = window.location.pathname;
+    if (!path.includes('/opportunities/')) return null;
+    const id = path.split('/opportunities/')[1]?.split('/')[0];
+    return id || null;
+  };
   const limits = getPlanLimits();
   const isLocked = !limits.hasAIVerdict;
+  const userPlan = getUserPlan();
+  const canLiveMode = ['investor', 'pro', 'elite', 'institutional'].includes(userPlan);
   const ALL_SUGGESTIONS = t('larry.suggestions', { returnObjects: true }) as string[];
 
   const [open, setOpen] = useState(false);
@@ -67,6 +82,8 @@ export function LarryChat({ lotId }: LarryChatProps) {
   const [usage, setUsage] = useState<Usage | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [proactiveMessages, setProactiveMessages] = useState<any[]>([]);
+  const [liveMode, setLiveMode] = useState(false);
+  const [upcomingAlert, setUpcomingAlert] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isNewConversation = useRef(false);
@@ -105,6 +122,31 @@ export function LarryChat({ lotId }: LarryChatProps) {
       } catch { /* silent */ }
     }, 30_000);
     return () => clearTimeout(timer);
+  }, [open]);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    const checkUpcoming = async () => {
+      try {
+        const res = await fetch(`${API}/api/subscriptions/upcoming`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const now = new Date();
+        const valid = data.filter((s: any) => new Date(s.auction_date) > now);
+        if (valid.length > 0 && !open) {
+          if (sessionStorage.getItem(`dismissed_alert_${valid[0].id}`)) return;
+          setUpcomingAlert(valid[0]);
+        } else {
+          setUpcomingAlert(null);
+        }
+      } catch { /* silent */ }
+    };
+    checkUpcoming();
+    const interval = setInterval(checkUpcoming, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [open]);
 
   const fetchUsage = useCallback(async () => {
@@ -165,7 +207,7 @@ export function LarryChat({ lotId }: LarryChatProps) {
       const res = await fetch(`${API}/api/chat/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ message: text.trim(), lot_id: lotId }),
+        body: JSON.stringify({ message: text.trim(), lot_id: getCurrentLotId() || existingLotId, live_mode: liveMode }),
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
@@ -282,6 +324,7 @@ export function LarryChat({ lotId }: LarryChatProps) {
             background: '#ffffff',
             borderRadius: '16px',
             boxShadow: '0 12px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)',
+            border: liveMode ? '2px solid #C6A85A' : '2px solid transparent',
             display: 'flex',
             flexDirection: 'column',
             zIndex: 10000,
@@ -321,7 +364,7 @@ export function LarryChat({ lotId }: LarryChatProps) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '1px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#4ade80', flexShrink: 0 }} />
                 <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {t('larry.subtitle')}
+                  {liveMode ? 'Paste artist · lot · URL' : t('larry.subtitle')}
                 </div>
               </div>
             </div>
@@ -330,27 +373,57 @@ export function LarryChat({ lotId }: LarryChatProps) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
               {/* New conversation */}
               {messages.length > 0 && (
+                <>
+                  <button
+                    className="lc-new"
+                    onClick={newConversation}
+                    title="Nouvelle conversation"
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '8px',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'background 0.15s',
+                    }}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={newConversation}
+                    title="New conversation"
+                    style={{
+                      background: 'none', border: 'none',
+                      color: 'rgba(255,255,255,0.5)',
+                      cursor: 'pointer', fontSize: 16,
+                      padding: '4px 8px',
+                    }}
+                  >
+                    ✕ New
+                  </button>
+                </>
+              )}
+              {/* Live mode toggle */}
+              {canLiveMode && (
                 <button
-                  className="lc-new"
-                  onClick={newConversation}
-                  title="Nouvelle conversation"
+                  onClick={() => setLiveMode(!liveMode)}
                   style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'background 0.15s',
+                    background: liveMode ? '#C6A85A' : 'transparent',
+                    color: liveMode ? '#1A2A44' : '#C6A85A',
+                    border: '1px solid #C6A85A',
+                    borderRadius: 4, padding: '4px 12px',
+                    fontSize: 11, fontWeight: 700,
+                    letterSpacing: '0.1em', cursor: 'pointer',
                   }}
                 >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                  </svg>
+                  {liveMode ? '⚡ LIVE ON' : '⚡ LIVE'}
                 </button>
               )}
               {/* Usage */}
@@ -602,6 +675,30 @@ export function LarryChat({ lotId }: LarryChatProps) {
                 </div>
               )}
 
+              {/* Live mode quick actions */}
+              {liveMode && (
+                <div style={{ padding: '8px 12px 4px', background: '#fff', display: 'flex', flexWrap: 'wrap', gap: '6px', borderTop: '1px solid #f3f4f6' }}>
+                  {QUICK_ACTIONS.map(action => (
+                    <button
+                      key={action.label}
+                      onClick={() => sendMessage(action.msg)}
+                      disabled={streaming}
+                      style={{
+                        padding: '5px 10px', borderRadius: 4,
+                        border: '1px solid #C6A85A',
+                        background: 'transparent', color: '#C6A85A',
+                        fontSize: 11, fontWeight: 700,
+                        letterSpacing: '0.08em',
+                        cursor: streaming ? 'not-allowed' : 'pointer',
+                        opacity: streaming ? 0.5 : 1,
+                      }}
+                    >
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {/* Input */}
               {usage && !usage.can_chat && usage.limit > 0 ? (
                 <div style={{ padding: '14px 16px', background: '#fff', textAlign: 'center', fontSize: '12px', color: '#6b7280', borderTop: '1px solid #f3f4f6', flexShrink: 0 }}>
@@ -673,6 +770,60 @@ export function LarryChat({ lotId }: LarryChatProps) {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* ── UPCOMING AUCTION ALERT BANNER ── */}
+      {upcomingAlert && !open && (
+        <div style={{
+          position: 'fixed', bottom: 90, right: 24,
+          background: '#1A2A44',
+          border: '2px solid #C6A85A',
+          borderRadius: 12, padding: '12px 16px',
+          maxWidth: 280, zIndex: 999,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+        }}>
+          <div style={{
+            color: '#C6A85A', fontSize: 11,
+            fontFamily: 'var(--font-mono)',
+            letterSpacing: '0.1em', marginBottom: 6,
+          }}>
+            ⚡ AUCTION ALERT
+          </div>
+          <div style={{ color: 'white', fontSize: 13, marginBottom: 10 }}>
+            {upcomingAlert.artist_name || upcomingAlert.auction_house_name || 'A followed lot'} goes live soon
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => {
+                setOpen(true);
+                setLiveMode(true);
+                setUpcomingAlert(null);
+              }}
+              style={{
+                background: '#C6A85A', color: '#1A2A44',
+                border: 'none', borderRadius: 4,
+                padding: '6px 12px', fontSize: 11,
+                fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              Open Larry Live
+            </button>
+            <button
+              onClick={() => {
+                sessionStorage.setItem(`dismissed_alert_${upcomingAlert.id}`, 'true');
+                setUpcomingAlert(null);
+              }}
+              style={{
+                background: 'none', color: 'rgba(255,255,255,0.5)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: 4, padding: '6px 12px',
+                fontSize: 11, cursor: 'pointer',
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 

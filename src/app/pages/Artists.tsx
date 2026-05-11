@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { getPlanLimits } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 export default function Artists() {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
   const limits = getPlanLimits();
   const [topArtists, setTopArtists] = useState<any[]>([]);
   const [loadingArtists, setLoadingArtists] = useState(true);
@@ -164,7 +167,7 @@ export default function Artists() {
         {/* Recently tracked artists */}
         <div style={{ marginTop: '32px' }}>
           <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '16px' }}>
-            RECENTLY TRACKED ARTISTS
+            {isFr ? 'ARTISTES RÉCEMMENT SUIVIS' : 'RECENTLY TRACKED ARTISTS'}
           </div>
 
           {loadingArtists ? (

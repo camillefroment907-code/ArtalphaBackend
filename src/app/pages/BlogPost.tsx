@@ -3,6 +3,7 @@
  */
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { useSEO } from '../../lib/useSEO';
 import { Logo } from '../components/Logo';
 
@@ -15,20 +16,34 @@ function formatDate(iso: string | null) {
 
 export default function BlogPostPage() {
   const { slug } = useParams<{ slug: string }>();
-  const [post, setPost]     = useState<any>(null);
+  const { i18n } = useTranslation();
+  const lang: 'fr' | 'en' = i18n.language?.startsWith('fr') ? 'fr' : 'en';
+  const [post, setPost]       = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError]   = useState('');
+  const [error, setError]     = useState('');
+
+  const localize = (field: any): string => {
+    if (!field) return '';
+    if (typeof field !== 'string') return String(field);
+    try {
+      const parsed = JSON.parse(field);
+      if (typeof parsed === 'object' && parsed !== null) {
+        return parsed[lang] || parsed['en'] || parsed['fr'] || field;
+      }
+    } catch {}
+    return field;
+  };
 
   useSEO({
-    title: post ? `${post.title} · Nautilus` : 'Art Market Intelligence · Nautilus',
-    description: post?.excerpt || 'Art market analysis and investment signals from Nautilus.',
+    title: post ? `${localize(post.title)} · Nautilus` : 'Art Market Intelligence · Nautilus',
+    description: post ? localize(post.excerpt) : 'Art market analysis and investment signals from Nautilus.',
     image: post?.cover_image || undefined,
     ogType: 'article',
     schema: post ? {
       '@context': 'https://schema.org',
       '@type': 'Article',
-      headline: post.title,
-      description: post.excerpt,
+      headline: localize(post.title),
+      description: localize(post.excerpt),
       image: post.cover_image,
       author: { '@type': 'Person', name: post.author },
       datePublished: post.published_at,
@@ -56,7 +71,33 @@ export default function BlogPostPage() {
         <Link to="/" style={{ textDecoration: 'none' }}>
           <Logo variant="horizontal" color="dark" size={24} />
         </Link>
-        <Link to="/blog" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>← All articles</Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {/* Language toggle */}
+          <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-subtle)', borderRadius: '6px', padding: '2px', border: '1px solid var(--border)' }}>
+            {(['fr', 'en'] as const).map(l => (
+              <button
+                key={l}
+                onClick={() => { i18n.changeLanguage(l); localStorage.setItem('i18nextLng', l); }}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  fontFamily: 'var(--font-mono)',
+                  letterSpacing: '0.08em',
+                  background: lang === l ? 'var(--navy)' : 'transparent',
+                  color: lang === l ? 'white' : 'var(--text-3)',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          <Link to="/blog" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>← All articles</Link>
+        </div>
       </header>
 
       {loading && (
@@ -89,12 +130,12 @@ export default function BlogPostPage() {
           )}
 
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '38px', fontWeight: 700, color: 'var(--text)', margin: '0 0 16px', lineHeight: 1.25 }}>
-            {post.title}
+            {localize(post.title)}
           </h1>
 
           {post.excerpt && (
             <p style={{ fontSize: '17px', color: 'var(--text-2)', margin: '0 0 24px', lineHeight: 1.7, borderLeft: '3px solid var(--gold)', paddingLeft: '16px' }}>
-              {post.excerpt}
+              {localize(post.excerpt)}
             </p>
           )}
 
@@ -114,10 +155,10 @@ export default function BlogPostPage() {
             </div>
           )}
 
-          {/* Content (Markdown rendered as HTML or plain text) */}
+          {/* Content */}
           <div
             style={{ fontSize: '16px', color: 'var(--text)', lineHeight: 1.85, fontFamily: 'var(--font-sans)' }}
-            dangerouslySetInnerHTML={{ __html: post.content
+            dangerouslySetInnerHTML={{ __html: localize(post.content)
               .replace(/^# (.+)$/gm, '<h1 style="font-family:var(--font-serif);font-size:28px;font-weight:700;margin:40px 0 16px">$1</h1>')
               .replace(/^## (.+)$/gm, '<h2 style="font-family:var(--font-serif);font-size:22px;font-weight:600;margin:32px 0 12px">$1</h2>')
               .replace(/^### (.+)$/gm, '<h3 style="font-size:18px;font-weight:600;margin:24px 0 10px">$1</h3>')

@@ -5,37 +5,40 @@ import { loginApi } from '../../lib/api';
 import { setUser } from '../../lib/auth';
 import { useSEO } from '../../lib/useSEO';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { useTranslation } from 'react-i18next';
 
 const API = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
-const FALLBACK_CARDS = [
-  { badge: '◆ STRONG BUY', badgeColor: '#C6A85A', artist: 'Pierre Soulages', detail: '−28% vs estimate', detailColor: '#2563EB' },
-  { badge: '⚡ NEW SIGNAL', badgeColor: 'rgba(255,255,255,0.7)', artist: 'Zao Wou-Ki', detail: 'Deal score: 87/100', detailColor: 'rgba(255,255,255,0.5)' },
-  { badge: '◎ LIVE AUCTION', badgeColor: 'rgba(255,255,255,0.7)', artist: 'Drouot · Closes in 14h', detail: '+€32K upside', detailColor: '#2563EB' },
-];
-
 type SignalCard = { badge: string; badgeColor: string; artist: string; detail: string; detailColor: string };
 
-function mapLotToCard(lot: any): SignalCard {
+function getFallbackCards(isFr: boolean): SignalCard[] {
+  return [
+    { badge: isFr ? '◆ ACHAT FORT' : '◆ STRONG BUY', badgeColor: '#C6A85A', artist: 'Pierre Soulages', detail: isFr ? '−28% vs estimation' : '−28% vs estimate', detailColor: '#2563EB' },
+    { badge: isFr ? '⚡ NOUVEAU SIGNAL' : '⚡ NEW SIGNAL', badgeColor: 'rgba(255,255,255,0.7)', artist: 'Zao Wou-Ki', detail: isFr ? 'Score : 87/100' : 'Deal score: 87/100', detailColor: 'rgba(255,255,255,0.5)' },
+    { badge: isFr ? '◎ ENCHÈRE EN DIRECT' : '◎ LIVE AUCTION', badgeColor: 'rgba(255,255,255,0.7)', artist: isFr ? 'Drouot · Clôture dans 14h' : 'Drouot · Closes in 14h', detail: isFr ? '+€32K potentiel' : '+€32K upside', detailColor: '#2563EB' },
+  ];
+}
+
+function mapLotToCard(lot: any, isFr: boolean): SignalCard {
   const artist = lot.artist?.name || lot.artist_name_raw || 'Unknown artist';
   const score = Math.round(lot.deal_score || 0);
   const upside = lot.pct_below_low_estimate;
 
-  let badge = '◎ LIVE AUCTION';
+  let badge = isFr ? '◎ ENCHÈRE EN DIRECT' : '◎ LIVE AUCTION';
   let badgeColor = 'rgba(255,255,255,0.7)';
-  let detail = `Deal score: ${score}/100`;
+  let detail = isFr ? `Score : ${score}/100` : `Deal score: ${score}/100`;
   let detailColor = 'rgba(255,255,255,0.5)';
 
   if (score >= 80) {
-    badge = '◆ STRONG BUY';
+    badge = isFr ? '◆ ACHAT FORT' : '◆ STRONG BUY';
     badgeColor = '#C6A85A';
     detailColor = '#2563EB';
   } else if (score >= 70) {
-    badge = '⚡ NEW SIGNAL';
+    badge = isFr ? '⚡ NOUVEAU SIGNAL' : '⚡ NEW SIGNAL';
   }
 
   if (upside && upside > 0) {
-    detail = `−${Math.round(upside)}% vs estimate`;
+    detail = isFr ? `−${Math.round(upside)}% vs estimation` : `−${Math.round(upside)}% vs estimate`;
     detailColor = '#2563EB';
   }
 
@@ -45,8 +48,12 @@ function mapLotToCard(lot: any): SignalCard {
 type FeaturedLot = { artist: string; title: string; upside: number | null; score: number };
 
 function RightPanel() {
-  const [cards, setCards] = useState<SignalCard[]>(FALLBACK_CARDS);
+  const { i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
+  const [cards, setCards] = useState<SignalCard[]>(() => getFallbackCards(isFr));
   const [lotCountLabel, setLotCountLabel] = useState('—');
+  const [avgUpside, setAvgUpside] = useState('—');
+  const [signalsToday, setSignalsToday] = useState('—');
   const [bgImage, setBgImage] = useState<string | null>(null);
   const [featured, setFeatured] = useState<FeaturedLot | null>(null);
 
@@ -66,7 +73,7 @@ function RightPanel() {
             score: Math.round(withImg.deal_score || 0),
           });
         }
-        setCards(items.slice(0, 3).map(mapLotToCard));
+        setCards(items.slice(0, 3).map(lot => mapLotToCard(lot, isFr)));
       })
       .catch(() => {});
 
@@ -77,6 +84,15 @@ function RightPanel() {
         if (n && n > 0) setLotCountLabel(n >= 1000 ? `${Math.floor(n / 100) / 10}K+` : `${n}`);
       })
       .catch(() => {});
+
+    fetch(`${API}/api/lots/stats`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        if (data.avg_deal_score) setAvgUpside(`+${Math.round(data.avg_deal_score)}%`);
+        if (data.deals_detected_today != null) setSignalsToday(String(data.deals_detected_today));
+      })
+      .catch(() => {});
   }, []);
 
   const panelBg = bgImage
@@ -84,7 +100,7 @@ function RightPanel() {
     : 'linear-gradient(135deg, #0A1628 0%, #0f2040 100%)';
 
   return (
-    <div style={{ flex: '0 0 50%', background: '#0A1628', backgroundImage: panelBg, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 52px' }}>
+    <div className="login-right-panel" style={{ flex: '0 0 50%', background: '#0A1628', backgroundImage: panelBg, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 52px' }}>
       {/* Vignette edges */}
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%)', pointerEvents: 'none' }} />
 
@@ -98,18 +114,18 @@ function RightPanel() {
 
         {/* Headline */}
         <h2 style={{ color: '#fff', fontFamily: 'Georgia,serif', fontSize: 30, fontWeight: 'normal', lineHeight: 1.2, margin: '0 0 6px', textShadow: '0 2px 12px rgba(0,0,0,0.7)' }}>
-          Welcome back.<br />The market didn't wait.
+          {isFr ? <>Bon retour.<br />Le marché n'a pas attendu.</> : <>Welcome back.<br />The market didn't wait.</>}
         </h2>
         <p style={{ color: 'rgba(198,168,90,0.85)', fontSize: 13, margin: '0 0 24px', textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>
-          New signals detected since your last visit.
+          {isFr ? 'De nouveaux signaux détectés depuis votre dernière visite.' : 'New signals detected since your last visit.'}
         </p>
 
         {/* Stats row */}
         <div style={{ display: 'flex', borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', marginBottom: 20, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(12px)' }}>
           {[
-            { value: lotCountLabel, label: 'lots analyzed', color: '#fff' },
-            { value: '+31%', label: 'avg upside', color: '#C6A85A' },
-            { value: '6', label: 'signals today', color: '#60a5fa' },
+            { value: lotCountLabel, label: isFr ? 'lots analysés' : 'lots analyzed', color: '#fff' },
+            { value: avgUpside, label: isFr ? 'potentiel moy.' : 'avg upside', color: '#C6A85A' },
+            { value: signalsToday, label: isFr ? "signaux aujourd'hui" : 'signals today', color: '#60a5fa' },
           ].map((s, i) => (
             <div key={i} style={{ flex: 1, padding: '12px 8px', textAlign: 'center', borderRight: i < 2 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
               <div style={{ fontSize: 18, fontWeight: 700, color: s.color, fontFamily: 'var(--font-mono)', lineHeight: 1 }}>{s.value}</div>
@@ -146,7 +162,9 @@ function RightPanel() {
         {/* Featured lot spotlight */}
         {featured && (
           <div style={{ background: 'rgba(198,168,90,0.07)', border: '1px solid rgba(198,168,90,0.22)', borderRadius: 10, padding: '12px 16px', marginBottom: 20 }}>
-            <div style={{ fontSize: 9, color: 'rgba(198,168,90,0.55)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 7 }}>◆ Top opportunity now</div>
+            <div style={{ fontSize: 9, color: 'rgba(198,168,90,0.55)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 7 }}>
+              ◆ {isFr ? 'Meilleure opportunité maintenant' : 'Top opportunity now'}
+            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, color: '#fff', fontWeight: 700 }}>{featured.artist}</div>
@@ -166,7 +184,7 @@ function RightPanel() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#C6A85A', animation: 'pulseDot 2s infinite' }} />
           <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>
-            Updated 3 min ago · 14 auction houses monitored
+            {isFr ? 'Mis à jour il y a 3 min · 14 maisons suivies' : 'Updated 3 min ago · 14 auction houses monitored'}
           </span>
         </div>
       </div>
@@ -176,6 +194,8 @@ function RightPanel() {
 
 export default function Login() {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -210,12 +230,12 @@ export default function Login() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', maxHeight: '100vh', overflow: 'hidden', background: '#FAFAFA' }}>
+    <div className="login-container" style={{ display: 'flex', height: '100vh', maxHeight: '100vh', overflow: 'hidden', background: '#FAFAFA' }}>
       {/* Left — form */}
-      <div style={{ flex: '0 0 50%', background: 'white', display: 'flex', flexDirection: 'column', overflowY: 'hidden' }}>
+      <div className="login-left-panel" style={{ flex: '0 0 50%', background: 'white', display: 'flex', flexDirection: 'column', overflowY: 'hidden' }}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '20px 72px', maxWidth: '480px', margin: '0 auto', width: '100%' }}>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px', lineHeight: 1.2 }}>
-            Access your intelligence
+            {isFr ? 'Accédez à votre intelligence marché' : 'Access your intelligence'}
           </h1>
 
           <div style={{ width: '32px', height: '2px', background: 'var(--gold)', marginBottom: '20px' }} />
@@ -235,7 +255,7 @@ export default function Login() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '20px 0' }}>
               <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
               <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
-                OR CONTINUE WITH EMAIL
+                {isFr ? 'OU CONTINUER AVEC EMAIL' : 'OR CONTINUE WITH EMAIL'}
               </span>
               <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
             </div>
@@ -251,7 +271,7 @@ export default function Login() {
             {/* Password input */}
             <div style={{ marginBottom: '8px' }}>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
-                Password
+                {isFr ? 'MOT DE PASSE' : 'PASSWORD'}
               </label>
               <div style={{ position: 'relative' }}>
                 <input
@@ -265,7 +285,7 @@ export default function Login() {
                   onKeyDown={e => { if (e.key === 'Enter') handleLogin(); }}
                 />
                 <button type="button" onClick={() => setShowPassword(p => !p)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '12px' }}>
-                  {showPassword ? 'Hide' : 'Show'}
+                  {showPassword ? (isFr ? 'Masquer' : 'Hide') : (isFr ? 'Afficher' : 'Show')}
                 </button>
               </div>
             </div>
@@ -273,7 +293,7 @@ export default function Login() {
             {/* Forgot password */}
             <div style={{ textAlign: 'right', marginBottom: '16px' }}>
               <Link to="/forgot-password" style={{ fontSize: '12px', color: 'var(--text-3)', textDecoration: 'none' }}>
-                Forgot password?
+                {isFr ? 'Mot de passe oublié ?' : 'Forgot password?'}
               </Link>
             </div>
 
@@ -284,14 +304,14 @@ export default function Login() {
               className="btn-electric"
               style={{ width: '100%', justifyContent: 'center', padding: '10px', fontSize: '13px', opacity: loading ? 0.7 : 1, textTransform: 'none' as const, letterSpacing: '0.02em' }}
             >
-              {loading ? 'Signing in...' : 'Sign in →'}
+              {loading ? (isFr ? 'Connexion…' : 'Signing in...') : (isFr ? 'Se connecter →' : 'Sign in →')}
             </button>
 
             {/* Sign up link */}
             <p style={{ fontSize: '13px', color: 'var(--text-3)', textAlign: 'center', marginTop: '12px' }}>
-              Don't have an account?{' '}
+              {isFr ? 'Pas encore de compte ?' : "Don't have an account?"}{' '}
               <Link to="/app/signup" style={{ color: 'var(--electric)', fontWeight: 600, textDecoration: 'none' }}>
-                Get access
+                {isFr ? 'Commencer gratuitement' : 'Get access'}
               </Link>
             </p>
 

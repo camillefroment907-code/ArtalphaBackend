@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { getToken, getUserPlan } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
@@ -229,6 +230,7 @@ function DateRow({ entry, onLotClick }: { entry: DateEntry; onLotClick: (id: str
 }
 
 export default function AuctionCalendar() {
+  const { t } = useTranslation();
   const nav = useNavigate();
   const [days, setDays] = useState(30);
   const [view, setView] = useState<'houses' | 'dates'>('houses');
@@ -255,19 +257,19 @@ export default function AuctionCalendar() {
       {/* Hero section */}
       <div style={{ padding: '40px 32px 32px', borderBottom: '1px solid var(--border)', marginBottom: '28px' }}>
         <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '10px' }}>
-          Auction Intelligence
+          {t('calendar.sectionLabel')}
         </div>
         <h1 style={{ fontSize: '28px', fontWeight: 700, color: 'var(--navy)', margin: '0 0 8px', letterSpacing: '-0.02em', fontFamily: 'var(--font-serif)' }}>
-          Upcoming Auction Calendar
+          {t('calendar.title')}
         </h1>
         <p style={{ fontSize: '14px', color: 'var(--text-2)', margin: '0 0 24px', lineHeight: 1.6, maxWidth: '560px' }}>
-          Track every major sale before it closes. Scored, ranked, and filtered for conviction opportunities.
+          {t('calendar.subtitle')}
         </p>
         <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
           {[
-            { label: 'Live lots tracked', value: data ? `${data.total_lots.toLocaleString()}` : '—' },
-            { label: 'Closing within 3 days', value: urgentCount > 0 ? `${urgentCount}` : '0', urgent: urgentCount > 0 },
-            { label: 'Auction houses', value: data ? `${data.by_house.length}` : '—' },
+            { label: t('calendar.statLiveLots'), value: data ? `${data.total_lots.toLocaleString()}` : '—' },
+            { label: t('calendar.statClosingSoon'), value: urgentCount > 0 ? `${urgentCount}` : '0', urgent: urgentCount > 0 },
+            { label: t('calendar.statHouses'), value: data ? `${data.by_house.length}` : '—' },
           ].map(({ label, value, urgent }) => (
             <div key={label}>
               <div style={{ fontSize: '22px', fontWeight: 700, color: urgent ? '#EF4444' : 'var(--navy)', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>{value}</div>
@@ -318,7 +320,7 @@ export default function AuctionCalendar() {
                 textTransform: 'capitalize',
               }}
             >
-              {v === 'houses' ? 'By House' : 'By Date'}
+              {v === 'houses' ? t('calendar.viewByHouse') : t('calendar.viewByDate')}
             </button>
           ))}
         </div>
@@ -328,11 +330,11 @@ export default function AuctionCalendar() {
       <div style={{ padding: '0 32px 32px' }}>
         {loading ? (
           <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-3)', fontSize: '13px' }}>
-            Loading calendar…
+            {t('calendar.loading')}
           </div>
         ) : !data || (view === 'houses' ? data.by_house.length === 0 : data.by_date.length === 0) ? (
           <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-3)', fontSize: '13px' }}>
-            No upcoming auctions found for this period.
+            {t('calendar.noAuctions')}
           </div>
         ) : view === 'houses' ? (
           <>
@@ -349,9 +351,9 @@ export default function AuctionCalendar() {
               <div style={{ marginTop: '-40px' }}>
                 <div style={{ height: '80px', background: 'linear-gradient(to bottom, transparent, var(--bg))' }} />
                 <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8f8f6', borderRadius: 8 }}>
-                  <div style={{ fontSize: 13, letterSpacing: '0.15em', color: '#C6A85A', marginBottom: 8 }}>INVESTOR+ FEATURE</div>
-                  <div style={{ fontSize: 20, fontFamily: 'Georgia,serif', color: '#1A2A44', marginBottom: 16 }}>Full calendar is available from the Investor plan</div>
-                  <a href="/app/pricing" style={{ background: '#2563EB', color: '#fff', padding: '12px 28px', fontSize: 13, fontWeight: 600, textDecoration: 'none', borderRadius: 4 }}>Unlock full access →</a>
+                  <div style={{ fontSize: 13, letterSpacing: '0.15em', color: '#C6A85A', marginBottom: 8 }}>{t('calendar.paywallTitle')}</div>
+                  <div style={{ fontSize: 20, fontFamily: 'Georgia,serif', color: '#1A2A44', marginBottom: 16 }}>{t('calendar.paywallSub')}</div>
+                  <a href="/app/pricing" style={{ background: '#2563EB', color: '#fff', padding: '12px 28px', fontSize: 13, fontWeight: 600, textDecoration: 'none', borderRadius: 4 }}>{t('calendar.paywallCta')}</a>
                 </div>
               </div>
             )}
@@ -371,9 +373,9 @@ export default function AuctionCalendar() {
               <div style={{ marginTop: '-40px' }}>
                 <div style={{ height: '80px', background: 'linear-gradient(to bottom, transparent, var(--bg))' }} />
                 <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8f8f6', borderRadius: 8 }}>
-                  <div style={{ fontSize: 13, letterSpacing: '0.15em', color: '#C6A85A', marginBottom: 8 }}>INVESTOR+ FEATURE</div>
-                  <div style={{ fontSize: 20, fontFamily: 'Georgia,serif', color: '#1A2A44', marginBottom: 16 }}>Full calendar is available from the Investor plan</div>
-                  <a href="/app/pricing" style={{ background: '#2563EB', color: '#fff', padding: '12px 28px', fontSize: 13, fontWeight: 600, textDecoration: 'none', borderRadius: 4 }}>Unlock full access →</a>
+                  <div style={{ fontSize: 13, letterSpacing: '0.15em', color: '#C6A85A', marginBottom: 8 }}>{t('calendar.paywallTitle')}</div>
+                  <div style={{ fontSize: 20, fontFamily: 'Georgia,serif', color: '#1A2A44', marginBottom: 16 }}>{t('calendar.paywallSub')}</div>
+                  <a href="/app/pricing" style={{ background: '#2563EB', color: '#fff', padding: '12px 28px', fontSize: 13, fontWeight: 600, textDecoration: 'none', borderRadius: 4 }}>{t('calendar.paywallCta')}</a>
                 </div>
               </div>
             )}

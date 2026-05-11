@@ -17,13 +17,13 @@ function useIsMobile(breakpoint = 900) {
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 const NAV_ITEMS = [
-  { tKey: 'nav.signalFeed',   label: 'Signal Feed', to: '/app/dashboard', dropdown: null },
-  { tKey: 'nav.explorer',     label: '',            to: '/app/explore',   dropdown: 'explorer' },
-  { tKey: 'nav.artists',      label: 'Artists',     to: '/app/artists',   dropdown: null },
-  { tKey: 'nav.emerging',     label: 'Emerging',    to: '/app/emerging',  dropdown: null },
-  { tKey: 'nav.calendar',     label: 'Calendar',    to: '/app/calendar',  dropdown: null },
-  { tKey: 'nav.intelligence', label: '',            to: '/app/agent',     dropdown: null },
-  { tKey: 'nav.portfolio',    label: '',            to: '/app/portfolio',  dropdown: null },
+  { tKey: 'nav.signalFeed',   label: '', to: '/app/dashboard', dropdown: null },
+  { tKey: 'nav.explorer',     label: '', to: '/app/explore',   dropdown: 'explorer' },
+  { tKey: 'nav.artists',      label: '', to: '/app/artists',   dropdown: null },
+  { tKey: 'nav.emerging',     label: '', to: '/app/emerging',  dropdown: null },
+  { tKey: 'nav.calendar',     label: '', to: '/app/calendar',  dropdown: null },
+  { tKey: 'nav.intelligence', label: '', to: '/app/agent',     dropdown: null },
+  { tKey: 'nav.portfolio',    label: '', to: '/app/portfolio', dropdown: null },
 ];
 
 const EXPLORER_ITEMS = [
@@ -47,7 +47,7 @@ export function Header() {
   const { t, i18n } = useTranslation();
   const isMobile = useIsMobile();
 
-  const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
+const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
   const toggleLang = () => {
     const newLang = currentLang === 'fr' ? 'en' : 'fr';
     i18n.changeLanguage(newLang);
@@ -326,29 +326,6 @@ export function Header() {
               {t('nav.live').toUpperCase()}
             </span>
           </div>
-
-          {/* Language toggle */}
-          <button
-            onClick={toggleLang}
-            style={{
-              padding: '3px 8px',
-              background: 'transparent',
-              border: '1px solid var(--border)',
-              borderRadius: '4px',
-              fontSize: '10px',
-              fontWeight: 700,
-              color: 'var(--text-2)',
-              cursor: 'pointer',
-              fontFamily: 'var(--font-mono)',
-              letterSpacing: '0.08em',
-              transition: 'all 0.15s',
-              flexShrink: 0,
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--electric)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--electric)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-2)'; }}
-          >
-            {currentLang === 'fr' ? 'EN' : 'FR'}
-          </button>
 
           {/* Search */}
           <div style={{ position: 'relative', flexShrink: 0 }}>

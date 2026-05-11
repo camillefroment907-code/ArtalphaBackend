@@ -5,10 +5,13 @@ import { registerApi } from '../../lib/api';
 import { setUser } from '../../lib/auth';
 import { useSEO } from '../../lib/useSEO';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { useTranslation } from 'react-i18next';
 
 const API = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 function RightPanel() {
+  const { i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
   const [bgImage, setBgImage] = useState<string | null>(null);
   const [featured, setFeatured] = useState<{ artist: string; title: string; score: number; upside: number | null } | null>(null);
   const [lotCount, setLotCount] = useState('—');
@@ -47,13 +50,13 @@ function RightPanel() {
     : 'linear-gradient(135deg, #0A1628 0%, #0f2040 100%)';
 
   const FEATURES = [
-    { icon: '◆', color: '#C6A85A', label: `${lotCount} lots analyzed`, sub: 'Daily, across 14 auction houses' },
-    { icon: '⚡', color: '#60a5fa', label: 'AI deal score on every lot', sub: 'Trained on 10 years of sales data' },
-    { icon: '●', color: '#22c55e', label: 'Real-time alerts at score ≥ 80', sub: 'Never miss an exceptional opportunity' },
+    { icon: '◆', color: '#C6A85A', label: isFr ? `${lotCount} lots analysés` : `${lotCount} lots analyzed`, sub: isFr ? 'En continu, sur 14 maisons de vente' : 'Daily, across 14 auction houses' },
+    { icon: '⚡', color: '#60a5fa', label: isFr ? 'Score IA sur chaque lot' : 'AI deal score on every lot', sub: isFr ? 'Entraîné sur 10 ans de données de ventes' : 'Trained on 10 years of sales data' },
+    { icon: '●', color: '#22c55e', label: isFr ? 'Alertes en temps réel dès score ≥ 80' : 'Real-time alerts at score ≥ 80', sub: isFr ? 'Ne manquez plus aucune opportunité exceptionnelle' : 'Never miss an exceptional opportunity' },
   ];
 
   return (
-    <div style={{ flex: '0 0 50%', background: '#0A1628', backgroundImage: panelBg, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 52px' }}>
+    <div className="signup-right-panel" style={{ flex: '0 0 50%', background: '#0A1628', backgroundImage: panelBg, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 52px' }}>
       {/* Vignette */}
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.45) 100%)', pointerEvents: 'none' }} />
 
@@ -70,10 +73,10 @@ function RightPanel() {
 
         {/* Headline */}
         <h2 style={{ color: '#fff', fontFamily: 'Georgia,serif', fontSize: 30, fontWeight: 'normal', lineHeight: 1.2, margin: '0 0 8px', textShadow: '0 2px 12px rgba(0,0,0,0.8)' }}>
-          Art Intelligence.<br />Finally.
+          {isFr ? <>Intelligence marché de l'art.<br />Enfin.</> : <>Art Intelligence.<br />Finally.</>}
         </h2>
         <p style={{ color: 'rgba(198,168,90,0.85)', fontSize: 13, margin: '0 0 28px', textShadow: '0 1px 6px rgba(0,0,0,0.7)' }}>
-          See the opportunities the market misses.
+          {isFr ? "Identifiez les opportunités que le marché n'a pas encore pricées." : 'See the opportunities the market misses.'}
         </p>
 
         {/* Feature rows */}
@@ -100,7 +103,9 @@ function RightPanel() {
         {/* Live opportunity spotlight */}
         {featured && (
           <div style={{ background: 'rgba(198,168,90,0.07)', border: '1px solid rgba(198,168,90,0.2)', borderRadius: 10, padding: '12px 16px', marginBottom: 20 }}>
-            <div style={{ fontSize: 9, color: 'rgba(198,168,90,0.55)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 7 }}>◆ Live opportunity detected</div>
+            <div style={{ fontSize: 9, color: 'rgba(198,168,90,0.55)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 7 }}>
+              ◆ {isFr ? 'Opportunité détectée en direct' : 'Live opportunity detected'}
+            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, color: '#fff', fontWeight: 700 }}>{featured.artist}</div>
@@ -120,7 +125,7 @@ function RightPanel() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#C6A85A', animation: 'pulseDot 2s infinite' }} />
           <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>
-            Scanning live · 14 auction houses
+            {isFr ? 'Analyse en direct · 14 maisons de vente' : 'Scanning live · 14 auction houses'}
           </span>
         </div>
 
@@ -131,6 +136,8 @@ function RightPanel() {
 
 export default function Signup() {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -154,17 +161,17 @@ export default function Signup() {
 
     let valid = true;
     if (!name.trim()) {
-      setNameError('Full name is required');
+      setNameError(isFr ? 'Nom complet requis' : 'Full name is required');
       valid = false;
     }
     if (!EMAIL_RE.test(email.trim())) {
-      setEmailError('Please enter a valid email address');
+      setEmailError(isFr ? 'Veuillez entrer une adresse email valide' : 'Please enter a valid email address');
       valid = false;
     }
     if (!valid) return;
 
     if (password !== confirmPassword) {
-      setError("Passwords don't match");
+      setError(isFr ? 'Les mots de passe ne correspondent pas' : "Passwords don't match");
       return;
     }
     setLoading(true);
@@ -180,7 +187,7 @@ export default function Signup() {
       localStorage.setItem('nautilus_show_tour', '1');
       navigate('/app/verify-email-required');
     } catch (err: any) {
-      setError(err.message || 'Registration failed');
+      setError(err.message || (isFr ? 'Échec de l\'inscription' : 'Registration failed'));
     } finally {
       setLoading(false);
     }
@@ -189,12 +196,12 @@ export default function Signup() {
   const passwordMismatch = confirmPassword.length > 0 && password !== confirmPassword;
 
   return (
-    <div style={{ display: 'flex', height: '100vh', maxHeight: '100vh', overflow: 'hidden', background: '#FAFAFA' }}>
+    <div className="signup-container" style={{ display: 'flex', height: '100vh', maxHeight: '100vh', overflow: 'hidden', background: '#FAFAFA' }}>
       {/* Left — form */}
-      <div style={{ flex: '0 0 50%', background: 'white', display: 'flex', flexDirection: 'column', overflowY: 'hidden' }}>
+      <div className="signup-left-panel" style={{ flex: '0 0 50%', background: 'white', display: 'flex', flexDirection: 'column', overflowY: 'hidden' }}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '20px 72px', maxWidth: '480px', margin: '0 auto', width: '100%' }}>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, color: 'var(--text)', margin: '0 0 8px', lineHeight: 1.2 }}>
-            Get access to the platform
+            {isFr ? 'Accédez à la plateforme' : 'Get access to the platform'}
           </h1>
 
           <div style={{ width: '32px', height: '2px', background: 'var(--gold)', marginBottom: '14px' }} />
@@ -213,7 +220,7 @@ export default function Signup() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '10px 0' }}>
               <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
               <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
-                OR CONTINUE WITH EMAIL
+                {isFr ? 'OU CONTINUER AVEC EMAIL' : 'OR CONTINUE WITH EMAIL'}
               </span>
               <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
             </div>
@@ -221,7 +228,7 @@ export default function Signup() {
             {/* Full name */}
             <div style={{ marginBottom: '8px' }}>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '4px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
-                Full name
+                {isFr ? 'NOM COMPLET' : 'FULL NAME'}
               </label>
               <input type="text" className="input" value={name} onChange={e => { setName(e.target.value); if (nameError) setNameError(''); }} placeholder="John Smith" autoComplete="name" style={nameError ? { borderColor: 'var(--red)' } : {}} />
               {nameError && <div style={{ marginTop: '4px', fontSize: '12px', color: 'var(--red)' }}>{nameError}</div>}
@@ -239,7 +246,7 @@ export default function Signup() {
             {/* Password */}
             <div style={{ marginBottom: '8px' }}>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '4px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
-                Password
+                {isFr ? 'MOT DE PASSE' : 'PASSWORD'}
               </label>
               <div style={{ position: 'relative' }}>
                 <input
@@ -247,12 +254,12 @@ export default function Signup() {
                   className="input"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="8+ characters"
+                  placeholder={isFr ? '8 caractères minimum' : '8+ characters'}
                   autoComplete="new-password"
                   style={{ paddingRight: '44px' }}
                 />
                 <button type="button" onClick={() => setShowPassword(p => !p)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '12px' }}>
-                  {showPassword ? 'Hide' : 'Show'}
+                  {showPassword ? (isFr ? 'Masquer' : 'Hide') : (isFr ? 'Afficher' : 'Show')}
                 </button>
               </div>
             </div>
@@ -260,7 +267,7 @@ export default function Signup() {
             {/* Confirm password */}
             <div style={{ marginBottom: '10px' }}>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '4px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
-                Confirm password
+                {isFr ? 'CONFIRMER LE MOT DE PASSE' : 'CONFIRM PASSWORD'}
               </label>
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -273,7 +280,9 @@ export default function Signup() {
                 style={passwordMismatch ? { borderColor: 'var(--red)' } : {}}
               />
               {passwordMismatch && (
-                <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--red)' }}>Passwords don't match</div>
+                <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--red)' }}>
+                  {isFr ? 'Les mots de passe ne correspondent pas' : "Passwords don't match"}
+                </div>
               )}
             </div>
 
@@ -289,10 +298,19 @@ export default function Signup() {
                 />
                 <span style={{ fontSize: '11px', color: 'var(--text-2)', lineHeight: 1.5 }}>
                   <span style={{ color: 'var(--red)', marginRight: '3px' }}>*</span>
-                  I accept the{' '}
-                  <a href="/legal#tos" target="_blank" rel="noreferrer" style={{ color: 'var(--electric)' }}>Terms of Service</a>
-                  {' '}and{' '}
-                  <a href="/legal#privacy" target="_blank" rel="noreferrer" style={{ color: 'var(--electric)' }}>Privacy Policy</a>
+                  {isFr ? (
+                    <>J'accepte les{' '}
+                      <a href="/legal#tos" target="_blank" rel="noreferrer" style={{ color: 'var(--electric)' }}>Conditions d'utilisation</a>
+                      {' '}et la{' '}
+                      <a href="/legal#privacy" target="_blank" rel="noreferrer" style={{ color: 'var(--electric)' }}>Politique de confidentialité</a>
+                    </>
+                  ) : (
+                    <>I accept the{' '}
+                      <a href="/legal#tos" target="_blank" rel="noreferrer" style={{ color: 'var(--electric)' }}>Terms of Service</a>
+                      {' '}and{' '}
+                      <a href="/legal#privacy" target="_blank" rel="noreferrer" style={{ color: 'var(--electric)' }}>Privacy Policy</a>
+                    </>
+                  )}
                 </span>
               </label>
               <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
@@ -303,7 +321,7 @@ export default function Signup() {
                   style={{ marginTop: '3px', flexShrink: 0, accentColor: '#2563EB', width: '14px', height: '14px' }}
                 />
                 <span style={{ fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.5 }}>
-                  I'd like to receive market intelligence newsletters from Nautilus
+                  {isFr ? "Je souhaite recevoir les newsletters d'intelligence marché de Nautilus" : "I'd like to receive market intelligence newsletters from Nautilus"}
                 </span>
               </label>
             </div>
@@ -315,14 +333,14 @@ export default function Signup() {
               className="btn-electric"
               style={{ width: '100%', justifyContent: 'center', padding: '10px', fontSize: '13px', opacity: (loading || !tosAccepted) ? 0.7 : 1, textTransform: 'none' as const, letterSpacing: '0.02em' }}
             >
-              {loading ? 'Creating account…' : 'Create my account'}
+              {loading ? (isFr ? 'Création du compte…' : 'Creating account…') : (isFr ? 'Créer mon compte' : 'Create my account')}
             </button>
 
             {/* Already have account */}
             <p style={{ fontSize: '13px', color: 'var(--text-3)', textAlign: 'center', marginTop: '12px' }}>
-              Already have an account?{' '}
+              {isFr ? 'Déjà un compte ?' : 'Already have an account?'}{' '}
               <Link to="/app/login" style={{ color: 'var(--electric)', fontWeight: 600, textDecoration: 'none' }}>
-                Sign in
+                {isFr ? 'Se connecter' : 'Sign in'}
               </Link>
             </p>
           </div>
