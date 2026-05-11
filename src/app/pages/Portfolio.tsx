@@ -1043,7 +1043,7 @@ export default function Portfolio() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
                 {portfolioItems.map(item => {
                   const currentVal = item.estimated_current_value_eur || item.purchase_price_eur;
-                  const gainPct = item.gain_pct;
+                  const gainPct = item.gain_pct ?? null;
                   return (
                     <div key={item.id}
                       style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', transition: 'box-shadow 0.2s, transform 0.2s' }}
@@ -1063,7 +1063,7 @@ export default function Portfolio() {
                             <input id={`img-${item.id}`} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleImageUpload(item.id, e)} />
                           </label>
                         )}
-                        {gainPct !== null && (
+                        {gainPct != null && (
                           <div style={{ position: 'absolute', top: '8px', right: '8px', padding: '3px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 700, background: gainPct >= 0 ? 'rgba(26,122,74,0.9)' : 'rgba(192,57,43,0.9)', color: 'white', fontFamily: 'var(--font-mono)' }}>
                             {gainPct >= 0 ? '+' : ''}{gainPct.toFixed(1)}%
                           </div>
@@ -1109,7 +1109,7 @@ export default function Portfolio() {
                           </div>
                         </div>
                         {/* Market timing indicator */}
-                        {gainPct !== null && (
+                        {gainPct != null && (
                           <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <div style={{
                               width: '6px', height: '6px', borderRadius: '50%',
