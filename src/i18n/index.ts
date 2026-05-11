@@ -13,13 +13,12 @@ i18n
       fr: { translation: fr },
     },
     fallbackLng: 'fr',
-    lng: 'fr',
     supportedLngs: ['en', 'fr'],
     interpolation: {
       escapeValue: false,
     },
     detection: {
-      order: ['localStorage', 'navigator', 'htmlTag'],
+      order: ['localStorage'],
       caches: ['localStorage'],
       lookupLocalStorage: 'i18nextLng',
     },
