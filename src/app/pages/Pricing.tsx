@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import { getToken } from "../../lib/auth";
 import { useSEO } from "../../lib/useSEO";
+import { useTranslation } from 'react-i18next';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -114,6 +115,61 @@ const COMPARE_ROWS = [
   { feature: 'Support',                 free: 'Community',     investor: 'Email',          pro: 'Priority',    institutional: 'Dedicated' },
 ];
 
+const PT = {
+  en: {
+    pageTitle: 'Choose your level of access',
+    pageSubtitle: 'From market discovery to full investment intelligence.',
+    monthly: 'Monthly', annual: 'Annual', save23: 'SAVE 23%',
+    currentPlan: 'CURRENT PLAN',
+    foundingPrice: 'Founding price · locked for life',
+    limitedSpots: 'Limited to 100 spots · Rises to €49 after launch',
+    comparePlans: 'Compare plans',
+    institutionalTitle: 'Institutional Access',
+    institutionalDesc: 'For auction houses, family offices, wealth managers and art funds. Custom limits, dedicated analytics team, API integration, SLA guarantees.',
+    contactSales: 'Contact Sales →',
+    viewFullFaq: 'View full FAQ →',
+    planDescriptions: { free: 'Discover the market at your own pace.', investor: 'For active art collectors.', pro: 'For serious art investors.' },
+    planCtas: { free: 'Current Plan', investor: 'Get founding access →', pro: 'GO PRO →' },
+    planFeatures: {
+      free: ['6 scored lots per day','Deal score visible (0–100)','Upside % visible','1 top deal fully unlocked daily','✗ Auction source hidden','✗ Bidding links locked','✗ No alerts','✗ No AI analyst'],
+      investor: ['Unlimited scored lots','Full auction source revealed','Direct bidding links','How to bid guide','Early access — before free users','Real-time alerts (score ≥ 70)','Ask your AI art analyst (20/month)','Investment Memo (Investor+)','1 active strategy','Basic portfolio tracking'],
+      pro: ['Everything in Investor','Unlimited AI art analyst','Unlimited Investment Memos','Unlimited active strategies','Alerts from score 60+','Arbitrage signals','Price projections (12/24 months)','Portfolio IRR tracking','+€X gained from Nautilus signals','Export CSV / PDF','Priority support'],
+    },
+    faq: [
+      { q: 'How does the 7-day trial work?', a: "Full access to your chosen plan for 7 days. No credit card needed to start. If you don't cancel before the trial ends, you'll be charged automatically." },
+      { q: 'Can I upgrade mid-subscription?', a: 'Yes, anytime. You pay the prorated difference immediately and your new plan activates instantly.' },
+      { q: 'Can I downgrade an annual plan?', a: 'Annual plans cannot be downgraded mid-year. You keep your current plan until renewal. Upgrades are always available immediately.' },
+      { q: 'Can I cancel anytime?', a: 'Monthly plans: cancel anytime, access until end of billing period. Annual plans: run until renewal date.' },
+    ],
+  },
+  fr: {
+    pageTitle: "Choisissez votre niveau d'accès",
+    pageSubtitle: "De la découverte du marché à l'intelligence d'investissement complète.",
+    monthly: 'Mensuel', annual: 'Annuel', save23: 'ÉCONOMISEZ 23%',
+    currentPlan: 'PLAN ACTUEL',
+    foundingPrice: 'Prix fondateur · garanti à vie',
+    limitedSpots: 'Limité à 100 places · Passera à €49 au lancement',
+    comparePlans: 'Comparer les plans',
+    institutionalTitle: 'Accès Institutionnel',
+    institutionalDesc: "Pour les maisons de vente, family offices, gestionnaires de patrimoine et fonds d'art. Limites personnalisées, équipe analytics dédiée, intégration API, garanties SLA.",
+    contactSales: 'Contacter →',
+    viewFullFaq: 'Voir la FAQ complète →',
+    planDescriptions: { free: 'Découvrez le marché à votre rythme.', investor: "Pour les collectionneurs d'art actifs.", pro: 'Pour les investisseurs art sérieux.' },
+    planCtas: { free: 'Plan actuel', investor: 'Accès fondateur →', pro: 'PASSER PRO →' },
+    planFeatures: {
+      free: ['6 lots scorés par jour','Score de conviction (0–100)','Potentiel % visible','1 meilleur lot débloqué par jour','✗ Source de vente masquée','✗ Liens enchères verrouillés','✗ Pas d\'alertes','✗ Pas d\'analyste IA'],
+      investor: ['Lots scorés illimités','Source de vente révélée','Liens enchères directs','Guide enchères','Accès anticipé — avant users gratuits','Alertes temps réel (score ≥ 70)','Analyste IA art (20/mois)','Mémo investissement (Investor+)','1 stratégie active','Suivi portfolio basique'],
+      pro: ['Tout Investor inclus','Analyste IA illimité','Mémos investissement illimités','Stratégies illimitées','Alertes dès score 60+','Signaux arbitrage','Projections prix (12/24 mois)','Suivi IRR portfolio','+€X via signaux Nautilus','Export CSV / PDF','Support prioritaire'],
+    },
+    faq: [
+      { q: "Comment fonctionne l'essai 7 jours ?", a: "Accès complet à votre plan choisi pendant 7 jours. Aucune carte bancaire requise. Si vous n'annulez pas avant la fin de l'essai, vous serez facturé automatiquement." },
+      { q: "Puis-je changer de plan en cours d'abonnement ?", a: "Oui, à tout moment. Vous payez la différence au prorata immédiatement et votre nouveau plan s'active instantanément." },
+      { q: 'Puis-je rétrograder un plan annuel ?', a: "Les plans annuels ne peuvent pas être rétrogradés en cours d'année. Vous conservez votre plan actuel jusqu'au renouvellement. Les upgrades sont disponibles immédiatement." },
+      { q: 'Puis-je annuler à tout moment ?', a: "Plans mensuels : annulation à tout moment, accès jusqu'à la fin de la période. Plans annuels : accès jusqu'à la date de renouvellement." },
+    ],
+  },
+};
+
 const FAQ_ITEMS = [
   { q: "How does the 7-day trial work?", a: "Full access to your chosen plan for 7 days. No credit card needed to start. If you don't cancel before the trial ends, you'll be charged automatically." },
   { q: "Can I upgrade mid-subscription?", a: "Yes, anytime. You pay the prorated difference immediately and your new plan activates instantly." },
@@ -127,6 +183,9 @@ export default function Pricing() {
   const [loading, setLoading] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isAnnual, setIsAnnual] = useState(false);
+  const { i18n } = useTranslation();
+  const lang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
+  const p = PT[lang];
 
   useSEO({
     title: 'Pricing · Nautilus',
@@ -211,10 +270,10 @@ export default function Pricing() {
       {/* Hero */}
       <div style={{ textAlign: 'center', padding: '20px 24px 6px' }}>
         <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(20px, 2.5vw, 28px)', fontWeight: 600, color: 'var(--text)', marginBottom: '4px', lineHeight: 1.15 }}>
-          Choose your level of access
+          {p.pageTitle}
         </h1>
         <p style={{ fontSize: '13px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto 18px', lineHeight: 1.5 }}>
-          From market discovery to full investment intelligence.
+          {p.pageSubtitle}
         </p>
       </div>
 
@@ -244,7 +303,7 @@ export default function Pricing() {
               transition: 'all 0.2s',
             }}
           >
-            Monthly
+            {p.monthly}
           </button>
           <button
             onClick={() => setIsAnnual(true)}
@@ -258,9 +317,9 @@ export default function Pricing() {
               display: 'flex', alignItems: 'center', gap: '6px',
             }}
           >
-            Annual
+            {p.annual}
             <span style={{ fontSize: '9px', fontWeight: 700, background: '#16A34A', color: 'white', padding: '2px 6px', borderRadius: '8px', letterSpacing: '0.05em', whiteSpace: 'nowrap' as const }}>
-              SAVE 23%
+              {p.save23}
             </span>
           </button>
         </div>
@@ -310,7 +369,7 @@ export default function Pricing() {
                 <div style={{ height: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '6px' }}>
                   {isCurrentPlan && (
                     <div style={{ background: 'var(--electric)', color: 'white', fontSize: '9px', fontWeight: 700, padding: '3px 12px', borderRadius: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
-                      YOUR CURRENT PLAN
+                      {p.currentPlan}
                     </div>
                   )}
                 </div>
@@ -353,7 +412,7 @@ export default function Pricing() {
                       </div>
                     )}
                     <div style={{ fontSize: '11px', fontStyle: 'italic', color: 'rgba(198,168,90,0.75)', lineHeight: 1.3 }}>
-                      Founding price · locked for life
+                      {p.foundingPrice}
                     </div>
                   </div>
                 ) : (
@@ -375,7 +434,7 @@ export default function Pricing() {
                 {/* Description */}
                 {plan.key !== 'investor' && (
                   <p style={{ fontSize: '12px', lineHeight: 1.6, margin: '0 0 0', color: isHighlight ? 'rgba(255,255,255,0.55)' : 'var(--text-3)' }}>
-                    {plan.description}
+                    {(p.planDescriptions as any)[plan.key] || plan.description}
                   </p>
                 )}
 
@@ -397,7 +456,7 @@ export default function Pricing() {
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
-                      {plan.cta}
+                      {(p.planCtas as any)[plan.key] || plan.cta}
                     </button>
                   ) : isCurrentPlan ? (
                     <div style={{ width: '100%', height: '48px', borderRadius: '6px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', color: 'var(--electric)', fontSize: '12px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' as const, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -418,10 +477,10 @@ export default function Pricing() {
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}
                       >
-                        {loading === plan.key ? 'Loading...' : plan.cta}
+                        {loading === plan.key ? 'Loading...' : ((p.planCtas as any)[plan.key] || plan.cta)}
                       </button>
                       <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '6px', textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
-                        Limited to 100 spots · Rises to €49 after launch
+                        {p.limitedSpots}
                       </div>
                     </>
                   ) : (
@@ -438,7 +497,7 @@ export default function Pricing() {
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
-                      {loading === plan.key ? 'Loading...' : plan.cta}
+                      {loading === plan.key ? 'Loading...' : ((p.planCtas as any)[plan.key] || plan.cta)}
                     </button>
                   )}
                 </div>
@@ -448,7 +507,7 @@ export default function Pricing() {
 
                 {/* Features */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: 1 }}>
-                  {plan.features.map((feature, i) => {
+                  {((p.planFeatures as any)[plan.key] || plan.features).map((feature: string, i: number) => {
                     const isNeg = feature.startsWith('✗');
                     const label = isNeg ? feature.slice(1).trim() : feature;
                     return (
@@ -475,21 +534,21 @@ export default function Pricing() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
               <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, color: 'white' }}>
-                Institutional Access
+                {p.institutionalTitle}
               </div>
               <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--gold)', background: 'rgba(198,168,90,0.12)', padding: '3px 10px', borderRadius: '4px', border: '1px solid rgba(198,168,90,0.25)', fontFamily: 'var(--font-mono)' }}>
                 CUSTOM
               </span>
             </div>
             <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', maxWidth: '500px', lineHeight: 1.6, margin: 0 }}>
-              For auction houses, family offices, wealth managers and art funds. Custom limits, dedicated analytics team, API integration, SLA guarantees.
+              {p.institutionalDesc}
             </p>
           </div>
           <button
             onClick={() => navigate('/app/contact?plan=institutional')}
             style={{ whiteSpace: 'nowrap' as const, padding: '12px 24px', borderRadius: '6px', background: '#2563EB', color: 'white', border: 'none', fontSize: '13px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em' }}
           >
-            Contact Sales →
+            {p.contactSales}
           </button>
         </div>
       </div>
@@ -497,7 +556,7 @@ export default function Pricing() {
       {/* Compare table */}
       <div style={{ maxWidth: '1100px', margin: '0 auto 64px', padding: '0 24px' }}>
         <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--text)', textAlign: 'center', marginBottom: '32px' }}>
-          Compare plans
+          {p.comparePlans}
         </h2>
         <div style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
           {/* Header */}
@@ -538,7 +597,7 @@ export default function Pricing() {
           FAQ
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '24px' }}>
-          {FAQ_ITEMS.map(({ q, a }, i) => (
+          {p.faq.map(({ q, a }, i) => (
             <div key={i}>
               <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>{q}</div>
               <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.7 }}>{a}</div>
@@ -546,7 +605,7 @@ export default function Pricing() {
           ))}
         </div>
         <Link to="/faq" style={{ fontSize: '13px', color: 'var(--electric)', textDecoration: 'none', fontWeight: 500 }}>
-          View full FAQ →
+          {p.viewFullFaq}
         </Link>
       </div>
     </div>
