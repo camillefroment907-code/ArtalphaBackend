@@ -8,6 +8,18 @@ import { getUsageStatus, PLAN_LIMITS as USAGE_LIMITS } from '../../lib/analysisU
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
+const trackEvent = async (eventType: string, entityType: string, entityId: string, properties: Record<string, any> = {}) => {
+  try {
+    const token = getToken ? getToken() : localStorage.getItem('token');
+    if (!token) return;
+    await fetch(`${BACKEND}/api/agent/track-event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ event_type: eventType, entity_type: entityType, entity_id: entityId, properties })
+    });
+  } catch {}
+};
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface MappedLot {
@@ -671,6 +683,9 @@ export default function Portfolio() {
       const r = await fetch(`${BACKEND}/api/portfolio/favorite-artists`, { headers: { Authorization: `Bearer ${getToken()}` } });
       const d = await r.json();
       setFavoriteArtists(d.artists || []);
+      trackEvent('artist_follow', 'artist', newArtistName.trim(), {
+        artist_name: newArtistName.trim(),
+      });
     } catch { /* silent */ }
   };
 

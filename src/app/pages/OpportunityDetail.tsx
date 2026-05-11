@@ -10,6 +10,18 @@ import {
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
+const trackEvent = async (eventType: string, entityType: string, entityId: string, properties: Record<string, any> = {}) => {
+  try {
+    const token = getToken ? getToken() : localStorage.getItem('token');
+    if (!token) return;
+    await fetch(`${BACKEND}/api/agent/track-event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ event_type: eventType, entity_type: entityType, entity_id: entityId, properties })
+    });
+  } catch {}
+};
+
 // ── TOKENS ────────────────────────────────────────────────────────────────────
 const DK  = '#0C1622';
 const DK2 = '#111827';
@@ -596,6 +608,14 @@ export default function OpportunityDetail() {
               <span onClick={() => { window.location.href = '/app/pricing'; }} style={{ cursor: 'pointer', color: '#2563EB', fontSize: 13, fontWeight: 600, letterSpacing: '0.04em' }}>🔒 Unlock source — Investor plan →</span>
             ) : (
               <a href={trackUrl} target="_blank" rel="noopener noreferrer"
+                onClick={() => trackEvent('lot_external_click', 'lot', lot.id, {
+                  lot_title: lot.title,
+                  artist: lot.artist_name_raw,
+                  source: lot.source,
+                  auction_house: lot.auction_house_name,
+                  deal_score: lot.deal_score,
+                  url: rawUrl,
+                })}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: BLD, textDecoration: 'none', letterSpacing: '0.06em' }}>
                 {isFr ? 'Voir sur' : 'View on'} {sourceNames[source] || resolvedSource} ↗
               </a>
@@ -626,6 +646,11 @@ export default function OpportunityDetail() {
                       const data = await r.json();
                       setSubscribed(true);
                       setSubId(data.id);
+                      trackEvent('lot_watchlist_add', 'lot', lot.id, {
+                        lot_title: lot.title,
+                        artist: lot.artist_name_raw,
+                        deal_score: lot.deal_score,
+                      });
                     }
                   }
                 } finally {

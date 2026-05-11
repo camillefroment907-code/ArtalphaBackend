@@ -5,6 +5,18 @@ import { getToken, getUserPlan } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
+const trackEvent = async (eventType: string, entityType: string, entityId: string, properties: Record<string, any> = {}) => {
+  try {
+    const token = getToken ? getToken() : localStorage.getItem('token');
+    if (!token) return;
+    await fetch(`${BACKEND}/api/agent/track-event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ event_type: eventType, entity_type: entityType, entity_id: entityId, properties })
+    });
+  } catch {}
+};
+
 // ── Price chart ───────────────────────────────────────────────────────────────
 
 interface YearPoint { year: string; avg_price: number; max_price: number; sale_count: number; }
@@ -709,7 +721,13 @@ export default function ArtistIntelligence() {
             </div>
 
             <button
-              onClick={() => navigate('/app/portfolio?tab=artists')}
+              onClick={() => {
+                trackEvent('artist_follow', 'artist', artist?.artist_name || artist?.name || '', {
+                  artist_name: artist?.artist_name || artist?.name,
+                  from_page: 'artist_intelligence',
+                });
+                navigate('/app/portfolio?tab=artists');
+              }}
               style={{ padding: '12px', background: 'var(--electric)', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'opacity 0.15s' }}
               onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.opacity = '0.9'}
               onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.opacity = '1'}
