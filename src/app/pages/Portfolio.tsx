@@ -277,6 +277,9 @@ export default function Portfolio() {
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
   const [portfolioLoading, setPortfolioLoading] = useState(true);
 
+  // ── Market sentiment ──────────────────────────────────────
+  const [marketSentiment, setMarketSentiment] = useState<any>(null);
+
   // ── Add form ───────────────────────────────────────────────
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState<AddForm>({ title: '', artist_name: '', purchase_price_eur: '', purchase_date: '', medium: '', notes: '' });
@@ -456,6 +459,12 @@ export default function Portfolio() {
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(data => { setLots((Array.isArray(data) ? data : (data.items || [])).map(mapLot)); setLotsLoading(false); })
       .catch(err => { setLotsError(err.message || 'Failed to load'); setLotsLoading(false); });
+
+    // Market sentiment
+    fetch(`${BACKEND}/api/market/sentiment`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.segments) setMarketSentiment(d); })
+      .catch(() => {});
 
     // Preload watchlist, artists, invoices
     loadWatchlist();
@@ -865,25 +874,6 @@ export default function Portfolio() {
     <div className="page" style={{ background: 'var(--bg)', minHeight: '100vh', paddingBottom: '80px' }}>
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
 
-        {/* ── PAGE HEADER ───────────────────────────────────────── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '40px 0 28px', borderBottom: '1px solid var(--border)' }}>
-          <div>
-            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--text)', margin: '0 0 4px' }}>Portfolio</h1>
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-3)' }}>Track your collection and manage your account</p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {user?.email && (
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-3)' }}>{user.email}</span>
-            )}
-            <span style={{ padding: '4px 12px', borderRadius: '4px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: 'var(--electric)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              {planLabel}
-            </span>
-            <button onClick={handleSignOut} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-              Sign out
-            </button>
-          </div>
-        </div>
-
         {/* ── TAB BAR ───────────────────────────────────────────── */}
         <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: '32px' }}>
           {TABS.map(({ key, label, soon }: any) => (
@@ -912,61 +902,107 @@ export default function Portfolio() {
         ══════════════════════════════════════════════════════ */}
         {activeTab === 'collection' && (
           <div className="animate-fade-in">
-            {/* Stats row */}
-            <div className="portfolio-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
-              {[
-                { label: t('portfolio.totalInvestedLabel'), value: fmt(totalInvested) },
-                { label: t('portfolio.estValueLabel'), value: fmt(totalValue) },
-                { label: t('portfolio.totalReturnLabel'), value: `${returnPct >= 0 ? '+' : ''}${returnPct.toFixed(1)}%`, highlight: returnPct > 0 },
-                { label: t('portfolio.worksTracked'), value: String(portfolioItems.length) },
-              ].map(({ label, value, highlight }) => (
-                <div key={label} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>{label}</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: highlight ? '#1A7A4A' : 'var(--text)' }}>{value}</div>
+
+            {/* ── PREMIUM DARK HEADER ─────────────────────────── */}
+            <div style={{ background: '#0A1628', borderRadius: 12, padding: '22px 24px', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+                <div>
+                  <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', color: 'rgba(198,168,90,0.65)', textTransform: 'uppercase', marginBottom: 6 }}>
+                    Portfolio · Intelligence
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: 24, fontWeight: 400, color: 'white', marginBottom: 6 }}>
+                    {currentLang === 'fr' ? 'Ma Collection' : 'My Collection'}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                    {currentLang === 'fr' ? 'Suivez la valeur, la liquidité et les signaux de votre collection.' : 'Track value, liquidity and signals of your collection.'}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#16A34A', boxShadow: '0 0 0 3px rgba(22,163,74,0.15)' }} />
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)' }}>
+                      {currentLang === 'fr' ? 'Estimations mises à jour en continu' : 'Estimates updated continuously'}
+                    </span>
+                  </div>
                 </div>
-              ))}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
+                  {collectorBadge && (
+                    <div style={{ border: '0.5px solid rgba(198,168,90,0.3)', borderRadius: 8, padding: '10px 16px', textAlign: 'center', minWidth: 160 }}>
+                      <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'rgba(198,168,90,0.7)', marginBottom: 4, textTransform: 'uppercase' }}>
+                        {currentLang === 'fr' ? 'Statut' : 'Status'}
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 500, color: 'rgba(198,168,90,0.9)', marginBottom: 2 }}>
+                        ✦ {collectorBadge.label}
+                      </div>
+                      {collectorBadge.topPct && (
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)' }}>
+                          {collectorBadge.topPct} {currentLang === 'fr' ? 'des membres' : 'of members'}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {portfolioItems.length > 0 && (
+                      <a href={`${BACKEND}/api/portfolio/export?format=csv`} download="nautilus_portfolio.csv"
+                        style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,0.5)', border: '0.5px solid rgba(255,255,255,0.15)', borderRadius: 5, padding: '8px 14px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+                        ↓ Export CSV
+                      </a>
+                    )}
+                    <button
+                      onClick={() => { setNewArtwork({ artist_name: '', title: '', year_created: '', medium: '', purchase_price: '', current_value: '', purchase_date: '', purchase_source: '', purchase_auction_house: '', purchase_location: '', country_of_origin: '', dimensions: '', condition: '', certificate_of_authenticity: 'false', authenticated_by: '', authentication_date: '', catalogue_raisonne_reference: '', storage_location: '', insured_value_eur: '', insurance_provider: '', notes: '' }); setShowAddModal(true); }}
+                      style={{ background: '#2563EB', color: 'white', border: 'none', borderRadius: 5, padding: '9px 16px', fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.06em', cursor: 'pointer' }}>
+                      {currentLang === 'fr' ? '+ Ajouter une œuvre' : '+ Add artwork'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* KPI strip */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', borderTop: '0.5px solid rgba(255,255,255,0.06)', paddingTop: 16 }}>
+                {(() => {
+                  const sentimentVal = marketSentiment?.overall;
+                  const sentimentLabel = sentimentVal === 'BULLISH'
+                    ? (currentLang === 'fr' ? 'En accélération' : 'Accelerating')
+                    : sentimentVal === 'BEARISH'
+                    ? (currentLang === 'fr' ? 'En ralentissement' : 'Slowing')
+                    : sentimentVal === 'NEUTRAL'
+                    ? (currentLang === 'fr' ? 'Stable' : 'Stable')
+                    : '—';
+                  const sentimentColor = sentimentVal === 'BULLISH' ? '#16A34A' : sentimentVal === 'BEARISH' ? '#C0392B' : sentimentVal === 'NEUTRAL' ? '#B8922A' : 'rgba(255,255,255,0.4)';
+                  const liquidityScore = aiAnalysis?.liquidity_score ?? null;
+                  const liquidityVal = liquidityScore !== null ? `${liquidityScore}/100` : '—';
+                  const liquidityColor = liquidityScore === null ? 'rgba(255,255,255,0.4)' : liquidityScore >= 70 ? '#16A34A' : liquidityScore >= 40 ? '#B8922A' : '#C0392B';
+                  const liquiditySub = liquidityScore === null ? '' : liquidityScore >= 70 ? (currentLang === 'fr' ? 'Élevée' : 'High') : liquidityScore >= 40 ? (currentLang === 'fr' ? 'Moyenne' : 'Medium') : (currentLang === 'fr' ? 'Faible' : 'Low');
+                  const kpis = [
+                    { label: currentLang === 'fr' ? 'Valeur estimée' : 'Est. value', value: fmt(totalValue), sub: returnPct !== 0 ? `${returnPct > 0 ? '+' : ''}${returnPct.toFixed(1)}% ${currentLang === 'fr' ? 'depuis achat' : 'since purchase'}` : null, subColor: returnPct > 0 ? '#16A34A' : '#C0392B' },
+                    { label: currentLang === 'fr' ? 'Investi' : 'Invested', value: fmt(totalInvested), sub: `${portfolioItems.length} ${currentLang === 'fr' ? 'œuvre' : 'artwork'}${portfolioItems.length !== 1 ? 's' : ''}`, subColor: 'rgba(255,255,255,0.3)' },
+                    { label: 'IRR', value: returnPct !== 0 ? `${returnPct > 0 ? '+' : ''}${returnPct.toFixed(1)}%` : '—', sub: currentLang === 'fr' ? 'Rendement total' : 'Total return', subColor: returnPct > 0 ? '#16A34A' : 'rgba(255,255,255,0.3)', valueColor: returnPct > 0 ? '#16A34A' : 'rgba(255,255,255,0.4)' },
+                    { label: currentLang === 'fr' ? 'Exposition' : 'Exposure', value: portfolioItems.length > 0 ? (portfolioItems[0].artist_name || '—') : '—', sub: currentLang === 'fr' ? 'Artiste principal' : 'Top artist', subColor: 'rgba(255,255,255,0.3)', small: true },
+                    { label: currentLang === 'fr' ? 'Signal' : 'Signal', value: sentimentLabel, sub: sentimentVal ? `${sentimentVal}` : currentLang === 'fr' ? 'Chargement...' : 'Loading...', subColor: sentimentColor, small: true, valueColor: sentimentColor },
+                    { label: currentLang === 'fr' ? 'Liquidité' : 'Liquidity', value: liquidityVal, sub: liquiditySub, subColor: liquidityColor, valueColor: liquidityColor },
+                  ];
+                  return kpis.map(({ label, value, sub, subColor, small, valueColor }, i) => (
+                    <div key={i} style={{ paddingLeft: i > 0 ? 16 : 0, paddingRight: i < 5 ? 16 : 0, borderRight: i < 5 ? '0.5px solid rgba(255,255,255,0.08)' : 'none' }}>
+                      <div style={{ fontSize: 8, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.3)', marginBottom: 4, textTransform: 'uppercase' }}>{label}</div>
+                      <div style={{ fontSize: small ? 13 : 18, fontWeight: 500, color: valueColor || 'white', lineHeight: 1.2, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
+                      {sub && <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: subColor }}>{sub}</div>}
+                    </div>
+                  ));
+                })()}
+              </div>
             </div>
 
-            {collectorBadge && (
-              <div style={{
-                display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
-                background: '#0A1628', borderRadius: 8, padding: '10px 18px',
-                marginBottom: 16,
-              }}>
-                <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'rgba(198,168,90,0.7)', marginBottom: 4 }}>
-                  {currentLang === 'fr' ? 'STATUT COLLECTIONNEUR' : 'COLLECTOR STATUS'}
+            {/* ── MA COLLECTION subheading ─────────────────────── */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--text)' }}>
+                  {currentLang === 'fr' ? 'Ma Collection' : 'My Collection'}
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 500, color: 'white', marginBottom: 2 }}>
-                  ✦ {collectorBadge.label}
+                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                  {portfolioItems.length} {currentLang === 'fr' ? 'œuvre' : 'artwork'}{portfolioItems.length !== 1 ? 's' : ''} · {currentLang === 'fr' ? 'Valeur totale' : 'Total value'} {fmt(totalValue)}
                 </div>
-                {collectorBadge.topPct && (
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
-                    {collectorBadge.topPct} {currentLang === 'fr' ? 'des membres' : 'of members'}
-                  </div>
-                )}
               </div>
-            )}
-
-            {/* Collection header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', margin: 0 }}>{t('portfolio.myCollectionTitle')}</h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {portfolioItems.length > 0 && (
-                  <a
-                    href={`${BACKEND}/api/portfolio/export?format=csv`}
-                    download="nautilus_portfolio.csv"
-                    style={{ fontSize: '11px', color: 'var(--text-3)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
-                  >
-                    {t('portfolio.exportCsv')}
-                  </a>
-                )}
-                <button
-                  onClick={() => { setNewArtwork({ artist_name: '', title: '', year_created: '', medium: '', purchase_price: '', current_value: '', purchase_date: '', purchase_source: '', purchase_auction_house: '', purchase_location: '', country_of_origin: '', dimensions: '', condition: '', certificate_of_authenticity: 'false', authenticated_by: '', authentication_date: '', catalogue_raisonne_reference: '', storage_location: '', insured_value_eur: '', insurance_provider: '', notes: '' }); setShowAddModal(true); }}
-                  style={{ padding: '8px 20px', background: 'var(--navy)', color: 'white', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}
-                >
-                  {t('portfolio.addArtwork')}
-                </button>
-              </div>
+              <button style={{ background: 'transparent', color: 'var(--text-2)', border: '0.5px solid var(--border)', borderRadius: 5, padding: '7px 14px', fontSize: 10, fontFamily: 'var(--font-mono)', cursor: 'pointer' }}>
+                {currentLang === 'fr' ? 'Trier par valeur' : 'Sort by value'}
+              </button>
             </div>
 
             {showAddModal && (
