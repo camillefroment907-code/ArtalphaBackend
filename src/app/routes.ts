@@ -38,6 +38,7 @@ const Legal                 = lazy(() => import('./pages/Legal'));
 const AdminHealth           = lazy(() => import('./pages/AdminHealth'));
 const AdminLaunch           = lazy(() => import('./pages/AdminLaunch'));
 const AdminRecommendations  = lazy(() => import('./pages/AdminRecommendations'));
+const AdminDashboard        = lazy(() => import('./pages/AdminDashboard'));
 const Blog                  = lazy(() => import('./pages/Blog'));
 const BlogPost              = lazy(() => import('./pages/BlogPost'));
 const FeedbackPage          = lazy(() => import('./pages/FeedbackPage'));
@@ -80,6 +81,7 @@ export const router = createBrowserRouter([
       { path: 'health',          Component: AdminHealth          },
       { path: 'launch',          Component: AdminLaunch          },
       { path: 'recommendations', Component: AdminRecommendations },
+      { path: 'pilot',           Component: AdminDashboard       },
     ],
   },
   // Legacy URL redirects → /legal/*
