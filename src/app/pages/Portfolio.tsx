@@ -297,6 +297,7 @@ export default function Portfolio() {
   // ── AI Analysis ────────────────────────────────────────────
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [saleModal, setSaleModal] = useState<any | null>(null);
   const [expandedValuation, setExpandedValuation] = useState<string | null>(null);
   const [collectorBadge, setCollectorBadge] = useState<{
     label: string; rank: number; color: string; topPct: string;
@@ -1419,7 +1420,7 @@ export default function Portfolio() {
 
                         {/* 2-col action buttons */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
-                          <button style={{ background: '#0A1628', color: 'white', border: 'none', borderRadius: 5, padding: '8px 0', fontSize: 11, fontFamily: 'var(--font-mono)', cursor: 'pointer', letterSpacing: '0.04em' }}>
+                          <button onClick={() => setSaleModal(item)} style={{ background: '#0A1628', color: 'white', border: 'none', borderRadius: 5, padding: '8px 0', fontSize: 11, fontFamily: 'var(--font-mono)', cursor: 'pointer', letterSpacing: '0.04em' }}>
                             {currentLang === 'fr' ? 'Mettre en vente →' : 'List for sale →'}
                           </button>
                           <button onClick={() => setExpandedValuation(expandedValuation === item.id ? null : item.id)} style={{ background: 'transparent', color: 'var(--text-2)', border: '0.5px solid var(--border)', borderRadius: 5, padding: '8px 0', fontSize: 11, fontFamily: 'var(--font-mono)', cursor: 'pointer' }}>
@@ -1782,6 +1783,100 @@ export default function Portfolio() {
                   <Link to="/app/opportunities" style={{ color: 'var(--navy)', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>Browse Opportunities</Link>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {saleModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1001, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '5vh', overflowY: 'auto' }}
+            onClick={() => setSaleModal(null)}>
+            <div style={{ background: 'white', borderRadius: 12, width: 560, maxWidth: '92vw', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)', margin: '0 auto' }}
+              onClick={e => e.stopPropagation()}>
+              <div style={{ background: '#0A1628', padding: '22px 26px', borderRadius: '12px 12px 0 0', position: 'sticky', top: 0, zIndex: 1 }}>
+                <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', color: 'rgba(198,168,90,0.7)', textTransform: 'uppercase', marginBottom: 8 }}>Nautilus · Module Revente</div>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 400, color: 'white', marginBottom: 4 }}>{saleModal.artist_name} — {saleModal.title}</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{currentLang === 'fr' ? 'Analyse de la meilleure maison de vente pour cette œuvre' : 'Analysis of the best auction house for this artwork'}</div>
+              </div>
+              <div style={{ padding: '22px 26px' }}>
+                <div style={{ background: 'rgba(37,99,235,0.05)', border: '0.5px solid rgba(37,99,235,0.15)', borderRadius: 8, padding: '12px 14px', marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 500, color: '#1d4ed8', marginBottom: 4 }}>{currentLang === 'fr' ? 'Analyse Nautilus Intelligence' : 'Nautilus Intelligence Analysis'}</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+                    {(() => {
+                      const price = saleModal.estimated_current_value_eur || saleModal.purchase_price_eur || 0;
+                      if (price >= 100000) return currentLang === 'fr' ? `Avec une valeur estimée de €${Math.round(price).toLocaleString('fr-FR')}, cette œuvre est idéale pour les grandes ventes internationales. Christie's et Sotheby's obtiennent les meilleurs résultats sur ce segment.` : `With an estimated value of €${Math.round(price).toLocaleString('en')}, this artwork is ideal for major international sales.`;
+                      if (price >= 20000) return currentLang === 'fr' ? `À €${Math.round(price).toLocaleString('fr-FR')}, Phillips et Bonhams sont les mieux positionnés pour maximiser le prix de vente avec des frais compétitifs.` : `At €${Math.round(price).toLocaleString('en')}, Phillips and Bonhams are best positioned to maximize the sale price.`;
+                      return currentLang === 'fr' ? `À €${Math.round(price).toLocaleString('fr-FR')}, Artcurial et Cornette de Saint Cyr offrent la meilleure visibilité pour ce segment de prix, notamment auprès des collectionneurs français.` : `At €${Math.round(price).toLocaleString('en')}, Artcurial and Cornette de Saint Cyr offer the best visibility for this price segment.`;
+                    })()}
+                  </div>
+                </div>
+                <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 12 }}>{currentLang === 'fr' ? 'Maisons recommandées' : 'Recommended houses'}</div>
+                {(() => {
+                  const price = saleModal.estimated_current_value_eur || saleModal.purchase_price_eur || 0;
+                  const houses = price >= 100000 ? [
+                    { name: "Christie's", avg: '€297 748', lots: '199 268', score: 96, url: 'https://www.christies.com/selling-services/auction-estimates', contact: 'sellingservices@christies.com', specialty: currentLang === 'fr' ? 'Art contemporain · Blue chip' : 'Contemporary art · Blue chip', tag: currentLang === 'fr' ? 'Recommandé' : 'Recommended' },
+                    { name: "Sotheby's", avg: '€225 228', lots: '291 060', score: 93, url: 'https://www.sothebys.com/en/sell', contact: 'consign@sothebys.com', specialty: currentLang === 'fr' ? 'Art moderne · International' : 'Modern art · International', tag: null },
+                    { name: 'Phillips', avg: '€136 986', lots: '55 220', score: 84, url: 'https://www.phillips.com/sell', contact: 'consignments@phillips.com', specialty: currentLang === 'fr' ? 'Art contemporain · Émergent' : 'Contemporary · Emerging', tag: null },
+                  ] : price >= 20000 ? [
+                    { name: 'Phillips', avg: '€136 986', lots: '55 220', score: 94, url: 'https://www.phillips.com/sell', contact: 'consignments@phillips.com', specialty: currentLang === 'fr' ? 'Art contemporain · Émergent' : 'Contemporary · Emerging', tag: currentLang === 'fr' ? 'Recommandé' : 'Recommended' },
+                    { name: 'Bonhams', avg: '€20 063', lots: '45 586', score: 87, url: 'https://www.bonhams.com/sell/', contact: 'info@bonhams.com', specialty: currentLang === 'fr' ? 'Art britannique · Européen' : 'British · European art', tag: null },
+                    { name: 'Dorotheum', avg: '€30 206', lots: '10 655', score: 79, url: 'https://www.dorotheum.com/en/sell/', contact: 'office@dorotheum.at', specialty: currentLang === 'fr' ? 'Art européen · Vienne' : 'European art · Vienna', tag: null },
+                  ] : [
+                    { name: 'Artcurial', avg: '€25 064', lots: '20 980', score: 92, url: 'https://www.artcurial.com/fr/vendre', contact: 'vendre@artcurial.com', specialty: currentLang === 'fr' ? 'Art français · Moderne' : 'French · Modern art', tag: currentLang === 'fr' ? 'Recommandé' : 'Recommended' },
+                    { name: 'Cornette de Saint Cyr', avg: '€15 922', lots: '10 424', score: 85, url: 'https://www.cornette-de-saint-cyr.com/', contact: 'contact@cornette-de-saint-cyr.com', specialty: currentLang === 'fr' ? 'Art contemporain français' : 'French contemporary art', tag: null },
+                    { name: 'Bonhams', avg: '€20 063', lots: '45 586', score: 78, url: 'https://www.bonhams.com/sell/', contact: 'info@bonhams.com', specialty: currentLang === 'fr' ? 'Art britannique · Accessible' : 'British art · Accessible', tag: null },
+                  ];
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                      {houses.map((h, i) => (
+                        <div key={h.name} style={{ border: i === 0 ? '1.5px solid #2563EB' : '0.5px solid var(--color-border-tertiary)', borderRadius: 8, padding: '14px 16px', position: 'relative' }}>
+                          {h.tag && <div style={{ position: 'absolute', top: -8, left: 12, background: '#2563EB', color: 'white', fontSize: 9, fontFamily: 'var(--font-mono)', padding: '2px 8px', borderRadius: 3 }}>{h.tag}</div>}
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <div>
+                              <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 2 }}>{h.name}</div>
+                              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{h.specialty}</div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: 16, fontWeight: 500, color: '#1A2A44', fontFamily: 'var(--font-mono)' }}>{h.score}<span style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>/100</span></div>
+                              <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)' }}>{currentLang === 'fr' ? 'Score Nautilus' : 'Nautilus score'}</div>
+                            </div>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 10 }}>
+                            <div>
+                              <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-secondary)', marginBottom: 2, textTransform: 'uppercase' }}>{currentLang === 'fr' ? 'Prix moyen' : 'Avg price'}</div>
+                              <div style={{ fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-mono)', color: 'var(--color-text-primary)' }}>{h.avg}</div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-secondary)', marginBottom: 2, textTransform: 'uppercase' }}>{currentLang === 'fr' ? 'Lots vendus' : 'Lots sold'}</div>
+                              <div style={{ fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-mono)', color: 'var(--color-text-primary)' }}>{h.lots}</div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-secondary)', marginBottom: 2, textTransform: 'uppercase' }}>Contact</div>
+                              <div style={{ fontSize: 10, color: '#2563EB', wordBreak: 'break-all' }}>{h.contact}</div>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <a href={h.url} target="_blank" rel="noopener noreferrer"
+                              style={{ flex: 1, background: i === 0 ? '#2563EB' : 'transparent', color: i === 0 ? 'white' : 'var(--color-text-secondary)', border: i === 0 ? 'none' : '0.5px solid var(--color-border-tertiary)', borderRadius: 4, padding: '8px 0', fontSize: 11, fontFamily: 'var(--font-mono)', cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', letterSpacing: '0.05em' }}>
+                              {currentLang === 'fr' ? 'Déposer mon œuvre →' : 'Submit my artwork →'}
+                            </a>
+                            <a href={`mailto:${h.contact}?subject=${encodeURIComponent(`Demande d'estimation - ${saleModal.artist_name} - ${saleModal.title}`)}&body=${encodeURIComponent(`Bonjour,\n\nJe souhaite faire estimer et mettre en vente l'œuvre suivante :\n\nArtiste : ${saleModal.artist_name}\nTitre : ${saleModal.title}\nAnnée : ${saleModal.year_created || 'N/A'}\nMédium : ${saleModal.medium || 'N/A'}\nValeur estimée : €${Math.round(saleModal.estimated_current_value_eur || saleModal.purchase_price_eur || 0).toLocaleString('fr-FR')}\n\nCordialement`)}`}
+                              style={{ background: 'transparent', color: 'var(--color-text-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 4, padding: '8px 14px', fontSize: 11, fontFamily: 'var(--font-mono)', cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
+                              ✉ Email
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: 16, padding: '10px 12px', background: 'var(--color-background-secondary)', borderRadius: 6 }}>
+                  {currentLang === 'fr' ? 'Les recommandations Nautilus sont basées sur 1,5M+ transactions historiques. Les commissions varient entre 10% et 25% selon la maison et le lot.' : 'Nautilus recommendations are based on 1.5M+ historical transactions. Commissions vary between 10% and 25% depending on the house and lot.'}
+                </div>
+                <button onClick={() => setSaleModal(null)}
+                  style={{ width: '100%', background: 'transparent', color: 'var(--color-text-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 5, padding: '10px', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer' }}>
+                  {currentLang === 'fr' ? 'Fermer' : 'Close'}
+                </button>
+              </div>
             </div>
           </div>
         )}
