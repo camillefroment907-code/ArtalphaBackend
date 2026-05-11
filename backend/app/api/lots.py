@@ -632,7 +632,10 @@ async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
     total = await db.execute(select(func.count(Lot.id)))
     deals_today = await db.execute(
         select(func.count(Lot.id)).where(
-            and_(Lot.is_deal == True, Lot.created_at >= today_start)
+            and_(
+                Lot.deal_score >= 80,
+                Lot.hammer_price.is_(None),
+            )
         )
     )
     avg_score = await db.execute(
