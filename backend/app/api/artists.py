@@ -22,6 +22,11 @@ def _is_attribution(name: str) -> bool:
     return any(p in low for p in _ATTRIBUTION_PREFIXES)
 
 
+def _canonical_name(name: str) -> str:
+    """Normalize to canonical: uppercase, strip, drop subtitle after first '.'."""
+    return (name or "").upper().strip().split(".")[0].strip()
+
+
 @router.get("/")
 async def list_artists(
     tier: Optional[str] = Query(None),
@@ -48,7 +53,18 @@ async def list_artists(
         stmt = stmt.where(and_(*filters))
     result = await db.execute(stmt)
     artists = result.scalars().all()
-    return [_serialize_artist(a) for a in artists if not _is_attribution(a.name or "")]
+    from collections import defaultdict
+    serialized = [_serialize_artist(a) for a in artists if not _is_attribution(a.name or "")]
+    groups: dict[str, list] = defaultdict(list)
+    for s in serialized:
+        groups[_canonical_name(s["name"] or "")].append(s)
+    result = []
+    for variants in groups.values():
+        if len(variants) == 1:
+            result.append(variants[0])
+        else:
+            result.append(max(variants, key=lambda v: (v.get("momentum_score") or 0)))
+    return result
 
 
 @router.get("/momentum")
@@ -102,18 +118,37 @@ async def search_artists(
         .limit(10)
     )
     artists = result.all()
-    return {
-        "artists": [
-            {
-                "name": a.artist_name_raw,
-                "lot_count": a.lot_count,
-                "avg_score": round(float(a.avg_score or 0), 1),
-                "avg_price": round(float(a.avg_price or 0)),
-            }
-            for a in artists
-            if a.artist_name_raw and not _is_attribution(a.artist_name_raw)
-        ]
-    }
+    from collections import defaultdict
+    raw = [
+        {
+            "name": a.artist_name_raw,
+            "lot_count": a.lot_count,
+            "avg_score": round(float(a.avg_score or 0), 1),
+            "avg_price": round(float(a.avg_price or 0)),
+        }
+        for a in artists
+        if a.artist_name_raw and not _is_attribution(a.artist_name_raw)
+    ]
+    groups: dict[str, list] = defaultdict(list)
+    for entry in raw:
+        groups[_canonical_name(entry["name"])].append(entry)
+    grouped = []
+    for variants in groups.values():
+        if len(variants) == 1:
+            grouped.append(variants[0])
+        else:
+            best = max(variants, key=lambda v: v["lot_count"])
+            total_lots = sum(v["lot_count"] for v in variants)
+            best_score = max(v["avg_score"] for v in variants)
+            w_price = sum(v["avg_price"] * v["lot_count"] for v in variants) / total_lots if total_lots else 0
+            grouped.append({
+                "name": best["name"],
+                "lot_count": total_lots,
+                "avg_score": round(best_score, 1),
+                "avg_price": round(w_price),
+            })
+    grouped.sort(key=lambda x: x["lot_count"], reverse=True)
+    return {"artists": grouped}
 
 
 @router.get("/{artist_name}/format-matrix")
