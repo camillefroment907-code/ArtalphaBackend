@@ -390,7 +390,7 @@ export default function Portfolio() {
     { key: 'risk', label: t('portfolio.riskAnalysis'), soon: true },
     { key: 'watchlist', label: watchlist.length > 0 ? `${t('portfolio.watchlist')} (${watchlist.length})` : t('portfolio.watchlist') },
     { key: 'artists', label: favoriteArtists.length > 0 ? `${t('portfolio.artists')} (${favoriteArtists.length})` : t('portfolio.artists') },
-    { key: 'alerts', label: t('portfolio.alerts') },
+    // { key: 'alerts', label: t('portfolio.alerts') }, // hidden for launch
     { key: 'settings', label: t('portfolio.settings') },
     { key: 'subscription', label: t('portfolio.subscription') },
   ];
