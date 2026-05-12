@@ -56,7 +56,7 @@ def poll_and_score_lots(self):
         raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
 
 
-async def _poll_and_score_async(lots_per_source: int = 800, skip_purge: bool = False, skip_rationale: bool = False):
+async def _poll_and_score_async(lots_per_source: int = 2000, skip_purge: bool = False, skip_rationale: bool = False):
     global _SCRAPING_RUNNING, _SCRAPING_STARTED_AT
     if _SCRAPING_RUNNING:
         # Auto-reset if lock has been held for more than 20 minutes (stuck run)
