@@ -51,10 +51,11 @@ export async function googleAuthApi(credential: string): Promise<LoginResponse &
 }
 
 export async function registerApi(email: string, password: string, name?: string, marketing_consent = false): Promise<LoginResponse> {
+  const language = navigator.language?.startsWith("fr") ? "fr" : "en";
   const res = await fetch(`${API}/api/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, full_name: name, marketing_consent }),
+    body: JSON.stringify({ email, password, full_name: name, marketing_consent, language }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

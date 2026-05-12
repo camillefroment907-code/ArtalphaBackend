@@ -53,6 +53,7 @@ class UserRegister(BaseModel):
     password: str = Field(..., min_length=8)
     full_name: Optional[str] = None
     marketing_consent: bool = False
+    language: str = "fr"
 
 
 class UserLogin(BaseModel):

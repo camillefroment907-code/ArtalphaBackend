@@ -155,6 +155,7 @@ class User(Base):
     accepted_terms_version = Column(String(10), nullable=True)
     marketing_consent = Column(Boolean, default=False)
     onboarding_completed = Column(Boolean, default=False, nullable=False)
+    language = Column(String(2), nullable=False, server_default="fr", default="fr")
 
     preferences = relationship("UserPreference", back_populates="user", uselist=False)
     alerts = relationship("Alert", back_populates="user")

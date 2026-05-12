@@ -44,6 +44,7 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
             is_active=True,
             is_verified=False,
             marketing_consent=body.marketing_consent,
+            language=body.language if body.language in ("fr", "en") else "fr",
         )
         user.accepted_terms_at = datetime.utcnow()
         user.accepted_terms_ip = request.client.host if request.client else None
@@ -79,7 +80,7 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
             to_email=user.email,
             name=user.full_name or user.email,
             plan="free",
-            lang="fr",
+            lang=user.language,
         ))
     except Exception:
         pass
@@ -92,10 +93,11 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
         )
         verify_url = f"{settings.frontend_url}/app/verify-email?token={verify_token}"
         print(f"[AUTH] email_config resend_key_set={bool(settings.resend_api_key)}, from={settings.transac_from_email}")
+        _lang = user.language
 
         async def _send_verify():
             try:
-                ok = await send_verification_email(user.email, verify_url)
+                ok = await send_verification_email(user.email, verify_url, lang=_lang)
                 print(f"[AUTH] verification_email sent={ok} to={user.email}")
             except Exception as exc:
                 print(f"[AUTH] verification_email FAILED to={user.email} error={exc}")
@@ -135,7 +137,7 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest, db: Asy
             expires_delta=timedelta(hours=1),
         )
         reset_url = f"{settings.frontend_url}/reset-password?token={reset_token}"
-        asyncio.create_task(send_password_reset_email(user.email, reset_url))
+        asyncio.create_task(send_password_reset_email(user.email, reset_url, lang=user.language))
 
     return {"message": "If this email is registered, you'll receive a reset link shortly."}
 
@@ -226,7 +228,7 @@ async def resend_verification(
         expires_delta=timedelta(hours=48),
     )
     verify_url = f"{settings.frontend_url}/app/verify-email?token={verify_token}"
-    asyncio.create_task(send_verification_email(current_user.email, verify_url))
+    asyncio.create_task(send_verification_email(current_user.email, verify_url, lang=getattr(current_user, 'language', 'fr')))
     return {"message": "Verification email sent."}
 
 
@@ -309,7 +311,7 @@ async def google_auth(request: Request, body: GoogleAuthRequest, db: AsyncSessio
                 to_email=user.email,
                 name=user.full_name or user.email,
                 plan="free",
-                lang="fr",
+                lang=user.language,
             ))
         except Exception:
             pass
