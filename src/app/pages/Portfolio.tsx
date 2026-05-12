@@ -2251,14 +2251,14 @@ export default function Portfolio() {
         {activeTab === 'alerts' && (
           <div className="animate-fade-in">
             <div style={{ marginBottom: '28px' }}>
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 6px' }}>Alert Center</h2>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 6px' }}>{currentLang === 'fr' ? "Centre d'alertes" : 'Alert Center'}</h2>
               <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>Configure exactly when Nautilus contacts you — and how</p>
             </div>
 
             {!hasAccess && (
               <div style={{textAlign:'center',padding:'32px 24px',background:'#f8f8f6',borderRadius:8,marginBottom:24,border:'1px solid #e8e4dc'}}>
                 <div style={{fontSize:11,letterSpacing:'0.2em',color:'#C6A85A',marginBottom:8,fontWeight:700}}>INVESTOR+ FEATURE</div>
-                <div style={{fontSize:18,fontFamily:'Georgia,serif',color:'#1A2A44',marginBottom:8}}>Alerts are available from the Investor plan</div>
+                <div style={{fontSize:18,fontFamily:'Georgia,serif',color:'#1A2A44',marginBottom:8}}>{currentLang === 'fr' ? "Les alertes sont disponibles à partir du plan Investor" : 'Alerts are available from the Investor plan'}</div>
                 <a href="/app/pricing" style={{display:'inline-block',background:'#2563EB',color:'#fff',padding:'12px 28px',fontSize:13,fontWeight:600,textDecoration:'none',borderRadius:4}}>Unlock alerts — €19/mo →</a>
               </div>
             )}
@@ -2383,7 +2383,7 @@ export default function Portfolio() {
         ══════════════════════════════════════════════════════ */}
         {activeTab === 'subscription' && (
           <div className="animate-fade-in">
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 24px' }}>Subscription</h2>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 24px' }}>{currentLang === 'fr' ? "Abonnement" : 'Subscription'}</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}><div>
 
             {/* Current plan hero card */}
@@ -2585,7 +2585,7 @@ export default function Portfolio() {
               {subscription?.status === 'active' && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', marginBottom: '16px', borderBottom: '1px solid var(--border-light)' }}>
                   <div>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>Cancel subscription</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>{currentLang === 'fr' ? "Annuler l'abonnement" : 'Cancel subscription'}</div>
                     <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Your access continues until the end of the billing period.</div>
                   </div>
                   <button
@@ -2599,7 +2599,7 @@ export default function Portfolio() {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>Delete my account</div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>{currentLang === 'fr' ? "Supprimer mon compte" : 'Delete my account'}</div>
                   <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Permanently delete all your data. This cannot be undone.</div>
                 </div>
                 <button
@@ -2616,7 +2616,7 @@ export default function Portfolio() {
             {showCancelModal && (
               <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,22,40,0.65)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
                 <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '420px', width: '100%' }}>
-                  <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '12px' }}>Cancel subscription?</h3>
+                  <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '12px' }}>{currentLang === 'fr' ? "Annuler l'abonnement ?" : 'Cancel subscription?'}</h3>
                   <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '24px', lineHeight: 1.7 }}>
                     Your access will continue until the end of the current billing period. After that, you'll be downgraded to the free plan.
                   </p>
@@ -2641,7 +2641,7 @@ export default function Portfolio() {
                   {deleteModalState === 'loading' && (
                     <div style={{ padding: '48px', textAlign: 'center' }}>
                       <div style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#dc2626', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
-                      <div style={{ fontSize: '14px', color: '#6b7280' }}>Loading account information…</div>
+                      <div style={{ fontSize: '14px', color: '#6b7280' }}>{currentLang === 'fr' ? "Chargement des informations du compte…" : 'Loading account information…'}</div>
                     </div>
                   )}
 
@@ -2652,7 +2652,7 @@ export default function Portfolio() {
                       <div style={{ padding: '32px' }}>
                         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
                           <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.15em', color: '#dc2626', textTransform: 'uppercase', fontFamily: 'var(--font-mono)', marginBottom: '12px' }}>NAUTILUS</div>
-                          <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: '#1a2a44', margin: 0 }}>Delete your Nautilus account</h3>
+                          <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: '#1a2a44', margin: 0 }}>{currentLang === 'fr' ? "Supprimer votre compte Nautilus" : 'Delete your Nautilus account'}</h3>
                         </div>
 
                         <div style={{ fontSize: '13px', color: '#374151', lineHeight: 1.7, marginBottom: '20px' }}>
@@ -2723,7 +2723,7 @@ export default function Portfolio() {
         ══════════════════════════════════════════════════════ */}
         {activeTab === 'settings' && (
           <div className="animate-fade-in">
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 24px' }}>Account Settings</h2>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 24px' }}>{currentLang === 'fr' ? "Paramètres du compte" : 'Account Settings'}</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}><div>
 
             {/* Profile */}
@@ -2734,7 +2734,7 @@ export default function Portfolio() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Full name</label>
-                  <input style={inputStyle} value={settingsForm.fullName} onChange={e => setSettingsForm(f => ({ ...f, fullName: e.target.value }))} placeholder="Your full name" />
+                  <input style={inputStyle} value={settingsForm.fullName} onChange={e => setSettingsForm(f => ({ ...f, fullName: e.target.value }))} placeholder={currentLang === 'fr' ? "Votre nom complet" : 'Your full name'} />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Email</label>
