@@ -1042,7 +1042,7 @@ async def _handle_payment_failed(db: AsyncSession, invoice: dict):
         asyncio.create_task(send_payment_failed_email(
             to_email=failed_user.email,
             name=failed_user.full_name or failed_user.email,
-            lang="fr",
+            lang=getattr(failed_user, 'language', 'fr'),
         ))
 
 
@@ -1078,6 +1078,7 @@ async def _handle_payment_succeeded(db: AsyncSession, invoice: dict):
                 plan=sub.plan.value,
                 amount=amount_str,
                 period_end=period_end_str,
+                lang=getattr(paid_user, 'language', 'fr'),
             ))
 
 

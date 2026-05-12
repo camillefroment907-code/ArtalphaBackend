@@ -545,6 +545,7 @@ def _check_annual_expiring():
             _run(send_annual_expiring_email(
                 user.email, user.full_name or "",
                 plan_label, renewal_str, "—", portal_url,
+                lang=getattr(user, 'language', 'fr'),
             ))
         except Exception as e:
             logger.error("annual_expiring_failed user=%s error=%s", user.email, e)
