@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { getPlanLimits, getToken, getUserPlan } from '../../lib/auth';
 import { AIAnalyst } from '../components/AIAnalyst';
 import {
-  ComposedChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
+  XAxis, YAxis, Tooltip,
   ReferenceLine, ResponsiveContainer, LineChart, Line,
 } from 'recharts';
 
@@ -98,7 +98,6 @@ export default function OpportunityDetail() {
   const [marketAnalysis, setMarketAnalysis] = useState<any>(null);
   const [stickyVisible, setStickyVisible] = useState(false);
   const [isDailyDeal, setIsDailyDeal]     = useState(false);
-  const [activeTab, setActiveTab]         = useState('overview');
   const [subscribed, setSubscribed]       = useState(false);
   const [subId, setSubId]                 = useState<string | null>(null);
   const [subLoading, setSubLoading]       = useState(false);
@@ -358,42 +357,6 @@ export default function OpportunityDetail() {
     padding: '9px 0', borderBottom: `1px solid #F0EDE6`,
   };
 
-  // ── TABS ─────────────────────────────────────────────────────────────────────
-  const TABS = [
-    { key: 'overview',     label: t('common.overview') },
-    { key: 'comparables',  label: t('lot.comparables') },
-    { key: 'analysis',     label: t('common.analysis') },
-    { key: 'documents',    label: t('common.documents') },
-  ];
-
-  // ── COMPARABLES CHART DATA ────────────────────────────────────────────────────
-  const compChartData: any[] = comparables
-    .map((c: any) => ({
-      x: c.auction_date ? new Date(c.auction_date).getFullYear() + (new Date(c.auction_date).getMonth() / 12) : null,
-      y: c.current_price || c.estimate_low,
-      id: c.id,
-      title: c.title,
-    }))
-    .filter((c: any) => c.x && c.y);
-
-  const currentLotChartDot: any[] = [{
-    x: lot.auction_date
-      ? new Date(lot.auction_date).getFullYear() + (new Date(lot.auction_date).getMonth() / 12)
-      : new Date().getFullYear(),
-    y: price,
-    isCurrent: true,
-  }];
-
-  // Custom dot renderer for current lot
-  const CurrentDot = (props: any) => {
-    const { cx, cy } = props;
-    return <circle cx={cx} cy={cy} r={8} fill={GOLD} stroke="#FFFFFF" strokeWidth={2} />;
-  };
-
-  // Comps stats
-  const compsAvgPrice = comparables.length > 0
-    ? Math.round(comparables.reduce((s: number, c: any) => s + (c.current_price || 0), 0) / comparables.length)
-    : 0;
 
   // Score pillars — real data from artist + lot
   const scorePillars = [
@@ -410,8 +373,6 @@ export default function OpportunityDetail() {
         @keyframes dot{0%,100%{opacity:1}50%{opacity:0.3}}
         .comp-card-light { transition: transform 0.18s ease, box-shadow 0.18s ease; }
         .comp-card-light:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
-        .tab-nav-btn { background: none; border: none; cursor: pointer; padding: 0 4px 12px; position: relative; }
-        .tab-nav-btn:focus { outline: none; }
       `}</style>
 
       {/* ═══ STICKY BAR — fixed, fades in ═══ */}
@@ -690,45 +651,10 @@ export default function OpportunityDetail() {
         </div>
       </div>
 
-      {/* ═══ TAB NAVIGATION BAR ═══ */}
-      <div style={{
-        background: '#FFFFFF',
-        borderBottom: `1px solid ${LTB}`,
-        padding: '0 40px',
-        display: 'flex',
-        gap: '32px',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-      }}>
-        {TABS.map(tab => (
-          <button
-            key={tab.key}
-            className="tab-nav-btn"
-            onClick={() => setActiveTab(tab.key)}
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '11px',
-              letterSpacing: '0.06em',
-              color: activeTab === tab.key ? LTT1 : LTT3,
-              fontWeight: activeTab === tab.key ? 700 : 400,
-              paddingTop: '14px',
-              borderBottom: activeTab === tab.key ? `2px solid ${GOLD}` : '2px solid transparent',
-              transition: 'color 0.15s, border-color 0.15s',
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* ═══ LIGHT ZONE (tab content) ═══ */}
+      {/* ═══ LIGHT ZONE ═══ */}
       <div style={{ background: LT }}>
 
-        {/* ──────────────── OVERVIEW TAB ──────────────── */}
-        {activeTab === 'overview' && (
-          <>
-            {/* ── MINI ARTIST CARD ────────────────────────────────────────────── */}
+        {/* ── MINI ARTIST CARD ────────────────────────────────────────────── */}
             {lot.artist_name_raw && (
               <div style={{ padding: '20px 40px 0' }}>
                 <div
@@ -919,66 +845,6 @@ export default function OpportunityDetail() {
 
             </div>
 
-            {/* ── PRE-BID INTELLIGENCE ─────────────────────────────────────────── */}
-            {(() => {
-              const currency = lot.currency || 'EUR';
-              const sym = currency === 'USD' ? '$' : currency === 'GBP' ? '£' : '€';
-              const getBuyerPremium = (houseName: string): number => {
-                const h = (houseName || '').toLowerCase();
-                if (h.includes('christie')) return 1.26;
-                if (h.includes('sotheby')) return 1.25;
-                if (h.includes('phillips')) return 1.25;
-                if (h.includes('bonhams')) return 1.25;
-                if (h.includes('drouot') || h.includes('artcurial')) return 1.28;
-                if (h.includes('ebay')) return 1.13;
-                if (h.includes('liveauctioneer')) return 1.25;
-                return 1.26;
-              };
-              const premiumMultiplier = getBuyerPremium(lot.auction_house_name || '');
-              const basePrice = lot.estimate_high || lot.estimate_low || lot.current_price || null;
-              const maxBid = basePrice ? Math.round(basePrice * premiumMultiplier) : null;
-              const avoidAbove = lot.real_cost?.breakeven_hammer
-                ? Math.round(lot.real_cost.breakeven_hammer * 0.85)
-                : null;
-              const score = lot.deal_score || 0;
-              const timingSignal = score >= 80 ? (isFr ? 'Fort — enchérissez maintenant' : 'Strong — bid now') : score >= 65 ? (isFr ? 'Bonne entrée' : 'Good entry') : (isFr ? 'Attendez une baisse' : 'Wait for lower');
-              const timingColor = score >= 80 ? GD : score >= 65 ? GOLD : RED;
-              const bullets = [
-                (provRisk?.flags?.length || 0) > 0
-                  ? isFr ? `${provRisk!.flags.length} signal${provRisk!.flags.length > 1 ? 's' : ''} de due diligence détecté${provRisk!.flags.length > 1 ? 's' : ''} — vérifier avant d'enchérir.` : `${provRisk!.flags.length} due diligence flag${provRisk!.flags.length > 1 ? 's' : ''} detected — review before bidding.`
-                  : isFr ? 'Aucun problème de provenance ou de conformité détecté.' : 'No provenance or compliance flags detected on this lot.',
-                lot.oracle?.signal === 'BUY_NOW' ? `${isFr ? 'Signal Oracle : ACHETEZ MAINTENANT' : 'Oracle signal: BUY NOW'} · ${lot.oracle.target_upside ? `+${lot.oracle.target_upside}% ${isFr ? 'potentiel cible' : 'target upside'}` : (isFr ? 'forte conviction' : 'strong conviction')}` : null,
-              ].filter(Boolean) as string[];
-              const content = (
-                <div style={{ padding: '20px 24px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '16px' }}>{isFr ? 'INTELLIGENCE PRÉ-ENCHÈRE' : 'PRE-BID INTELLIGENCE'}</div>
-                  {/* ── Row 1: PRICING GAP + CONFIANCE DU SIGNAL ── */}
-                  {lot.fair_value_nautilus != null && (() => {
-                    const nautVal = lot.fair_value_nautilus as number;
-                    const nautConf = (lot.fair_value_confidence as number) || 0;
-                    const gapPct = price > 0 ? Math.round((1 - price / nautVal) * 100) : null;
-                    const filledBars = Math.round((Math.min(nautConf, 20) / 20) * 6);
-                    return (
-                      <div style={{ display: 'flex', gap: '10px', marginBottom: '14px' }}>
-                        <div style={{ flex: 1, background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.25)', borderRadius: '8px', padding: '12px 16px' }}>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '6px' }}>{isFr ? 'ÉCART DE PRIX' : 'PRICING GAP'}</div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: '#34D399', lineHeight: 1 }}>
-                            {gapPct != null && gapPct > 0 ? `-${gapPct}%` : gapPct != null ? `+${Math.abs(gapPct)}%` : '—'}
-                          </div>
-                          <div style={{ fontSize: '11px', color: LTT3, marginTop: '4px' }}>{isFr ? 'sous la valeur Nautilus' : 'below Nautilus value'}</div>
-                        </div>
-                        <div style={{ flex: 1, background: 'rgba(198,168,90,0.06)', border: '1px solid rgba(198,168,90,0.25)', borderRadius: '8px', padding: '12px 16px' }}>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>{isFr ? 'CONFIANCE DU SIGNAL' : 'SIGNAL CONFIDENCE'}</div>
-                          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginBottom: '6px' }}>
-                            {[0,1,2,3,4,5].map(i => (
-                              <div key={i} style={{ width: '14px', height: '6px', borderRadius: '2px', background: i < filledBars ? GOLD : 'rgba(198,168,90,0.2)' }} />
-                            ))}
-                          </div>
-                          <div style={{ fontSize: '11px', color: LTT3 }}>{isFr ? `${nautConf} ventes comparables` : `${nautConf} comparable sales`}</div>
-                        </div>
-                      </div>
-                    );
-                  })()}
 
                   {/* ── Price Position Bar ── */}
                   {lot.fair_value_nautilus != null && price > 0 && (() => {
@@ -1476,12 +1342,9 @@ export default function OpportunityDetail() {
                 </div>
               </div>
             )}
-          </>
-        )}
 
-        {/* ──────────────── COMPARABLES TAB ──────────────── */}
-        {activeTab === 'comparables' && (
-          <div style={{ padding: '32px 40px 48px' }}>
+        {/* ──────────────── COMPARABLE SALES ──────────────── */}
+        <div style={{ padding: '32px 40px 48px' }}>
             {comparables.length === 0 ? (
               <div style={{ ...wCard, textAlign: 'center', padding: '60px 24px' }}>
                 <div style={{ fontSize: '32px', opacity: 0.15, marginBottom: '16px' }}>◎</div>
@@ -1489,95 +1352,6 @@ export default function OpportunityDetail() {
               </div>
             ) : (
               <>
-                {/* Market stats row */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '28px' }}>
-                  <div style={wCard}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase' as const, color: LTT3, marginBottom: '8px' }}>AVG COMPARABLE PRICE</div>
-                    <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', fontWeight: 600, color: LTT1 }}>{fmt(compsAvgPrice)}</div>
-                  </div>
-                  <div style={wCard}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase' as const, color: LTT3, marginBottom: '8px' }}>COMPARABLES COUNT</div>
-                    <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', fontWeight: 600, color: LTT1 }}>{comparables.length}</div>
-                  </div>
-                  <div style={wCard}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase' as const, color: LTT3, marginBottom: '8px' }}>VS THIS LOT</div>
-                    <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', fontWeight: 600, color: compsAvgPrice > price ? GL : RED }}>
-                      {compsAvgPrice > price
-                        ? `+${Math.round((compsAvgPrice / price - 1) * 100)}%`
-                        : compsAvgPrice < price
-                        ? `-${Math.round((1 - compsAvgPrice / price) * 100)}%`
-                        : 'At parity'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Scatter chart */}
-                <div style={{ ...wCard, marginBottom: '28px' }}>
-                  <div style={{ ...sl, marginBottom: '20px' }}>PRICE HISTORY · SCATTER VIEW</div>
-                  <ResponsiveContainer width="100%" height={320}>
-                    <ComposedChart margin={{ top: 16, right: 24, bottom: 16, left: 16 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={LTB} />
-                      <XAxis
-                        dataKey="x"
-                        type="number"
-                        domain={['auto', 'auto']}
-                        tickFormatter={(v: any) => String(Math.round(v))}
-                        tick={{ fontFamily: 'monospace', fontSize: 10, fill: LTT3 }}
-                        label={{ value: 'Year', position: 'insideBottom', offset: -8, fontFamily: 'monospace', fontSize: 10, fill: LTT3 }}
-                      />
-                      <YAxis
-                        dataKey="y"
-                        type="number"
-                        tickFormatter={(v: any) => fmt(v)}
-                        tick={{ fontFamily: 'monospace', fontSize: 10, fill: LTT3 }}
-                        width={72}
-                      />
-                      <Tooltip
-                        formatter={(value: any, _name: any, props: any) => [fmt(value), props?.payload?.title || 'Comparable']}
-                        labelFormatter={(label: any) => `Year: ${Math.round(label)}`}
-                        contentStyle={{ fontFamily: 'monospace', fontSize: 11, background: LTC, border: `1px solid ${LTB}`, borderRadius: 8 }}
-                      />
-                      {estLow > 0 && (
-                        <ReferenceLine y={estLow} stroke={GOLD} strokeDasharray="4 4" strokeWidth={1.5}
-                          label={{ value: 'Est. Low', position: 'right', fontFamily: 'monospace', fontSize: 9, fill: GOLD }} />
-                      )}
-                      {estHigh > 0 && (
-                        <ReferenceLine y={estHigh} stroke={GOLD} strokeDasharray="4 4" strokeWidth={1.5}
-                          label={{ value: 'Est. High', position: 'right', fontFamily: 'monospace', fontSize: 9, fill: GOLD }} />
-                      )}
-                      {/* Comparable lots — small gray dots */}
-                      <Scatter
-                        name="Comparables"
-                        data={compChartData}
-                        fill={LTT3}
-                        opacity={0.7}
-                      />
-                      {/* Current lot — gold dot */}
-                      <Scatter
-                        name="This lot"
-                        data={currentLotChartDot}
-                        shape={<CurrentDot />}
-                      />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                  <div style={{ display: 'flex', gap: '20px', marginTop: '12px', flexWrap: 'wrap' as const }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: LTT3 }} />
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: LTT3 }}>Comparable lots</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div style={{ width: 12, height: 12, borderRadius: '50%', background: GOLD, border: '2px solid #fff', boxShadow: `0 0 0 1px ${GOLD}` }} />
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: LTT3 }}>This lot</span>
-                    </div>
-                    {estLow > 0 && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ width: 16, height: 2, background: GOLD, opacity: 0.7 }} />
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: LTT3 }}>Estimate range</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
                 {/* Full comparables table */}
                 <div style={wCard}>
                   <div style={{ ...sl, marginBottom: '4px' }}>ALL COMPARABLES</div>
@@ -1629,11 +1403,9 @@ export default function OpportunityDetail() {
               </>
             )}
           </div>
-        )}
 
-        {/* ──────────────── ANALYSIS TAB ──────────────── */}
-        {activeTab === 'analysis' && (
-          <div style={{ padding: '32px 40px 48px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        {/* ──────────────── ANALYSIS ──────────────── */}
+        <div style={{ padding: '32px 40px 48px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
             {/* AI Rationale */}
             {analysisText && (
@@ -1744,11 +1516,9 @@ export default function OpportunityDetail() {
               </div>
             </div>
           </div>
-        )}
 
-        {/* ──────────────── DOCUMENTS TAB ──────────────── */}
-        {activeTab === 'documents' && (
-          <div style={{ padding: '32px 40px 48px' }}>
+        {/* ──────────────── DOCUMENTS ──────────────── */}
+        <div style={{ padding: '32px 40px 48px' }}>
             {!hasAccess ? (
               <LockedBlock
                 title="Documents & Sources"
@@ -1831,7 +1601,6 @@ export default function OpportunityDetail() {
               </div>
             )}
           </div>
-        )}
 
       </div>
 
