@@ -615,15 +615,61 @@ export default function ArtistIntelligence() {
               </div>
             )}
 
+            {/* Stat bar */}
+            {(() => {
+              const rec = priceHistory?.statistics?.max_hammer_eur ?? stats.max_price;
+              const trendPct = priceHistory?.statistics?.trend_pct;
+              const totalSales = priceHistory?.total_sales ?? artist.total_lots;
+              const aboveEst = priceHistory?.statistics?.sell_above_estimate_pct;
+              const fmtStat = (v: number) => v >= 1_000_000 ? `€${(v/1_000_000).toFixed(1)}M` : v >= 1_000 ? `€${Math.round(v/1_000)}K` : `€${Math.round(v)}`;
+              const cols = [
+                rec != null ? { key: 'record', label: 'RECORD', value: fmtStat(rec), color: '#C6A85A', big: true } : null,
+                trendPct != null ? { key: 'trend', label: 'TREND', value: `${trendPct >= 0 ? '↑' : '↓'} ${Math.abs(trendPct)}%`, color: trendPct >= 0 ? '#34D399' : '#F87171', big: true } : null,
+                totalSales != null ? { key: 'ventes', label: 'VENTES', value: String(totalSales), color: 'rgba(255,255,255,0.45)', big: false } : null,
+                aboveEst != null ? { key: 'above', label: 'AU-DESSUS EST.', value: `${aboveEst}%`, color: '#60A5FA', big: true } : null,
+              ].filter(Boolean) as { key: string; label: string; value: string; color: string; big: boolean }[];
+              if (cols.length === 0) return null;
+              return (
+                <div style={{ display: 'flex', background: 'var(--navy)', borderRadius: '10px', marginBottom: '20px', overflow: 'hidden' }}>
+                  {cols.map((col, i) => (
+                    <div key={col.key} style={{ flex: 1, padding: '14px 16px', borderLeft: i > 0 ? '0.5px solid rgba(255,255,255,0.08)' : 'none' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '6px' }}>{col.label}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: col.big ? '24px' : '14px', fontWeight: col.big ? 700 : 400, color: col.color, lineHeight: 1 }}>{col.value}</div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
             {/* AI brief / Wikipedia fallback / placeholder */}
             {artist.ai_brief ? (
               <div style={{ background: 'var(--navy)', borderRadius: '10px', padding: '18px 22px', marginBottom: '20px' }}>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '8px' }}>
-                  {isFr ? '◆ ANALYSE NAUTILUS' : '◆ NAUTILUS ANALYST BRIEF'}
-                </div>
-                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>
-                  {artist.ai_brief}
-                </p>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '12px' }}>◆ ANALYSE NAUTILUS</div>
+                {[
+                  { key: 'MOMENTUM', value: stats.momentum === 'rising' ? '↑ En hausse — activité croissante' : stats.momentum === 'falling' ? '↓ En baisse — activité décroissante' : '→ Stable — marché équilibré', color: stats.momentum === 'rising' ? '#16A34A' : stats.momentum === 'falling' ? '#F87171' : 'rgba(255,255,255,0.6)' },
+                  { key: 'CONVICTION', value: (stats.avg_score || 0) >= 80 ? `${stats.avg_score}/100 — Forte conviction` : (stats.avg_score || 0) >= 60 ? `${stats.avg_score}/100 — Intérêt modéré` : `${stats.avg_score || 0}/100 — Signal faible`, color: (stats.avg_score || 0) >= 60 ? '#C6A85A' : 'rgba(255,255,255,0.6)' },
+                  { key: 'TENDANCE', value: stats.trend_direction === 'up' ? 'Hausse sur 24 mois' : stats.trend_direction === 'down' ? 'Baisse sur 24 mois' : 'Latéral sur 24 mois', color: stats.trend_direction === 'up' ? '#16A34A' : stats.trend_direction === 'down' ? '#F87171' : 'rgba(255,255,255,0.6)' },
+                ].map(row => (
+                  <div key={row.key} style={{ display: 'flex', gap: '12px', alignItems: 'baseline', marginBottom: '8px' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', minWidth: '110px', flexShrink: 0 }}>{row.key}</span>
+                    <span style={{ fontSize: '13px', color: row.color, lineHeight: 1.5 }}>{row.value}</span>
+                  </div>
+                ))}
+                {formatMatrix.length > 0 && (() => {
+                  const bf = formatMatrix.reduce((best: any, f: any) => (f.sell_above_estimate_pct || 0) > (best.sell_above_estimate_pct || 0) ? f : best, formatMatrix[0]);
+                  return (
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'baseline', marginBottom: '8px' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', minWidth: '110px', flexShrink: 0 }}>MEILLEUR FORMAT</span>
+                      <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>{bf.format} · €{bf.avg_price >= 1000 ? `${Math.round(bf.avg_price/1000)}K` : Math.round(bf.avg_price)} · {bf.sell_above_estimate_pct}% au-dessus est.</span>
+                    </div>
+                  );
+                })()}
+                {timingOptimizer?.best_month && (
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'baseline' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', minWidth: '110px', flexShrink: 0 }}>MEILLEUR MARCHÉ</span>
+                    <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>{timingOptimizer.best_month} · {timingOptimizer.best_season} · {timingOptimizer.best_house}</span>
+                  </div>
+                )}
               </div>
             ) : wikiBio ? (
               <div style={{ background: 'var(--navy)', borderRadius: '10px', padding: '18px 22px', marginBottom: '20px' }}>
@@ -734,6 +780,40 @@ export default function ArtistIntelligence() {
             >
               {isFr ? '★ Suivre cet artiste' : '★ Follow this artist'}
             </button>
+
+            {/* Oracle — right column */}
+            {oracle !== null && hasAccess && (
+              <div style={{ background: 'var(--navy)', borderRadius: '10px', padding: '18px 22px' }}>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '14px' }}>◆ NAUTILUS ORACLE</div>
+                {Object.entries(oracle as Record<string, unknown>).map(([key, value]) =>
+                  typeof value === 'string' || typeof value === 'number' ? (
+                    <div key={key} style={{ marginBottom: '12px' }}>
+                      <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '3px' }}>{key.replace(/_/g, ' ')}</div>
+                      <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.75 }}>{String(value)}</div>
+                    </div>
+                  ) : null
+                )}
+              </div>
+            )}
+
+            {/* Actions rapides */}
+            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '16px 18px' }}>
+              <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '12px' }}>ACTIONS RAPIDES</div>
+              {[
+                { label: 'Parcourir les opportunités', right: `${artist.total_lots} lots →`, to: `/app/explore?artist=${encodeURIComponent(artist.artist_name || artist.name || '')}` },
+                { label: 'Voir les convictions ≥ 80', right: '→', to: '/app/explore?min_score=80' },
+                { label: 'Créer une alerte artiste', right: '→', to: '/app/intelligence' },
+              ].map(({ label, right, to }, idx) => (
+                <button key={label} onClick={() => navigate(to)}
+                  style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', background: 'none', border: 'none', borderBottom: idx < 2 ? '1px solid var(--border-light)' : 'none', cursor: 'pointer', fontSize: '13px', color: 'var(--text)', textAlign: 'left' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = 'var(--electric)'}
+                  onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = 'var(--text)'}
+                >
+                  <span>{label}</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>{right}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -804,37 +884,79 @@ export default function ArtistIntelligence() {
           </div>
         )}
 
-        {/* Oracle Analysis */}
-        {oracle !== null && hasAccess && (
-          <div style={{ marginBottom: '32px' }}>
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 16px 0' }}>Oracle Analysis</h2>
-            <div style={{ background: 'var(--navy)', borderRadius: '10px', padding: '18px 22px' }}>
-              <div style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '14px' }}>
-                ◆ NAUTILUS ORACLE
-              </div>
-              {Object.entries(oracle as Record<string, unknown>).map(([key, value]) =>
-                typeof value === 'string' || typeof value === 'number' ? (
-                  <div key={key} style={{ marginBottom: '12px' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '3px' }}>
-                      {key.replace(/_/g, ' ')}
-                    </div>
-                    <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.75 }}>
-                      {String(value)}
-                    </div>
-                  </div>
-                ) : null
-              )}
-            </div>
+        {/* Chart + Timing — side by side */}
+        <div style={{ display: 'grid', gridTemplateColumns: timingOptimizer && hasAccess ? '1fr 280px' : '1fr', gap: '16px', marginBottom: '32px', alignItems: 'start' }}>
+          <div>
+            {priceHistory && (
+              <PriceChart
+                data={priceHistory.price_by_year}
+                stats={{ ...priceHistory.statistics, total_sales: priceHistory.total_sales }}
+              />
+            )}
           </div>
-        )}
-
-        {/* Price history chart */}
-        {priceHistory && (
-          <PriceChart
-            data={priceHistory.price_by_year}
-            stats={{ ...priceHistory.statistics, total_sales: priceHistory.total_sales }}
-          />
-        )}
+          {timingOptimizer && hasAccess && (() => {
+            const fmtT = (v: number) => v >= 1_000_000 ? `€${(v/1_000_000).toFixed(1)}M` : v >= 1_000 ? `€${Math.round(v/1_000)}K` : `€${Math.round(v)}`;
+            const maxAvgT = Math.max(...timingOptimizer.monthly_summary.map((m: any) => m.avg_price));
+            const SEASON_COLOR_T: Record<string, string> = { Spring: '#34D399', Summer: '#F59E0B', Autumn: '#F87171', Winter: '#60A5FA' };
+            return (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
+                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', margin: 0 }}>{isFr ? 'Optimiseur de timing' : 'Timing Optimizer'}</h2>
+                  {timingOptimizer.best_month && (
+                    <div style={{ background: 'var(--navy)', borderRadius: '8px', padding: '10px 16px', textAlign: 'right' }}>
+                      <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>{isFr ? 'MEILLEURE PÉRIODE' : 'BEST WINDOW'}</div>
+                      <div style={{ fontSize: '15px', fontWeight: 700, color: '#C6A85A', marginTop: '3px' }}>📅 {timingOptimizer.best_month} · {timingOptimizer.best_season}</div>
+                      {timingOptimizer.best_house && <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>{timingOptimizer.best_house}</div>}
+                    </div>
+                  )}
+                </div>
+                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '20px 24px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '6px', alignItems: 'end', height: '100px' }}>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
+                      const entry = timingOptimizer.monthly_summary.find((x: any) => x.month === m);
+                      const MONTH_SHORT = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+                      const barH = entry ? Math.max(8, (entry.avg_price / maxAvgT) * 80) : 0;
+                      const sc = entry ? SEASON_COLOR_T[entry.season] : 'var(--border)';
+                      const isBest = entry && entry.avg_price === maxAvgT;
+                      return (
+                        <div key={m} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                          {isBest && <div style={{ fontSize: '8px', color: '#C6A85A', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>★</div>}
+                          <div title={entry ? `${entry.month_name}: ${fmtT(entry.avg_price)} avg · ${entry.total_sales} sales` : 'No data'}
+                            style={{ width: '100%', height: `${barH}px`, background: entry ? sc : 'var(--bg-subtle)', borderRadius: '3px 3px 0 0', opacity: entry ? (isBest ? 1 : 0.65) : 0.3 }} />
+                          <div style={{ fontSize: '9px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{MONTH_SHORT[m-1]}</div>
+                          {entry && <div style={{ fontSize: '8px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{fmtT(entry.avg_price)}</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-light)', flexWrap: 'wrap' }}>
+                    {(() => {
+                      const seasonFr: Record<string, string> = { Spring: 'Printemps', Summer: 'Été', Autumn: 'Automne', Winter: 'Hiver' };
+                      return Object.entries(SEASON_COLOR_T).map(([s, c]) => (
+                        <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: c }} />
+                          <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{isFr ? (seasonFr[s] || s) : s}</span>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+                {timingOptimizer.entries?.length > 0 && (
+                  <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
+                    {timingOptimizer.entries.slice(0, 4).map((e: any, i: number) => (
+                      <div key={i} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', borderLeft: `3px solid ${SEASON_COLOR_T[e.season] || '#6B7280'}` }}>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text)', marginBottom: '4px' }}>{e.house}</div>
+                        <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginBottom: '6px' }}>{e.month_name} · {e.count} sales</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: i === 0 ? '#C6A85A' : 'var(--text)' }}>{fmtT(e.avg_price)}</div>
+                        {e.sell_above_pct !== null && <div style={{ fontSize: '10px', color: e.sell_above_pct >= 70 ? '#34D399' : e.sell_above_pct >= 50 ? '#F59E0B' : '#F87171', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>{e.sell_above_pct}% {isFr ? 'au-dessus est.' : 'above est.'}</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
 
         {!hasAccess ? (
           <div style={{textAlign:'center',padding:'64px 24px',background:'#f8f8f6',borderRadius:8,marginTop:32,border:'1px solid #e8e4dc'}}>
@@ -845,9 +967,12 @@ export default function ArtistIntelligence() {
           </div>
         ) : (
           <>
+            {/* Format Matrix + Geo — side by side */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '32px' }}>
+            <div>
             {/* Format Performance Matrix */}
             {formatMatrix.length > 0 && (
-          <div style={{ marginBottom: '32px' }}>
+          <div style={{ marginBottom: 0 }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div>
@@ -993,6 +1118,8 @@ export default function ArtistIntelligence() {
           </div>
         )}
 
+            </div>
+            <div>
         {/* Geographic Arbitrage Detector */}
         {geoArbitrage && geoArbitrage.regions.length >= 2 && (() => {
           const regions: any[] = geoArbitrage.regions;
@@ -1004,7 +1131,7 @@ export default function ArtistIntelligence() {
             :                `€${Math.round(v)}`;
 
           return (
-            <div style={{ marginBottom: '32px' }}>
+            <div style={{ marginBottom: 0 }}>
               {/* Header */}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div>
@@ -1143,80 +1270,8 @@ export default function ArtistIntelligence() {
             </div>
           );
         })()}
-
-        {/* ── Auction House Timing Optimizer ──────────────────────────── */}
-        {timingOptimizer && (() => {
-          const fmt = (v: number) => v >= 1_000_000 ? `€${(v/1_000_000).toFixed(1)}M` : v >= 1_000 ? `€${Math.round(v/1_000)}K` : `€${Math.round(v)}`;
-          const maxAvg = Math.max(...timingOptimizer.monthly_summary.map((m: any) => m.avg_price));
-          const SEASON_COLOR: Record<string, string> = { Spring: '#34D399', Summer: '#F59E0B', Autumn: '#F87171', Winter: '#60A5FA' };
-          return (
-            <div style={{ marginBottom: '32px' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div>
-                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: 0 }}>{isFr ? 'Optimiseur de timing par maison de vente' : 'Auction House Timing Optimizer'}</h2>
-                </div>
-                {timingOptimizer.best_month && (
-                  <div style={{ background: 'var(--navy)', borderRadius: '8px', padding: '10px 16px', textAlign: 'right' }}>
-                    <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>{isFr ? 'MEILLEURE PÉRIODE' : 'BEST WINDOW'}</div>
-                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#C6A85A', marginTop: '3px' }}>
-                      📅 {timingOptimizer.best_month} · {timingOptimizer.best_season}
-                    </div>
-                    {timingOptimizer.best_house && <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>{timingOptimizer.best_house}</div>}
-                  </div>
-                )}
-              </div>
-
-              {/* Monthly bar chart */}
-              <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '20px 24px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '6px', alignItems: 'end', height: '100px' }}>
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
-                    const entry = timingOptimizer.monthly_summary.find((x: any) => x.month === m);
-                    const MONTH_SHORT = ['J','F','M','A','M','J','J','A','S','O','N','D'];
-                    const barH = entry ? Math.max(8, (entry.avg_price / maxAvg) * 80) : 0;
-                    const sc = entry ? SEASON_COLOR[entry.season] : 'var(--border)';
-                    const isBest = entry && entry.avg_price === maxAvg;
-                    return (
-                      <div key={m} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                        {isBest && <div style={{ fontSize: '8px', color: '#C6A85A', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>★</div>}
-                        <div title={entry ? `${entry.month_name}: ${fmt(entry.avg_price)} avg · ${entry.total_sales} sales` : 'No data'}
-                          style={{ width: '100%', height: `${barH}px`, background: entry ? sc : 'var(--bg-subtle)', borderRadius: '3px 3px 0 0', opacity: entry ? (isBest ? 1 : 0.65) : 0.3, transition: 'opacity 0.2s', cursor: entry ? 'default' : 'default' }} />
-                        <div style={{ fontSize: '9px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{MONTH_SHORT[m-1]}</div>
-                        {entry && <div style={{ fontSize: '8px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{fmt(entry.avg_price)}</div>}
-                      </div>
-                    );
-                  })}
-                </div>
-                {/* Season legend */}
-                <div style={{ display: 'flex', gap: '16px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-light)' }}>
-                  {(() => {
-                    const seasonFr: Record<string, string> = { Spring: 'Printemps', Summer: 'Été', Autumn: 'Automne', Winter: 'Hiver' };
-                    return Object.entries(SEASON_COLOR).map(([s, c]) => (
-                      <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: c }} />
-                        <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{isFr ? (seasonFr[s] || s) : s}</span>
-                      </div>
-                    ));
-                  })()}
-                  <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginLeft: 'auto' }}>{isFr ? 'Hauteur des barres = prix adjugé moy. (EUR)' : 'Bar height = avg hammer price (EUR)'}</span>
-                </div>
-              </div>
-
-              {/* Top house+month combos */}
-              {timingOptimizer.entries?.length > 0 && (
-                <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
-                  {timingOptimizer.entries.slice(0, 6).map((e: any, i: number) => (
-                    <div key={i} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', borderLeft: `3px solid ${SEASON_COLOR[e.season] || '#6B7280'}` }}>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text)', marginBottom: '4px' }}>{e.house}</div>
-                      <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginBottom: '6px' }}>{e.month_name} · {e.count} sales</div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: i === 0 ? '#C6A85A' : 'var(--text)' }}>{fmt(e.avg_price)}</div>
-                      {e.sell_above_pct !== null && <div style={{ fontSize: '10px', color: e.sell_above_pct >= 70 ? '#34D399' : e.sell_above_pct >= 50 ? '#F59E0B' : '#F87171', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>{e.sell_above_pct}% {isFr ? 'au-dessus est.' : 'above est.'}</div>}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
-          );
-        })()}
+            </div>
 
         {/* ── Liquidity Depth Map ──────────────────────────────────────── */}
         {liquidityMap && (() => {
