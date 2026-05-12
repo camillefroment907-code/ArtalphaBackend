@@ -1350,7 +1350,7 @@ class EmailSentLog(Base):
     __tablename__ = "email_sent_log"
 
     id         = Column(Integer, primary_key=True, autoincrement=True)
-    user_id    = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id    = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     email_type = Column(String, nullable=False)
     sent_at    = Column(DateTime, default=datetime.utcnow, nullable=False)
 

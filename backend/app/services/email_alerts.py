@@ -16,7 +16,7 @@ async def _under_weekly_limit(user_id: str, email_type: str, db, limit: int = 1)
     cutoff = datetime.utcnow() - timedelta(days=7)
     result = await db.execute(
         select(func.count()).select_from(EmailSentLog).where(
-            EmailSentLog.user_id == str(user_id),
+            EmailSentLog.user_id == user_id,
             EmailSentLog.email_type == email_type,
             EmailSentLog.sent_at >= cutoff,
         )
@@ -31,7 +31,7 @@ async def _log_email(user_id: str, email_type: str, db) -> None:
         return
     from app.models.db_models import EmailSentLog
     from datetime import datetime as _dt
-    log = EmailSentLog(user_id=str(user_id), email_type=email_type, sent_at=_dt.utcnow())
+    log = EmailSentLog(user_id=user_id, email_type=email_type, sent_at=_dt.utcnow())
     db.add(log)
     await db.commit()
 
