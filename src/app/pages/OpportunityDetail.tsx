@@ -173,13 +173,12 @@ export default function OpportunityDetail() {
 
   useEffect(() => {
     if (!id || !getToken()) return;
-    fetch(`${BACKEND}/api/subscriptions`, {
+    fetch(`${BACKEND}/api/wishlist/ids`, {
       headers: { Authorization: `Bearer ${getToken()}` },
     })
       .then(r => r.ok ? r.json() : [])
-      .then((subs: any[]) => {
-        const match = subs.find((s: any) => s.lot_id === id);
-        if (match) { setSubscribed(true); setSubId(match.id); }
+      .then((ids: string[]) => {
+        if (ids.includes(id)) { setSubscribed(true); setSubId(id); }
       })
       .catch(() => {});
   }, [id]);
@@ -630,22 +629,20 @@ export default function OpportunityDetail() {
                 setSubLoading(true);
                 try {
                   if (subscribed && subId) {
-                    await fetch(`${BACKEND}/api/subscriptions/${subId}`, {
+                    await fetch(`${BACKEND}/api/wishlist/${id}`, {
                       method: 'DELETE',
                       headers: { Authorization: `Bearer ${getToken()}` },
                     });
                     setSubscribed(false);
                     setSubId(null);
                   } else {
-                    const r = await fetch(`${BACKEND}/api/subscriptions/lot`, {
+                    const r = await fetch(`${BACKEND}/api/wishlist/${id}`, {
                       method: 'POST',
-                      headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ lot_id: id }),
+                      headers: { Authorization: `Bearer ${getToken()}` },
                     });
                     if (r.ok) {
-                      const data = await r.json();
                       setSubscribed(true);
-                      setSubId(data.id);
+                      setSubId(id);
                       trackEvent('lot_watchlist_add', 'lot', lot.id, {
                         lot_title: lot.title,
                         artist: lot.artist_name_raw,
