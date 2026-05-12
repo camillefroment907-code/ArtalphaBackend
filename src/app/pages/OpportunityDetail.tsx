@@ -321,6 +321,36 @@ export default function OpportunityDetail() {
   const breakEvenGain = realCost ? realCost.needed_gain_pct : 26;
   const netGain       = upsidePct - breakEvenGain;
 
+  const getBuyerPremium = (houseName: string): number => {
+    const h = (houseName || '').toLowerCase();
+    if (h.includes('christie')) return 1.26;
+    if (h.includes('sotheby')) return 1.25;
+    if (h.includes('phillips')) return 1.25;
+    if (h.includes('bonhams')) return 1.25;
+    if (h.includes('drouot') || h.includes('artcurial')) return 1.28;
+    if (h.includes('ebay')) return 1.13;
+    if (h.includes('liveauctioneer')) return 1.25;
+    return 1.26;
+  };
+  const premiumMultiplier = getBuyerPremium(lot.auction_house_name || '');
+  const buyerPremiumPct = Math.round((premiumMultiplier - 1) * 100);
+  const bidBase = lot.estimate_high || lot.estimate_low || lot.current_price || null;
+  const maxBid = bidBase ? Math.round(bidBase * premiumMultiplier) : null;
+  const avoidAbove = lot.real_cost?.breakeven_hammer
+    ? Math.round(lot.real_cost.breakeven_hammer * 0.85)
+    : null;
+  const daysUntilClose = lot.auction_date
+    ? Math.max(0, Math.round((new Date(lot.auction_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null;
+  const timingSignal = lot.oracle?.signal === 'BUY_NOW'
+    ? (isFr ? 'Signal fort — meilleur moment pour acheter' : 'Strong signal — optimal entry')
+    : lot.oracle?.signal === 'AVOID'
+    ? (isFr ? 'Signal négatif — éviter pour le moment' : 'Negative signal — avoid for now')
+    : null;
+  const bullets: string[] = [
+    lot.score_rationale ? String(lot.score_rationale) : null,
+  ].filter(Boolean) as string[];
+
   // Analysis text
   const rawAnalysis = lot.score_rationale || lot.nautilus_analysis || '';
   const analysisText = rawAnalysis && !isFrench(rawAnalysis)
@@ -398,12 +428,11 @@ export default function OpportunityDetail() {
         </div>
       </div>
 
-      {/* ═══ HERO — dark ═══ */}
-      <div ref={heroRef} className="lot-hero-grid" style={{ background: DK, display: 'grid', gridTemplateColumns: '35% 65%' }}>
+      {/* ═══ HERO — terminal 3-col ═══ */}
+      <div ref={heroRef} style={{ background: DK, display: 'grid', gridTemplateColumns: '180px 1fr 220px', minHeight: '380px' }}>
 
-        {/* LEFT — image panel */}
-        <div className="lot-hero-image" style={{ background: DK4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '400px', padding: '8px', gap: '16px', borderRight: `0.5px solid ${DKB}`, position: 'relative' }}>
-          {/* Back button (top-left) */}
+        {/* COL 1 — Image */}
+        <div className="lot-hero-image" style={{ background: DK4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px', gap: '16px', borderRight: `0.5px solid ${DKB}`, position: 'relative' }}>
           <button onClick={() => navigate(-1)} style={{ position: 'absolute', top: '16px', left: '16px', background: 'none', border: `0.5px solid ${DKB}`, color: '#6B7280', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.08em', padding: '5px 10px', borderRadius: '4px' }}>
             {t('lot.back')}
           </button>
@@ -411,16 +440,16 @@ export default function OpportunityDetail() {
             <img src={lot.image_url} alt={lot.title}
               onLoad={() => setImgLoaded(true)}
               onClick={() => setShowLightbox(true)}
-              style={{ width: '100%', height: 'auto', maxHeight: '420px', objectFit: 'contain', opacity: imgLoaded ? 1 : 0, transition: 'opacity 0.4s', cursor: 'pointer' }} />
+              style={{ width: '100%', height: 'auto', maxHeight: '340px', objectFit: 'contain', opacity: imgLoaded ? 1 : 0, transition: 'opacity 0.4s', cursor: 'pointer' }} />
           ) : (
-            <div style={{ width: '200px', height: '260px', background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: '40px', opacity: 0.08 }}>◎</span>
+            <div style={{ width: '140px', height: '180px', background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '36px', opacity: 0.08 }}>◎</span>
             </div>
           )}
         </div>
 
-        {/* RIGHT — info panel */}
-        <div className="lot-hero-info" style={{ padding: '36px 32px 36px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* COL 2 — Context */}
+        <div className="lot-hero-info" style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', gap: '14px', borderRight: `0.5px solid ${DKB}` }}>
 
           {/* EXCEPTIONAL badge */}
           {dealScore >= 80 && (
@@ -438,7 +467,7 @@ export default function OpportunityDetail() {
               style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px', cursor: 'pointer' }}>
               {lot.artist_name_raw || 'Unknown artist'}
             </div>
-            <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(24px, 2.5vw, 30px)', color: '#F0EDE6', fontWeight: 600, margin: '0 0 8px', lineHeight: 1.15 }}>
+            <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(20px, 2vw, 26px)', color: '#F0EDE6', fontWeight: 600, margin: '0 0 8px', lineHeight: 1.15 }}>
               {lot.title || 'Untitled'}
             </h1>
             <div style={{ fontSize: '12px', color: '#6B7280', fontStyle: 'italic' }}>
@@ -446,84 +475,12 @@ export default function OpportunityDetail() {
             </div>
           </div>
 
-          {/* 5 KPI cards */}
-          <div className="lot-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
-
-            {/* SIGNAL */}
-            <div style={{ background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', padding: '13px 12px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>{t('lot.signal')}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: verdict.dk, lineHeight: 1 }}>{verdict.icon} {verdict.label}</div>
-              <div style={{ fontSize: '9px', color: '#6B7280', marginTop: '5px', lineHeight: 1.4 }}>{verdict.sub}</div>
-              {lot.oracle?.signal && (
-                <div style={{ marginTop: '7px', fontFamily: 'var(--font-mono)', fontSize: '8px', color: lot.oracle.signal === 'BUY_NOW' ? '#4ADE80' : lot.oracle.signal === 'AVOID' ? '#F87171' : '#FCD34D', fontWeight: 700, letterSpacing: '0.08em' }}>
-                  ◆ ORACLE: {lot.oracle.signal === 'BUY_NOW' ? 'BUY NOW' : lot.oracle.signal}
-                </div>
-              )}
+          {/* Urgency */}
+          {daysUntilClose !== null && daysUntilClose <= 7 && (
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: daysUntilClose <= 2 ? '#EF4444' : '#FBBF24', letterSpacing: '0.08em' }}>
+              ⚡ {isFr ? `Se clôture dans ${daysUntilClose} jour${daysUntilClose > 1 ? 's' : ''}` : `Closes in ${daysUntilClose} day${daysUntilClose !== 1 ? 's' : ''}`}
             </div>
-
-            {/* SCORE */}
-            <div style={{ background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', padding: '13px 12px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>{t('lot.score')}</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
-                <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 700, color: GOLD, lineHeight: 1 }}>{dealScore.toFixed(0)}</span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#6B7280' }}>/100</span>
-              </div>
-              <div style={{ marginTop: '7px', height: '2px', background: DKB, borderRadius: '1px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', borderRadius: '1px', width: `${dealScore}%`, background: GOLD }} />
-              </div>
-            </div>
-
-            {/* STARTING BID / PRICE */}
-            <div style={{ background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', padding: '13px 12px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>{isUpcoming ? t('lot.startingBid') : t('lot.price')}</div>
-              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 700, color: '#F0EDE6', lineHeight: 1 }}>{fmt(price)}</div>
-              {totalCost > price && (
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: GOLD, marginTop: '4px' }}>all-in {fmt(totalCost)}</div>
-              )}
-              {(estLow > 0 || estHigh > 0) && (
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#6B7280', marginTop: '2px' }}>est. {fmt(estLow)}–{fmt(estHigh)}</div>
-              )}
-            </div>
-
-            {/* NAUTILUS FAIR VALUE */}
-            {lot.fair_value_nautilus != null && (
-              <div style={{ background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', padding: '13px 12px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>
-                  {isFr ? 'Prix de référence Nautilus' : 'Nautilus Reference Price'}
-                </div>
-                <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 700, color: '#F0EDE6', lineHeight: 1 }}>
-                  {fmt(lot.fair_value_nautilus)}
-                </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#6B7280', marginTop: '4px' }}>
-                  {isFr
-                    ? `Basé sur ${lot.fair_value_confidence} ventes comparables`
-                    : `Based on ${lot.fair_value_confidence} comparable sales`}
-                </div>
-              </div>
-            )}
-
-            {/* UPSIDE */}
-            <div style={{ background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', padding: '13px 12px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>{t('lot.upside')}</div>
-              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 700, color: upsidePct > 0 ? GD : '#EF4444', lineHeight: 1 }}>
-                {upsidePct > 0 ? '+' : ''}{upsidePct.toFixed(0)}%
-              </div>
-              {netGain > 0 && (
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: GD, marginTop: '4px' }}>{isFr ? `net +${netGain.toFixed(0)}% après frais` : `net +${netGain.toFixed(0)}% after costs`}</div>
-              )}
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#6B7280', marginTop: '2px' }}>{isFr ? `Nécessite +${breakEvenGain.toFixed(0)}% pour atteindre le seuil` : `needs +${breakEvenGain.toFixed(0)}% breakeven`}</div>
-            </div>
-
-            {/* RISK */}
-            <div style={{ background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', padding: '13px 12px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>{t('lot.risk')}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: riskColor, lineHeight: 1 }}>{riskLabel}</div>
-              {riskFlagCount > 0 && (
-                <div style={{ fontSize: '9px', color: '#6B7280', marginTop: '5px' }}>{riskFlagCount} {isFr ? `signal${riskFlagCount > 1 ? 's' : ''}` : `flag${riskFlagCount > 1 ? 's' : ''}`}</div>
-              )}
-            </div>
-
-          </div>
+          )}
 
           {/* WHY block */}
           {(() => {
@@ -555,7 +512,7 @@ export default function OpportunityDetail() {
             const whyColor = isBuy ? "#C6A85A" : "#F87171";
             if (reasons.length === 0) return null;
             return (
-              <div style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '12px 16px', marginTop: 14 }}>
+              <div style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '12px 16px' }}>
                 <div style={{ fontFamily: 'monospace', fontSize: 9, letterSpacing: '0.15em', color: whyColor, marginBottom: 8, textTransform: 'uppercase' as const }}>
                   {whyLabel}
                 </div>
@@ -569,7 +526,7 @@ export default function OpportunityDetail() {
           })()}
 
           {/* Market narrative */}
-          <p style={{ fontSize: 13, fontStyle: 'italic', color: '#6B7280', marginTop: 8 }}>
+          <p style={{ fontSize: 13, fontStyle: 'italic', color: '#6B7280', margin: 0 }}>
             {(lot.deal_score || 0) >= 80
               ? isFr ? `Fort signal d'achat chez ${lot.auction_house_name || 'cette maison de ventes'} — conviction maximale.` : `Strong buy signal at ${lot.auction_house_name || 'this auction house'} — top conviction tier.`
               : (lot.deal_score || 0) >= 65
@@ -598,61 +555,153 @@ export default function OpportunityDetail() {
               </a>
             )}
           </div>
+        </div>
 
-          {/* Follow button */}
-          <div>
-            <button
-              onClick={async () => {
-                if (!getToken()) { window.location.href = '/app/login'; return; }
-                setSubLoading(true);
-                try {
-                  if (subscribed && subId) {
-                    await fetch(`${BACKEND}/api/wishlist/${id}`, {
-                      method: 'DELETE',
-                      headers: { Authorization: `Bearer ${getToken()}` },
-                    });
-                    setSubscribed(false);
-                    setSubId(null);
-                  } else {
-                    const r = await fetch(`${BACKEND}/api/wishlist/${id}`, {
-                      method: 'POST',
-                      headers: { Authorization: `Bearer ${getToken()}` },
-                    });
-                    if (r.ok) {
-                      setSubscribed(true);
-                      setSubId(id);
-                      trackEvent('lot_watchlist_add', 'lot', lot.id, {
-                        lot_title: lot.title,
-                        artist: lot.artist_name_raw,
-                        deal_score: lot.deal_score,
-                      });
-                    }
-                  }
-                } finally {
-                  setSubLoading(false);
-                }
-              }}
-              disabled={subLoading}
-              style={{
-                background: subscribed ? 'rgba(82,201,127,0.1)' : 'none',
-                border: `0.5px solid ${subscribed ? GD : DKB}`,
-                color: subscribed ? GD : '#9CA3AF',
-                cursor: subLoading ? 'default' : 'pointer',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '10px',
-                letterSpacing: '0.08em',
-                padding: '6px 14px',
-                borderRadius: '4px',
-              }}
-            >
-              {subLoading ? '...' : subscribed ? (isFr ? '✓ Suivi' : '✓ Following') : (isFr ? '🔔 Suivre ce lot' : '🔔 Follow this lot')}
-            </button>
+        {/* COL 3 — Conviction stack */}
+        <div style={{ padding: '28px 16px', display: 'flex', flexDirection: 'column', gap: '8px', background: DK4 }}>
+
+          {/* Signal */}
+          <div style={{ background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', padding: '12px 12px' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{t('lot.signal')}</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: verdict.dk, lineHeight: 1 }}>{verdict.icon} {verdict.label}</div>
+            <div style={{ fontSize: '9px', color: '#6B7280', marginTop: '4px', lineHeight: 1.4 }}>{verdict.sub}</div>
           </div>
+
+          {/* Score */}
+          <div style={{ background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', padding: '12px 12px' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{t('lot.score')}</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
+              <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 700, color: GOLD, lineHeight: 1 }}>{dealScore.toFixed(0)}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#6B7280' }}>/100</span>
+            </div>
+            <div style={{ marginTop: '5px', height: '2px', background: DKB, borderRadius: '1px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: '1px', width: `${dealScore}%`, background: GOLD }} />
+            </div>
+          </div>
+
+          {/* Price */}
+          <div style={{ background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', padding: '12px 12px' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isUpcoming ? t('lot.startingBid') : t('lot.price')}</div>
+            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 700, color: '#F0EDE6', lineHeight: 1 }}>{fmt(price)}</div>
+            {maxBid && (
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, marginTop: '3px' }}>
+                {isFr ? `max ${fmt(maxBid)}` : `max ${fmt(maxBid)}`}
+              </div>
+            )}
+          </div>
+
+          {/* Upside */}
+          <div style={{ background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', padding: '12px 12px' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{t('lot.upside')}</div>
+            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 700, color: upsidePct > 0 ? GD : '#EF4444', lineHeight: 1 }}>
+              {upsidePct > 0 ? '+' : ''}{upsidePct.toFixed(0)}%
+            </div>
+            {netGain > 0 && (
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GD, marginTop: '3px' }}>{isFr ? `net +${netGain.toFixed(0)}%` : `net +${netGain.toFixed(0)}% after fees`}</div>
+            )}
+          </div>
+
+          {/* Follow */}
+          <button
+            onClick={async () => {
+              if (!getToken()) { window.location.href = '/app/login'; return; }
+              setSubLoading(true);
+              try {
+                if (subscribed && subId) {
+                  await fetch(`${BACKEND}/api/wishlist/${id}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${getToken()}` },
+                  });
+                  setSubscribed(false);
+                  setSubId(null);
+                } else {
+                  const r = await fetch(`${BACKEND}/api/wishlist/${id}`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${getToken()}` },
+                  });
+                  if (r.ok) {
+                    setSubscribed(true);
+                    setSubId(id);
+                    trackEvent('lot_watchlist_add', 'lot', lot.id, {
+                      lot_title: lot.title,
+                      artist: lot.artist_name_raw,
+                      deal_score: lot.deal_score,
+                    });
+                  }
+                }
+              } finally {
+                setSubLoading(false);
+              }
+            }}
+            disabled={subLoading}
+            style={{
+              marginTop: 'auto',
+              background: subscribed ? 'rgba(82,201,127,0.1)' : 'none',
+              border: `0.5px solid ${subscribed ? GD : DKB}`,
+              color: subscribed ? GD : '#9CA3AF',
+              cursor: subLoading ? 'default' : 'pointer',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '10px',
+              letterSpacing: '0.08em',
+              padding: '8px 14px',
+              borderRadius: '4px',
+              width: '100%',
+            }}
+          >
+            {subLoading ? '...' : subscribed ? (isFr ? '✓ Suivi' : '✓ Following') : (isFr ? '🔔 Suivre ce lot' : '🔔 Follow this lot')}
+          </button>
+
         </div>
       </div>
 
       {/* ═══ LIGHT ZONE ═══ */}
       <div style={{ background: LT }}>
+
+        {/* ── DÉCISION ─────────────────────────────────────────────────────── */}
+        <div style={{ padding: '24px 40px 0' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase', marginBottom: '12px' }}>
+            {isFr ? '◆ DÉCISION' : '◆ DECISION'}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+            <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '10px', padding: '18px 20px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase', marginBottom: '10px' }}>
+                {isFr ? "ENCHÉRISSEZ JUSQU'À" : 'BID UP TO'}
+              </div>
+              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 600, color: LTT1, lineHeight: 1 }}>
+                {maxBid ? fmt(maxBid) : '—'}
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, marginTop: '6px' }}>
+                {isFr ? `Frais inclus (${buyerPremiumPct}%)` : `Incl. premium (${buyerPremiumPct}%)`}
+              </div>
+            </div>
+            <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '10px', padding: '18px 20px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase', marginBottom: '10px' }}>
+                {isFr ? 'DURÉE AVANT LA CLÔTURE' : 'CLOSES IN'}
+              </div>
+              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 600, color: daysUntilClose !== null && daysUntilClose <= 3 ? RED : LTT1, lineHeight: 1 }}>
+                {daysUntilClose !== null ? `${daysUntilClose}j` : '—'}
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, marginTop: '6px' }}>
+                {auctionDateFmt || (isFr ? 'Date inconnue' : 'Date unknown')}
+              </div>
+            </div>
+            <div style={{
+              background: verdict.gl === GL ? '#F0FDF4' : verdict.gl === RED ? '#FEF2F2' : '#FFFBEB',
+              border: `1px solid ${verdict.gl === GL ? '#BBF7D0' : verdict.gl === RED ? '#FECACA' : '#FDE68A'}`,
+              borderRadius: '10px', padding: '18px 20px',
+            }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase', marginBottom: '10px' }}>
+                SIGNAL NAUTILUS
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 800, color: verdict.gl, letterSpacing: '0.04em', lineHeight: 1 }}>
+                {verdict.icon} {verdict.label}
+              </div>
+              <div style={{ fontSize: '11px', color: LTT2, marginTop: '6px', lineHeight: 1.4 }}>
+                {verdict.sub}
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* ── MINI ARTIST CARD ────────────────────────────────────────────── */}
             {lot.artist_name_raw && (
@@ -845,7 +894,9 @@ export default function OpportunityDetail() {
 
             </div>
 
-
+            {canSeeAnalysis && (() => {
+              const content = (
+                <div style={{ padding: '24px' }}>
                   {/* ── Price Position Bar ── */}
                   {lot.fair_value_nautilus != null && price > 0 && (() => {
                     const nautVal = lot.fair_value_nautilus as number;
@@ -968,9 +1019,6 @@ export default function OpportunityDetail() {
             {/* ── HOW TO BID ───────────────────────────────────────────────────── */}
             {(() => {
               const targetEntry = lot.current_price;
-              const avoidAbove = lot.real_cost?.breakeven_hammer
-                ? Math.round(lot.real_cost.breakeven_hammer * 0.85)
-                : null;
               const currency = lot.currency || 'EUR';
               const currencySymbol = currency === 'USD' ? '$' : currency === 'GBP' ? '£' : '€';
               const content = (
