@@ -503,6 +503,10 @@ const fr: TranslationKeys = {
     paywallDesc: 'Accédez à la liste radar complète à partir du plan Investor.',
     unlockCta: 'Débloquer accès Investor →',
     fromPrice: 'À partir de €29/mois · Sans engagement',
+    earlyConviction: 'Forte conviction',
+    earlySignal: 'Signal précoce',
+    underObservation: 'Sous observation',
+    radarNautilus: 'Radar Nautilus',
   },
   blog: {
     sectionLabel: 'INTELLIGENCE DE MARCHÉ',

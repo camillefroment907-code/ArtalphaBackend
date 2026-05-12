@@ -498,6 +498,10 @@ const en = {
     paywallDesc: 'Access the full radar list from the Investor plan.',
     unlockCta: 'Unlock Investor access →',
     fromPrice: 'From €29/month · Cancel anytime',
+    earlyConviction: 'Early Conviction',
+    earlySignal: 'Early Signal',
+    underObservation: 'Under Observation',
+    radarNautilus: 'Radar Nautilus',
   },
   blog: {
     sectionLabel: 'MARKET INTELLIGENCE',

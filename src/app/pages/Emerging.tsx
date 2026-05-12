@@ -193,6 +193,7 @@ export default function Emerging() {
 }
 
 function ArtistCard({ artist, navigate }: { artist: EmergingArtist; navigate: ReturnType<typeof useNavigate> }) {
+  const { t } = useTranslation();
   const bio = artist.biography
     ? artist.biography.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').slice(0, 120).trim() + (artist.biography.length > 120 ? '…' : '')
     : null;
@@ -241,16 +242,28 @@ function ArtistCard({ artist, navigate }: { artist: EmergingArtist; navigate: Re
       <div style={{ padding: '14px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {/* Badges row */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {artist.momentum_signal && (
-            <span style={{
-              fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700,
-              color: artist.momentum_signal === 'rising' ? 'var(--gold)' : 'var(--text-3)',
-              border: `1px solid ${artist.momentum_signal === 'rising' ? 'rgba(198,168,90,0.4)' : 'var(--border)'}`,
-              borderRadius: 3, padding: '2px 7px', letterSpacing: '0.1em',
-            }}>
-              {artist.momentum_signal === 'rising' ? '↑ RISING' : '→ STABLE'}
-            </span>
-          )}
+          {(() => {
+            const score = artist.momentum_score;
+            let prefix: string, label: string, color: string, border: string;
+            if (score !== null && score >= 70) {
+              prefix = '◈'; label = t('emerging.earlyConviction'); color = 'var(--gold)'; border = 'rgba(198,168,90,0.4)';
+            } else if (score !== null && score >= 50) {
+              prefix = '↑'; label = t('emerging.earlySignal'); color = 'var(--gold)'; border = 'rgba(198,168,90,0.4)';
+            } else if (score !== null && score >= 30) {
+              prefix = '→'; label = t('emerging.underObservation'); color = 'var(--text-3)'; border = 'var(--border)';
+            } else {
+              prefix = '◉'; label = t('emerging.radarNautilus'); color = 'var(--text-3)'; border = 'var(--border)';
+            }
+            return (
+              <span style={{
+                fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700,
+                color, border: `1px solid ${border}`,
+                borderRadius: 3, padding: '2px 7px', letterSpacing: '0.1em',
+              }}>
+                {prefix} {label}
+              </span>
+            );
+          })()}
         </div>
 
         {/* Name */}
@@ -267,7 +280,7 @@ function ArtistCard({ artist, navigate }: { artist: EmergingArtist; navigate: Re
 
         {/* CTA */}
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--electric)', letterSpacing: '0.05em', marginTop: 4 }}>
-          View artist →
+          {t('emerging.viewArtist')}
         </div>
       </div>
     </div>
