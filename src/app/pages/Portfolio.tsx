@@ -1333,7 +1333,7 @@ export default function Portfolio() {
                   <span style={{ color: 'white', fontSize: '20px' }}>+</span>
                 </div>
                 <div style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', marginBottom: '8px' }}>Start tracking your collection</div>
-                <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '20px', maxWidth: '360px', margin: '0 auto 20px' }}>Add your artworks to monitor their value, track performance, and get AI-powered insights.</p>
+                <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '20px', maxWidth: '360px', margin: '0 auto 20px' }}>{currentLang === 'fr' ? "Ajoutez vos œuvres pour suivre leur valeur et obtenir des analyses IA." : 'Add your artworks to monitor their value, track performance, and get AI-powered insights.'}</p>
                 <button onClick={() => setShowAddModal(true)} style={{ padding: '10px 28px', background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                   Add my first artwork →
                 </button>
@@ -1794,8 +1794,8 @@ export default function Portfolio() {
               {!lotsLoading && !lotsError && sortedLots.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '80px 0' }}>
                   <div style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', color: 'var(--border)', marginBottom: '16px' }}>◇</div>
-                  <div style={{ fontSize: '16px', color: 'var(--text-2)', marginBottom: '6px' }}>No opportunities tracked yet</div>
-                  <Link to="/app/opportunities" style={{ color: 'var(--navy)', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>Browse Opportunities</Link>
+                  <div style={{ fontSize: '16px', color: 'var(--text-2)', marginBottom: '6px' }}>{currentLang === 'fr' ? "Aucune opportunité suivie" : 'No opportunities tracked yet'}</div>
+                  <Link to="/app/opportunities" style={{ color: 'var(--navy)', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>{currentLang === 'fr' ? "Parcourir les opportunités" : 'Browse Opportunities'}</Link>
                 </div>
               )}
             </div>
@@ -1981,7 +1981,7 @@ export default function Portfolio() {
                 <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--navy)', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <span style={{ color: 'white', fontSize: '22px' }}>◎</span>
                 </div>
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '10px' }}>No lots on your watchlist</div>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '10px' }}>{currentLang === 'fr' ? "Aucun lot dans votre surveillance" : 'No lots on your watchlist'}</div>
                 <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '24px', maxWidth: '340px', margin: '0 auto 24px', lineHeight: 1.7 }}>
                   Browse opportunities and click "Watch" on any lot to track it here and receive closing alerts.
                 </p>
@@ -2097,7 +2097,7 @@ export default function Portfolio() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
               <div>
                 <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 6px' }}>Favorite Artists</h2>
-                <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>Follow artists — get alerted when their works appear on Nautilus</p>
+                <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>{currentLang === 'fr' ? "Suivez des artistes — soyez alerté quand leurs œuvres apparaissent" : 'Follow artists — get alerted when their works appear on Nautilus'}</p>
               </div>
               <button onClick={() => setShowAddArtist(true)} className="btn-electric" style={{ fontSize: '11px', padding: '8px 18px', borderRadius: '6px' }}>
                 + Follow artist
@@ -2109,7 +2109,7 @@ export default function Portfolio() {
                 <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--navy)', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <span style={{ color: '#C6A85A', fontSize: '22px' }}>★</span>
                 </div>
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '10px' }}>No favorite artists yet</div>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '10px' }}>{currentLang === 'fr' ? "Aucun artiste suivi pour l'instant" : 'No favorite artists yet'}</div>
                 <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '24px', maxWidth: '340px', margin: '0 auto 24px', lineHeight: 1.7 }}>
                   Follow Picasso, Basquiat, or any artist — and be the first to know when their work appears on the market.
                 </p>
@@ -2200,7 +2200,7 @@ export default function Portfolio() {
                   <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <span style={{ color: 'white', fontSize: '20px', lineHeight: 1 }}>+</span>
                   </div>
-                  <span style={{ fontSize: '13px', color: 'var(--text-2)', fontWeight: 600 }}>Follow an artist</span>
+                  <span style={{ fontSize: '13px', color: 'var(--text-2)', fontWeight: 600 }}>{currentLang === 'fr' ? "Suivre un artiste" : 'Follow an artist'}</span>
                 </div>
               </div>
             )}
@@ -2216,7 +2216,7 @@ export default function Portfolio() {
                   <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '20px' }}>You'll be notified when their work appears on Nautilus.</p>
                   <input
                     className="input"
-                    placeholder="Artist name, e.g. Joan Miró, Basquiat..."
+                    placeholder={currentLang === 'fr' ? "Nom de l'artiste, ex. Joan Miró, Basquiat..." : 'Artist name, e.g. Joan Miró, Basquiat...'}
                     value={newArtistName}
                     onChange={e => setNewArtistName(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && addFavoriteArtist()}
