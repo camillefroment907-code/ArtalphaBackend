@@ -82,28 +82,53 @@ const CATEGORIES = [
 
 function LockedPage() {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
+
+  const steps = isFr ? [
+    { icon: '◆', title: 'Définissez votre stratégie une fois', body: "Définissez vos préférences d'artistes, budget, horizon et appétit au risque. Votre agent apprend votre profil et ne l'oublie jamais." },
+    { icon: '⚡', title: 'Soyez alerté en premier', body: "Dès qu'un lot correspondant apparaît — Drouot, Phillips, Christie's — vous recevez un signal de précision avec un score de conviction et une recommandation claire." },
+    { icon: '◎', title: 'Sachez exactement quoi faire', body: "Chaque recommandation inclut un prix cible, une estimation de potentiel et une justification détaillée. Pas une suggestion — une décision." },
+  ] : [
+    { icon: '◆', title: 'Set your strategy once', body: 'Define your artist preferences, budget, time horizon and risk appetite. Your agent learns your profile and never forgets it.' },
+    { icon: '⚡', title: 'Get alerted first', body: "The moment a matching lot appears — Drouot, Phillips, or Christie's — you receive a precision signal with a conviction score and clear recommendation." },
+    { icon: '◎', title: 'Know exactly what to do', body: 'Every recommendation includes a price target, upside estimate, and detailed rationale. Not a suggestion — a decision.' },
+  ];
+
+  const features = isFr ? [
+    { title: "Flux d'alertes personnalisé", live: true },
+    { title: "Score de conviction par lot", live: true },
+    { title: "Notifications email & in-app", live: true },
+    { title: "Matrice de corrélation portfolio", live: false },
+  ] : [
+    { title: 'Personalized alert feed', live: true },
+    { title: 'Conviction score per lot', live: true },
+    { title: 'Email & in-app notifications', live: true },
+    { title: 'Portfolio Correlation Matrix', live: false },
+  ];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <div style={{ flex: '0 0 40vh', background: '#0A1628', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 64px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, opacity: 0.03, backgroundImage: 'linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)', backgroundSize: '48px 48px' }} />
         <div style={{ position: 'relative', maxWidth: '680px', width: '100%' }}>
           <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.22em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '14px' }}>
-            Investment Intelligence · Investor+
+            {isFr ? "Intelligence d'investissement · Investor+" : "Investment Intelligence · Investor+"}
           </div>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '36px', fontWeight: 600, color: 'white', margin: '0 0 14px', lineHeight: 1.2 }}>
-            Your private art investment analyst.<br />Always on.
+            {isFr ? <>Votre analyste privé en art.<br />Toujours actif.</> : <>Your private art investment analyst.<br />Always on.</>}
           </h1>
           <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.5)', margin: '0 0 28px', lineHeight: 1.7, maxWidth: '520px' }}>
-            While you sleep, your AI analyst scans thousands of artworks across 10+ global auction houses — surfacing only what matches your strategy, at the right price, at the right moment.
+            {isFr ? "Pendant que vous dormez, votre analyste IA scanne des milliers d'œuvres dans 10+ maisons de ventes mondiales — ne faisant remonter que ce qui correspond à votre stratégie, au bon prix, au bon moment." : "While you sleep, your AI analyst scans thousands of artworks across 10+ global auction houses — surfacing only what matches your strategy, at the right price, at the right moment."}
           </p>
           <button
             onClick={() => navigate('/app/pricing')}
             style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#2563EB', color: 'white', border: 'none', borderRadius: '6px', padding: '12px 28px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', letterSpacing: '0.01em' }}
           >
-            Activate my AI analyst →
+            {isFr ? "Activer mon analyste IA →" : "Activate my AI analyst →"}
           </button>
           <div style={{ marginTop: '10px', fontSize: '11px', color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-mono)' }}>
-            Available from Investor plan · €29/month · Cancel anytime
+            {isFr ? "Disponible dès le plan Investor · 29€/mois · Résiliable à tout moment" : "Available from Investor plan · €29/month · Cancel anytime"}
           </div>
         </div>
       </div>
@@ -112,13 +137,9 @@ function LockedPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px', maxWidth: '960px', margin: '0 auto' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '4px' }}>
-              How it works
+              {isFr ? "Comment ça marche" : "How it works"}
             </div>
-            {[
-              { icon: '◆', title: 'Set your strategy once', body: 'Define your artist preferences, budget, time horizon and risk appetite. Your agent learns your profile and never forgets it.' },
-              { icon: '⚡', title: 'Get alerted first', body: "The moment a matching lot appears — Drouot, Phillips, or Christie's — you receive a precision signal with a conviction score and clear recommendation." },
-              { icon: '◎', title: 'Know exactly what to do', body: 'Every recommendation includes a price target, upside estimate, and detailed rationale. Not a suggestion — a decision.' },
-            ].map(({ icon, title, body }) => (
+            {steps.map(({ icon, title, body }) => (
               <div key={title} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                 <span style={{ fontSize: '14px', color: 'var(--gold)', flexShrink: 0, marginTop: '2px' }}>{icon}</span>
                 <div>
@@ -131,7 +152,7 @@ function LockedPage() {
 
           <div>
             <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '12px' }}>
-              Sample signal
+              {isFr ? "Exemple de signal" : "Sample signal"}
             </div>
             <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
               <div style={{ background: '#0A1628', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -142,7 +163,7 @@ function LockedPage() {
                 <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>Zao Wou-Ki</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '14px' }}>Composition abstraite, 1972 · Oil on canvas</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '14px' }}>
-                  {[{ label: 'Estimate', value: '€45–60k' }, { label: 'Target price', value: '€38k' }, { label: 'Upside', value: '+31%' }, { label: 'Closes in', value: '14h' }].map(({ label, value }) => (
+                  {(isFr ? [{ label: 'Estimation', value: '€45–60k' }, { label: 'Prix cible', value: '€38k' }, { label: 'Potentiel', value: '+31%' }, { label: 'Ferme dans', value: '14h' }] : [{ label: 'Estimate', value: '€45–60k' }, { label: 'Target price', value: '€38k' }, { label: 'Upside', value: '+31%' }, { label: 'Closes in', value: '14h' }]).map(({ label, value }) => (
                     <div key={label} style={{ background: 'var(--bg-subtle)', borderRadius: '6px', padding: '8px 10px' }}>
                       <div style={{ fontSize: '10px', color: 'var(--text-3)', marginBottom: '2px' }}>{label}</div>
                       <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{value}</div>
@@ -150,30 +171,25 @@ function LockedPage() {
                   ))}
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--text-2)', lineHeight: 1.6, borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
-                  31% below 3-year auction average. Rare early-period composition. Drouot estimate appears conservative relative to comparable sales.
+                  {isFr ? "31% en dessous de la moyenne aux enchères sur 3 ans. Composition rare de la première période. L'estimation Drouot paraît conservatrice au regard des ventes comparables." : "31% below 3-year auction average. Rare early-period composition. Drouot estimate appears conservative relative to comparable sales."}
                 </div>
               </div>
             </div>
             <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>
-              Illustrative · real signals delivered to Investor members
+              {isFr ? "Illustratif · vrais signaux livrés aux membres Investor" : "Illustrative · real signals delivered to Investor members"}
             </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '4px' }}>
-              What's included
+              {isFr ? "Ce qui est inclus" : "What's included"}
             </div>
-            {[
-              { title: 'Personalized alert feed', live: true },
-              { title: 'Conviction score per lot', live: true },
-              { title: 'Email & in-app notifications', live: true },
-              { title: 'Portfolio Correlation Matrix', live: false },
-            ].map(({ title, live }) => (
+            {features.map(({ title, live }) => (
               <div key={title} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'white', border: '1px solid var(--border)', borderRadius: '8px' }}>
                 <span style={{ fontSize: '13px', color: 'var(--text)', fontWeight: 500 }}>{title}</span>
                 {live
                   ? <span style={{ fontSize: '10px', fontWeight: 700, color: '#16a34a', fontFamily: 'var(--font-mono)', background: 'rgba(22,163,74,0.08)', padding: '2px 7px', borderRadius: '4px' }}>LIVE</span>
-                  : <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', background: 'var(--bg-subtle)', padding: '2px 7px', borderRadius: '4px' }}>SOON</span>
+                  : <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', background: 'var(--bg-subtle)', padding: '2px 7px', borderRadius: '4px' }}>{isFr ? "BIENTÔT" : "SOON"}</span>
                 }
               </div>
             ))}
