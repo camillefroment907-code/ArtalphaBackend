@@ -13,7 +13,7 @@ Each recommendation has a `rec_type` from the 20-type taxonomy:
 """
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func, desc
+from sqlalchemy import select, and_, or_, func, desc, String
 from sqlalchemy.orm import selectinload
 from typing import Optional, List
 from datetime import datetime, timedelta
@@ -87,7 +87,7 @@ def _base_lot_query():
     """Base filter: upcoming/live auction lots with a deal score."""
     horizon = datetime.utcnow() + timedelta(days=_UPCOMING_DAYS)
     return and_(
-        Lot.status.in_(['upcoming', 'live']),
+        Lot.status.cast(String).in_(['upcoming', 'live']),
         Lot.market_type == MarketType.AUCTION,
         Lot.deal_score >= _SCORE_FLOOR,
         or_(
@@ -280,7 +280,7 @@ async def _strategy_global_fallback(excluded: set, db: AsyncSession, limit: int)
     result = await db.execute(
         select(Lot)
         .where(and_(
-            Lot.status.in_(['upcoming', 'live']),
+            Lot.status.cast(String).in_(['upcoming', 'live']),
             Lot.market_type == MarketType.AUCTION,
             Lot.deal_score.isnot(None),
         ))

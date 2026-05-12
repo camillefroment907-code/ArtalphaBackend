@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, Request, Header, Response
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_, desc
+from sqlalchemy import select, func, and_, or_, desc, String
 from sqlalchemy.orm import selectinload
 from typing import Optional, List
 from datetime import datetime, timedelta
@@ -589,7 +589,7 @@ async def get_top_deals(
                 Lot.deal_score >= 70,
                 Lot.auction_date >= today,
                 Lot.auction_date <= month_ahead,
-                Lot.status == 'upcoming',
+                Lot.status.cast(String) == 'upcoming',
                 Lot.market_type == MarketType.AUCTION,
             )
         )
@@ -680,7 +680,7 @@ async def get_trending_lots(
 
     base = and_(
         Lot.auction_date > now,
-        Lot.status == 'upcoming',
+        Lot.status.cast(String) == 'upcoming',
         or_(*artist_filters),
     )
 

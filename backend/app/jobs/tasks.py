@@ -13,6 +13,7 @@ from app.jobs.celery_app import celery_app
 from app.config import get_settings
 from app.utils.url_validator import fix_url
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy import String
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -510,7 +511,7 @@ async def _rescore_live_async():
         result = await session.execute(
             select(Lot)
             .options(selectinload(Lot.artist))
-            .where(Lot.status.in_(['upcoming', 'live']))
+            .where(Lot.status.cast(String).in_(['upcoming', 'live']))
             .where(
                 or_(
                     Lot.auction_date >= datetime.utcnow(),
@@ -641,7 +642,7 @@ async def _process_alerts_async():
             .where(
                 and_(
                     Lot.is_deal == True,
-                    Lot.status == 'upcoming',
+                    Lot.status.cast(String) == 'upcoming',
                     Lot.scored_at >= one_hour_ago,
                 )
             )
@@ -745,7 +746,7 @@ async def _daily_cleanup_async():
         stmt = sa_select(Lot).where(
             and_(
                 Lot.auction_date < datetime.utcnow(),
-                Lot.status == 'upcoming',
+                Lot.status.cast(String) == 'upcoming',
             )
         )
         past_lots_result = await session.execute(stmt)
