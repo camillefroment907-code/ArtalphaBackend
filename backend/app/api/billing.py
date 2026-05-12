@@ -19,6 +19,7 @@ from app.services.email_service import (
     send_payment_failed_email,
     send_payment_success_email,
     send_subscription_canceled_email,
+    send_upgrade_confirmed_email,
     send_admin_notification,
 )
 
@@ -867,7 +868,10 @@ async def _handle_subscription_update(db: AsyncSession, stripe_sub: dict):
     )
     sub = result.scalar_one_or_none()
 
+    _UPGRADE_ORDER = ["free", "starter", "investor", "pro", "elite"]
+
     if sub:
+        old_plan_str = _PLAN_VALUE_TO_ID.get(sub.plan.value, "free")
         sub.plan = plan
         sub.status = status
         sub.stripe_subscription_id = stripe_sub["id"]
@@ -877,6 +881,24 @@ async def _handle_subscription_update(db: AsyncSession, stripe_sub: dict):
         sub.current_period_end = period_end
         sub.cancel_at_period_end = stripe_sub.get("cancel_at_period_end", False)
         sub.updated_at = datetime.utcnow()
+
+        new_plan_str = _PLAN_VALUE_TO_ID.get(plan.value, "free")
+        old_idx = _UPGRADE_ORDER.index(old_plan_str) if old_plan_str in _UPGRADE_ORDER else 0
+        new_idx = _UPGRADE_ORDER.index(new_plan_str) if new_plan_str in _UPGRADE_ORDER else 0
+        if new_idx > old_idx:
+            try:
+                user_result = await db.execute(select(User).where(User.id == sub.user_id))
+                upgraded_user = user_result.scalar_one_or_none()
+                if upgraded_user:
+                    asyncio.create_task(send_upgrade_confirmed_email(
+                        to_email=upgraded_user.email,
+                        name=upgraded_user.full_name or upgraded_user.email,
+                        old_plan=old_plan_str,
+                        new_plan=new_plan_str,
+                        lang=getattr(upgraded_user, "language", "fr"),
+                    ))
+            except Exception:
+                pass
     else:
         stripe.api_key = settings.stripe_secret_key
         try:
