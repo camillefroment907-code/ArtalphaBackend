@@ -9,6 +9,7 @@ import math
 import asyncio
 import json
 import re
+import statistics
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -1556,6 +1557,27 @@ async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
             "sell_recommendation":    proj["sell_recommendation"],
             "years":                  proj["projections"],
         }
+
+    # ── Nautilus fair value (median of comparable sold lots, last 24 months) ──
+    lot_dict["fair_value_nautilus"] = None
+    lot_dict["fair_value_confidence"] = None
+    if lot.artist_name_raw:
+        cutoff = datetime.utcnow() - timedelta(days=730)
+        comp_result = await db.execute(
+            select(Lot.hammer_price)
+            .where(
+                and_(
+                    func.lower(Lot.artist_name_raw) == lot.artist_name_raw.lower(),
+                    Lot.hammer_price.isnot(None),
+                    Lot.auction_date >= cutoff,
+                    Lot.id != lot.id,
+                )
+            )
+        )
+        prices = [row[0] for row in comp_result.fetchall() if row[0] and row[0] > 0]
+        if len(prices) >= 5:
+            lot_dict["fair_value_nautilus"] = statistics.median(prices)
+            lot_dict["fair_value_confidence"] = len(prices)
 
     return lot_dict
 

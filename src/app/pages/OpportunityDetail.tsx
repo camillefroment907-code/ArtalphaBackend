@@ -524,6 +524,23 @@ export default function OpportunityDetail() {
               )}
             </div>
 
+            {/* NAUTILUS FAIR VALUE */}
+            {lot.fair_value_nautilus != null && (
+              <div style={{ background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', padding: '13px 12px' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  {isFr ? 'Prix de référence Nautilus' : 'Nautilus Reference Price'}
+                </div>
+                <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 700, color: '#F0EDE6', lineHeight: 1 }}>
+                  {fmt(lot.fair_value_nautilus)}
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#6B7280', marginTop: '4px' }}>
+                  {isFr
+                    ? `Basé sur ${lot.fair_value_confidence} ventes comparables`
+                    : `Based on ${lot.fair_value_confidence} comparable sales`}
+                </div>
+              </div>
+            )}
+
             {/* UPSIDE */}
             <div style={{ background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', padding: '13px 12px' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>{t('lot.upside')}</div>
