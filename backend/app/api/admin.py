@@ -1673,3 +1673,51 @@ async def get_costs(_: dict = Depends(verify_admin)):
         {"tool": "Stripe fees", "cost_eur": 37, "category": "Paiement"},
     ]
     return {"costs": costs, "total_monthly_eur": sum(c["cost_eur"] for c in costs)}
+
+
+@router.post("/test-alert-email")
+async def test_alert_email(
+    payload: dict,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(verify_admin),
+):
+    from app.services.email_alerts import send_alert_exceptional_email
+    from app.models.db_models import Lot
+    from sqlalchemy import select
+
+    lot_id = payload.get("lot_id")
+    to_email = payload.get("to_email")
+    if not lot_id or not to_email:
+        raise HTTPException(status_code=400, detail="lot_id and to_email required")
+
+    result = await db.execute(select(Lot).where(Lot.id == lot_id))
+    lot = result.scalar_one_or_none()
+    if not lot:
+        raise HTTPException(status_code=404, detail="Lot not found")
+
+    est_low = float(lot.estimate_low or 0)
+    est_high = lot.estimate_high
+    if est_low and est_high and est_high != est_low:
+        estimate_range = f"€{est_low:,.0f} – €{est_high:,.0f}"
+    elif est_low:
+        estimate_range = f"€{est_low:,.0f}"
+    else:
+        estimate_range = "—"
+
+    ok = await send_alert_exceptional_email(
+        to_email=to_email,
+        artist_name=lot.artist_name_raw or "Unknown",
+        score=int(lot.deal_score or 0),
+        auction_house=lot.auction_house_name or "",
+        lot_title=lot.title or "Untitled",
+        sale_date=str(lot.auction_date.date()) if lot.auction_date else "",
+        location="",
+        estimate_range=estimate_range,
+        upside_pct=int(lot.pct_below_low_estimate or 0),
+        lot_url=lot.url or "",
+        days_until_close=3,
+        lot_image_url=lot.image_url,
+        estimate_low_eur=est_low,
+        lang="fr",
+    )
+    return {"sent": ok, "to": to_email, "lot": lot.title}
