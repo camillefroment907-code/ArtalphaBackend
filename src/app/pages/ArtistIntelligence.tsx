@@ -625,7 +625,6 @@ export default function ArtistIntelligence() {
               const cols = [
                 rec != null ? { key: 'record', label: 'RECORD', value: fmtStat(rec), color: '#C6A85A', big: true } : null,
                 trendPct != null ? { key: 'trend', label: 'TREND', value: `${trendPct >= 0 ? '↑' : '↓'} ${Math.abs(trendPct)}%`, color: trendPct >= 0 ? '#34D399' : '#F87171', big: true } : null,
-                totalSales != null ? { key: 'ventes', label: 'VENTES', value: String(totalSales), color: 'rgba(255,255,255,0.45)', big: false } : null,
                 aboveEst != null ? { key: 'above', label: 'AU-DESSUS EST.', value: `${aboveEst}%`, color: '#60A5FA', big: true } : null,
               ].filter(Boolean) as { key: string; label: string; value: string; color: string; big: boolean }[];
               if (cols.length === 0) return null;
@@ -884,22 +883,18 @@ export default function ArtistIntelligence() {
           </div>
         )}
 
-        {/* Chart + Timing — side by side */}
-        <div style={{ display: 'grid', gridTemplateColumns: timingOptimizer && hasAccess ? '1fr 280px' : '1fr', gap: '16px', marginBottom: '32px', alignItems: 'start' }}>
-          <div>
-            {priceHistory && (
-              <PriceChart
-                data={priceHistory.price_by_year}
-                stats={{ ...priceHistory.statistics, total_sales: priceHistory.total_sales }}
-              />
-            )}
-          </div>
-          {timingOptimizer && hasAccess && (() => {
+        {priceHistory && (
+          <PriceChart
+            data={priceHistory.price_by_year}
+            stats={{ ...priceHistory.statistics, total_sales: priceHistory.total_sales }}
+          />
+        )}
+        {timingOptimizer && hasAccess && (() => {
             const fmtT = (v: number) => v >= 1_000_000 ? `€${(v/1_000_000).toFixed(1)}M` : v >= 1_000 ? `€${Math.round(v/1_000)}K` : `€${Math.round(v)}`;
             const maxAvgT = Math.max(...timingOptimizer.monthly_summary.map((m: any) => m.avg_price));
             const SEASON_COLOR_T: Record<string, string> = { Spring: '#34D399', Summer: '#F59E0B', Autumn: '#F87171', Winter: '#60A5FA' };
             return (
-              <div>
+              <div style={{ marginBottom: '32px' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
                   <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', margin: 0 }}>{isFr ? 'Optimiseur de timing' : 'Timing Optimizer'}</h2>
                   {timingOptimizer.best_month && (
@@ -955,8 +950,7 @@ export default function ArtistIntelligence() {
                 )}
               </div>
             );
-          })()}
-        </div>
+        })()}
 
         {!hasAccess ? (
           <div style={{textAlign:'center',padding:'64px 24px',background:'#f8f8f6',borderRadius:8,marginTop:32,border:'1px solid #e8e4dc'}}>
@@ -967,12 +961,9 @@ export default function ArtistIntelligence() {
           </div>
         ) : (
           <>
-            {/* Format Matrix + Geo — side by side */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '32px' }}>
-            <div>
             {/* Format Performance Matrix */}
             {formatMatrix.length > 0 && (
-          <div style={{ marginBottom: 0 }}>
+          <div style={{ marginBottom: '32px' }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div>
@@ -1118,8 +1109,6 @@ export default function ArtistIntelligence() {
           </div>
         )}
 
-            </div>
-            <div>
         {/* Geographic Arbitrage Detector */}
         {geoArbitrage && geoArbitrage.regions.length >= 2 && (() => {
           const regions: any[] = geoArbitrage.regions;
@@ -1131,7 +1120,7 @@ export default function ArtistIntelligence() {
             :                `€${Math.round(v)}`;
 
           return (
-            <div style={{ marginBottom: 0 }}>
+            <div style={{ marginBottom: '32px' }}>
               {/* Header */}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div>
@@ -1270,8 +1259,6 @@ export default function ArtistIntelligence() {
             </div>
           );
         })()}
-            </div>
-            </div>
 
         {/* ── Liquidity Depth Map ──────────────────────────────────────── */}
         {liquidityMap && (() => {
