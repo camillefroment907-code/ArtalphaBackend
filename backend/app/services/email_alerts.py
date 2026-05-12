@@ -34,6 +34,8 @@ async def send_alert_exceptional_email(
     """Email 19 — exceptional lot for followed artist (score >= 80)"""
     if not await _pref_ok(user_id, "exceptional_opportunity", db): return False
     is_fr = lang == "fr"
+    _house_display = auction_house.split(":")[0].strip()
+    _house_display = _house_display[:35] + "..." if len(_house_display) > 35 else _house_display
 
     image_block = (
         f'<div style="padding:0 0 20px 0;">'
@@ -49,10 +51,10 @@ async def send_alert_exceptional_email(
     _label = "SIGNAL À FORTE CONVICTION" if is_fr else "HIGH CONVICTION SIGNAL"
     _h1 = f"{artist_name} est en vente aux enchères." if is_fr else f"{artist_name} is going up for auction."
     _body = (
-        f"Nautilus a détecté un signal à <strong>{score}/100</strong> sur cette œuvre de <strong>{artist_name}</strong> chez {auction_house}. "
+        f"Nautilus a détecté un signal à <strong>{score}/100</strong> sur cette œuvre de <strong>{artist_name}</strong> chez {_house_display}. "
         f"Le lot apparaît positionné significativement sous les transactions comparables récentes."
         if is_fr else
-        f"Nautilus has identified a <strong>{score}/100</strong> conviction signal on this work by <strong>{artist_name}</strong> at {auction_house}. "
+        f"Nautilus has identified a <strong>{score}/100</strong> conviction signal on this work by <strong>{artist_name}</strong> at {_house_display}. "
         f"The lot appears significantly below recent comparable transactions."
     )
     _estimation_label = "Estimation maison de vente" if is_fr else "Auction house estimate"
@@ -79,10 +81,13 @@ async def send_alert_exceptional_email(
         if is_fr else
         f"This lot closes in {days_until_close} day(s). Signals above 80 represent our highest conviction."
     )
-    _subject = f"{artist_name} · Score {score}/100 · {auction_house}"
+    _subject = f"{artist_name} · Score {score}/100 · {_house_display}"
     _footer = "Nautilus fournit de l'intelligence marché, pas des conseils en investissement." if is_fr else "Nautilus provides market intelligence, not investment advice."
 
-    gain_block = f'<div style="font-size:13px;color:#16A34A;font-weight:500;margin-bottom:14px;">↑ {_gain_line}</div>' if _gain_line else ""
+    gain_block = (
+        f'<div style="font-size:12px;color:#555;margin-bottom:4px;">↑ {"Valeur comparable estimée" if is_fr else "Estimated comparable value"} : ~€{comparable_value:,}</div>'
+        f'<div style="font-size:13px;color:#16A34A;font-weight:600;margin-bottom:14px;">{"Gain potentiel" if is_fr else "Potential gain"} : +€{potential_gain:,}</div>'
+    ) if potential_gain else ""
 
     content = f"""
 {label(_label)}
@@ -93,20 +98,18 @@ async def send_alert_exceptional_email(
 <tr><td style="background:#F5F4F0;border-left:3px solid #C6A85A;padding:20px 24px;border-radius:0 8px 8px 0;">
   <div style="font-size:10px;color:#888;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:6px;">{artist_name.upper()}</div>
   <div style="font-size:18px;font-family:Georgia,serif;color:#0C1622;margin-bottom:4px;">{lot_title}</div>
-  <div style="font-size:12px;color:#888;margin-bottom:16px;">{auction_house} · {sale_date}</div>
+  <div style="font-size:12px;color:#888;margin-bottom:16px;">{_house_display} · {sale_date}</div>
   <hr style="border:none;border-top:1px solid #E8E4DC;margin:0 0 16px 0;">
-  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:12px;">
-    <tr>
-      <td>
-        <div style="font-size:10px;color:#888;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">{_estimation_label}</div>
-        <div style="font-size:20px;font-weight:700;color:#0C1622;">{estimate_range}</div>
-      </td>
-      <td align="right">
-        <div style="font-size:10px;color:#888;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Score</div>
-        <div style="background:#C6A85A;color:#1A2A44;font-size:14px;font-weight:700;padding:4px 12px;border-radius:4px;display:inline-block;">{score}/100</div>
-      </td>
-    </tr>
-  </table>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+    <div>
+      <div style="font-size:10px;color:#888;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">{_estimation_label}</div>
+      <div style="font-size:20px;font-weight:700;color:#0C1622;">{estimate_range}</div>
+    </div>
+    <div>
+      <div style="font-size:10px;color:#888;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Score</div>
+      <div style="background:#C6A85A;color:#1A2A44;font-size:14px;font-weight:700;padding:4px 12px;border-radius:4px;display:inline-block;">{score}/100</div>
+    </div>
+  </div>
   <div style="font-size:13px;color:#888;margin-bottom:8px;">&#8595; {_decote_label} : -{upside_pct}%</div>
   {gain_block}
   <hr style="border:none;border-top:1px solid #E8E4DC;margin:0 0 14px 0;">
