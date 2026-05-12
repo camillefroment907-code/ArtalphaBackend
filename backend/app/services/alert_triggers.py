@@ -123,7 +123,7 @@ async def send_exceptional_opportunity_alerts(lot_ids: list) -> int:
                     and_(
                         Lot.id.in_(lot_ids),
                         Lot.deal_score >= 80,
-                        Lot.status == 'UPCOMING',
+                        Lot.status == 'upcoming',
                     )
                 )
             )
@@ -313,7 +313,7 @@ async def send_auction_closing_alerts() -> int:
             lots_result = await db.execute(
                 select(Lot).where(
                     and_(
-                        Lot.status == 'UPCOMING',
+                        Lot.status == 'upcoming',
                         Lot.auction_date >= window_start,
                         Lot.auction_date <= window_end,
                     )

@@ -589,7 +589,7 @@ async def get_top_deals(
                 Lot.deal_score >= 70,
                 Lot.auction_date >= today,
                 Lot.auction_date <= month_ahead,
-                Lot.status == 'UPCOMING',
+                Lot.status == 'upcoming',
                 Lot.market_type == MarketType.AUCTION,
             )
         )
@@ -680,7 +680,7 @@ async def get_trending_lots(
 
     base = and_(
         Lot.auction_date > now,
-        Lot.status == 'UPCOMING',
+        Lot.status == 'upcoming',
         or_(*artist_filters),
     )
 
