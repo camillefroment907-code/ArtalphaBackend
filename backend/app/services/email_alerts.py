@@ -2,7 +2,38 @@
 Nautilus Recommendation & Alert Emails (19-30)
 """
 from typing import Optional
+from datetime import datetime
 from app.services.email_base import html_email, label, cta, lot_card, stat_row, divider, send_email, TRANSAC_FROM, ALERT_FROM
+
+
+async def _under_weekly_limit(user_id: str, email_type: str, db, limit: int = 1) -> bool:
+    """Returns True if the user has received fewer than `limit` emails of this type in the last 7 days."""
+    if not user_id or not db:
+        return True
+    from sqlalchemy import select, func
+    from datetime import timedelta
+    from app.models.db_models import EmailSentLog
+    cutoff = datetime.utcnow() - timedelta(days=7)
+    result = await db.execute(
+        select(func.count()).select_from(EmailSentLog).where(
+            EmailSentLog.user_id == str(user_id),
+            EmailSentLog.email_type == email_type,
+            EmailSentLog.sent_at >= cutoff,
+        )
+    )
+    count = result.scalar() or 0
+    return count < limit
+
+
+async def _log_email(user_id: str, email_type: str, db) -> None:
+    """Records that an email of this type was sent to the user."""
+    if not user_id or not db:
+        return
+    from app.models.db_models import EmailSentLog
+    from datetime import datetime as _dt
+    log = EmailSentLog(user_id=str(user_id), email_type=email_type, sent_at=_dt.utcnow())
+    db.add(log)
+    await db.commit()
 
 
 async def _pref_ok(user_id: Optional[str], pref_field: str, db) -> bool:
@@ -132,6 +163,7 @@ async def send_price_gap_alert_email(
 ) -> bool:
     """Email 20 — lot price significantly below historical median"""
     if not await _pref_ok(user_id, "lot_below_market", db): return False
+    if user_id and not await _under_weekly_limit(user_id, "price_gap_alert", db): return False
     comparison = f"""<div style="background:#F5F4F0;border-left:3px solid #C6A85A;padding:20px 24px;margin:20px 0;">
 <table width="100%" cellpadding="0" cellspacing="0">
 <tr><td style="font-size:12px;color:#888;padding-bottom:8px;">Current estimate</td><td style="font-size:16px;font-weight:600;color:#1A2A44;text-align:right;">{estimate}</td></tr>
@@ -147,8 +179,11 @@ async def send_price_gap_alert_email(
 {cta("View the lot", lot_url)}
 <p style="color:#888888;font-size:13px;">Sale closes {sale_date}. Past performance does not guarantee future results.</p>
 """
-    return await send_email(to_email, f"{artist_name} priced {gap_pct}% below market average",
+    sent = await send_email(to_email, f"{artist_name} priced {gap_pct}% below market average",
                             html_email(content, f"Price alert: {artist_name}"), ALERT_FROM)
+    if sent and user_id:
+        await _log_email(user_id, "price_gap_alert", db)
+    return sent
 
 
 async def send_watchlist_closing_email(
@@ -355,6 +390,7 @@ async def send_portfolio_artist_sale_email(
 ) -> bool:
     """Email 29 — artist in user portfolio has new lot in upcoming auction"""
     if not await _pref_ok(user_id, "portfolio_value_change", db): return False
+    if user_id and not await _under_weekly_limit(user_id, "portfolio_artist_sale", db): return False
     content = f"""
 {label("PORTFOLIO ALERT")}
 <h1>{artist_name} is going to auction.</h1>
@@ -363,8 +399,11 @@ async def send_portfolio_artist_sale_email(
 <p>If this lot sells above estimate, your portfolio piece's estimated value will be revised upward. If below, Nautilus will flag a reassessment.</p>
 {cta("View the sale", lot_url)}
 """
-    return await send_email(to_email, f"{artist_name} — new lot at auction. Your portfolio may be affected.",
+    sent = await send_email(to_email, f"{artist_name} — new lot at auction. Your portfolio may be affected.",
                             html_email(content, f"Portfolio alert: {artist_name}"), ALERT_FROM)
+    if sent and user_id:
+        await _log_email(user_id, "portfolio_artist_sale", db)
+    return sent
 
 
 async def send_collection_completion_email(

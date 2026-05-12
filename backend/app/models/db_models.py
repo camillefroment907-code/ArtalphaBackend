@@ -1343,3 +1343,17 @@ class PlatformMetric(Base):
     __table_args__ = (
         Index("ix_platform_metrics_snapshot_date", "snapshot_date"),
     )
+
+
+class EmailSentLog(Base):
+    """Tracks non-transactional emails sent to users for rate-limiting purposes."""
+    __tablename__ = "email_sent_log"
+
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    user_id    = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    email_type = Column(String, nullable=False)
+    sent_at    = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        Index("ix_email_sent_log_user_type_sent", "user_id", "email_type", "sent_at"),
+    )
