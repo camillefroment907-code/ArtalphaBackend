@@ -952,23 +952,110 @@ export default function OpportunityDetail() {
               const content = (
                 <div style={{ padding: '20px 24px' }}>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '16px' }}>{isFr ? 'INTELLIGENCE PRÉ-ENCHÈRE' : 'PRE-BID INTELLIGENCE'}</div>
-                  <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', flexWrap: 'wrap' as const }}>
-                    <div style={{ background: DK, borderRadius: '6px', padding: '10px 14px', flex: 1, minWidth: '120px' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', marginBottom: '6px' }}>{isFr ? 'TIMING' : 'TIMING'}</div>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: timingColor }}>{timingSignal}</div>
-                    </div>
-                    {(avoidAbove || maxBid) && (
-                      <div style={{ background: LT, border: `1px solid ${LTB}`, borderRadius: '6px', padding: '10px 14px', flex: 1, minWidth: '120px' }}>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', marginBottom: '6px' }}>{avoidAbove ? (isFr ? "ENCHÉRISSEZ JUSQU'À" : 'BID UP TO') : (isFr ? 'ENCHÈRE MAX' : 'MAX BID')}</div>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: LTT1 }}>{sym}{(avoidAbove ?? maxBid)!.toLocaleString()}</div>
-                        {avoidAbove && <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>{isFr ? "Au-delà, le potentiel s'annule" : 'Beyond this, upside is erased'}</div>}
+                  {/* ── Row 1: PRICING GAP + CONFIANCE DU SIGNAL ── */}
+                  {lot.fair_value_nautilus != null && (() => {
+                    const nautVal = lot.fair_value_nautilus as number;
+                    const nautConf = (lot.fair_value_confidence as number) || 0;
+                    const gapPct = price > 0 ? Math.round((1 - price / nautVal) * 100) : null;
+                    const filledBars = Math.round((Math.min(nautConf, 20) / 20) * 6);
+                    return (
+                      <div style={{ display: 'flex', gap: '10px', marginBottom: '14px' }}>
+                        <div style={{ flex: 1, background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.25)', borderRadius: '8px', padding: '12px 16px' }}>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '6px' }}>{isFr ? 'ÉCART DE PRIX' : 'PRICING GAP'}</div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: '#34D399', lineHeight: 1 }}>
+                            {gapPct != null && gapPct > 0 ? `-${gapPct}%` : gapPct != null ? `+${Math.abs(gapPct)}%` : '—'}
+                          </div>
+                          <div style={{ fontSize: '11px', color: LTT3, marginTop: '4px' }}>{isFr ? 'sous la valeur Nautilus' : 'below Nautilus value'}</div>
+                        </div>
+                        <div style={{ flex: 1, background: 'rgba(198,168,90,0.06)', border: '1px solid rgba(198,168,90,0.25)', borderRadius: '8px', padding: '12px 16px' }}>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>{isFr ? 'CONFIANCE DU SIGNAL' : 'SIGNAL CONFIDENCE'}</div>
+                          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginBottom: '6px' }}>
+                            {[0,1,2,3,4,5].map(i => (
+                              <div key={i} style={{ width: '14px', height: '6px', borderRadius: '2px', background: i < filledBars ? GOLD : 'rgba(198,168,90,0.2)' }} />
+                            ))}
+                          </div>
+                          <div style={{ fontSize: '11px', color: LTT3 }}>{isFr ? `${nautConf} ventes comparables` : `${nautConf} comparable sales`}</div>
+                        </div>
                       </div>
-                    )}
-                    <div style={{ background: LT, border: `1px solid ${LTB}`, borderRadius: '6px', padding: '10px 14px', flex: 1, minWidth: '120px' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', marginBottom: '6px' }}>{isFr ? 'VALEUR JUSTE' : 'FAIR VALUE'}</div>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: GL }}>{fmt(fairVal)}</div>
-                    </div>
-                  </div>
+                    );
+                  })()}
+
+                  {/* ── Price Position Bar ── */}
+                  {lot.fair_value_nautilus != null && price > 0 && (() => {
+                    const nautVal = lot.fair_value_nautilus as number;
+                    const bidRef = avoidAbove ?? maxBid;
+                    const maxScale = nautVal * 1.1;
+                    const pctOf = (v: number) => `${Math.min(100, (v / maxScale) * 100).toFixed(1)}%`;
+                    return (
+                      <div style={{ marginBottom: '28px' }}>
+                        <div style={{ position: 'relative', height: '6px', background: LTB, borderRadius: '3px', marginBottom: '26px' }}>
+                          <div style={{ position: 'absolute', left: pctOf(price), top: '-4px', width: '2px', height: '14px', background: '#34D399', borderRadius: '1px' }} />
+                          {bidRef && <div style={{ position: 'absolute', left: pctOf(bidRef), top: '-4px', width: '2px', height: '14px', background: GOLD, borderRadius: '1px' }} />}
+                          <div style={{ position: 'absolute', left: pctOf(nautVal), top: '-4px', width: '2px', height: '14px', background: LTT3, borderRadius: '1px' }} />
+                          <div style={{ position: 'absolute', left: pctOf(price), top: '18px', transform: 'translateX(-50%)', fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#34D399', letterSpacing: '0.08em', whiteSpace: 'nowrap' as const }}>
+                            {isFr ? 'ENTRÉE' : 'ENTRY'}
+                          </div>
+                          {bidRef && (
+                            <div style={{ position: 'absolute', left: pctOf(bidRef), top: '18px', transform: 'translateX(-50%)', fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.08em', whiteSpace: 'nowrap' as const }}>
+                              MAX
+                            </div>
+                          )}
+                          <div style={{ position: 'absolute', left: pctOf(nautVal), top: '18px', transform: 'translateX(-50%)', fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.08em', whiteSpace: 'nowrap' as const }}>
+                            {isFr ? 'VALEUR' : 'VALUE'}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* ── POURQUOI LE MARCHÉ SE TROMPE ── */}
+                  {lot.fair_value_nautilus != null && (() => {
+                    const nautVal = lot.fair_value_nautilus as number;
+                    const gapPct = price > 0 ? Math.round((1 - price / nautVal) * 100) : 0;
+                    const marketBullets = [
+                      gapPct > 0
+                        ? isFr
+                          ? `Le lot est estimé ${gapPct}% sous sa valeur de marché reconstituée — décote d'entrée significative.`
+                          : `Lot is priced ${gapPct}% below reconstructed market value — significant entry discount.`
+                        : null,
+                      isFr
+                        ? 'Le marché secondaire sous-pondère souvent les artistes hors grandes maisons.'
+                        : 'Secondary market often underweights artists outside major houses.',
+                      timingSignal
+                        ? isFr ? `Signal Nautilus : ${timingSignal}` : `Nautilus signal: ${timingSignal}`
+                        : null,
+                    ].filter(Boolean) as string[];
+                    if (marketBullets.length === 0) return null;
+                    return (
+                      <div style={{ marginBottom: '18px' }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
+                          ◆ {isFr ? 'POURQUOI LE MARCHÉ SE TROMPE' : 'WHY THE MARKET IS WRONG'}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '7px' }}>
+                          {marketBullets.map((b, i) => (
+                            <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                              <span style={{ color: GOLD, fontSize: '10px', marginTop: '2px', flexShrink: 0 }}>◆</span>
+                              <span style={{ fontSize: '12px', color: LTT2, lineHeight: 1.55 }}>{b}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* ── LECTURE NAUTILUS ── */}
+                  {(() => {
+                    const rationale = (lot as any).ai_rationale || (lot as any).investment_rationale || (lot as any).rationale || (lot as any).lot_rationale;
+                    if (!rationale) return null;
+                    return (
+                      <div style={{ borderLeft: '2px solid rgba(198,168,90,0.4)', paddingLeft: '14px', marginBottom: '18px' }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>
+                          {isFr ? 'LECTURE NAUTILUS' : 'NAUTILUS READ'}
+                        </div>
+                        <p style={{ fontSize: '12px', color: LTT2, lineHeight: 1.65, margin: 0 }}>{rationale}</p>
+                      </div>
+                    );
+                  })()}
                   {comparables.length > 0 && (
                     <div style={{ marginBottom: '16px', borderTop: `1px solid ${LTB}`, paddingTop: '14px' }}>
                       <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', marginBottom: '8px' }}>{isFr ? 'COMPARABLES RÉCENTS' : 'RECENT COMPARABLES'}</div>
