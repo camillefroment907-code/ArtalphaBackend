@@ -299,7 +299,7 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
                   }}
                 >
                   {isEmerging ? (
-                    <>{item.label} <span style={{ color: 'var(--gold)' }}>✦</span></>
+                    <>{t(item.tKey)} <span style={{ color: 'var(--gold)' }}>✦</span></>
                   ) : (item.label || t(item.tKey))}
                   {isIntelligence && agentUnread > 0 && (
                     <span style={{
