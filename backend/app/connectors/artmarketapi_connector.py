@@ -449,7 +449,7 @@ class ArtMarketAPIConnector:
 
 CONNECTOR_META = {
     "name": "ArtMarket API",
-    "source": AuctionHouseEnum.OTHER,
+    "source": 'other',
     "house_reputation_score": 0.90,
     "currency": "USD",
     "country": "US",

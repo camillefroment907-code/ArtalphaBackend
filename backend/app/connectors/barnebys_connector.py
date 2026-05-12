@@ -102,7 +102,7 @@ async def fetch_lots(limit: int = 100) -> List[LotNormalized]:
 
                     lots.append(LotNormalized(
                         external_id=f"barnebys-{lot_id}",
-                        source=AuctionHouseEnum.OTHER,
+                        source='other',
                         title=str(title)[:500],
                         artist_name_raw=str(artist)[:500] if artist else None,
                         estimate_low=price,

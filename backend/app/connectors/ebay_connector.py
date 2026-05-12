@@ -152,7 +152,7 @@ def _parse_item(item: dict, category_name: str) -> Optional[LotNormalized]:
 
         return LotNormalized(
             external_id=f"ebay-{item_id}",
-            source=AuctionHouseEnum.OTHER,
+            source='other',
             title=str(title)[:500],
             artist_name_raw=None,  # Not reliably available in eBay search results
             estimate_low=estimate_low,
@@ -266,7 +266,7 @@ async def fetch_lots(limit: int = 2000) -> List[LotNormalized]:
 
 CONNECTOR_META = {
     "name": "eBay Art",
-    "source": AuctionHouseEnum.OTHER,
+    "source": 'other',
     "house_reputation_score": 0.45,
     "currency": "MULTI",
     "country": "INTL",

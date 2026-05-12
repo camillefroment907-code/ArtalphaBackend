@@ -75,7 +75,7 @@ def _parse_artwork(item: dict, idx: int) -> Optional[LotNormalized]:
 
         return LotNormalized(
             external_id=f"singulart-{artwork_id}",
-            source=AuctionHouseEnum.OTHER,
+            source='other',
             title=title[:500],
             artist_name_raw=str(artist)[:500] if artist else None,
             estimate_low=price,

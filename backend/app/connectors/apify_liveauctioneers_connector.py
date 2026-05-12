@@ -149,7 +149,7 @@ def _parse_item(item: dict) -> Optional[LotNormalized]:
 
         return LotNormalized(
             external_id=f"la-apify-{lot_id}",
-            source=AuctionHouseEnum.OTHER,
+            source='other',
             title=str(title).strip()[:500],
             artist_name_raw=str(artist).strip()[:500] if artist else None,
             estimate_low=estimate_low,
@@ -250,7 +250,7 @@ async def fetch_liveauctioneers_via_apify(limit: int = 100) -> List[LotNormalize
 
 CONNECTOR_META = {
     "name": "LiveAuctioneers (Apify)",
-    "source": AuctionHouseEnum.OTHER,
+    "source": 'other',
     "house_reputation_score": 0.80,
     "currency": "MULTI",
     "country": "INTL",
