@@ -87,7 +87,7 @@ def _base_lot_query():
     """Base filter: upcoming/live auction lots with a deal score."""
     horizon = datetime.utcnow() + timedelta(days=_UPCOMING_DAYS)
     return and_(
-        Lot.status.in_(['UPCOMING', 'LIVE']),
+        Lot.status.in_(['upcoming', 'live']),
         Lot.market_type == MarketType.AUCTION,
         Lot.deal_score >= _SCORE_FLOOR,
         or_(
@@ -280,7 +280,7 @@ async def _strategy_global_fallback(excluded: set, db: AsyncSession, limit: int)
     result = await db.execute(
         select(Lot)
         .where(and_(
-            Lot.status.in_(['UPCOMING', 'LIVE']),
+            Lot.status.in_(['upcoming', 'live']),
             Lot.market_type == MarketType.AUCTION,
             Lot.deal_score.isnot(None),
         ))

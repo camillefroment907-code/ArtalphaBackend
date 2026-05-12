@@ -84,7 +84,7 @@ async def parse_wishlist(
 
     for crit in criteria_list[:5]:  # cap at 5 criteria
         filters = [
-            Lot.status.in_(['UPCOMING', 'LIVE']),
+            Lot.status.in_(['upcoming', 'live']),
             Lot.market_type == MarketType.AUCTION,
         ]
 
