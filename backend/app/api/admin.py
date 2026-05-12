@@ -1721,3 +1721,74 @@ async def test_alert_email(
         lang="fr",
     )
     return {"sent": ok, "to": to_email, "lot": lot.title}
+
+
+@router.post("/test-email")
+async def test_email(
+    payload: dict,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(verify_admin),
+):
+    email_type = payload.get("type")
+    to_email = payload.get("to_email", "camillefroment907@gmail.com")
+
+    if email_type == "welcome":
+        from app.services.email_auth import send_welcome_email
+        ok = await send_welcome_email(to_email, "Camille")
+
+    elif email_type == "verification":
+        from app.services.email_auth import send_verification_email
+        ok = await send_verification_email(to_email, "https://get-nautilus.com/verify?token=TEST123")
+
+    elif email_type == "password_reset":
+        from app.services.email_auth import send_password_reset_email
+        ok = await send_password_reset_email(to_email, "https://get-nautilus.com/reset?token=TEST123")
+
+    elif email_type == "payment_success":
+        from app.services.email_billing import send_payment_success_email
+        ok = await send_payment_success_email(to_email, "Camille", "Investor", "€19", "1 juin 2026")
+
+    elif email_type == "upgrade_confirmed":
+        from app.services.email_billing import send_upgrade_confirmed_email
+        ok = await send_upgrade_confirmed_email(to_email, "Camille", "free", "investor")
+
+    elif email_type == "subscription_cancelled":
+        from app.services.email_billing import send_subscription_cancelled_email
+        ok = await send_subscription_cancelled_email(to_email, "Camille", "Investor", "1 juin 2026")
+
+    elif email_type == "watchlist_closing":
+        from app.services.email_alerts import send_watchlist_closing_email
+        ok = await send_watchlist_closing_email(
+            to_email=to_email,
+            lot_title="The Sound of the Fire Alarm",
+            artist_name="David Shrigley",
+            auction_house="Rago Wright",
+            estimate="€10,000 – €15,000",
+            score=91,
+            closing_time="2026-05-15 18:00",
+            lot_url="https://www.get-nautilus.com/app/opportunities/21d3e5e7-54e9-4972-8b03-b418d20f615c",
+        )
+
+    elif email_type == "weekly_brief":
+        from app.services.email_newsletters import send_weekly_brief_email
+        ok = await send_weekly_brief_email(
+            to_email=to_email,
+            week_date="12 mai 2026",
+            top_lots=[
+                {"title": "The Sound of the Fire Alarm", "artist": "David Shrigley", "score": 91, "estimate": "€10,000", "url": "https://get-nautilus.com/app/opportunities/21d3e5e7-54e9-4972-8b03-b418d20f615c"},
+                {"title": "Marilyn Monroe", "artist": "Andy Warhol", "score": 88, "estimate": "€1,500", "url": "https://get-nautilus.com/app/opportunities/7f0bb1de-7b57-4ee1-862d-a9e995888831"},
+            ],
+            artists_to_watch=[
+                {"name": "David Shrigley", "momentum": "+22%"},
+                {"name": "Andy Warhol", "momentum": "+15%"},
+            ],
+            market_insight="Le marché art contemporain montre une forte activité cette semaine avec plusieurs lots sous-évalués détectés.",
+            closing_lots=[
+                {"title": "The Sound of the Fire Alarm", "artist": "David Shrigley", "closing_in": "24h", "url": "https://get-nautilus.com/app/opportunities/21d3e5e7-54e9-4972-8b03-b418d20f615c"},
+            ],
+        )
+
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown type: {email_type}. Valid: welcome, verification, password_reset, payment_success, upgrade_confirmed, subscription_cancelled, watchlist_closing, weekly_brief")
+
+    return {"sent": ok, "type": email_type, "to": to_email}
