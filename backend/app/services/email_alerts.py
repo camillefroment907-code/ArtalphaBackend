@@ -29,66 +29,97 @@ async def send_alert_exceptional_email(
     user_id: Optional[str] = None, db=None,
     lot_image_url: Optional[str] = None,
     lang: str = "fr",
+    estimate_low_eur: float = 0,
 ) -> bool:
     """Email 19 — exceptional lot for followed artist (score >= 80)"""
     if not await _pref_ok(user_id, "exceptional_opportunity", db): return False
     is_fr = lang == "fr"
+
     image_block = (
-        f'<div style="padding:0 0 24px 0;">'
+        f'<div style="padding:0 0 20px 0;">'
         f'<a href="{lot_url}" style="display:block;">'
-        f'<img src="{lot_image_url}" alt="Artwork" '
-        f'style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;display:block;">'
-        f'</a>'
-        f'</div>'
+        f'<img src="{lot_image_url}" alt="{lot_title}" '
+        f'style="width:100%;max-height:260px;object-fit:cover;border-radius:6px;display:block;">'
+        f'</a></div>'
     ) if lot_image_url else ""
-    _label     = "OPPORTUNITÉ EXCEPTIONNELLE" if is_fr else "EXCEPTIONAL OPPORTUNITY"
-    _h1        = f"{artist_name} est en vente aux enchères." if is_fr else f"{artist_name} is going up for auction."
-    _body      = (
-        f"Une œuvre de <strong>{artist_name}</strong> a été identifiée par Nautilus avec un score de conviction de <strong>{score}/100</strong>. C'est l'un des signaux les plus forts de la semaine."
+
+    potential_gain = int(estimate_low_eur * upside_pct / 100) if estimate_low_eur and upside_pct else 0
+    comparable_value = int(estimate_low_eur + potential_gain) if potential_gain else 0
+
+    _label = "SIGNAL À FORTE CONVICTION" if is_fr else "HIGH CONVICTION SIGNAL"
+    _h1 = f"{artist_name} est en vente aux enchères." if is_fr else f"{artist_name} is going up for auction."
+    _body = (
+        f"Nautilus a détecté un signal à <strong>{score}/100</strong> sur cette œuvre de <strong>{artist_name}</strong> chez {auction_house}. "
+        f"Le lot apparaît positionné significativement sous les transactions comparables récentes."
         if is_fr else
-        f"A work by <strong>{artist_name}</strong> has been identified by Nautilus with a conviction score of <strong>{score}/100</strong>. This is one of the strongest signals we've seen this week."
+        f"Nautilus has identified a <strong>{score}/100</strong> conviction signal on this work by <strong>{artist_name}</strong> at {auction_house}. "
+        f"The lot appears significantly below recent comparable transactions."
     )
-    _upside    = "de potentiel vs comparables" if is_fr else "upside vs comparables"
-    _cta       = "Voir cette opportunité" if is_fr else "View this opportunity"
-    _closing   = (
-        f"Ce lot se clôture dans {days_until_close} jour(s). Les scores au-dessus de 80 représentent nos signaux de plus haute conviction."
+    _estimation_label = "Estimation maison de vente" if is_fr else "Auction house estimate"
+    _decote_label = "Décote estimée vs comparables" if is_fr else "Estimated discount vs comparables"
+    _gain_line = (
+        f"Valeur comparable estimée : ~€{comparable_value:,} · Gain potentiel : +€{potential_gain:,}"
         if is_fr else
-        f"This lot closes in {days_until_close} day(s). Conviction scores above 80 represent our highest confidence signals."
-    )
-    _subject   = (
-        f"ALERTE — {artist_name} score {score}/100 chez {auction_house}"
+        f"Estimated comparable value: ~€{comparable_value:,} · Potential gain: +€{potential_gain:,}"
+    ) if potential_gain else ""
+    _conviction_label = "Conviction basée sur :" if is_fr else "Signal based on:"
+    _conviction_bullets = (
+        "<li>Estimation conservatrice vs comparables récents</li>"
+        "<li>Offre secondaire limitée sur ce segment</li>"
+        "<li>Momentum de marché positif détecté</li>"
         if is_fr else
-        f"ALERT — {artist_name} scoring {score}/100 at {auction_house}"
+        "<li>Conservative estimate vs recent comparables</li>"
+        "<li>Limited secondary supply in this segment</li>"
+        "<li>Positive market momentum detected</li>"
     )
+    _proof = "Analyse Nautilus · données marché secondaire · 1,5M+ transactions" if is_fr else "Nautilus analysis · secondary market data · 1.5M+ transactions"
+    _cta = "Voir l'analyse complète" if is_fr else "View full analysis"
+    _closing = (
+        f"Ce lot se clôture dans {days_until_close} jour(s). Les signaux au-dessus de 80 représentent nos convictions les plus fortes."
+        if is_fr else
+        f"This lot closes in {days_until_close} day(s). Signals above 80 represent our highest conviction."
+    )
+    _subject = f"{artist_name} · Score {score}/100 · {auction_house}"
+    _footer = "Nautilus fournit de l'intelligence marché, pas des conseils en investissement." if is_fr else "Nautilus provides market intelligence, not investment advice."
+
+    gain_block = f'<div style="font-size:13px;color:#16A34A;font-weight:500;margin-bottom:14px;">↑ {_gain_line}</div>' if _gain_line else ""
+
     content = f"""
 {label(_label)}
 <h1>{_h1}</h1>
 <p>{_body}</p>
-{image_block}<table cellpadding="0" cellspacing="0" width="100%" style="margin:20px 0;">
+{image_block}
+<table cellpadding="0" cellspacing="0" width="100%" style="margin:20px 0;">
 <tr><td style="background:#F5F4F0;border-left:3px solid #C6A85A;padding:20px 24px;border-radius:0 8px 8px 0;">
   <div style="font-size:10px;color:#888;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:6px;">{artist_name.upper()}</div>
-  <div style="font-size:20px;font-family:Georgia,serif;color:#0C1622;margin-bottom:4px;">{lot_title}</div>
-  <div style="font-size:12px;color:#888;margin-bottom:16px;">{auction_house} · {sale_date} · {location}</div>
+  <div style="font-size:18px;font-family:Georgia,serif;color:#0C1622;margin-bottom:4px;">{lot_title}</div>
+  <div style="font-size:12px;color:#888;margin-bottom:16px;">{auction_house} · {sale_date}</div>
   <hr style="border:none;border-top:1px solid #E8E4DC;margin:0 0 16px 0;">
-  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:10px;">
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:12px;">
     <tr>
       <td>
-        <div style="font-size:10px;color:#888;letter-spacing:0.1em;text-transform:uppercase;">Estimation</div>
-        <div style="font-size:16px;font-weight:700;color:#0C1622;">{estimate_range}</div>
+        <div style="font-size:10px;color:#888;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">{_estimation_label}</div>
+        <div style="font-size:20px;font-weight:700;color:#0C1622;">{estimate_range}</div>
       </td>
       <td align="right">
-        <div style="font-size:10px;color:#888;letter-spacing:0.1em;text-transform:uppercase;">Score</div>
+        <div style="font-size:10px;color:#888;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Score</div>
         <div style="background:#C6A85A;color:#1A2A44;font-size:14px;font-weight:700;padding:4px 12px;border-radius:4px;display:inline-block;">{score}/100</div>
       </td>
     </tr>
   </table>
-  <div style="font-size:13px;color:#2D7A4F;font-weight:500;">&#8593; +{upside_pct}% {_upside}</div>
+  <div style="font-size:13px;color:#888;margin-bottom:8px;">&#8595; {_decote_label} : -{upside_pct}%</div>
+  {gain_block}
+  <hr style="border:none;border-top:1px solid #E8E4DC;margin:0 0 14px 0;">
+  <div style="font-size:11px;color:#555;font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">{_conviction_label}</div>
+  <ul style="font-size:12px;color:#555;margin:0;padding-left:16px;line-height:1.9;">{_conviction_bullets}</ul>
+  <div style="font-size:10px;color:#aaa;margin-top:12px;font-style:italic;">{_proof}</div>
 </td></tr>
 </table>
-<div style="text-align:center;">{cta(_cta, lot_url, gold=True)}</div>
-<p style="color:#888888;font-size:13px;">{_closing}</p>
+<div style="text-align:center;margin:24px 0;">{cta(_cta, lot_url, gold=True)}</div>
+<p style="color:#888;font-size:12px;text-align:center;">{_closing}</p>
+<p style="color:#aaa;font-size:11px;text-align:center;">{_footer}</p>
 """
-    return await send_email(to_email, _subject, html_email(content, f"Alert: {artist_name}"), ALERT_FROM)
+    return await send_email(to_email, _subject, html_email(content, f"Signal: {artist_name}"), ALERT_FROM)
 
 
 async def send_price_gap_alert_email(

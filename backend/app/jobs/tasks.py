@@ -880,10 +880,13 @@ async def _run_ai_agents_async():
                 if top_rec and top_rec.lot:
                     lot = top_rec.lot
                     est_low = lot.estimate_low or 0
-                    est_high = lot.estimate_high or est_low
-                    estimate_range = (
-                        f"€{est_low:,.0f} – €{est_high:,.0f}" if est_low else "N/A"
-                    )
+                    est_high = lot.estimate_high
+                    if est_low and est_high and est_high != est_low:
+                        estimate_range = f"€{est_low:,.0f} – €{est_high:,.0f}"
+                    elif est_low:
+                        estimate_range = f"€{est_low:,.0f}"
+                    else:
+                        estimate_range = "—"
                     sale_date = (
                         lot.auction_date.strftime("%d %b %Y")
                         if lot.auction_date else "TBD"
@@ -911,6 +914,8 @@ async def _run_ai_agents_async():
                             days_until_close=days_until_close,
                             user_id=str(user.id),
                             lang=lang,
+                            lot_image_url=lot.image_url,
+                            estimate_low_eur=float(lot.estimate_low or 0),
                         )
                         logger.info(
                             "agent_email_sent",
