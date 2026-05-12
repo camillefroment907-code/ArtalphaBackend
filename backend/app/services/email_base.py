@@ -47,7 +47,7 @@ _BASE_CSS = """
     .footer p { color: #AAAAAA; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11px; line-height: 1.6; }
     .footer a { color: #AAAAAA; text-decoration: underline; }
     .disclaimer { color: #CCCCCC; font-size: 10px; font-style: italic; margin-top: 16px; }
-    @media (max-width: 480px) { .body { padding: 32px 24px; } h1 { font-size: 22px; } .stat-row { flex-direction: column; } }
+    @media (max-width: 480px) { .body { padding: 32px 24px; } h1 { font-size: 22px; } .stat-row { flex-direction: column; } table[width="600"] { width: 100% !important; max-width: 100% !important; } td.body { padding: 16px 16px 20px 16px !important; } }
 """
 
 
@@ -64,11 +64,11 @@ def html_email(content: str, subject: str = "Nautilus", unsubscribe_url: str = "
 <body>
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F4F0;">
   <tr>
-    <td align="center" style="padding:40px 20px;">
+    <td align="center" style="padding:40px 8px;">
       <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF;max-width:600px;">
         <!-- HEADER -->
         <tr>
-          <td style="background-color:#FFFFFF;padding:28px 40px 24px 40px;border-top:3px solid #C6A85A;">
+          <td style="background-color:#FFFFFF;padding:20px 24px 20px 24px;border-top:3px solid #C6A85A;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td valign="middle">
@@ -91,13 +91,13 @@ def html_email(content: str, subject: str = "Nautilus", unsubscribe_url: str = "
         </tr>
         <!-- BODY -->
         <tr>
-          <td class="body" style="padding:24px 40px 28px 40px;">
+          <td class="body" style="padding:24px 24px 28px 24px;">
             {content}
           </td>
         </tr>
         <!-- FOOTER -->
         <tr>
-          <td class="footer" style="padding:32px 40px;text-align:center;border-top:1px solid #E8E4DC;">
+          <td class="footer" style="padding:24px 24px;text-align:center;border-top:1px solid #E8E4DC;">
             <p style="color:#AAAAAA;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;line-height:1.6;margin:0 0 4px;">Nautilus &middot; Art Market Intelligence &middot; <a href="https://www.get-nautilus.com" style="color:#AAAAAA;text-decoration:underline;">get-nautilus.com</a></p>
             <p style="color:#AAAAAA;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;line-height:1.6;margin:0 0 4px;"><a href="{unsubscribe_url}" style="color:#AAAAAA;text-decoration:underline;">Unsubscribe</a> &middot; <a href="https://www.get-nautilus.com/legal/privacy" style="color:#AAAAAA;text-decoration:underline;">Privacy Policy</a></p>
             <p class="disclaimer" style="color:#CCCCCC;font-size:10px;font-style:italic;margin:8px 0 0;">Not financial advice.</p>
