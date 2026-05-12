@@ -1714,7 +1714,7 @@ async def test_alert_email(
         location="",
         estimate_range=estimate_range,
         upside_pct=int(lot.pct_below_low_estimate or 0),
-        lot_url=lot.url or "",
+        lot_url=f"https://www.get-nautilus.com/app/opportunities/{lot.id}",
         days_until_close=3,
         lot_image_url=lot.image_url,
         estimate_low_eur=est_low,
