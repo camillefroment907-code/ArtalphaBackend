@@ -510,7 +510,7 @@ async def _rescore_live_async():
         result = await session.execute(
             select(Lot)
             .options(selectinload(Lot.artist))
-            .where(Lot.status.in_([LotStatus.UPCOMING, LotStatus.LIVE]))
+            .where(Lot.status.in_(['UPCOMING', 'LIVE']))
             .where(
                 or_(
                     Lot.auction_date >= datetime.utcnow(),
@@ -641,7 +641,7 @@ async def _process_alerts_async():
             .where(
                 and_(
                     Lot.is_deal == True,
-                    Lot.status == LotStatus.UPCOMING,
+                    Lot.status == 'UPCOMING',
                     Lot.scored_at >= one_hour_ago,
                 )
             )
@@ -745,7 +745,7 @@ async def _daily_cleanup_async():
         stmt = sa_select(Lot).where(
             and_(
                 Lot.auction_date < datetime.utcnow(),
-                Lot.status == LotStatus.UPCOMING,
+                Lot.status == 'UPCOMING',
             )
         )
         past_lots_result = await session.execute(stmt)
