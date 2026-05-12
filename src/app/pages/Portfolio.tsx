@@ -1332,10 +1332,10 @@ export default function Portfolio() {
                 <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--navy)', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <span style={{ color: 'white', fontSize: '20px' }}>+</span>
                 </div>
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', marginBottom: '8px' }}>Start tracking your collection</div>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', marginBottom: '8px' }}>{t('portfolio.startTracking')}</div>
                 <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '20px', maxWidth: '360px', margin: '0 auto 20px' }}>{currentLang === 'fr' ? "Ajoutez vos œuvres pour suivre leur valeur et obtenir des analyses IA." : 'Add your artworks to monitor their value, track performance, and get AI-powered insights.'}</p>
                 <button onClick={() => setShowAddModal(true)} style={{ padding: '10px 28px', background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                  Add my first artwork →
+                  {t('portfolio.addFirstArtworkBtn')}
                 </button>
               </div>
             )}
@@ -1968,11 +1968,11 @@ export default function Portfolio() {
           <div className="animate-fade-in">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
               <div>
-                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 6px' }}>Auction Watchlist</h2>
-                <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>Lots you're monitoring — alerted 24h before closing</p>
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 6px' }}>{t('portfolio.auctionWatchlist')}</h2>
+                <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>{t('portfolio.watchlistSubtitle')}</p>
               </div>
               <button onClick={() => navigate('/app/explore')} className="btn-electric" style={{ fontSize: '11px', padding: '8px 18px', borderRadius: '6px' }}>
-                Browse lots →
+                {t('portfolio.browseLots')}
               </button>
             </div>
 
@@ -1983,10 +1983,10 @@ export default function Portfolio() {
                 </div>
                 <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '10px' }}>{currentLang === 'fr' ? "Aucun lot dans votre surveillance" : 'No lots on your watchlist'}</div>
                 <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '24px', maxWidth: '340px', margin: '0 auto 24px', lineHeight: 1.7 }}>
-                  Browse opportunities and click "Watch" on any lot to track it here and receive closing alerts.
+                  {t('portfolio.watchlistEmptyDesc')}
                 </p>
                 <button onClick={() => navigate('/app/explore')} className="btn-electric" style={{ fontSize: '12px', padding: '12px 28px', borderRadius: '6px' }}>
-                  Find opportunities →
+                  {t('portfolio.findOpportunities')}
                 </button>
               </div>
             ) : (
@@ -2096,11 +2096,11 @@ export default function Portfolio() {
           <div className="animate-fade-in">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
               <div>
-                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 6px' }}>Favorite Artists</h2>
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 6px' }}>{t('portfolio.favoriteArtists')}</h2>
                 <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>{currentLang === 'fr' ? "Suivez des artistes — soyez alerté quand leurs œuvres apparaissent" : 'Follow artists — get alerted when their works appear on Nautilus'}</p>
               </div>
               <button onClick={() => setShowAddArtist(true)} className="btn-electric" style={{ fontSize: '11px', padding: '8px 18px', borderRadius: '6px' }}>
-                + Follow artist
+                {t('portfolio.followArtist')}
               </button>
             </div>
 
@@ -2111,10 +2111,10 @@ export default function Portfolio() {
                 </div>
                 <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', marginBottom: '10px' }}>{currentLang === 'fr' ? "Aucun artiste suivi pour l'instant" : 'No favorite artists yet'}</div>
                 <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '24px', maxWidth: '340px', margin: '0 auto 24px', lineHeight: 1.7 }}>
-                  Follow Picasso, Basquiat, or any artist — and be the first to know when their work appears on the market.
+                  {t('portfolio.followArtistEmptyDesc')}
                 </p>
                 <button onClick={() => setShowAddArtist(true)} className="btn-electric" style={{ fontSize: '12px', padding: '12px 28px', borderRadius: '6px' }}>
-                  Follow your first artist →
+                  {t('portfolio.followFirstArtist')}
                 </button>
               </div>
             ) : (
@@ -2403,14 +2403,14 @@ export default function Portfolio() {
               </div>
 
               <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.2em', marginBottom: '10px' }}>
-                CURRENT PLAN
+                {t('portfolio.currentPlan')}
               </div>
               <div style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', fontWeight: 600, color: 'white', marginBottom: '6px', textTransform: 'capitalize' }}>
                 {subscription?.plan || userPlan || 'Explorer'}
               </div>
               <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '24px' }}>
                 {subscription?.status === 'active'
-                  ? 'Active · Renews automatically'
+                  ? t('portfolio.activeRenews')
                   : subscription?.status === 'trialing'
                   ? `Free trial · Ends ${subscription?.trial_end ? new Date(subscription.trial_end * 1000).toLocaleDateString('fr-FR') : 'soon'}`
                   : 'Free plan — upgrade to unlock the full platform'
@@ -2426,7 +2426,7 @@ export default function Portfolio() {
                     cursor: 'pointer', letterSpacing: '0.06em',
                   }}
                 >
-                  {userPlan === 'free' ? 'Upgrade plan →' : 'Change plan →'}
+                  {userPlan === 'free' ? t('portfolio.upgradePlan') : t('portfolio.changePlan')}
                 </button>
                 {subscription?.status === 'active' && (
                   <button
@@ -2437,7 +2437,7 @@ export default function Portfolio() {
                       fontSize: '12px', fontWeight: 600, cursor: 'pointer',
                     }}
                   >
-                    Manage billing
+                    {t('portfolio.manageBilling')}
                   </button>
                 )}
               </div>
@@ -2446,7 +2446,7 @@ export default function Portfolio() {
             {/* Plan features summary */}
             <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px 24px', marginBottom: '16px' }}>
               <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '14px' }}>
-                Your plan includes
+                {t('portfolio.planIncludes')}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 {(userPlan === 'free' ? [
@@ -2469,12 +2469,12 @@ export default function Portfolio() {
                   'Full artist profiles',
                   'Priority support',
                 ] : [
-                  'Everything in Investor',
-                  'Investment Dossier (50yr)',
-                  'Unlimited Larry',
-                  'Unlimited AI analyses',
-                  'API access',
-                  'Dedicated support',
+                  t('portfolio.proFeatureEverything'),
+                  t('portfolio.proFeatureDossier'),
+                  t('portfolio.proFeatureLarry'),
+                  t('portfolio.proFeatureAI'),
+                  t('portfolio.proFeatureAPI'),
+                  t('portfolio.proFeatureSupport'),
                 ]).map((feature, i) => (
                   <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <span style={{ color: 'var(--electric)', fontSize: '12px' }}>✓</span>
@@ -2496,10 +2496,10 @@ export default function Portfolio() {
             {/* Stripe billing portal */}
             <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px 24px', marginBottom: '16px' }}>
               <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '12px' }}>
-                Billing & Payments
+                {t('portfolio.billingPayments')}
               </div>
               <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '16px', lineHeight: 1.6 }}>
-                Update your payment method, download invoices, and manage your subscription directly in the Stripe billing portal.
+                {t('portfolio.billingPortalDesc')}
               </p>
               <button
                 onClick={openBillingPortal}
@@ -2513,7 +2513,7 @@ export default function Portfolio() {
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--navy)'; (e.currentTarget as HTMLButtonElement).style.color = 'white'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-subtle)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text)'; }}
               >
-                <span>Open Stripe billing portal</span>
+                <span>{t('portfolio.openBillingPortal')}</span>
                 <span>→</span>
               </button>
             </div>
@@ -2521,7 +2521,7 @@ export default function Portfolio() {
             {/* Invoices */}
             <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px 24px', marginBottom: '24px' }}>
               <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '14px' }}>
-                Invoice History
+                {t('portfolio.invoiceHistory')}
               </div>
               {invoices.length === 0 ? (
                 <p style={{ fontSize: '13px', color: 'var(--text-3)', textAlign: 'center', padding: '20px 0', margin: 0 }}>
@@ -2579,20 +2579,20 @@ export default function Portfolio() {
             {/* Danger zone */}
             <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '20px 24px' }}>
               <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '16px' }}>
-                Danger Zone
+                {t('portfolio.dangerZone')}
               </div>
 
               {subscription?.status === 'active' && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', marginBottom: '16px', borderBottom: '1px solid var(--border-light)' }}>
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>{currentLang === 'fr' ? "Annuler l'abonnement" : 'Cancel subscription'}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Your access continues until the end of the billing period.</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{t('portfolio.accessContinues')}</div>
                   </div>
                   <button
                     onClick={() => setShowCancelModal(true)}
                     style={{ padding: '8px 16px', background: 'transparent', border: '1px solid var(--red)', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: 'var(--red)', cursor: 'pointer', whiteSpace: 'nowrap' }}
                   >
-                    Cancel plan
+                    {t('portfolio.cancelPlan')}
                   </button>
                 </div>
               )}
@@ -2600,13 +2600,13 @@ export default function Portfolio() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>{currentLang === 'fr' ? "Supprimer mon compte" : 'Delete my account'}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Permanently delete all your data. This cannot be undone.</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{t('portfolio.deleteWarning')}</div>
                 </div>
                 <button
                   onClick={openDeleteModal}
                   style={{ padding: '8px 16px', background: 'var(--red)', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 700, color: 'white', cursor: 'pointer', whiteSpace: 'nowrap' }}
                 >
-                  Delete account
+                  {t('portfolio.deleteAccountBtn')}
                 </button>
               </div>
             </div>
@@ -2729,23 +2729,23 @@ export default function Portfolio() {
             {/* Profile */}
             <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '24px', marginBottom: '16px' }}>
               <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '18px' }}>
-                Personal Information
+                {t('portfolio.personalInfo')}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Full name</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('portfolio.fullNameLabel')}</label>
                   <input style={inputStyle} value={settingsForm.fullName} onChange={e => setSettingsForm(f => ({ ...f, fullName: e.target.value }))} placeholder={currentLang === 'fr' ? "Votre nom complet" : 'Your full name'} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Email</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('portfolio.emailLabel')}</label>
                   <input style={{ ...inputStyle, opacity: 0.5, cursor: 'not-allowed' }} value={user?.email || ''} disabled />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Phone</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('portfolio.phoneLabel')}</label>
                   <input style={inputStyle} value={settingsForm.phone} onChange={e => setSettingsForm(f => ({ ...f, phone: e.target.value }))} placeholder="+33 6 00 00 00 00" />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Country</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('portfolio.countryLabel')}</label>
                   <select style={inputStyle} value={settingsForm.country} onChange={e => setSettingsForm(f => ({ ...f, country: e.target.value }))}>
                     <option value="">Select country</option>
                     <option value="FR">France</option>
@@ -2762,7 +2762,7 @@ export default function Portfolio() {
                   </select>
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Address</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('portfolio.addressLabel')}</label>
                   <input style={inputStyle} value={settingsForm.address} onChange={e => setSettingsForm(f => ({ ...f, address: e.target.value }))} placeholder="123 Rue de Rivoli, 75001 Paris" />
                 </div>
               </div>
@@ -2772,11 +2772,11 @@ export default function Portfolio() {
             {/* Investment profile */}
             <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '24px', marginBottom: '16px' }}>
               <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '18px' }}>
-                Investment Profile
+                {t('portfolio.investmentProfile')}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Investor type</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('portfolio.investorType')}</label>
                   <select style={inputStyle} value={settingsForm.collectorType} onChange={e => setSettingsForm(f => ({ ...f, collectorType: e.target.value }))}>
                     <option value="">Select type</option>
                     <option value="first_time">First-time buyer</option>
@@ -2788,7 +2788,7 @@ export default function Portfolio() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Investment horizon</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('portfolio.investmentHorizon')}</label>
                   <select style={inputStyle} value={settingsForm.horizon} onChange={e => setSettingsForm(f => ({ ...f, horizon: e.target.value }))}>
                     <option value="">Select horizon</option>
                     <option value="short">{'Short term (< 2 years)'}</option>
@@ -2798,23 +2798,23 @@ export default function Portfolio() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Annual budget (€)</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('portfolio.annualBudget')}</label>
                   <input style={inputStyle} type="number" value={settingsForm.annualBudget} onChange={e => setSettingsForm(f => ({ ...f, annualBudget: e.target.value }))} placeholder="e.g. 50000" />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Expected annual return (%)</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('portfolio.expectedReturn')}</label>
                   <input style={inputStyle} type="number" value={settingsForm.expectedReturn} onChange={e => setSettingsForm(f => ({ ...f, expectedReturn: e.target.value }))} placeholder="e.g. 15" />
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Preferred art styles & movements</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('portfolio.preferredStyles')}</label>
                   <input style={inputStyle} value={settingsForm.preferredStyles} onChange={e => setSettingsForm(f => ({ ...f, preferredStyles: e.target.value }))} placeholder="e.g. Impressionism, Contemporary, Street Art, Photography..." />
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Preferred regions & schools</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('portfolio.preferredRegions')}</label>
                   <input style={inputStyle} value={settingsForm.preferredRegions} onChange={e => setSettingsForm(f => ({ ...f, preferredRegions: e.target.value }))} placeholder="e.g. French school, American abstract, Asian contemporary..." />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Currency display</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('portfolio.currencyDisplay')}</label>
                   <select style={inputStyle} value={settingsForm.currency} onChange={e => setSettingsForm(f => ({ ...f, currency: e.target.value }))}>
                     <option value="EUR">EUR (€)</option>
                     <option value="USD">USD ($)</option>
@@ -2823,7 +2823,7 @@ export default function Portfolio() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Language</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('portfolio.language')}</label>
                   <select style={inputStyle}
                     value={settingsForm.language}
                     onChange={e => { localStorage.setItem('i18nextLng', e.target.value); i18n.changeLanguage(e.target.value); setSettingsForm(f => ({ ...f, language: e.target.value })); }}>
@@ -2832,7 +2832,7 @@ export default function Portfolio() {
                   </select>
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>What do you want to achieve with Nautilus?</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('portfolio.goalsQuestion')}</label>
                   <textarea
                     style={{ ...inputStyle, resize: 'vertical', minHeight: '80px' }}
                     value={settingsForm.goals}
@@ -2851,11 +2851,11 @@ export default function Portfolio() {
                 className="btn-electric"
                 style={{ fontSize: '13px', padding: '12px 32px', borderRadius: '8px' }}
               >
-                Save changes
+                {t('portfolio.saveChanges')}
               </button>
               {settingsSaved && (
                 <span style={{ fontSize: '12px', color: 'var(--electric)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  ✓ Saved successfully
+                  ✓ {t('portfolio.savedSuccessfully')}
                 </span>
               )}
             </div>

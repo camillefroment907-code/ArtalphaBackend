@@ -9,6 +9,18 @@ from app.models.db_models import ArtistProfile, Lot
 
 router = APIRouter(prefix="/artist-profiles", tags=["artist-profiles"])
 
+_ATTRIBUTION_PREFIXES = (
+    "after ", "d'après", "d'apres", "efter ",
+    "attribué à", "attribue a", "attributed to",
+    "follower of", "circle of", "workshop of",
+    "school of", "manner of",
+)
+
+
+def _is_attribution(name: str) -> bool:
+    low = (name or "").lower()
+    return any(p in low for p in _ATTRIBUTION_PREFIXES)
+
 
 @router.get("/")
 async def list_artists(
@@ -36,7 +48,7 @@ async def list_artists(
         stmt = stmt.where(and_(*filters))
     result = await db.execute(stmt)
     artists = result.scalars().all()
-    return [_serialize_artist(a) for a in artists]
+    return [_serialize_artist(a) for a in artists if not _is_attribution(a.name or "")]
 
 
 @router.get("/momentum")
@@ -99,7 +111,7 @@ async def search_artists(
                 "avg_price": round(float(a.avg_price or 0)),
             }
             for a in artists
-            if a.artist_name_raw
+            if a.artist_name_raw and not _is_attribution(a.artist_name_raw)
         ]
     }
 
