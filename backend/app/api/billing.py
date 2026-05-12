@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import structlog
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -20,6 +20,8 @@ from app.services.email_service import (
     send_payment_success_email,
     send_subscription_canceled_email,
     send_upgrade_confirmed_email,
+    send_downgrade_confirmed_email,
+    send_renewal_confirmed_email,
     send_admin_notification,
 )
 
@@ -899,6 +901,21 @@ async def _handle_subscription_update(db: AsyncSession, stripe_sub: dict):
                     ))
             except Exception:
                 pass
+        elif new_idx < old_idx:
+            try:
+                user_result = await db.execute(select(User).where(User.id == sub.user_id))
+                downgraded_user = user_result.scalar_one_or_none()
+                if downgraded_user:
+                    asyncio.create_task(send_downgrade_confirmed_email(
+                        to_email=downgraded_user.email,
+                        name=downgraded_user.full_name or downgraded_user.email,
+                        old_plan=old_plan_str,
+                        new_plan=new_plan_str,
+                        effective_date=datetime.utcnow().strftime("%d/%m/%Y"),
+                        lang=getattr(downgraded_user, "language", "fr"),
+                    ))
+            except Exception:
+                pass
     else:
         stripe.api_key = settings.stripe_secret_key
         try:
@@ -1061,6 +1078,7 @@ async def _handle_payment_failed(db: AsyncSession, invoice: dict):
     user_result = await db.execute(select(User).where(User.id == sub.user_id))
     failed_user = user_result.scalar_one_or_none()
     if failed_user:
+        failed_user.payment_failed_at = datetime.utcnow()
         asyncio.create_task(send_payment_failed_email(
             to_email=failed_user.email,
             name=failed_user.full_name or failed_user.email,
@@ -1102,6 +1120,16 @@ async def _handle_payment_succeeded(db: AsyncSession, invoice: dict):
                 period_end=period_end_str,
                 lang=getattr(paid_user, 'language', 'fr'),
             ))
+            # Renewal confirmation — only for returning subscribers (account > 35 days old)
+            if paid_user.created_at and paid_user.created_at < datetime.utcnow() - timedelta(days=35):
+                asyncio.create_task(send_renewal_confirmed_email(
+                    to_email=paid_user.email,
+                    name=paid_user.full_name or paid_user.email,
+                    plan_name=sub.plan.value,
+                    amount=amount_str,
+                    next_renewal_date=period_end_str,
+                    lang=getattr(paid_user, 'language', 'fr'),
+                ))
 
 
 async def _handle_trial_ending(db: AsyncSession, stripe_sub: dict):

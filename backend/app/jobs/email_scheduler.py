@@ -251,6 +251,8 @@ def run_daily_email_checks():
     _check_trial_expired()
     _check_annual_expiring()
     _check_winback()
+    _check_payment_retry()
+    _check_payment_dunning()
 
 
 def _check_nps():
@@ -579,6 +581,108 @@ def _check_winback():
             _run(send_winback_email(user.email, user.full_name or ""))
         except Exception as e:
             logger.error("winback_email_failed user=%s error=%s", user.email, e)
+
+
+def _check_payment_retry():
+    """Email 13 — send retry reminder to past_due users whose payment failed 2–4 days ago."""
+    from app.services.email_billing import send_payment_retry_email
+    from app.models.db_models import User, Subscription
+    from sqlalchemy import select
+
+    now = datetime.now(timezone.utc)
+    cutoff_min = now - timedelta(days=4)
+    cutoff_max = now - timedelta(days=2)
+
+    db = _get_sync_db()
+    try:
+        stmt = (
+            select(User, Subscription)
+            .join(User.subscription)
+            .where(
+                Subscription.status == "past_due",
+                User.payment_failed_at.between(cutoff_min, cutoff_max),
+                User.is_active == True,
+            )
+        )
+        results = db.execute(stmt).all()
+    finally:
+        db.close()
+
+    portal_url = getattr(settings, "stripe_billing_portal_url", "https://billing.stripe.com/p/login")
+    sent = 0
+    for user, sub in results:
+        try:
+            _run(send_payment_retry_email(
+                to_email=user.email,
+                name=user.full_name or user.email,
+                plan_name=sub.plan.value.lower() if sub.plan else "",
+                stripe_billing_portal_url=portal_url,
+                lang=getattr(user, "language", "fr"),
+            ))
+            sent += 1
+        except Exception as e:
+            logger.error("payment_retry_failed user=%s error=%s", user.email, e)
+    logger.info("payment_retry_sent count=%d", sent)
+
+
+def _check_payment_dunning():
+    """Daily — downgrade to free any user whose payment has been failing for 3+ days."""
+    from app.services.email_billing import send_payment_retry_email
+    from app.models.db_models import User, Subscription, SubscriptionPlan, SubscriptionStatus
+    from sqlalchemy import select
+
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=3)
+
+    db = _get_sync_db()
+    try:
+        stmt = (
+            select(User, Subscription)
+            .join(User.subscription)
+            .where(
+                User.payment_failed_at != None,
+                User.payment_failed_at <= cutoff,
+                Subscription.status == "past_due",
+                User.is_active == True,
+            )
+        )
+        results = db.execute(stmt).all()
+    finally:
+        db.close()
+
+    portal_url = getattr(settings, "stripe_billing_portal_url", "https://billing.stripe.com/p/login")
+    downgraded = 0
+    for user, sub in results:
+        db2 = _get_sync_db()
+        try:
+            # Final warning email before downgrade
+            try:
+                _run(send_payment_retry_email(
+                    to_email=user.email,
+                    name=user.full_name or user.email,
+                    plan_name=sub.plan.value.lower() if sub.plan else "",
+                    stripe_billing_portal_url=portal_url,
+                    lang=getattr(user, "language", "fr"),
+                ))
+            except Exception as e:
+                logger.error("payment_dunning_email_failed user=%s error=%s", user.email, e)
+
+            # Downgrade to free
+            db_sub = db2.get(Subscription, sub.id)
+            if db_sub:
+                db_sub.plan = SubscriptionPlan.FREE
+                db_sub.status = SubscriptionStatus.CANCELED
+            db_user = db2.get(User, user.id)
+            if db_user:
+                db_user.payment_failed_at = None
+            db2.commit()
+            downgraded += 1
+            logger.info("payment_dunning_downgraded user=%s", user.email)
+        except Exception as e:
+            logger.error("payment_dunning_failed user=%s error=%s", user.email, e)
+        finally:
+            db2.close()
+    logger.info("payment_dunning_completed count=%d", downgraded)
 
 
 # ── SEASONAL/SPECIAL TASKS ────────────────────────────────────────────────────

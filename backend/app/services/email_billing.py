@@ -80,14 +80,14 @@ async def send_payment_retry_email(to_email: str, name: str, plan_name: str, str
     is_fr = lang == "fr"
     first = _first_name(name, to_email)
     _subject = "Dernier rappel : mettez à jour votre moyen de paiement." if is_fr else "Last reminder: update your payment method."
-    _label_str = "URGENT"
-    _h1 = "Votre accès est en danger." if is_fr else "Your access is at risk."
+    _label_str = "ACCÈS EN DANGER" if is_fr else "ACCESS AT RISK"
+    _h1 = "Votre accès Nautilus expire dans 24h." if is_fr else "Your Nautilus access expires in 24h."
     _body = (
-        f"Nous n'avons pas pu traiter votre paiement depuis 3 jours. Pour conserver votre accès {plan_name}, veuillez mettre à jour votre moyen de paiement maintenant."
+        "Nous n'avons toujours pas pu débiter votre carte. Sans mise à jour, votre compte passe en version gratuite demain."
         if is_fr else
-        f"We've been unable to process your payment for 3 days. To keep your {plan_name} access, please update your payment method now."
+        "We still couldn't charge your card. Without an update, your account moves to the free plan tomorrow."
     )
-    _cta = "Mettre à jour maintenant — 30 secondes" if is_fr else "Update now — takes 30 seconds"
+    _cta = "Mettre à jour ma carte maintenant" if is_fr else "Update my card now"
     content = f"""
 {label(_label_str)}
 <h1>{_h1}</h1>
@@ -214,24 +214,26 @@ async def send_downgrade_confirmed_email(to_email: str, name: str, old_plan: str
     first = _first_name(name, to_email)
     _subject = "Votre plan a été mis à jour." if is_fr else "Your plan has been updated."
     _label_str = "CHANGEMENT DE PLAN" if is_fr else "PLAN CHANGE"
-    _h1 = f"Plan mis à jour vers {new_plan}." if is_fr else f"Plan updated to {new_plan}."
-    _body = (
-        f"Votre plan Nautilus a été changé pour <strong>{new_plan}</strong>. Vos nouvelles limites prennent effet le <strong>{effective_date}</strong>."
+    _h1 = f"Votre plan a été mis à jour vers {new_plan}." if is_fr else f"Your plan has been updated to {new_plan}."
+    _body1 = (
+        f"Votre abonnement Nautilus est passé de <strong>{old_plan}</strong> à <strong>{new_plan}</strong>. Les nouvelles limites prennent effet le <strong>{effective_date}</strong>."
         if is_fr else
-        f"Your Nautilus plan has been changed to <strong>{new_plan}</strong>. Your new limits take effect on <strong>{effective_date}</strong>."
+        f"Your Nautilus subscription moved from <strong>{old_plan}</strong> to <strong>{new_plan}</strong>. New limits apply from <strong>{effective_date}</strong>."
     )
-    _note = (
-        f"Les fonctionnalités de votre ancien plan {old_plan} restent actives jusqu'au {effective_date}."
+    _body2 = (
+        "Vous perdez l'accès à : les opportunités illimitées, Larry IA, la génération d'Investment Memo et les alertes en temps réel."
         if is_fr else
-        f"Your previous {old_plan} plan features will remain active until {effective_date}."
+        "You're losing access to: unlimited opportunities, Larry AI, Investment Memo generation and real-time alerts."
     )
-    _cta = "Voir tous les plans" if is_fr else "View all plans"
+    _cta = "Revenir à mon ancien plan" if is_fr else "Restore my previous plan"
+    _small = "Réactivation immédiate. Aucun engagement." if is_fr else "Instant reactivation. No commitment."
     content = f"""
 {label(_label_str)}
 <h1>{_h1}</h1>
-<p>{_body}</p>
-<p style="color:#888;">{_note}</p>
-{cta(_cta, "https://www.get-nautilus.com/app/pricing")}
+<p>{_body1}</p>
+<p>{_body2}</p>
+{cta(_cta, "https://www.get-nautilus.com/app/pricing", gold=True)}
+<p style="color:#aaa;font-size:12px;text-align:center;">{_small}</p>
 """
     return await send_email(to_email, _subject, html_email(content, "Plan updated"), TRANSAC_FROM)
 
