@@ -694,7 +694,7 @@ export default function OpportunityDetail() {
 
         {/* ── SCORE PILLARS STRIP ──────────────────────────────────────────── */}
         {scorePillars.length > 0 && (
-          <div style={{ display: 'flex', gap: '32px', padding: '12px 40px', background: LTC, borderBottom: `1px solid ${LTB}`, flexWrap: 'wrap' as const }}>
+          <div style={{ display: 'flex', gap: '32px', padding: '12px 40px', background: 'rgba(10,15,30,0.04)', borderBottom: '1px solid rgba(0,0,0,0.06)', borderRadius: '8px', flexWrap: 'wrap' as const }}>
             {scorePillars.map(({ label, value }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>{label.toUpperCase()}</span>
@@ -793,7 +793,7 @@ export default function OpportunityDetail() {
                     ◆ {isFr ? 'INTELLIGENCE NAUTILUS' : 'NAUTILUS INTELLIGENCE'}
                   </div>
                 </div>
-                <div style={{ padding: '20px 24px' }}>
+                <div style={{ padding: '16px 20px' }}>
 
                   {/* ROW A — Gap percentage + Price bar */}
                   {nautVal && gapPct !== null && (
@@ -1282,7 +1282,7 @@ export default function OpportunityDetail() {
                     risks.push(isFr ? 'Frais acheteur à intégrer' : "Include buyer's premium");
                   }
                   return (
-                    <div style={wCard}>
+                    <div style={{ ...wCard, padding: '16px 20px' }}>
                       <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ {isFr ? 'POINTS DE VIGILANCE' : 'WATCH POINTS'}</div>
                       <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '6px' }}>
                         {risks.map((text, i) => (
@@ -1306,7 +1306,7 @@ export default function OpportunityDetail() {
                       <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                         <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
                         <YAxis tickFormatter={(v: number) => `€${v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v}`} tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} width={48} />
-                        <Tooltip formatter={(val: number, name: string) => [`€${Number(val).toLocaleString()}`, name === 'optimistic' ? (isFr ? '🟢 Scénario haussier' : '🟢 Bull market') : name === 'value' ? (isFr ? '🟡 Scénario central' : '🟡 Stable market') : (isFr ? '🔴 Scénario baissier' : '🔴 Bear market')]} contentStyle={{ background: '#1A2A44', border: 'none', borderRadius: 8, fontSize: 12, color: 'white' }} />
+                        <Tooltip formatter={(val: number, name: string) => [`€${Number(val).toLocaleString()}`, name === 'optimistic' ? (isFr ? '🟢 Marché fort' : '🟢 Bull market') : name === 'value' ? (isFr ? '🟡 Marché stable' : '🟡 Stable market') : (isFr ? '🔴 Marché faible' : '🔴 Bear market')]} contentStyle={{ background: '#1A2A44', border: 'none', borderRadius: 8, fontSize: 12, color: 'white' }} />
                         <ReferenceLine y={price} stroke="#E8E4DC" strokeDasharray="4 2" />
                         <Line type="monotone" dataKey="optimistic" stroke="#16A34A" strokeWidth={2} dot={false} />
                         <Line type="monotone" dataKey="value" stroke="#B8922A" strokeWidth={2} dot={false} />
@@ -1314,9 +1314,9 @@ export default function OpportunityDetail() {
                       </LineChart>
                     </ResponsiveContainer>
                     <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 8 }}>
-                      <span style={{ fontSize: 11, color: '#16A34A' }}>● {isFr ? 'Scénario haussier' : 'Bull market'}</span>
-                      <span style={{ fontSize: 11, color: '#B8922A' }}>● {isFr ? 'Scénario central' : 'Stable market'}</span>
-                      <span style={{ fontSize: 11, color: '#DC2626' }}>● {isFr ? 'Scénario baissier' : 'Bear market'}</span>
+                      <span style={{ fontSize: 11, color: '#16A34A' }}>● {isFr ? 'Marché fort' : 'Bull market'}</span>
+                      <span style={{ fontSize: 11, color: '#B8922A' }}>● {isFr ? 'Marché stable' : 'Stable market'}</span>
+                      <span style={{ fontSize: 11, color: '#DC2626' }}>● {isFr ? 'Marché faible' : 'Bear market'}</span>
                     </div>
                     {lot.projection?.sell_recommendation && (
                       <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '6px', padding: '8px 12px', marginTop: '6px' }}>
@@ -1497,12 +1497,15 @@ export default function OpportunityDetail() {
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'INTELLIGENCE IA' : 'AI INTELLIGENCE'}</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
 
-                <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 24px', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '16px 20px', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                     <span style={{ color: GOLD, fontSize: '13px', lineHeight: 1 }}>◆</span>
                     <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1, fontWeight: 500 }}>{isFr ? "Mémo d'investissement" : 'Investment Memo'}</span>
                   </div>
-                  <div style={{ fontSize: '12px', color: LTT3, marginBottom: '16px', lineHeight: 1.5 }}>{isFr ? "Analyse générée par IA du potentiel d'investissement de ce lot." : "AI-generated analysis of this lot's investment potential."}</div>
+                  <div style={{ fontSize: '12px', color: LTT3, marginBottom: '16px', lineHeight: 1.5 }}>
+                    {isFr ? "Analyse générée par IA du potentiel d'investissement de ce lot." : "AI-generated analysis of this lot's investment potential."}
+                    <span style={{ color: LTT3, marginLeft: '4px' }}>· PDF · ~5 min</span>
+                  </div>
                   <div style={{ marginBottom: '16px' }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#EFF6FF', border: '1px solid #BFDBFE', color: BL, padding: '3px 8px', borderRadius: '3px' }}>INVESTOR+</span>
                   </div>
@@ -1523,7 +1526,7 @@ export default function OpportunityDetail() {
                   )}
                 </div>
 
-                <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 24px', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '16px 20px', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
                       <circle cx="8" cy="8" r="7" stroke="#9CA3AF" strokeWidth="1.2"/>
@@ -1532,7 +1535,10 @@ export default function OpportunityDetail() {
                     </svg>
                     <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1, fontWeight: 500 }}>{isFr ? "Dossier d'investissement" : 'Investment Dossier'}</span>
                   </div>
-                  <div style={{ fontSize: '12px', color: LTT3, marginBottom: '16px', lineHeight: 1.5 }}>{isFr ? "Analyse complète — projections 5/10/20 ans, valorisation artiste & verdict IA." : "Full analysis — 5/10/20yr projections, artist valuation & AI verdict."}</div>
+                  <div style={{ fontSize: '12px', color: LTT3, marginBottom: '16px', lineHeight: 1.5 }}>
+                    {isFr ? "Analyse complète — projections 5/10/20 ans, valorisation artiste & verdict IA." : "Full analysis — 5/10/20yr projections, artist valuation & AI verdict."}
+                    <span style={{ color: LTT3, marginLeft: '4px' }}>· PDF · Analyse complète</span>
+                  </div>
                   <div style={{ marginBottom: '16px' }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#F0F0FF', border: '1px solid #C7C7F0', color: '#5B5BD6', padding: '3px 8px', borderRadius: '3px' }}>FAMILY OFFICE+</span>
                   </div>
@@ -1568,16 +1574,16 @@ export default function OpportunityDetail() {
                 }
               />
             ) : (
-              <div style={wCard}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '20px' }}>◆ {isFr ? 'SOURCES' : 'SOURCES'}</div>
+              <div style={{ ...wCard, padding: '12px 20px' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ {isFr ? 'SOURCES' : 'SOURCES'}</div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '0' }}>
 
                   {/* Lot source */}
                   {trackUrl && (
-                    <div style={{ ...dRow, paddingTop: '12px', paddingBottom: '12px' }}>
+                    <div style={{ ...dRow, paddingTop: '8px', paddingBottom: '8px' }}>
                       <div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '3px' }}>LOT SOURCE</div>
-                        <div style={{ fontSize: '13px', color: LTT2 }}>{lot.auction_house_name || resolvedSource || 'Auction'}</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '2px' }}>LOT SOURCE</div>
+                        <div style={{ fontSize: '12px', color: LTT2 }}>{lot.auction_house_name || resolvedSource || 'Auction'}</div>
                       </div>
                       <a
                         href={trackUrl}
@@ -1592,10 +1598,10 @@ export default function OpportunityDetail() {
 
                   {/* Artist search */}
                   {lot.artist_name_raw && (
-                    <div style={{ ...dRow, paddingTop: '12px', paddingBottom: '12px' }}>
+                    <div style={{ ...dRow, paddingTop: '8px', paddingBottom: '8px' }}>
                       <div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '3px' }}>ARTIST SEARCH</div>
-                        <div style={{ fontSize: '13px', color: LTT2 }}>{lot.artist_name_raw}</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '2px' }}>ARTIST SEARCH</div>
+                        <div style={{ fontSize: '12px', color: LTT2 }}>{lot.artist_name_raw}</div>
                       </div>
                       <a
                         href={sourceSearch[source] || `https://www.google.com/search?q=${artistEnc}+auction+results`}
@@ -1610,10 +1616,10 @@ export default function OpportunityDetail() {
 
                   {/* Auction house */}
                   {lot.auction_house_name && (
-                    <div style={{ ...dRow, paddingTop: '12px', paddingBottom: '12px', borderBottom: 'none' }}>
+                    <div style={{ ...dRow, paddingTop: '8px', paddingBottom: '8px', borderBottom: 'none' }}>
                       <div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '3px' }}>AUCTION HOUSE</div>
-                        <div style={{ fontSize: '13px', color: LTT2 }}>{lot.auction_house_name}</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '2px' }}>AUCTION HOUSE</div>
+                        <div style={{ fontSize: '12px', color: LTT2 }}>{lot.auction_house_name}</div>
                       </div>
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>
                         {sourceLabel}
@@ -1623,14 +1629,10 @@ export default function OpportunityDetail() {
 
                 </div>
 
-                {/* Note */}
-                <div style={{ marginTop: '20px', background: LT, borderRadius: '8px', padding: '12px 16px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '4px' }}>NOTE</div>
-                  <p style={{ fontSize: '12px', color: LTT2, lineHeight: 1.6, margin: 0 }}>
-                    Source links may redirect via Nautilus tracking before landing on the auction platform.
-                    {lot.auction_house_name ? ` This lot is listed by ${lot.auction_house_name.split('—')[0].trim()}.` : ''}
-                  </p>
-                </div>
+                <p style={{ fontSize: '11px', color: LTT3, margin: '10px 0 0', lineHeight: 1.5 }}>
+                  Source links may redirect via Nautilus tracking before landing on the auction platform.
+                  {lot.auction_house_name ? ` This lot is listed by ${lot.auction_house_name.split('—')[0].trim()}.` : ''}
+                </p>
               </div>
             )}
           </div>
