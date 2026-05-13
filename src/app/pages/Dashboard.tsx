@@ -49,11 +49,8 @@ export default function Dashboard() {
   const lang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
 
   const [topLots, setTopLots]               = useState<any[]>([]);
-  const [recentLots, setRecentLots]         = useState<any[]>([]);
   const [sentiment, setSentiment]           = useState<any>(null);
   const [marketStats, setMarketStats]       = useState<{ total_lots: number; avg_score: number; exceptional: number }>({ total_lots: 0, avg_score: 0, exceptional: 0 });
-  const [portfolioValue, setPortfolioValue] = useState(0);
-  const [portfolioReturn, setPortfolioReturn] = useState(0);
   const [portfolioItems, setPortfolioItems] = useState<any[]>([]);
   const [agentAlerts, setAgentAlerts]       = useState<any[]>([]);
   const [brief, setBrief]                   = useState<string>('');
@@ -101,10 +98,6 @@ export default function Dashboard() {
       .then((d: any) => { if (d?.segments) setSentiment(d); })
       .catch(() => {});
 
-    // Recent lots
-    cachedFetch(`${BACKEND}/api/lots?sort_by=created_at&sort_dir=desc&page_size=5`, { headers })
-      .then((d: any) => setRecentLots(d.items || []))
-      .catch(() => {});
 
     // Portfolio
     if (token) {
@@ -112,10 +105,6 @@ export default function Dashboard() {
         .then((d: any) => {
           const items: any[] = d.items || d || [];
           setPortfolioItems(items);
-          const invested = items.reduce((s: number, i: any) => s + (i.purchase_price_eur || 0), 0);
-          const value = items.reduce((s: number, i: any) => s + (i.estimated_current_value_eur || i.purchase_price_eur || 0), 0);
-          setPortfolioValue(value);
-          setPortfolioReturn(invested > 0 ? (value - invested) / invested * 100 : 0);
         })
         .catch(() => {});
 
@@ -368,7 +357,7 @@ export default function Dashboard() {
                 iconColor: '#C0392B',
                 value: marketStats.exceptional > 0 ? marketStats.exceptional.toString() : '0',
                 label: t('dashboard.kpiExceptional'),
-                sub: t('dashboard.kpiConvictionGe80'),
+                sub: lang === 'fr' ? "Nouveaux deals aujourd'hui" : 'New deals today',
               },
               {
                 icon: '⏱',
@@ -531,7 +520,7 @@ export default function Dashboard() {
             {[
               { label: t('dashboard.auctionLots'), sub: t('dashboard.globalCoverage'), value: marketStats.total_lots > 0 ? marketStats.total_lots.toLocaleString() : '—' },
               { label: t('dashboard.avgDealScore'), sub: t('dashboard.currentSelection'), value: marketStats.avg_score > 0 ? `${marketStats.avg_score}/100` : '—' },
-              { label: t('dashboard.exceptionalLots'), sub: t('dashboard.scoreGe80'), value: marketStats.exceptional > 0 ? marketStats.exceptional.toString() : '—' },
+              { label: t('dashboard.exceptionalLots'), sub: lang === 'fr' ? "Nouveaux deals aujourd'hui" : 'New deals today', value: marketStats.exceptional > 0 ? marketStats.exceptional.toString() : '—' },
             ].map(({ label, sub, value }, i) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i < 2 ? '1px solid #F0EDE8' : 'none' }}>
                 <div>
@@ -615,7 +604,7 @@ export default function Dashboard() {
                   <div key={alert.id || i} style={{ background: '#FAFAF8', border: '1px solid #E8E4DC', borderRadius: '6px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '1px' }}>{alert.name || alert.strategy_type || 'Signal'}</div>
-                      <div style={{ fontSize: '10px', color: '#9CA3AF' }}>{alert.description || (alert.max_price ? `Budget ${fmtPrice(alert.max_price)}` : '')}</div>
+                      <div style={{ fontSize: '10px', color: '#9CA3AF' }}>{alert.budget_max_eur ? `Budget max : ${fmtPrice(alert.budget_max_eur)}` : alert.artist_name ? alert.artist_name : ''}</div>
                     </div>
                     <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: alert.is_active ? '#34D399' : '#E8E4DC', flexShrink: 0 }} />
                   </div>
