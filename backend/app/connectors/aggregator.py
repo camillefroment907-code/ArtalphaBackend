@@ -55,6 +55,21 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     real_lots: List[LotNormalized] = []
     seen_ids: set = set()
 
+    # --- Bukowskis — Swedish auction house, no key needed, listing HTML scraping ---
+    try:
+        from app.connectors.bukowskis_connector import fetch_lots as bukowskis_fetch
+        bukowskis_lots = await _with_timeout(bukowskis_fetch(lots_per_source), timeout=120, name="bukowskis")
+        added = 0
+        for lot in bukowskis_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("Bukowskis: fetched", count=added)
+    except Exception as e:
+        logger.warning("Bukowskis connector skipped", error=str(e))
+
     # --- Bruun Rasmussen — Danish auction house, no key needed, JSON-LD scraping ---
     try:
         from app.connectors.bruun_rasmussen_connector import fetch_lots as br_fetch
