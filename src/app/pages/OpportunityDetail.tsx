@@ -436,7 +436,7 @@ export default function OpportunityDetail() {
       </div>
 
       {/* ═══ HERO — terminal 3-col ═══ */}
-      <div ref={heroRef} style={{ background: DK, display: 'grid', gridTemplateColumns: '280px 1fr 220px', minHeight: '380px' }}>
+      <div ref={heroRef} style={{ background: DK, display: 'grid', gridTemplateColumns: '260px 1fr 280px', minHeight: '380px' }}>
 
         {/* COL 1 — Image */}
         <div className="lot-hero-image" style={{ background: DK4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', borderRight: `0.5px solid ${DKB}`, position: 'relative' }}>
