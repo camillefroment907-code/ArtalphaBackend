@@ -200,6 +200,8 @@ class UserPreference(Base):
     preferred_market_type = Column(ARRAY(String), nullable=True)
     preferred_career_stages = Column(ARRAY(String), nullable=True)
     strategy_preset = Column(String(50), nullable=True)
+    expected_return_pct = Column(Float, nullable=True)  # target annual return %
+    goals = Column(Text, nullable=True)  # free text investment goals
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

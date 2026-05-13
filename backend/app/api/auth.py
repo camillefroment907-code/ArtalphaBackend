@@ -383,6 +383,10 @@ async def update_profile(
         pref.preferred_regions = [body.preferred_regions] if body.preferred_regions else []
     if body.language in ("fr", "en"):
         pref.language = body.language
+    if body.expected_return is not None:
+        pref.expected_return_pct = body.expected_return
+    if body.goals is not None:
+        pref.goals = body.goals
 
     await db.commit()
     return {"message": "Profile updated", "email": current_user.email}
