@@ -86,6 +86,21 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     except Exception as e:
         logger.warning("Drouot Apify connector skipped", error=str(e))
 
+    # --- Invaluable via Apify (lexis-solutions/invaluable-scraper) — requires APIFY_API_TOKEN ---
+    try:
+        from app.connectors.apify_invaluable_connector import fetch_lots as apify_invaluable_fetch
+        apify_invaluable_lots = await _with_timeout(apify_invaluable_fetch(lots_per_source), timeout=300, name="apify_invaluable")
+        added = 0
+        for lot in apify_invaluable_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("Invaluable (Apify): fetched", count=added)
+    except Exception as e:
+        logger.warning("Invaluable Apify connector skipped", error=str(e))
+
     # --- Interenchères — disabled (Cloudflare blocks all access, 0 real lots) ---
     # try:
     #     from app.connectors.interencheres_real_connector import fetch_lots as ie_fetch
