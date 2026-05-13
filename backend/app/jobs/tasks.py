@@ -88,9 +88,8 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
     start_time = datetime.utcnow()
 
     if not skip_purge:
-        # 0. Purge UPCOMING lots whose auction_date is more than 1 day past.
-        #    SOLD lots (historical data) are kept — never purged here.
-        #    Must delete FK dependents (score_performance, hammer_prices, user_signals) first.
+        # Cleanup runs AFTER fetch+insert (see end of function) to avoid emptying
+        # the DB before new lots arrive.  Only fast/safe ops here: bad-title lots.
         async with AsyncSessionLocal() as _cleanup_session:
             from sqlalchemy import text as _text
 
@@ -113,28 +112,6 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
                 """), params)
                 await _cleanup_session.commit()
                 return result.rowcount
-
-            # Mark expired UPCOMING auction lots as SOLD — keep them in DB for history.
-            # Frontend already hides them via auction_date >= now filter.
-            # Hard-delete is wrong here: these lots have historical value.
-            expired_cutoff = datetime.utcnow() - timedelta(days=1)
-            expired_result = await _cleanup_session.execute(_text(
-                "UPDATE lots SET status = 'sold', updated_at = :now "
-                "WHERE auction_date IS NOT NULL AND auction_date < :cutoff AND status = 'upcoming'"
-            ), {"cutoff": expired_cutoff, "now": datetime.utcnow()})
-            await _cleanup_session.commit()
-            expired_count = expired_result.rowcount
-            if expired_count:
-                logger.info("Marked expired lots as SOLD", count=expired_count)
-
-            # Purge UPCOMING lots with no auction_date older than 3 days
-            no_date_cutoff = datetime.utcnow() - timedelta(days=3)
-            no_date_count = await _purge_by_sql(
-                "auction_date IS NULL AND created_at < :cutoff AND status = 'upcoming'",
-                {"cutoff": no_date_cutoff},
-            )
-            if no_date_count:
-                logger.info("Purged no-date lots", count=no_date_count)
 
             # Purge Drouot lots with countdown timer titles (legacy bad data)
             bad_title_count = await _purge_by_sql(
@@ -496,6 +473,42 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
         await _run_ai_agents_async()
     except Exception as e:
         logger.warning("ai agents pipeline failed", error=str(e))
+
+    # Post-ingest cleanup — runs AFTER new lots are inserted so the feed
+    # is never emptied before fresh lots arrive.
+    if not skip_purge:
+        try:
+            from app.database import BgSessionLocal as _BgSession
+            from sqlalchemy import text as _text2
+            async with _BgSession() as _cs:
+                # 1. Mark expired auction lots as SOLD (keep for history)
+                _exp_cutoff = datetime.utcnow() - timedelta(days=1)
+                _exp = await _cs.execute(_text2(
+                    "UPDATE lots SET status = 'sold', updated_at = :now "
+                    "WHERE auction_date IS NOT NULL AND auction_date < :cutoff AND status = 'upcoming'"
+                ), {"cutoff": _exp_cutoff, "now": datetime.utcnow()})
+                await _cs.commit()
+                if _exp.rowcount:
+                    logger.info("Marked expired auction lots as SOLD", count=_exp.rowcount)
+
+                # 2. Delete primary-market lots with no date older than 7 days
+                #    (no historical value; they will be re-ingested next run)
+                _nd_cutoff = datetime.utcnow() - timedelta(days=7)
+                await _cs.execute(_text2("""
+                    WITH to_del AS (
+                        SELECT id FROM lots
+                        WHERE auction_date IS NULL
+                          AND created_at < :cutoff
+                          AND status = 'upcoming'
+                    ),
+                    del_score   AS (DELETE FROM score_performance WHERE lot_id IN (SELECT id FROM to_del)),
+                    del_hammer  AS (DELETE FROM hammer_prices    WHERE lot_id IN (SELECT id FROM to_del)),
+                    del_signals AS (DELETE FROM user_signals     WHERE lot_id IN (SELECT id FROM to_del))
+                    DELETE FROM lots WHERE id IN (SELECT id FROM to_del)
+                """), {"cutoff": _nd_cutoff})
+                await _cs.commit()
+        except Exception as _ce:
+            logger.warning("post-ingest cleanup failed", error=str(_ce))
 
 
 @celery_app.task(name="app.jobs.tasks.rescore_live_lots", bind=True)
