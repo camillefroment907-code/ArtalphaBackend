@@ -838,7 +838,7 @@ export default function Explore() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   {([
                     { label: t('explorer.sortBestSignal'),  by: 'deal_score',              dir: 'desc' },
-                    { label: t('explorer.sortBestUpside'),  by: 'pct_below_low_estimate',  dir: 'desc' },
+                    { label: t('explorer.sortBestUpside'),  by: 'deal_score',  dir: 'desc' },
                     { label: t('explorer.sortNewest'),      by: 'created_at',              dir: 'desc' },
                     { label: t('explorer.sortOldest'),      by: 'created_at',              dir: 'asc'  },
                     { label: t('explorer.sortPriceLow'),    by: 'current_price',           dir: 'asc'  },
@@ -879,7 +879,12 @@ export default function Explore() {
               {userPlan === 'free' && dailyDeal && (
                 <div style={{marginBottom:24,padding:16,background:'#1A2A44',borderRadius:8,display:'flex',gap:16,alignItems:'center',cursor:'pointer'}}
                   onClick={() => window.location.href=`/app/opportunities/${dailyDeal.id}`}>
-                  <img src={dailyDeal.image_url} style={{width:64,height:64,objectFit:'cover',borderRadius:4}} />
+                  <img
+                    src={dailyDeal.image_url || ''}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    alt={dailyDeal.title || ''}
+                    style={{width:64,height:64,objectFit:'cover',borderRadius:4}}
+                  />
                   <div>
                     <div style={{fontSize:10,color:'#C6A85A',letterSpacing:'0.15em',fontWeight:700,marginBottom:4}}>⚡ DEAL OF THE DAY · FULLY UNLOCKED</div>
                     <div style={{color:'#fff',fontSize:15,fontWeight:600}}>{dailyDeal.artist_name_raw}</div>
