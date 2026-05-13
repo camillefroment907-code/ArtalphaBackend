@@ -55,6 +55,21 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     real_lots: List[LotNormalized] = []
     seen_ids: set = set()
 
+    # --- Bruun Rasmussen — Danish auction house, no key needed, JSON-LD scraping ---
+    try:
+        from app.connectors.bruun_rasmussen_connector import fetch_lots as br_fetch
+        br_lots = await _with_timeout(br_fetch(lots_per_source), timeout=120, name="bruun_rasmussen")
+        added = 0
+        for lot in br_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("Bruun Rasmussen: fetched", count=added)
+    except Exception as e:
+        logger.warning("Bruun Rasmussen connector skipped", error=str(e))
+
     # --- Drouot via ScraperAPI headless render (replaces Playwright) ---
     # Requires SCRAPERAPI_KEY env var. Uses render=true + French IP to bypass Cloudflare.
     try:
