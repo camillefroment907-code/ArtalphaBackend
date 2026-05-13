@@ -340,9 +340,13 @@ class UpdateProfileRequest(BaseModel):
     country: Optional[str] = None
     address: Optional[str] = None
     collector_type: Optional[str] = None
-    investment_budget: Optional[str] = None
     investment_horizon: Optional[str] = None
-    preferred_categories: Optional[List[str]] = None
+    annual_budget: Optional[float] = None
+    expected_return: Optional[float] = None
+    preferred_styles: Optional[str] = None
+    preferred_regions: Optional[str] = None
+    goals: Optional[str] = None
+    language: Optional[str] = None
 
 
 @router.patch("/profile")
@@ -357,6 +361,9 @@ async def update_profile(
         if value is not None and hasattr(current_user, field):
             setattr(current_user, field, value)
 
+    if body.language in ("fr", "en"):
+        current_user.language = body.language
+
     # Preference fields
     pref_result = await db.execute(select(UserPreference).where(UserPreference.user_id == current_user.id))
     pref = pref_result.scalar_one_or_none()
@@ -368,8 +375,14 @@ async def update_profile(
         pref.collector_type = body.collector_type
     if body.investment_horizon is not None:
         pref.investment_horizon = body.investment_horizon
-    if body.preferred_categories is not None:
-        pref.categories = body.preferred_categories
+    if body.annual_budget is not None:
+        pref.min_lot_budget_eur = body.annual_budget
+    if body.preferred_styles is not None:
+        pref.preferred_periods = [body.preferred_styles] if body.preferred_styles else []
+    if body.preferred_regions is not None:
+        pref.preferred_regions = [body.preferred_regions] if body.preferred_regions else []
+    if body.language in ("fr", "en"):
+        pref.language = body.language
 
     await db.commit()
     return {"message": "Profile updated", "email": current_user.email}

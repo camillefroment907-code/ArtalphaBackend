@@ -855,10 +855,12 @@ export default function Portfolio() {
           address: settingsForm.address,
           collector_type: settingsForm.collectorType,
           investment_horizon: settingsForm.horizon,
-          annual_budget: settingsForm.annualBudget ? parseFloat(settingsForm.annualBudget) : null,
-          expected_return: settingsForm.expectedReturn ? parseFloat(settingsForm.expectedReturn) : null,
-          preferred_styles: settingsForm.preferredStyles,
-          preferred_regions: settingsForm.preferredRegions,
+          annual_budget: parseFloat(settingsForm.annualBudget) || null,
+          expected_return: parseFloat(settingsForm.expectedReturn) || null,
+          preferred_styles: settingsForm.preferredStyles || null,
+          preferred_regions: settingsForm.preferredRegions || null,
+          goals: settingsForm.goals || null,
+          language: settingsForm.language || null,
         }),
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -2860,15 +2862,6 @@ export default function Portfolio() {
               )}
             </div>
 
-            {/* Delete account */}
-            <div style={{ marginTop: '48px', textAlign: 'center' }}>
-              <button
-                onClick={openDeleteModal}
-                style={{ color: '#dc2626', background: 'none', border: 'none', fontSize: '13px', cursor: 'pointer', textDecoration: 'underline' }}
-              >
-                Delete my account
-              </button>
-            </div>
           </div>
         )}
 
