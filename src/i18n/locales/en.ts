@@ -522,8 +522,8 @@ const en = {
   },
   landing: {
     sectionLabel: 'ART MARKET INTELLIGENCE',
-    heroTitle: "The art market's best-kept secret is now yours.",
-    heroSub: 'Nautilus scans 500,000+ auction lots across 30+ global sources, scores every opportunity with AI, and tells you exactly what to buy — before the market figures it out.',
+    heroTitle: 'Buy art with conviction.',
+    heroSub: 'Nautilus tells you what to pay, when to bid, and what to avoid.',
     trustedBy: 'Trusted by collectors in 28 countries',
     startFree: 'Start free',
     seeLive: 'See live opportunities →',

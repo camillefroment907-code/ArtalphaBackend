@@ -527,8 +527,8 @@ const fr: TranslationKeys = {
   },
   landing: {
     sectionLabel: 'ART MARKET INTELLIGENCE',
-    heroTitle: 'La plupart des acheteurs d\'art se trompent.\nPas vous.',
-    heroSub: 'Nautilus transforme le marché de l\'art en décisions d\'investissement claires — avec un score, une analyse et une justification objective.',
+    heroTitle: 'Achetez de l\'art\nsans vous faire avoir.',
+    heroSub: 'Nautilus score chaque lot aux enchères — pour que vous achetiez au bon prix, au bon moment.',
     trustedBy: 'Plébiscité par des investisseurs dans 28 pays',
     startFree: 'Commencer gratuitement',
     seeLive: 'Accéder aux opportunités en direct →',
