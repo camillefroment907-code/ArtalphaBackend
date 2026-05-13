@@ -114,13 +114,18 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
                 await _cleanup_session.commit()
                 return result.rowcount
 
+            # Mark expired UPCOMING auction lots as SOLD — keep them in DB for history.
+            # Frontend already hides them via auction_date >= now filter.
+            # Hard-delete is wrong here: these lots have historical value.
             expired_cutoff = datetime.utcnow() - timedelta(days=1)
-            expired_count = await _purge_by_sql(
-                "auction_date IS NOT NULL AND auction_date < :cutoff AND status = 'upcoming'",
-                {"cutoff": expired_cutoff},
-            )
+            expired_result = await _cleanup_session.execute(_text(
+                "UPDATE lots SET status = 'sold', updated_at = :now "
+                "WHERE auction_date IS NOT NULL AND auction_date < :cutoff AND status = 'upcoming'"
+            ), {"cutoff": expired_cutoff, "now": datetime.utcnow()})
+            await _cleanup_session.commit()
+            expired_count = expired_result.rowcount
             if expired_count:
-                logger.info("Purged expired lots", count=expired_count)
+                logger.info("Marked expired lots as SOLD", count=expired_count)
 
             # Purge UPCOMING lots with no auction_date older than 3 days
             no_date_cutoff = datetime.utcnow() - timedelta(days=3)
