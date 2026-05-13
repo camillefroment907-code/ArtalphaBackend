@@ -415,7 +415,7 @@ export default function Portfolio() {
         const items = await itemsRes.json();
         setPortfolioItems(items);
         const totalVal = items.reduce((sum: number, item: any) =>
-          sum + (item.current_estimated_value_eur || item.purchase_price_eur || 0), 0);
+          sum + (item.estimated_current_value_eur || item.purchase_price_eur || 0), 0);
         const badge =
           totalVal >= 1_000_000 ? { label: 'Mécène', rank: 5, color: '#C6A85A', topPct: 'Top 1%' } :
           totalVal >= 200_000   ? { label: 'Grand Collectionneur', rank: 4, color: '#C6A85A', topPct: 'Top 8%' } :
@@ -665,7 +665,7 @@ export default function Portfolio() {
     await fetch(`${BACKEND}/api/portfolio/watchlist/${id}`, {
       method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` },
     });
-    setWatchlist(prev => prev.filter((w: any) => w.id !== id));
+    setWatchlist(prev => prev.filter((w: any) => w.lot_id !== id));
   };
 
   // ── Artist actions ─────────────────────────────────────────
@@ -1352,7 +1352,7 @@ export default function Portfolio() {
                       {/* Image zone */}
                       <div style={{ height: 160, position: 'relative', overflow: 'hidden' }}>
                         {item.image_url ? (
-                          <img src={item.image_url} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={item.image_url} alt={item.title} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
                           <div style={{ width: '100%', height: '100%', background: '#F0EBE0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'rgba(0,0,0,0.2)' }}>Photo à ajouter</span>
@@ -1992,14 +1992,14 @@ export default function Portfolio() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {watchlist.map((item: any) => {
-                  const auctionDate = item.auction_date ? new Date(item.auction_date) : null;
+                  const auctionDate = item.lot?.auction_date ? new Date(item.lot.auction_date) : null;
                   const daysLeft = auctionDate ? Math.ceil((auctionDate.getTime() - Date.now()) / 86400000) : null;
                   const isUrgent = daysLeft !== null && daysLeft <= 3 && daysLeft >= 0;
                   const isPast = daysLeft !== null && daysLeft < 0;
                   const isToday = daysLeft === 0;
 
                   return (
-                    <div key={item.id} style={{
+                    <div key={item.watchlist_id} style={{
                       background: 'white',
                       border: `1px solid ${isUrgent ? 'var(--gold)' : 'var(--border)'}`,
                       borderLeft: `3px solid ${isUrgent ? 'var(--gold)' : isPast ? 'var(--border)' : 'var(--electric)'}`,
@@ -2013,37 +2013,37 @@ export default function Portfolio() {
                     >
                       {/* Image */}
                       <div style={{ width: '72px', height: '72px', background: 'var(--bg-subtle)', borderRadius: '6px', flexShrink: 0, overflow: 'hidden' }}>
-                        {item.image_url && <img src={item.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                        {item.lot?.image_url && <img src={item.lot.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                       </div>
 
                       {/* Info */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
                           <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                            {item.artist_name_raw || item.artist_name}
+                            {item.lot?.artist_name}
                           </span>
-                          {item.deal_score >= 80 && (
+                          {(item.lot?.deal_score ?? 0) >= 80 && (
                             <span style={{ fontSize: '8px', fontWeight: 700, color: 'var(--gold-dim)', background: 'var(--gold-subtle)', padding: '1px 6px', borderRadius: '3px', fontFamily: 'var(--font-mono)' }}>
                               EXCEPTIONAL
                             </span>
                           )}
                         </div>
                         <div style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '6px' }}>
-                          {item.title}
+                          {item.lot?.title}
                         </div>
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                          {item.current_price && (
+                          {item.lot?.current_price && (
                             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>
-                              €{Number(item.current_price).toLocaleString()}
+                              €{Number(item.lot.current_price).toLocaleString()}
                             </span>
                           )}
-                          {item.deal_score && (
+                          {item.lot?.deal_score && (
                             <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--electric)', background: 'var(--electric-subtle)', padding: '2px 7px', borderRadius: '3px', border: '1px solid var(--electric-border)' }}>
-                              Score {item.deal_score}/100
+                              Score {item.lot.deal_score}/100
                             </span>
                           )}
-                          {item.auction_house_name && (
-                            <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>{item.auction_house_name}</span>
+                          {item.lot?.auction_house && (
+                            <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>{item.lot.auction_house}</span>
                           )}
                           {isToday && (
                             <span style={{ fontSize: '10px', fontWeight: 700, color: 'white', background: 'var(--red)', padding: '2px 8px', borderRadius: '3px', fontFamily: 'var(--font-mono)' }}>
@@ -2075,7 +2075,7 @@ export default function Portfolio() {
                           </button>
                         )}
                         <button
-                          onClick={() => removeFromWatchlist(item.id)}
+                          onClick={() => removeFromWatchlist(item.lot_id)}
                           style={{ padding: '7px 10px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-3)', cursor: 'pointer' }}
                         >
                           ×
