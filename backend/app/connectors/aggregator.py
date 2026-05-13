@@ -290,6 +290,21 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     except Exception as e:
         logger.warning("Singulart connector skipped", error=str(e))
 
+    # --- Rise Art — UK primary market gallery, Apollo SSR scraping ---
+    try:
+        from app.connectors.riseart_connector import fetch_lots as riseart_fetch
+        riseart_lots = await _with_timeout(riseart_fetch(lots_per_source), timeout=120, name="riseart")
+        added = 0
+        for lot in riseart_lots:
+            if lot.external_id not in seen_ids:
+                seen_ids.add(lot.external_id)
+                real_lots.append(lot)
+                added += 1
+        if added:
+            logger.info("Rise Art: fetched", count=added)
+    except Exception as e:
+        logger.warning("Rise Art connector skipped", error=str(e))
+
     # --- Heritage Auctions — public fine art lots ---
     if False:  # Blocked by Railway IP — re-enable if proxy added
         try:
