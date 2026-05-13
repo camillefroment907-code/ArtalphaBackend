@@ -490,28 +490,28 @@ export default function OpportunityDetail() {
           )}
 
           {/* Market context stats */}
-          <div style={{ display: 'flex', gap: '20px', marginTop: '4px', flexWrap: 'wrap' as const }}>
-            {priceHistory?.statistics?.trend_pct != null && (
-              <div>
-                <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '3px' }}>MARCHÉ ARTISTE</div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: priceHistory.statistics.trend_pct > 0 ? '#34D399' : '#F87171' }}>
-                  {priceHistory.statistics.trend_pct > 0 ? '↑ +' : '↓ '}{priceHistory.statistics.trend_pct}% YoY
+          {(priceHistory?.statistics?.trend_pct != null || lot.fair_value_confidence != null) && (
+            <div style={{ display: 'flex', gap: '20px', marginTop: '14px', flexWrap: 'wrap' as const }}>
+              {priceHistory?.statistics?.trend_pct != null && (
+                <div>
+                  <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '3px', textTransform: 'uppercase' as const }}>{isFr ? 'MARCHÉ ARTISTE' : 'ARTIST MARKET'}</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: priceHistory.statistics.trend_pct > 0 ? '#34D399' : '#F87171' }}>{priceHistory.statistics.trend_pct > 0 ? '↑ +' : '↓ '}{priceHistory.statistics.trend_pct}% YoY</div>
                 </div>
-              </div>
-            )}
-            {priceHistory?.statistics?.sell_above_estimate_pct != null && (
-              <div>
-                <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '3px' }}>SELL-THROUGH</div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: 'white' }}>{priceHistory.statistics.sell_above_estimate_pct}%</div>
-              </div>
-            )}
-            {lot.fair_value_confidence != null && (
-              <div>
-                <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '3px' }}>COMPARABLES 24M</div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: 'white' }}>{lot.fair_value_confidence} ventes</div>
-              </div>
-            )}
-          </div>
+              )}
+              {priceHistory?.statistics?.sell_above_estimate_pct != null && (
+                <div>
+                  <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '3px', textTransform: 'uppercase' as const }}>SELL-THROUGH</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'white' }}>{priceHistory.statistics.sell_above_estimate_pct}%</div>
+                </div>
+              )}
+              {lot.fair_value_confidence != null && (
+                <div>
+                  <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '3px', textTransform: 'uppercase' as const }}>COMPARABLES 24M</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'white' }}>{lot.fair_value_confidence} {isFr ? 'ventes' : 'sales'}</div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* WHY block */}
           {(() => {
@@ -592,46 +592,44 @@ export default function OpportunityDetail() {
         {/* COL 3 — Conviction stack */}
         <div style={{ padding: '28px 16px', display: 'flex', flexDirection: 'column', gap: '8px', background: DK4 }}>
 
-          {/* Signal */}
-          <div style={{ background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', padding: '12px 12px' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{t('lot.signal')}</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: verdict.dk, lineHeight: 1 }}>{verdict.icon} {verdict.label}</div>
-            <div style={{ fontSize: '9px', color: '#6B7280', marginTop: '4px', lineHeight: 1.4 }}>{verdict.sub}</div>
-          </div>
-
-          {/* Score */}
-          <div style={{ background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', padding: '12px 12px' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{t('lot.score')}</div>
+          {/* Block 1 — SCORE */}
+          <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>SCORE</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
-              <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 700, color: GOLD, lineHeight: 1 }}>{dealScore.toFixed(0)}</span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#6B7280' }}>/100</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '42px', fontWeight: 700, color: 'white', lineHeight: 1 }}>{Math.round(dealScore)}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>/100</span>
             </div>
-            <div style={{ marginTop: '5px', height: '2px', background: DKB, borderRadius: '1px', overflow: 'hidden' }}>
+            <div style={{ marginTop: '6px', height: '3px', background: DKB, borderRadius: '1px', overflow: 'hidden' }}>
               <div style={{ height: '100%', borderRadius: '1px', width: `${dealScore}%`, background: GOLD }} />
             </div>
           </div>
 
-          {/* Price */}
-          <div style={{ background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', padding: '12px 12px' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isUpcoming ? t('lot.startingBid') : t('lot.price')}</div>
-            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 700, color: '#F0EDE6', lineHeight: 1 }}>{fmt(price)}</div>
-            {maxBid && (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, marginTop: '3px' }}>
-                {isFr ? `max ${fmt(maxBid)}` : `max ${fmt(maxBid)}`}
-              </div>
-            )}
+          {/* Block 2 — SIGNAL */}
+          <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>SIGNAL</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: verdict.dk, lineHeight: 1 }}>{verdict.icon} {verdict.label}</div>
           </div>
 
-          {/* Upside */}
-          <div style={{ background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', padding: '12px 12px' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{t('lot.upside')}</div>
-            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 700, color: upsidePct > 0 ? GD : '#EF4444', lineHeight: 1 }}>
-              {upsidePct > 0 ? '+' : ''}{upsidePct.toFixed(0)}%
+          {/* Block 3 — VS COMPARABLES */}
+          {lot.fair_value_nautilus && price > 0 && (() => {
+            const heroGapPct = Math.round((1 - price / (lot.fair_value_nautilus as number)) * 100);
+            return (
+              <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? 'VS COMPARABLES' : 'VS COMPARABLES'}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: '#34D399', lineHeight: 1 }}>{heroGapPct > 0 ? '-' : '+'}{Math.abs(heroGapPct)}%</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>{isFr ? `Médiane : ${fmt(lot.fair_value_nautilus)}` : `Median: ${fmt(lot.fair_value_nautilus)}`}</div>
+              </div>
+            );
+          })()}
+
+          {/* Block 4 — MAX BID */}
+          {(avoidAbove ?? maxBid) && (
+            <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? 'MAX BID RENTABLE' : 'MAX PROFITABLE BID'}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>{fmtExact(avoidAbove ?? maxBid)}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>{isFr ? 'Au-delà : perte garantie' : 'Beyond this: guaranteed loss'}</div>
             </div>
-            {netGain > 0 && (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GD, marginTop: '3px' }}>{isFr ? `net +${netGain.toFixed(0)}%` : `net +${netGain.toFixed(0)}% after fees`}</div>
-            )}
-          </div>
+          )}
 
           {/* Follow */}
           <button
@@ -1181,7 +1179,7 @@ export default function OpportunityDetail() {
 
                   {/* ── LECTURE NAUTILUS ── */}
                   {(() => {
-                    const rationale = [(lot as any).ai_rationale, (lot as any).investment_rationale, (lot as any).rationale, (lot as any).lot_rationale].filter(Boolean).join(' — ');
+                    const rationale = [(lot as any).ai_rationale, (lot as any).investment_rationale, (lot as any).rationale, (lot as any).lot_rationale].filter(Boolean).join(' ');
                     if (!rationale) return null;
                     return (
                       <div style={{ borderLeft: '2px solid rgba(198,168,90,0.4)', paddingLeft: '14px', marginBottom: '18px' }}>
@@ -1631,58 +1629,6 @@ export default function OpportunityDetail() {
 
         {/* ──────────────── ANALYSIS ──────────────── */}
         <div style={{ padding: '32px 40px 48px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-
-            {/* AI Rationale */}
-            {analysisText && (
-              <div style={wCard}>
-                <div style={{ ...sl, marginBottom: '12px' }}>AI RATIONALE</div>
-                <p style={{ fontSize: '14px', color: LTT1, lineHeight: 1.8, margin: 0 }}>{analysisText}</p>
-              </div>
-            )}
-
-            {/* Score pillar bars — prominent vertical bars */}
-            <div style={wCard}>
-              <div style={{ ...sl, marginBottom: '24px' }}>SCORE BREAKDOWN</div>
-              <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-end', justifyContent: 'space-around', height: '160px' }}>
-                {scorePillars.map(({ label, value }) => (
-                  <div key={label} style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: '8px', flex: 1 }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: LTT1 }}>{value}</span>
-                    <div style={{ width: '100%', maxWidth: '64px', background: LTB, borderRadius: '4px 4px 0 0', overflow: 'hidden', height: '100px', display: 'flex', alignItems: 'flex-end' }}>
-                      <div style={{
-                        width: '100%',
-                        height: `${Math.max(4, value)}%`,
-                        background: GOLD,
-                        borderRadius: '4px 4px 0 0',
-                        transition: 'height 0.4s ease',
-                      }} />
-                    </div>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: LTT3 }}>{label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Verdict box */}
-            <div style={{ ...wCard, display: 'flex', gap: '20px', alignItems: 'center' }}>
-              <div style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '28px',
-                fontWeight: 800,
-                color: verdict.gl,
-                letterSpacing: '0.04em',
-                flexShrink: 0,
-              }}>
-                {verdict.icon} {verdict.label}
-              </div>
-              <div style={{ borderLeft: `1px solid ${LTB}`, paddingLeft: '20px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '6px' }}>VERDICT</div>
-                <div style={{ fontSize: '14px', color: LTT1, lineHeight: 1.6 }}>{verdict.sub}</div>
-                <div style={{ fontSize: '12px', color: LTT2, marginTop: '6px' }}>
-                  Score: <strong style={{ color: LTT1 }}>{dealScore.toFixed(1)}/100</strong>
-                  {upsidePct > 0 && <> · Upside: <strong style={{ color: GL }}>+{upsidePct.toFixed(0)}%</strong></>}
-                </div>
-              </div>
-            </div>
 
             {/* AI Intelligence cards */}
             <div>
