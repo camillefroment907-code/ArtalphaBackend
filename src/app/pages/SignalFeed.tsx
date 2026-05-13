@@ -89,7 +89,7 @@ export default function SignalFeed() {
       const now = new Date();
       const newC: Record<string, string> = {};
       [...urgentLots, ...topLots].forEach((lot: any) => {
-        const closes = lot.closes_at || lot.auction_date;
+        const closes = lot.auction_date;
         if (!closes) return;
         const diff = new Date(closes).getTime() - now.getTime();
         if (diff <= 0) { newC[lot.id] = 'CLOSED'; return; }
@@ -105,7 +105,7 @@ export default function SignalFeed() {
   }, [urgentLots, topLots]);
 
   const upside = (lot: any) => {
-    if (lot.upside_percentage) return `+${lot.upside_percentage.toFixed(0)}%`;
+    if (lot.pct_below_low_estimate) return `+${lot.pct_below_low_estimate.toFixed(0)}%`;
     if (lot.estimate_low && lot.current_price && lot.current_price < lot.estimate_low)
       return `+${((lot.estimate_low - lot.current_price) / lot.current_price * 100).toFixed(0)}%`;
     return null;
@@ -167,7 +167,7 @@ export default function SignalFeed() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '2px' }}>
-                        {lot.artist_name_raw || lot.artist?.name || 'Unknown'}
+                        {lot.artist_name_raw || 'Unknown Artist'}
                       </div>
                       <div style={{ fontFamily: 'var(--font-serif)', fontSize: '14px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '6px' }}>
                         {lot.title}
@@ -250,7 +250,7 @@ export default function SignalFeed() {
                     </div>
                     <div style={{ padding: '10px 12px' }}>
                       <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {lot.artist_name_raw || lot.artist?.name || 'Unknown'}
+                        {lot.artist_name_raw || 'Unknown Artist'}
                       </div>
                       <div style={{ fontFamily: 'var(--font-serif)', fontSize: '13px', color: 'var(--text)', marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {lot.title}

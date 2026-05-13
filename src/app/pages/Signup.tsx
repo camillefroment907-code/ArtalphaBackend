@@ -28,7 +28,7 @@ function RightPanel() {
         if (bgLot) setBgImage(bgLot.image_url);
         const featLot = withImg[0] || items[0];
         if (featLot) setFeatured({
-          artist: featLot.artist?.name || featLot.artist_name_raw || 'Unknown',
+          artist: featLot.artist_name_raw || 'Unknown Artist',
           title: featLot.title || '',
           score: Math.round(featLot.deal_score || 0),
           upside: featLot.pct_below_low_estimate ?? null,

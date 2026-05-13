@@ -20,7 +20,7 @@ function getFallbackCards(isFr: boolean): SignalCard[] {
 }
 
 function mapLotToCard(lot: any, isFr: boolean): SignalCard {
-  const artist = lot.artist?.name || lot.artist_name_raw || 'Unknown artist';
+  const artist = lot.artist_name_raw || 'Unknown Artist';
   const score = Math.round(lot.deal_score || 0);
   const upside = lot.pct_below_low_estimate;
 
@@ -67,7 +67,7 @@ function RightPanel() {
         if (withImg) {
           setBgImage(withImg.image_url);
           setFeatured({
-            artist: withImg.artist?.name || withImg.artist_name_raw || 'Unknown',
+            artist: withImg.artist_name_raw || 'Unknown Artist',
             title: withImg.title || '',
             upside: withImg.pct_below_low_estimate ?? null,
             score: Math.round(withImg.deal_score || 0),
@@ -124,7 +124,7 @@ function RightPanel() {
         <div style={{ display: 'flex', borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', marginBottom: 20, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(12px)' }}>
           {[
             { value: lotCountLabel, label: isFr ? 'lots analysés' : 'lots analyzed', color: '#fff' },
-            { value: avgUpside, label: isFr ? 'potentiel moy.' : 'avg upside', color: '#C6A85A' },
+            { value: avgUpside, label: isFr ? 'Score moyen' : 'Avg score', color: '#C6A85A' },
             { value: signalsToday, label: isFr ? "signaux aujourd'hui" : 'signals today', color: '#60a5fa' },
           ].map((s, i) => (
             <div key={i} style={{ flex: 1, padding: '12px 8px', textAlign: 'center', borderRight: i < 2 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
