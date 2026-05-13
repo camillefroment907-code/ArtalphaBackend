@@ -116,7 +116,7 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
 
             expired_cutoff = datetime.utcnow() - timedelta(days=1)
             expired_count = await _purge_by_sql(
-                "auction_date IS NOT NULL AND auction_date < :cutoff AND status = 'UPCOMING'",
+                "auction_date IS NOT NULL AND auction_date < :cutoff AND status = 'upcoming'",
                 {"cutoff": expired_cutoff},
             )
             if expired_count:
@@ -125,7 +125,7 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
             # Purge UPCOMING lots with no auction_date older than 3 days
             no_date_cutoff = datetime.utcnow() - timedelta(days=3)
             no_date_count = await _purge_by_sql(
-                "auction_date IS NULL AND created_at < :cutoff AND status = 'UPCOMING'",
+                "auction_date IS NULL AND created_at < :cutoff AND status = 'upcoming'",
                 {"cutoff": no_date_cutoff},
             )
             if no_date_count:
@@ -169,24 +169,29 @@ async def _poll_and_score_inner(lots_per_source: int = 800, skip_purge: bool = F
             (lot.source.value if hasattr(lot.source, "value") else str(lot.source), lot.external_id)
             for lot in raw_lots if lot.external_id
         ]
-        candidate_eids = [eid for _, eid in candidate_pairs]
-        candidate_sources = list({src for src, _ in candidate_pairs})
-        if candidate_eids:
-            from sqlalchemy import cast, Text
-            existing_result = await session.execute(
-                select(Lot.source, Lot.external_id).where(
-                    Lot.external_id.in_(candidate_eids),
+        # Batched dedup — split into chunks of 500 to avoid huge IN clauses that
+        # time out when the lots table has accumulated many rows.
+        existing_pairs: set = set()
+        if candidate_pairs:
+            from sqlalchemy import cast, Text, and_
+            _DEDUP_CHUNK = 500
+            for _i in range(0, len(candidate_pairs), _DEDUP_CHUNK):
+                _chunk = candidate_pairs[_i:_i + _DEDUP_CHUNK]
+                _chunk_eids = [eid for _, eid in _chunk]
+                _chunk_sources = list({src for src, _ in _chunk})
+                _chunk_result = await session.execute(
+                    select(Lot.source, Lot.external_id).where(
+                        and_(
+                            cast(Lot.source, String).in_(_chunk_sources),
+                            Lot.external_id.in_(_chunk_eids),
+                        )
+                    )
                 )
-            )
-            existing_pairs = {
-                (
-                    row.source.value if hasattr(row.source, "value") else str(row.source),
-                    row.external_id,
-                )
-                for row in existing_result.fetchall()
-            }
-        else:
-            existing_pairs = set()
+                for _row in _chunk_result.fetchall():
+                    existing_pairs.add((
+                        _row.source.value if hasattr(_row.source, "value") else str(_row.source),
+                        _row.external_id,
+                    ))
 
         # 3. Filter to only new lots
         new_lots = [
@@ -755,20 +760,28 @@ async def _daily_cleanup_async():
         for lot in past_lots_result.scalars().all():
             lot.status = LotStatus.SOLD
 
-        # Purge low-quality lots (score < 20 AND no price AND no estimate)
-        from sqlalchemy import delete, or_
-        purge_stmt = delete(Lot).where(
-            and_(
-                or_(Lot.deal_score.is_(None), Lot.deal_score < 20),
-                Lot.current_price.is_(None),
-                Lot.estimate_low.is_(None),
-                Lot.estimate_high.is_(None),
-                # Only purge if no alerts sent for this lot
-                ~Lot.alerts.any(),
-            )
-        )
-        purge_result = await session.execute(purge_stmt)
-        logger.info("Purged low-quality lots", count=purge_result.rowcount)
+        # Purge low-quality lots (score < 20 AND no price AND no estimate AND no alerts)
+        # Uses raw CTE to pre-delete FK deps (score_performance, hammer_prices, user_signals)
+        # before deleting lots — prevents FK constraint violations.
+        from sqlalchemy import text as _sql
+        low_q_result = await session.execute(_sql("""
+            WITH to_del AS (
+                SELECT id FROM lots
+                WHERE (deal_score IS NULL OR deal_score < 20)
+                  AND current_price IS NULL
+                  AND estimate_low IS NULL
+                  AND estimate_high IS NULL
+                  AND NOT EXISTS (
+                      SELECT 1 FROM alerts
+                      WHERE alerts.lot_id = lots.id
+                  )
+            ),
+            del_score   AS (DELETE FROM score_performance WHERE lot_id IN (SELECT id FROM to_del)),
+            del_hammer  AS (DELETE FROM hammer_prices    WHERE lot_id IN (SELECT id FROM to_del)),
+            del_signals AS (DELETE FROM user_signals     WHERE lot_id IN (SELECT id FROM to_del))
+            DELETE FROM lots WHERE id IN (SELECT id FROM to_del)
+        """))
+        logger.info("Purged low-quality lots", count=low_q_result.rowcount)
 
         # Purge old chat messages (30-day retention)
         from app.models.db_models import ChatMessage
