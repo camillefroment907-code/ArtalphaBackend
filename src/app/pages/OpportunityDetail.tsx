@@ -395,13 +395,14 @@ export default function OpportunityDetail() {
   };
 
 
-  // Score pillars — real data from artist + lot
+  // Score pillars — real score_breakdown keys
+  const sb = (lot as any).score_breakdown || {};
   const scorePillars = [
-    { label: 'Pricing',    value: Math.min(100, Math.max(0, Math.round((lot.pct_below_low_estimate || 0) * 1.2))) },
-    { label: 'Liquidity',  value: Math.min(100, Math.round(lot.artist?.liquidity_score ?? 50)) },
-    { label: 'Momentum',   value: lot.artist?.trend === 'up' ? 80 : lot.artist?.trend === 'down' ? 20 : Math.round(lot.deal_score || 50) },
-    { label: 'Sell-thru',  value: lot.artist?.sell_through_rate != null ? Math.min(100, Math.round(lot.artist.sell_through_rate * 100)) : 50 },
-  ];
+    { label: 'PRICING',   value: Math.round(sb.below_estimate_score ?? 0) },
+    { label: 'LIQUIDITY', value: Math.round(sb.liquidity_score ?? lot.artist?.liquidity_score ?? 0) },
+    { label: 'MOMENTUM',  value: lot.artist?.trend === 'rising' ? 75 : lot.artist?.trend === 'stable' ? 50 : 25 },
+    { label: 'SELL-THR',  value: Math.round(lot.artist?.sell_through_rate ?? 0) },
+  ].filter(p => p.value > 0);
 
   return (
     <div style={{ minHeight: '100vh', background: LT }}>
@@ -797,7 +798,7 @@ export default function OpportunityDetail() {
         {canSeeAnalysis && (() => {
           const nautVal = lot.fair_value_nautilus as number | null;
           const gapPct = nautVal && price > 0 ? Math.round((1 - price / nautVal) * 100) : null;
-          const aiRationale = (lot as any).ai_rationale || (lot as any).investment_rationale || (lot as any).rationale || (lot as any).lot_rationale;
+          const aiRationale = lot.ai_insight || (Array.isArray((lot as any).rationale) ? (lot as any).rationale.join(' ') : (lot as any).rationale);
           return (
             <div style={{ padding: '20px 40px 24px' }}>
               <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden' }}>
@@ -1170,14 +1171,20 @@ export default function OpportunityDetail() {
 
                   {/* ── LECTURE NAUTILUS ── */}
                   {(() => {
-                    const rationale = [(lot as any).ai_rationale, (lot as any).investment_rationale, (lot as any).rationale, (lot as any).lot_rationale].filter(Boolean).join(' ');
-                    if (!rationale) return null;
+                    const rationaleText = [
+                      lot.score_rationale,
+                      lot.ai_insight,
+                      Array.isArray((lot as any).rationale)
+                        ? (lot as any).rationale.join(' ')
+                        : (lot as any).rationale,
+                    ].filter(Boolean).join(' ');
+                    if (!rationaleText) return null;
                     return (
                       <div style={{ borderLeft: '2px solid rgba(198,168,90,0.4)', paddingLeft: '14px', marginBottom: '18px' }}>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>
                           {isFr ? 'LECTURE NAUTILUS' : 'NAUTILUS READ'}
                         </div>
-                        <p style={{ fontSize: '12px', color: LTT2, lineHeight: 1.65, margin: 0 }}>{rationale}</p>
+                        <p style={{ fontSize: '12px', color: LTT2, lineHeight: 1.65, margin: 0 }}>{rationaleText}</p>
                       </div>
                     );
                   })()}

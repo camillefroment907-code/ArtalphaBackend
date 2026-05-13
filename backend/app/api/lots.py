@@ -1579,6 +1579,48 @@ async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
             lot_dict["fair_value_nautilus"] = statistics.median(prices)
             lot_dict["fair_value_confidence"] = len(prices)
 
+    # ── Artist price history statistics ──────────────────────────────────────
+    try:
+        now = datetime.utcnow()
+        cutoff_24m = now - timedelta(days=730)
+        cutoff_48m = now - timedelta(days=1460)
+        if lot.artist_name_raw:
+            prices_result = await db.execute(
+                select(Lot.hammer_price, Lot.estimate_high, Lot.auction_date).where(
+                    and_(
+                        func.lower(Lot.artist_name_raw) == lot.artist_name_raw.lower(),
+                        Lot.hammer_price.isnot(None),
+                        Lot.hammer_price > 0,
+                        Lot.auction_date >= cutoff_48m,
+                        Lot.id != lot.id,
+                    )
+                )
+            )
+            price_rows = prices_result.fetchall()
+            recent = [r[0] for r in price_rows if r[2] and r[2] >= cutoff_24m]
+            prior = [r[0] for r in price_rows if r[2] and r[2] < cutoff_24m]
+            trend_pct = None
+            if len(recent) >= 3 and len(prior) >= 3:
+                med_recent = statistics.median(recent)
+                med_prior = statistics.median(prior)
+                if med_prior > 0:
+                    trend_pct = round((med_recent - med_prior) / med_prior * 100, 1)
+            with_estimate = [r for r in price_rows if r[1] and r[1] > 0 and r[2] and r[2] >= cutoff_24m]
+            sell_above_pct = None
+            if len(with_estimate) >= 3:
+                above = sum(1 for r in with_estimate if r[0] > r[1])
+                sell_above_pct = round(above / len(with_estimate) * 100, 1)
+            lot_dict["price_history"] = {
+                "statistics": {
+                    "trend_pct": trend_pct,
+                    "sell_above_estimate_pct": sell_above_pct,
+                }
+            } if (trend_pct is not None or sell_above_pct is not None) else None
+        else:
+            lot_dict["price_history"] = None
+    except Exception:
+        lot_dict["price_history"] = None
+
     return lot_dict
 
 
