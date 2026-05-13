@@ -790,10 +790,9 @@ export default function Landing() {
               </div>
 
               {/* FR — Block 4: KPI row */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '48px', textAlign: 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '48px', textAlign: 'center' }}>
                 {[
                   { value: '4,9 / 5', label: 'SATISFACTION' },
-                  { value: '€2,4M+',  label: 'CAPITAL ENGAGÉ' },
                   { value: '+31%',    label: 'POTENTIEL MOYEN' },
                   { value: '73%',     label: 'PRÉCISION DES SIGNAUX' },
                 ].map(({ value, label }) => (
