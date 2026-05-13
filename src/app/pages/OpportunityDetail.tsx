@@ -294,6 +294,7 @@ export default function OpportunityDetail() {
   const estBias      = lot.estimation_bias   || null;
   const consignAlert = lot.consignment_alert || null;
   const provRisk     = lot.provenance_risk   || null;
+  const priceHistory = (lot.price_history)    || null;
 
   const hasProvHighRisk = provRisk?.level === 'HIGH RISK';
   const hasConsignHigh  = consignAlert?.level === 'HIGH VOLUME';
@@ -366,6 +367,7 @@ export default function OpportunityDetail() {
   );
   const displayComps = sameArtistComps.length >= 2 ? sameArtistComps.slice(0, 3) : allComps.slice(0, 3);
   const compsLabel   = sameArtistComps.length >= 2 ? (isFr ? 'VENTES COMPARABLES' : 'COMPARABLE SALES') : (isFr ? 'ŒUVRES SIMILAIRES' : 'SIMILAR WORKS');
+  const maxCompPrice = comparables.length > 0 ? Math.max(...comparables.map((c: any) => c.current_price || 0), price) : price;
 
   // Projection bar width: proportional to max value
   const maxProjVal = visibleYears.length > 0 ? proj(Math.max(...visibleYears)) : proj(20);
@@ -481,6 +483,30 @@ export default function OpportunityDetail() {
               ⚡ {isFr ? `Se clôture dans ${daysUntilClose} jour${daysUntilClose > 1 ? 's' : ''}` : `Closes in ${daysUntilClose} day${daysUntilClose !== 1 ? 's' : ''}`}
             </div>
           )}
+
+          {/* Market context stats */}
+          <div style={{ display: 'flex', gap: '20px', marginTop: '4px', flexWrap: 'wrap' as const }}>
+            {priceHistory?.statistics?.trend_pct != null && (
+              <div>
+                <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '3px' }}>MARCHÉ ARTISTE</div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: priceHistory.statistics.trend_pct > 0 ? '#34D399' : '#F87171' }}>
+                  {priceHistory.statistics.trend_pct > 0 ? '↑ +' : '↓ '}{priceHistory.statistics.trend_pct}% YoY
+                </div>
+              </div>
+            )}
+            {priceHistory?.statistics?.sell_above_estimate_pct != null && (
+              <div>
+                <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '3px' }}>SELL-THROUGH</div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'white' }}>{priceHistory.statistics.sell_above_estimate_pct}%</div>
+              </div>
+            )}
+            {lot.fair_value_confidence != null && (
+              <div>
+                <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '3px' }}>COMPARABLES 24M</div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'white' }}>{lot.fair_value_confidence} ventes</div>
+              </div>
+            )}
+          </div>
 
           {/* WHY block */}
           {(() => {
@@ -660,7 +686,7 @@ export default function OpportunityDetail() {
 
         {/* ── DÉCISION ─────────────────────────────────────────────────────── */}
         <div style={{ padding: '24px 40px 0' }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase', marginBottom: '12px' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>
             {isFr ? '◆ DÉCISION' : '◆ DECISION'}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
@@ -688,7 +714,7 @@ export default function OpportunityDetail() {
                   {isFr ? 'NE PAS DÉPASSER' : 'MAX BID'}
                 </div>
                 <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 600, color: GOLD, lineHeight: 1 }}>
-                  {fmt(avoidAbove ?? maxBid)}
+                  {fmt(avoidAbove ?? maxBid ?? (estHigh || null))}
                 </div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#6B7280', marginTop: '6px' }}>
                   {isFr ? 'Seuil de rentabilité max' : 'Max breakeven threshold'}
@@ -743,7 +769,7 @@ export default function OpportunityDetail() {
               <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden' }}>
                 {/* Header */}
                 <div style={{ padding: '16px 24px 12px', borderBottom: `1px solid ${LTB}` }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.15em', color: GOLD, textTransform: 'uppercase' as const }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const }}>
                     ◆ {isFr ? 'INTELLIGENCE NAUTILUS' : 'NAUTILUS INTELLIGENCE'}
                   </div>
                 </div>
@@ -763,27 +789,25 @@ export default function OpportunityDetail() {
                           {isFr ? `vs valeur reconstituée ${fmt(nautVal)}` : `vs reconstructed value ${fmt(nautVal)}`}
                         </div>
                       </div>
-                      <div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>
-                          {isFr ? 'POSITIONNEMENT PRIX' : 'PRICE POSITIONING'}
-                        </div>
+                      <div style={{ flex: 1 }}>
                         {(() => {
-                          const maxScale = nautVal * 1.15;
-                          const pctOf = (v: number) => `${Math.min(98, (v / maxScale) * 100).toFixed(1)}%`;
-                          const bidRef = avoidAbove ?? maxBid;
+                          const maxScale = (lot.fair_value_nautilus as number) * 1.1;
+                          const entryPct = Math.min((price / maxScale) * 100, 98);
+                          const maxBidPct = Math.min(((avoidAbove ?? maxBid ?? price) / maxScale) * 100, 98);
                           return (
-                            <div style={{ position: 'relative', paddingBottom: '20px' }}>
-                              <div style={{ height: '4px', background: LTB, borderRadius: '2px', position: 'relative' }}>
-                                <div style={{ position: 'absolute', left: pctOf(price), top: '-5px', width: '2px', height: '14px', background: GD, borderRadius: '1px' }} />
-                                {bidRef && <div style={{ position: 'absolute', left: pctOf(bidRef), top: '-5px', width: '2px', height: '14px', background: GOLD, borderRadius: '1px' }} />}
-                                <div style={{ position: 'absolute', left: pctOf(nautVal), top: '-5px', width: '2px', height: '14px', background: LTT3, borderRadius: '1px' }} />
+                            <>
+                              <div style={{ position: 'relative', height: '6px', background: 'rgba(0,0,0,0.08)', borderRadius: '3px', marginBottom: '12px' }}>
+                                <div style={{ position: 'absolute', left: 0, width: entryPct + '%', height: '100%', background: '#34D399', borderRadius: '3px', opacity: 0.7 }} />
+                                <div style={{ position: 'absolute', left: entryPct + '%', transform: 'translateX(-50%)', top: '-5px', width: '2px', height: '16px', background: '#34D399', borderRadius: '1px' }} />
+                                <div style={{ position: 'absolute', left: maxBidPct + '%', transform: 'translateX(-50%)', top: '-5px', width: '2px', height: '16px', background: '#C6A85A', borderRadius: '1px' }} />
+                                <div style={{ position: 'absolute', left: '99%', transform: 'translateX(-50%)', top: '-5px', width: '2px', height: '16px', background: '#9CA3AF', borderRadius: '1px' }} />
                               </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
-                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GD }}>{isFr ? 'ENTRÉE' : 'ENTRY'}</span>
-                                {bidRef && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD }}>MAX</span>}
-                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3 }}>{isFr ? 'VALEUR' : 'VALUE'}</span>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontFamily: 'var(--font-mono)' }}>
+                                <div><div style={{ fontWeight: 700, color: '#34D399' }}>{fmt(price)}</div><div style={{ color: LTT3 }}>{isFr ? 'Entrée' : 'Entry'}</div></div>
+                                <div style={{ textAlign: 'center' }}><div style={{ fontWeight: 700, color: '#C6A85A' }}>{fmt(avoidAbove ?? maxBid)}</div><div style={{ color: LTT3 }}>Max bid</div></div>
+                                <div style={{ textAlign: 'right' }}><div style={{ fontWeight: 700, color: LTT2 }}>{fmt(lot.fair_value_nautilus)}</div><div style={{ color: LTT3 }}>{isFr ? 'Médiane' : 'Median'}</div></div>
                               </div>
-                            </div>
+                            </>
                           );
                         })()}
                       </div>
@@ -918,7 +942,8 @@ export default function OpportunityDetail() {
 
             {/* ── DATA GRID 50/50 ─────────────────────────────────────────────── */}
             <div style={{ padding: '32px 40px' }}>
-              <div style={{ border: `0.5px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden', marginBottom: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'ANALYSE' : 'ANALYSIS'}</div>
+              <div style={{ border: `0.5px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden', marginBottom: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
 
               {/* LEFT COLUMN — Real Cost Breakdown + Investment Analysis */}
               <div style={{ padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: '20px', borderRight: `0.5px solid ${LTB}` }}>
@@ -1040,6 +1065,46 @@ export default function OpportunityDetail() {
                 )}
               </div>
 
+              {/* COL 3 — Stratégie de sortie */}
+              <div style={{ padding: '20px 22px', background: LT }}>
+                <div style={{ fontSize: '10px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '14px' }}>
+                  {isFr ? 'STRATÉGIE DE SORTIE' : 'EXIT STRATEGY'}
+                </div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: LTT1, marginBottom: '4px' }}>
+                  {isFr ? 'Horizon optimal : 3–5 ans' : 'Optimal horizon: 3–5 years'}
+                </div>
+                {lot.cagr && (
+                  <div style={{ fontSize: '11px', color: LTT3, marginBottom: '14px' }}>CAGR : {lot.cagr}%</div>
+                )}
+                <div style={{ fontSize: '10px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>
+                  {isFr ? 'CATALYSEURS' : 'CATALYSTS'}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '7px' }}>
+                  {priceHistory?.statistics?.trend_pct != null && (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <span style={{ color: GOLD, fontSize: '9px', marginTop: '3px' }}>◆</span>
+                      <span style={{ fontSize: '12px', color: LTT2 }}>
+                        {isFr ? `Momentum artiste ↑ ${priceHistory.statistics.trend_pct}% YoY` : `Artist momentum ↑ ${priceHistory.statistics.trend_pct}% YoY`}
+                      </span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <span style={{ color: GOLD, fontSize: '9px', marginTop: '3px' }}>◆</span>
+                    <span style={{ fontSize: '12px', color: LTT2 }}>
+                      {isFr ? "Faible prix d'entrée — asymétrie favorable" : 'Low entry price — favorable asymmetry'}
+                    </span>
+                  </div>
+                  {priceHistory?.statistics?.sell_above_estimate_pct != null && (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <span style={{ color: GOLD, fontSize: '9px', marginTop: '3px' }}>◆</span>
+                      <span style={{ fontSize: '12px', color: LTT2 }}>
+                        {isFr ? `Liquidité catégorie — ${priceHistory.statistics.sell_above_estimate_pct}% sell-through` : `Category liquidity — ${priceHistory.statistics.sell_above_estimate_pct}% sell-through`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               </div>
             </div>
 
@@ -1111,7 +1176,7 @@ export default function OpportunityDetail() {
 
                   {/* ── LECTURE NAUTILUS ── */}
                   {(() => {
-                    const rationale = (lot as any).ai_rationale || (lot as any).investment_rationale || (lot as any).rationale || (lot as any).lot_rationale;
+                    const rationale = [(lot as any).ai_rationale, (lot as any).investment_rationale, (lot as any).rationale, (lot as any).lot_rationale].filter(Boolean).join(' — ');
                     if (!rationale) return null;
                     return (
                       <div style={{ borderLeft: '2px solid rgba(198,168,90,0.4)', paddingLeft: '14px', marginBottom: '18px' }}>
@@ -1199,7 +1264,7 @@ export default function OpportunityDetail() {
             {/* ── INTELLIGENCE SIGNALS — Oracle + Artist Profile + Due Diligence ── */}
             {canSeeAnalysis && (lot.oracle || lot.artist_profile || cycleStage || estBias || consignAlert) && (
               <div style={{ padding: '0 40px 32px' }}>
-                <div style={sl}>{isFr ? 'SIGNAUX INTELLIGENCE' : 'INTELLIGENCE SIGNALS'}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'SIGNAUX' : 'SIGNALS'}</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
 
                   {/* Oracle signal card */}
@@ -1346,7 +1411,7 @@ export default function OpportunityDetail() {
                   }
                   return (
                     <div style={wCard}>
-                      <div style={{ ...sl, marginBottom: '12px' }}>{isFr ? 'RISQUES CLÉS' : 'KEY RISKS'}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ {isFr ? 'RISQUES' : 'RISKS'}</div>
                       {risks.map((risk, i, arr) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 0', borderBottom: i < arr.length - 1 ? `1px solid ${LT}` : 'none' }}>
                           <span style={{
@@ -1367,7 +1432,7 @@ export default function OpportunityDetail() {
                 {visibleYears.length > 0 ? (
                   <div style={wCard}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
-                      <div style={sl}>{isFr ? 'PROJECTIONS DE VALEUR' : 'FUTURE VALUE PROJECTIONS'} · {projCagr.toFixed(1)}% CAGR</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ PROJECTIONS · {projCagr.toFixed(1)}% CAGR</div>
                       {lot.projection?.artist_tier && (
                         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>{lot.projection.artist_tier.replace('_', ' ')}</span>
                       )}
@@ -1407,7 +1472,7 @@ export default function OpportunityDetail() {
             {displayComps.length > 0 && (
               <div style={{ padding: '0 40px 40px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
-                  <div style={sl}>{compsLabel}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'LOTS SIMILAIRES' : 'SIMILAR LOTS'}</div>
                   {(comparables as any)?.market_analysis && (
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: LTT2 }}>
                       Comps avg: {fmt((comparables as any).market_analysis.market_avg_price)} ·{' '}
@@ -1490,15 +1555,17 @@ export default function OpportunityDetail() {
               <>
                 {/* Full comparables table */}
                 <div style={wCard}>
-                  <div style={{ ...sl, marginBottom: '4px' }}>ALL COMPARABLES</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ {isFr ? 'VENTES COMPARABLES' : 'COMPARABLE SALES'}</div>
                   <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
                     <thead>
                       <tr>
-                        {(isFr ? ['Artiste', 'Titre', 'Prix', 'Score', 'Date'] : ['Artist', 'Title', 'Price', 'Score', 'Date']).map(col => (
-                          <th key={col} style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: LTT3, textAlign: 'left' as const, padding: '10px 12px 10px 0', borderBottom: `1px solid ${LTB}` }}>
-                            {col}
-                          </th>
-                        ))}
+                        {(isFr ? ['Artiste', 'Titre', 'Prix', 'Score', 'Date'] : ['Artist', 'Title', 'Price', 'Score', 'Date']).flatMap((col, ci) => {
+                          const thStyle: React.CSSProperties = { fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', color: LTT3, textAlign: 'left', padding: '10px 12px 10px 0', borderBottom: `1px solid ${LTB}` };
+                          return ci === 2 ? [
+                            <th key="bar-h" style={{ width: '120px', padding: '10px 8px 10px 0', borderBottom: `1px solid ${LTB}` }}></th>,
+                            <th key={col} style={thStyle}>{col}</th>,
+                          ] : [<th key={col} style={thStyle}>{col}</th>];
+                        })}
                       </tr>
                     </thead>
                     <tbody>
@@ -1521,6 +1588,11 @@ export default function OpportunityDetail() {
                             <td style={{ padding: '11px 12px 11px 0', borderBottom: `1px solid #F0EDE6`, fontSize: '13px', color: LTT1, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
                               {comp.title || 'Untitled'}
                             </td>
+                            <td style={{ width: '120px', padding: '0 8px', borderBottom: `1px solid #F0EDE6` }}>
+                              <div style={{ height: '3px', background: LTB, borderRadius: '2px' }}>
+                                <div style={{ height: '100%', width: ((compPrice / maxCompPrice) * 100) + '%', background: GOLD, borderRadius: '2px' }} />
+                              </div>
+                            </td>
                             <td style={{ padding: '11px 12px 11px 0', borderBottom: `1px solid #F0EDE6`, fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600, color: GOLD, whiteSpace: 'nowrap' as const }}>
                               {fmt(compPrice)}
                             </td>
@@ -1533,6 +1605,18 @@ export default function OpportunityDetail() {
                           </tr>
                         );
                       })}
+                      <tr style={{ background: 'rgba(52,211,153,0.04)' }}>
+                        <td style={{ padding: '11px 12px 11px 0', borderTop: `1px solid ${LTB}`, fontSize: '12px', color: '#16A34A', fontWeight: 600 }}>{isFr ? 'Votre lot' : 'This lot'}</td>
+                        <td style={{ padding: '11px 12px 11px 0', borderTop: `1px solid ${LTB}`, fontSize: '13px', color: LTT1 }}>{lot.auction_house_name || '—'}</td>
+                        <td style={{ width: '120px', padding: '0 8px', borderTop: `1px solid ${LTB}` }}>
+                          <div style={{ height: '3px', background: 'rgba(52,211,153,0.2)', borderRadius: '2px' }}>
+                            <div style={{ height: '100%', width: (price / maxCompPrice * 100) + '%', background: '#34D399', borderRadius: '2px' }} />
+                          </div>
+                        </td>
+                        <td style={{ padding: '11px 12px 11px 0', borderTop: `1px solid ${LTB}`, fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: '#34D399', whiteSpace: 'nowrap' as const }}>{fmt(price)}</td>
+                        <td style={{ padding: '11px 12px 11px 0', borderTop: `1px solid ${LTB}`, fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, whiteSpace: 'nowrap' as const }}>—</td>
+                        <td style={{ padding: '11px 0 11px 0', borderTop: `1px solid ${LTB}`, fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, whiteSpace: 'nowrap' as const }}>—</td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>
@@ -1597,7 +1681,7 @@ export default function OpportunityDetail() {
 
             {/* AI Intelligence cards */}
             <div>
-              <div style={{ ...sl, marginBottom: '16px' }}>{isFr ? 'INTELLIGENCE IA' : 'AI INTELLIGENCE'}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'INTELLIGENCE IA' : 'AI INTELLIGENCE'}</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
 
                 <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 24px', display: 'flex', flexDirection: 'column' }}>
@@ -1672,7 +1756,7 @@ export default function OpportunityDetail() {
               />
             ) : (
               <div style={wCard}>
-                <div style={{ ...sl, marginBottom: '20px' }}>SOURCES & LINKS</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '20px' }}>◆ {isFr ? 'SOURCES' : 'SOURCES'}</div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '0' }}>
 
                   {/* Lot source */}
