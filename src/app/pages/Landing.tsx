@@ -227,7 +227,7 @@ export default function Landing() {
       fetch(`${BACKEND}/api/lots/closing-today?days=1&limit=50&min_score=0`).then(r => r.ok ? r.json() : null),
       fetch(`${BACKEND}/api/lots/closing-today?days=30&min_score=80&limit=100`).then(r => r.ok ? r.json() : null),
     ]).then(([stats, closing24h, exceptional]) => {
-      if (stats)      setBottomStats(prev => ({ ...prev, total:       stats.total_upcoming   || prev.total       }));
+      if (stats)      setBottomStats(prev => ({ ...prev, total:       stats.total_lots_tracked || prev.total       }));
       if (closing24h) setBottomStats(prev => ({ ...prev, closing:     closing24h.total       || prev.closing     }));
       if (exceptional) setBottomStats(prev => ({ ...prev, exceptional: exceptional.total     || prev.exceptional }));
     }).catch(() => {});
