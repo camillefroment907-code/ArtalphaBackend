@@ -602,6 +602,11 @@ export default function OpportunityDetail() {
             <div style={{ marginTop: '6px', height: '3px', background: DKB, borderRadius: '1px', overflow: 'hidden' }}>
               <div style={{ height: '100%', borderRadius: '1px', width: `${dealScore}%`, background: GOLD }} />
             </div>
+            {lot.fair_value_nautilus && price && (
+              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', marginTop: '6px', fontFamily: 'var(--font-mono)' }}>
+                -{Math.round((1 - price / (lot.fair_value_nautilus as number)) * 100)}% vs comparables
+              </div>
+            )}
           </div>
 
           {/* Block 2 — SIGNAL */}
@@ -687,8 +692,20 @@ export default function OpportunityDetail() {
       {/* ═══ LIGHT ZONE ═══ */}
       <div style={{ background: LT }}>
 
+        {/* ── SCORE PILLARS STRIP ──────────────────────────────────────────── */}
+        {scorePillars.length > 0 && (
+          <div style={{ display: 'flex', gap: '32px', padding: '12px 40px', background: LTC, borderBottom: `1px solid ${LTB}`, flexWrap: 'wrap' as const }}>
+            {scorePillars.map(({ label, value }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>{label.toUpperCase()}</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: LTT1, fontFamily: 'var(--font-mono)' }}>{value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* ── DÉCISION ─────────────────────────────────────────────────────── */}
-        <div style={{ padding: '24px 40px 0' }}>
+        <div style={{ padding: '24px 40px 32px' }}>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>
             {isFr ? '◆ DÉCISION' : '◆ DECISION'}
           </div>
@@ -768,7 +785,7 @@ export default function OpportunityDetail() {
           const gapPct = nautVal && price > 0 ? Math.round((1 - price / nautVal) * 100) : null;
           const aiRationale = (lot as any).ai_rationale || (lot as any).investment_rationale || (lot as any).rationale || (lot as any).lot_rationale;
           return (
-            <div style={{ padding: '20px 40px 0' }}>
+            <div style={{ padding: '20px 40px 32px' }}>
               <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden' }}>
                 {/* Header */}
                 <div style={{ padding: '16px 24px 12px', borderBottom: `1px solid ${LTB}` }}>
@@ -833,41 +850,6 @@ export default function OpportunityDetail() {
                           <span style={{ fontSize: '12px', color: LTT2, lineHeight: 1.55 }}>{b}</span>
                         </div>
                       ))}
-                    </div>
-                  </div>
-
-                  {/* ROW C — Score breakdown + Verdict */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                    <div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
-                        SCORE BREAKDOWN
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px' }}>
-                        {scorePillars.map(p => (
-                          <div key={p.label}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3 }}>{p.label.toUpperCase()}</span>
-                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT2, fontWeight: 600 }}>{p.value}</span>
-                            </div>
-                            <div style={{ height: '3px', background: LTB, borderRadius: '2px' }}>
-                              <div style={{ height: '100%', borderRadius: '2px', width: `${p.value}%`, background: p.value >= 70 ? GD : p.value >= 40 ? GOLD : RED }} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
-                        {isFr ? 'VERDICT' : 'VERDICT'}
-                      </div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 800, color: verdict.gl, marginBottom: '6px' }}>
-                        {verdict.icon} {verdict.label}
-                      </div>
-                      {aiRationale ? (
-                        <p style={{ fontSize: '11px', color: LTT2, lineHeight: 1.6, margin: 0 }}>{String(aiRationale)}</p>
-                      ) : (
-                        <p style={{ fontSize: '11px', color: LTT3, lineHeight: 1.6, margin: 0 }}>{verdict.sub}</p>
-                      )}
                     </div>
                   </div>
 
@@ -1147,11 +1129,6 @@ export default function OpportunityDetail() {
                     const nautVal = lot.fair_value_nautilus as number;
                     const gapPct = price > 0 ? Math.round((1 - price / nautVal) * 100) : 0;
                     const marketBullets = [
-                      gapPct > 0
-                        ? isFr
-                          ? `Le lot est estimé ${gapPct}% sous sa valeur de marché reconstituée — décote d'entrée significative.`
-                          : `Lot is priced ${gapPct}% below reconstructed market value — significant entry discount.`
-                        : null,
                       isFr
                         ? 'Le marché secondaire sous-pondère souvent les artistes hors grandes maisons.'
                         : 'Secondary market often underweights artists outside major houses.',
@@ -1234,155 +1211,47 @@ export default function OpportunityDetail() {
             })()}
 
             {/* ── HOW TO BID ───────────────────────────────────────────────────── */}
-            {(() => {
-              const targetEntry = lot.current_price;
-              const currency = lot.currency || 'EUR';
-              const currencySymbol = currency === 'USD' ? '$' : currency === 'GBP' ? '£' : '€';
-              const content = (
-                <>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '14px' }}>{isFr ? 'COMMENT ENCHÉRIR' : 'HOW TO BID'}</div>
-                  <div style={{ fontSize: '13px', color: LTT2, marginBottom: '6px' }}>→ {isFr ? 'Entrée cible :' : 'Target entry:'} {currencySymbol}{targetEntry?.toLocaleString()}</div>
-                  <div style={{ fontSize: '13px', color: LTT2, marginBottom: '6px' }}>→ {isFr ? "Timing d'enchère : dernières minutes — évitez d'enchérir tôt" : 'Bid timing: final minutes — avoid early bidding'}</div>
-                  <div style={{ fontSize: '13px', color: LTT2 }}>→ {isFr ? "Conviction max : enchérissez jusqu'à" : 'Max conviction: bid up to'} {currencySymbol}{lot.estimate_low?.toLocaleString() || 'estimate low'}</div>
-                </>
-              );
-              return (
-                <div style={{ padding: '0 40px 32px' }}>
-                  <div style={{ position: 'relative', background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 24px', overflow: 'hidden' }}>
-                    {canSeeAI ? content : (
-                      <>
-                        <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none' as const }}>{content}</div>
-                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
-                          <span onClick={() => window.location.href = '/app/pricing'} style={{ cursor: 'pointer', background: '#1A2A44', color: '#C6A85A', fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', padding: '8px 18px', borderRadius: 3 }}>
-                            INVESTOR+ · UNLOCK →
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
+            <div style={{ display: 'flex', gap: '24px', padding: '14px 40px 32px', flexWrap: 'wrap' as const }}>
+              <div>
+                <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>{isFr ? 'ENTRÉE CIBLE' : 'TARGET ENTRY'}</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: LTT1 }}>{fmtExact(price)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>{isFr ? 'BID MAX' : 'MAX BID'}</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: GOLD }}>{fmtExact(avoidAbove ?? maxBid)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>TIMING</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: LTT1 }}>{isFr ? 'Fin de session' : 'End of session'}</div>
+              </div>
+            </div>
 
-            {/* ── INTELLIGENCE SIGNALS — Oracle + Artist Profile + Due Diligence ── */}
-            {canSeeAnalysis && (lot.oracle || lot.artist_profile || cycleStage || estBias || consignAlert) && (
+            {/* ── SIGNAUX ──────────────────────────────────────────────────────── */}
+            {canSeeAnalysis && (
               <div style={{ padding: '0 40px 32px' }}>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'SIGNAUX' : 'SIGNALS'}</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-
-                  {/* Oracle signal card */}
-                  {lot.oracle && (() => {
-                    const sig = lot.oracle.signal as string;
-                    const oColor = sig === 'BUY_NOW' ? GL : sig === 'AVOID' ? RED : sig === 'WATCH' ? AMB : BL;
-                    const oBg   = sig === 'BUY_NOW' ? '#F0FDF4' : sig === 'AVOID' ? '#FEF2F2' : sig === 'WATCH' ? '#FFFBEB' : '#EFF6FF';
-                    const oBorder = sig === 'BUY_NOW' ? '#BBF7D0' : sig === 'AVOID' ? '#FECACA' : sig === 'WATCH' ? '#FDE68A' : '#BFDBFE';
-                    const oLabel = sig === 'BUY_NOW' ? 'BUY NOW' : sig;
-                    return (
-                      <div style={{ background: oBg, border: `1px solid ${oBorder}`, borderRadius: '12px', padding: '18px 20px' }}>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '10px' }}>ORACLE VERDICT</div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 800, color: oColor, letterSpacing: '0.04em', marginBottom: '8px' }}>{oLabel}</div>
-                        {lot.oracle.narrative && (
-                          <div style={{ fontSize: '12px', color: LTT2, lineHeight: 1.5, marginBottom: '10px' }}>{lot.oracle.narrative}</div>
-                        )}
-                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' as const }}>
-                          {lot.oracle.score_6m != null && (
-                            <div>
-                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '2px' }}>6M SCORE</div>
-                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>{lot.oracle.score_6m.toFixed(0)}</div>
-                            </div>
-                          )}
-                          {lot.oracle.score_18m != null && (
-                            <div>
-                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '2px' }}>18M SCORE</div>
-                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>{lot.oracle.score_18m.toFixed(0)}</div>
-                            </div>
-                          )}
-                          {lot.oracle.target_upside != null && (
-                            <div>
-                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '2px' }}>TARGET</div>
-                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: GL }}>+{lot.oracle.target_upside}%</div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Artist profile card */}
-                  {lot.artist_profile && (
-                    <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '18px 20px' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '10px' }}>{isFr ? 'PROFIL ARTISTE' : 'ARTIST PROFILE'}</div>
-                      {lot.artist_profile.investment_tier && (
-                        <div style={{ marginBottom: '10px' }}>
-                          <span style={{
-                            fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const,
-                            color: lot.artist_profile.investment_tier === 'blue_chip' ? BL : lot.artist_profile.investment_tier === 'emerging' ? GL : AMB,
-                            background: lot.artist_profile.investment_tier === 'blue_chip' ? '#EFF6FF' : lot.artist_profile.investment_tier === 'emerging' ? '#F0FDF4' : '#FFFBEB',
-                            padding: '3px 8px', borderRadius: '3px',
-                          }}>{isFr ? (lot.artist_profile.investment_tier === 'emerging' ? 'émergent' : lot.artist_profile.investment_tier === 'mid_career' ? 'mi-carrière' : lot.artist_profile.investment_tier.replace('_', ' ')) : lot.artist_profile.investment_tier.replace('_', ' ')}</span>
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' as const, marginBottom: '8px' }}>
-                        {lot.artist_profile.institutional_score != null && (
-                          <div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '2px' }}>INSTITUTIONAL</div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>{lot.artist_profile.institutional_score.toFixed(0)}/100</div>
-                          </div>
-                        )}
-                        {lot.artist_profile.shows_last_12m != null && (
-                          <div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '2px' }}>{isFr ? 'EXPOSITIONS 12M' : 'SHOWS 12M'}</div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>{lot.artist_profile.shows_last_12m}</div>
-                          </div>
-                        )}
-                        {lot.artist_profile.gallery_count != null && lot.artist_profile.gallery_count > 0 && (
-                          <div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '2px' }}>GALLERIES</div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>{lot.artist_profile.gallery_count}</div>
-                          </div>
-                        )}
-                      </div>
-                      {lot.artist_profile.top_gallery_name && (
-                        <div style={{ fontSize: '11px', color: LTT3, fontStyle: 'italic' }}>Rep. by {lot.artist_profile.top_gallery_name}</div>
-                      )}
-                      {lot.artist_profile.is_pre_auction && (
-                        <div style={{ marginTop: '8px', fontFamily: 'var(--font-mono)', fontSize: '9px', color: AMB, fontWeight: 700 }}>↑ PRE-AUCTION MOMENTUM</div>
-                      )}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: LTB, borderRadius: '8px', overflow: 'hidden' }}>
+                  <div style={{ background: LTC, padding: '16px 18px' }}>
+                    <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>MARCHÉ</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#34D399', marginBottom: '4px' }}>
+                      {priceHistory?.statistics?.trend_pct != null ? `↑ +${priceHistory.statistics.trend_pct}% YoY` : '—'}
                     </div>
-                  )}
-
-                  {/* Due diligence signals */}
-                  {(cycleStage || estBias || consignAlert) && (
-                    <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '18px 20px' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '12px' }}>{isFr ? 'SIGNAUX MARCHÉ' : 'MARKET SIGNALS'}</div>
-                      {cycleStage && (
-                        <div style={{ marginBottom: '10px' }}>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '3px' }}>{isFr ? 'CYCLE DE MARCHÉ' : 'MARKET CYCLE'}</div>
-                          <span style={{
-                            fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700,
-                            color: cycleStage.stage === 'PEAK' ? RED : cycleStage.stage === 'RECOVERY' ? GL : AMB,
-                          }}>{cycleStage.stage}</span>
-                          {cycleStage.description && <span style={{ fontSize: '11px', color: LTT3, marginLeft: '8px' }}>{cycleStage.description}</span>}
-                        </div>
-                      )}
-                      {estBias && (
-                        <div style={{ marginBottom: '10px' }}>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '3px' }}>ESTIMATE BIAS</div>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: (estBias.pct_above_low_estimate || 0) > 30 ? AMB : GL }}>
-                            {(estBias.pct_above_low_estimate || 0) > 0 ? `+${Math.round(estBias.pct_above_low_estimate)}%` : `${Math.round(estBias.pct_above_low_estimate || 0)}%`} vs history
-                          </span>
-                        </div>
-                      )}
-                      {consignAlert && (
-                        <div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.1em', marginBottom: '3px' }}>{isFr ? 'CONSIGNATION' : 'CONSIGNMENT'}</div>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: consignAlert.level === 'HIGH VOLUME' ? RED : GL }}>{isFr && consignAlert.level === 'HIGH VOLUME' ? 'VOLUME ÉLEVÉ' : consignAlert.level}</span>
-                          {consignAlert.message && <div style={{ fontSize: '11px', color: LTT3, marginTop: '2px' }}>{consignAlert.message}</div>}
-                        </div>
-                      )}
+                    <div style={{ fontSize: '11px', color: LTT3 }}>{isFr ? 'Prix catégorie' : 'Category prices'}</div>
+                  </div>
+                  <div style={{ background: LTC, padding: '16px 18px' }}>
+                    <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>LIQUIDITÉ</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: LTT1, marginBottom: '4px' }}>
+                      {lot.artist?.sell_through_rate != null ? `${Math.round(lot.artist.sell_through_rate * 100)}%` : '—'}
                     </div>
-                  )}
-
+                    <div style={{ fontSize: '11px', color: LTT3 }}>sell-through</div>
+                  </div>
+                  <div style={{ background: LTC, padding: '16px 18px' }}>
+                    <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>INSTITUTIONNEL</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: LTT1, marginBottom: '4px' }}>
+                      {lot.artist_profile?.shows_last_12m != null ? lot.artist_profile.shows_last_12m : '—'}
+                    </div>
+                    <div style={{ fontSize: '11px', color: LTT3 }}>{isFr ? 'expositions 12 mois' : 'exhibitions 12m'}</div>
+                  </div>
                 </div>
               </div>
             )}
@@ -1393,40 +1262,33 @@ export default function OpportunityDetail() {
 
                 {/* KEY RISKS — data-driven */}
                 {(() => {
-                  const risks: { text: string; sev: 'HIGH' | 'MED' | 'LOW' }[] = [];
+                  const risks: string[] = [];
                   if (hasProvHighRisk)
-                    risks.push({ text: isFr ? "Problèmes de provenance détectés — vérifier le titre et l'historique avant d'enchérir" : 'Provenance flags detected — verify title and ownership history before bidding', sev: 'HIGH' });
+                    risks.push(isFr ? 'Provenance à vérifier' : 'Verify provenance');
                   if (hasCycleRisk)
-                    risks.push({ text: isFr ? `Marché au pic du cycle (${cycleStage?.stage}) — hausse des prix à court terme limitée` : `Market at peak cycle (${cycleStage?.stage}) — limited near-term price upside`, sev: 'HIGH' });
+                    risks.push(isFr ? 'Marché au pic du cycle' : 'Market at peak cycle');
                   if (hasConsignHigh)
-                    risks.push({ text: isFr ? 'Volume de consignation élevé dans cette maison — la suroffre peut comprimer les prix de revente' : 'High consignment volume at this house — oversupply may compress resale prices', sev: 'HIGH' });
+                    risks.push(isFr ? 'Suroffre consignation possible' : 'Possible consignment oversupply');
                   if (estBias && Math.abs(estBias.pct_above_low_estimate || 0) > 50)
-                    risks.push({ text: isFr ? `Estimation potentiellement optimiste — actuellement +${Math.round(estBias.pct_above_low_estimate || 0)}% au-dessus de la moyenne historique pour cet artiste` : `Estimate may be optimistic — currently +${Math.round(estBias.pct_above_low_estimate || 0)}% above historical average for this artist`, sev: 'MED' });
+                    risks.push(isFr ? 'Estimation possiblement optimiste' : 'Estimate may be optimistic');
                   if (lot.artist?.trend === 'down')
-                    risks.push({ text: isFr ? "Momentum de l'artiste en déclin — considérer attentivement le timing de sortie" : 'Artist momentum declining — consider exit timing carefully', sev: 'MED' });
+                    risks.push(isFr ? 'Momentum artiste en déclin' : 'Artist momentum declining');
                   if ((lot.artist?.liquidity_score ?? 60) < 40)
-                    risks.push({ text: isFr ? 'Faible liquidité de marché pour cet artiste — la revente peut nécessiter 12 à 24 mois' : 'Low market liquidity for this artist — resale may require 12–24 months', sev: 'MED' });
+                    risks.push(isFr ? 'Faible liquidité artiste' : 'Low artist liquidity');
                   if (lot.oracle?.signal === 'AVOID')
-                    risks.push({ text: isFr ? `Signal Oracle : ÉVITER — ${lot.oracle.narrative || 'sous le seuil de conviction'}` : `Oracle signal: AVOID — ${lot.oracle.narrative || 'below conviction threshold'}`, sev: 'HIGH' });
+                    risks.push(isFr ? 'Signal Oracle : ÉVITER' : 'Oracle signal: AVOID');
                   if (risks.length === 0) {
-                    risks.push({ text: isFr ? "Illiquidité standard du marché de l'art — durée de détention minimale recommandée : 3 à 5 ans" : 'Standard art market illiquidity — minimum 3–5 year hold recommended', sev: 'LOW' });
-                    risks.push({ text: isFr ? "Les frais acheteur et de stockage augmentent le coût total d'acquisition" : "Buyer's premium and storage fees increase total acquisition cost", sev: 'LOW' });
+                    risks.push(isFr ? 'Illiquidité standard marché art' : 'Standard art illiquidity');
+                    risks.push(isFr ? 'Frais acheteur à intégrer' : "Include buyer's premium");
                   }
                   return (
                     <div style={wCard}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ {isFr ? 'RISQUES' : 'RISKS'}</div>
-                      {risks.map((risk, i, arr) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 0', borderBottom: i < arr.length - 1 ? `1px solid ${LT}` : 'none' }}>
-                          <span style={{
-                            fontSize: '8px', fontWeight: 700, fontFamily: 'var(--font-mono)',
-                            color: risk.sev === 'HIGH' ? RED : risk.sev === 'MED' ? AMB : LTT3,
-                            background: risk.sev === 'HIGH' ? '#FEE2E2' : risk.sev === 'MED' ? '#FEF3C7' : LT,
-                            border: `1px solid ${risk.sev === 'HIGH' ? '#FECACA' : risk.sev === 'MED' ? '#FDE68A' : LTB}`,
-                            padding: '2px 6px', borderRadius: '3px', flexShrink: 0, marginTop: '2px',
-                          }}>{risk.sev}</span>
-                          <span style={{ fontSize: '13px', color: LTT1, lineHeight: 1.5 }}>{translateDueDiligence(risk.text)}</span>
-                        </div>
-                      ))}
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ {isFr ? 'POINTS DE VIGILANCE' : 'WATCH POINTS'}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '6px' }}>
+                        {risks.map((text, i) => (
+                          <div key={i} style={{ fontSize: '12px', color: LTT2, lineHeight: 1.5 }}>• {text}</div>
+                        ))}
+                      </div>
                     </div>
                   );
                 })()}
@@ -1435,7 +1297,7 @@ export default function OpportunityDetail() {
                 {visibleYears.length > 0 ? (
                   <div style={wCard}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ PROJECTIONS · {projCagr.toFixed(1)}% CAGR</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'SCÉNARIOS DE VALORISATION' : 'VALUATION SCENARIOS'} · {projCagr.toFixed(1)}% CAGR</div>
                       {lot.projection?.artist_tier && (
                         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>{lot.projection.artist_tier.replace('_', ' ')}</span>
                       )}
@@ -1444,7 +1306,7 @@ export default function OpportunityDetail() {
                       <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                         <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
                         <YAxis tickFormatter={(v: number) => `€${v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v}`} tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} width={48} />
-                        <Tooltip formatter={(val: number, name: string) => [`€${Number(val).toLocaleString()}`, name === 'optimistic' ? (isFr ? '🟢 Optimiste' : '🟢 Optimistic') : name === 'value' ? '🟡 Base' : (isFr ? '🔴 Pessimiste' : '🔴 Pessimistic')]} contentStyle={{ background: '#1A2A44', border: 'none', borderRadius: 8, fontSize: 12, color: 'white' }} />
+                        <Tooltip formatter={(val: number, name: string) => [`€${Number(val).toLocaleString()}`, name === 'optimistic' ? (isFr ? '🟢 Scénario haussier' : '🟢 Bull market') : name === 'value' ? (isFr ? '🟡 Scénario central' : '🟡 Stable market') : (isFr ? '🔴 Scénario baissier' : '🔴 Bear market')]} contentStyle={{ background: '#1A2A44', border: 'none', borderRadius: 8, fontSize: 12, color: 'white' }} />
                         <ReferenceLine y={price} stroke="#E8E4DC" strokeDasharray="4 2" />
                         <Line type="monotone" dataKey="optimistic" stroke="#16A34A" strokeWidth={2} dot={false} />
                         <Line type="monotone" dataKey="value" stroke="#B8922A" strokeWidth={2} dot={false} />
@@ -1452,9 +1314,9 @@ export default function OpportunityDetail() {
                       </LineChart>
                     </ResponsiveContainer>
                     <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 8 }}>
-                      <span style={{ fontSize: 11, color: '#16A34A' }}>● {isFr ? 'Optimiste' : 'Optimistic'}</span>
-                      <span style={{ fontSize: 11, color: '#B8922A' }}>● Base</span>
-                      <span style={{ fontSize: 11, color: '#DC2626' }}>● {isFr ? 'Pessimiste' : 'Pessimistic'}</span>
+                      <span style={{ fontSize: 11, color: '#16A34A' }}>● {isFr ? 'Scénario haussier' : 'Bull market'}</span>
+                      <span style={{ fontSize: 11, color: '#B8922A' }}>● {isFr ? 'Scénario central' : 'Stable market'}</span>
+                      <span style={{ fontSize: 11, color: '#DC2626' }}>● {isFr ? 'Scénario baissier' : 'Bear market'}</span>
                     </div>
                     {lot.projection?.sell_recommendation && (
                       <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '6px', padding: '8px 12px', marginTop: '6px' }}>
