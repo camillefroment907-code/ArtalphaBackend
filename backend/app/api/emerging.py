@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from app.database import get_db
 from app.models.db_models import ArtistProfile, EmergingArtist
@@ -67,13 +67,20 @@ async def get_emerging_artists(
         for a in artists
     ]
 
+    total_count_result = await db.execute(
+        select(func.count()).select_from(ArtistProfile).where(
+            ArtistProfile.investment_tier == "emerging"
+        )
+    )
+    total_count = total_count_result.scalar() or 0
+
     if is_free:
         return {
             "artists": items[:FREE_LIMIT],
             "page": page,
             "page_size": page_size,
             "blur_remaining": len(items) > FREE_LIMIT,
-            "total_available": len(items),
+            "total_available": total_count,
         }
 
     return {
@@ -81,7 +88,7 @@ async def get_emerging_artists(
         "page": page,
         "page_size": page_size,
         "blur_remaining": False,
-        "total_available": len(items),
+        "total_available": total_count,
     }
 
 
