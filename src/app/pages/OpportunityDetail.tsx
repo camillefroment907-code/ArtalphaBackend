@@ -705,7 +705,7 @@ export default function OpportunityDetail() {
         )}
 
         {/* ── DÉCISION ─────────────────────────────────────────────────────── */}
-        <div style={{ padding: '24px 40px 32px' }}>
+        <div style={{ padding: '24px 40px 24px' }}>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>
             {isFr ? '◆ DÉCISION' : '◆ DECISION'}
           </div>
@@ -777,6 +777,20 @@ export default function OpportunityDetail() {
             )}
 
           </div>
+          <div style={{ marginTop: '12px', display: 'flex', gap: '24px', padding: '12px 16px', background: 'rgba(10,15,30,0.04)', borderRadius: '6px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+            <div>
+              <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>{isFr ? 'ENTRÉE CIBLE' : 'TARGET ENTRY'}</div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: LTT1 }}>{fmtExact(price)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>{isFr ? 'BID MAX' : 'MAX BID'}</div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: GOLD }}>{fmtExact(avoidAbove ?? maxBid)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>TIMING</div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: LTT1 }}>{isFr ? 'Fin de session' : 'End of session'}</div>
+            </div>
+          </div>
         </div>
 
         {/* ── INTELLIGENCE NAUTILUS ─────────────────────────────────────────── */}
@@ -785,7 +799,7 @@ export default function OpportunityDetail() {
           const gapPct = nautVal && price > 0 ? Math.round((1 - price / nautVal) * 100) : null;
           const aiRationale = (lot as any).ai_rationale || (lot as any).investment_rationale || (lot as any).rationale || (lot as any).lot_rationale;
           return (
-            <div style={{ padding: '20px 40px 32px' }}>
+            <div style={{ padding: '20px 40px 24px' }}>
               <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden' }}>
                 {/* Header */}
                 <div style={{ padding: '16px 24px 12px', borderBottom: `1px solid ${LTB}` }}>
@@ -1193,7 +1207,7 @@ export default function OpportunityDetail() {
                 </div>
               );
               return (
-                <div style={{ padding: '0 40px 32px' }}>
+                <div style={{ padding: '0 40px 24px' }}>
                   <div style={{ position: 'relative', background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden' }}>
                     {canSeeAnalysis ? content : (
                       <>
@@ -1210,126 +1224,122 @@ export default function OpportunityDetail() {
               );
             })()}
 
-            {/* ── HOW TO BID ───────────────────────────────────────────────────── */}
-            <div style={{ display: 'flex', gap: '24px', padding: '14px 40px 32px', flexWrap: 'wrap' as const }}>
-              <div>
-                <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>{isFr ? 'ENTRÉE CIBLE' : 'TARGET ENTRY'}</div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: LTT1 }}>{fmtExact(price)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>{isFr ? 'BID MAX' : 'MAX BID'}</div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: GOLD }}>{fmtExact(avoidAbove ?? maxBid)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>TIMING</div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: LTT1 }}>{isFr ? 'Fin de session' : 'End of session'}</div>
-              </div>
-            </div>
+            {/* ── CONTEXTE MARCHÉ & VIGILANCE ──────────────────────────────────── */}
+            {canSeeAnalysis && (() => {
+              const marketTrend = priceHistory?.statistics?.trend_pct;
+              const sellThrough = lot.artist?.sell_through_rate;
+              const exhibitions = lot.artist_profile?.shows_last_12m;
+              const hasMarket = marketTrend != null || sellThrough != null || exhibitions != null;
 
-            {/* ── SIGNAUX ──────────────────────────────────────────────────────── */}
-            {canSeeAnalysis && (
-              <div style={{ padding: '0 40px 32px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'SIGNAUX' : 'SIGNALS'}</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: LTB, borderRadius: '8px', overflow: 'hidden' }}>
-                  <div style={{ background: LTC, padding: '16px 18px' }}>
-                    <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>MARCHÉ</div>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#34D399', marginBottom: '4px' }}>
-                      {priceHistory?.statistics?.trend_pct != null ? `↑ +${priceHistory.statistics.trend_pct}% YoY` : '—'}
-                    </div>
-                    <div style={{ fontSize: '11px', color: LTT3 }}>{isFr ? 'Prix catégorie' : 'Category prices'}</div>
+              const risks: string[] = [];
+              if (hasProvHighRisk)
+                risks.push(isFr ? 'Provenance à vérifier' : 'Verify provenance');
+              if (hasCycleRisk)
+                risks.push(isFr ? 'Marché au pic du cycle' : 'Market at peak cycle');
+              if (hasConsignHigh)
+                risks.push(isFr ? 'Suroffre consignation possible' : 'Possible consignment oversupply');
+              if (estBias && Math.abs(estBias.pct_above_low_estimate || 0) > 50)
+                risks.push(isFr ? 'Estimation possiblement optimiste' : 'Estimate may be optimistic');
+              if (lot.artist?.trend === 'down')
+                risks.push(isFr ? 'Momentum artiste en déclin' : 'Artist momentum declining');
+              if ((lot.artist?.liquidity_score ?? 60) < 40)
+                risks.push(isFr ? 'Faible liquidité artiste' : 'Low artist liquidity');
+              if (lot.oracle?.signal === 'AVOID')
+                risks.push(isFr ? 'Signal Oracle : ÉVITER' : 'Oracle signal: AVOID');
+              if (risks.length === 0) {
+                risks.push(isFr ? 'Illiquidité standard marché art' : 'Standard art illiquidity');
+                risks.push(isFr ? 'Frais acheteur à intégrer' : "Include buyer's premium");
+              }
+
+              if (!hasMarket && risks.length === 0) return null;
+
+              return (
+                <div style={{ padding: '0 40px 24px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>
+                    ◆ {isFr ? 'CONTEXTE MARCHÉ & VIGILANCE' : 'MARKET CONTEXT & WATCH POINTS'}
                   </div>
-                  <div style={{ background: LTC, padding: '16px 18px' }}>
-                    <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>LIQUIDITÉ</div>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: LTT1, marginBottom: '4px' }}>
-                      {lot.artist?.sell_through_rate != null ? `${Math.round(lot.artist.sell_through_rate * 100)}%` : '—'}
-                    </div>
-                    <div style={{ fontSize: '11px', color: LTT3 }}>sell-through</div>
-                  </div>
-                  <div style={{ background: LTC, padding: '16px 18px' }}>
-                    <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>INSTITUTIONNEL</div>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: LTT1, marginBottom: '4px' }}>
-                      {lot.artist_profile?.shows_last_12m != null ? lot.artist_profile.shows_last_12m : '—'}
-                    </div>
-                    <div style={{ fontSize: '11px', color: LTT3 }}>{isFr ? 'expositions 12 mois' : 'exhibitions 12m'}</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ── KEY RISKS + FUTURE VALUE PROJECTIONS — side by side ─────────── */}
-            {canSeeAnalysis && (
-              <div style={{ padding: '0 40px 32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'stretch' }}>
-
-                {/* KEY RISKS — data-driven */}
-                {(() => {
-                  const risks: string[] = [];
-                  if (hasProvHighRisk)
-                    risks.push(isFr ? 'Provenance à vérifier' : 'Verify provenance');
-                  if (hasCycleRisk)
-                    risks.push(isFr ? 'Marché au pic du cycle' : 'Market at peak cycle');
-                  if (hasConsignHigh)
-                    risks.push(isFr ? 'Suroffre consignation possible' : 'Possible consignment oversupply');
-                  if (estBias && Math.abs(estBias.pct_above_low_estimate || 0) > 50)
-                    risks.push(isFr ? 'Estimation possiblement optimiste' : 'Estimate may be optimistic');
-                  if (lot.artist?.trend === 'down')
-                    risks.push(isFr ? 'Momentum artiste en déclin' : 'Artist momentum declining');
-                  if ((lot.artist?.liquidity_score ?? 60) < 40)
-                    risks.push(isFr ? 'Faible liquidité artiste' : 'Low artist liquidity');
-                  if (lot.oracle?.signal === 'AVOID')
-                    risks.push(isFr ? 'Signal Oracle : ÉVITER' : 'Oracle signal: AVOID');
-                  if (risks.length === 0) {
-                    risks.push(isFr ? 'Illiquidité standard marché art' : 'Standard art illiquidity');
-                    risks.push(isFr ? 'Frais acheteur à intégrer' : "Include buyer's premium");
-                  }
-                  return (
-                    <div style={{ ...wCard, padding: '16px 20px' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ {isFr ? 'POINTS DE VIGILANCE' : 'WATCH POINTS'}</div>
-                      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '6px' }}>
-                        {risks.map((text, i) => (
-                          <div key={i} style={{ fontSize: '12px', color: LTT2, lineHeight: 1.5 }}>• {text}</div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* FUTURE VALUE PROJECTIONS */}
-                {visibleYears.length > 0 ? (
-                  <div style={wCard}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'SCÉNARIOS DE VALORISATION' : 'VALUATION SCENARIOS'} · {projCagr.toFixed(1)}% CAGR</div>
-                      {lot.projection?.artist_tier && (
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>{lot.projection.artist_tier.replace('_', ' ')}</span>
-                      )}
-                    </div>
-                    <ResponsiveContainer width="100%" height={220}>
-                      <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                        <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
-                        <YAxis tickFormatter={(v: number) => `€${v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v}`} tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} width={48} />
-                        <Tooltip formatter={(val: number, name: string) => [`€${Number(val).toLocaleString()}`, name === 'optimistic' ? (isFr ? '🟢 Marché fort' : '🟢 Bull market') : name === 'value' ? (isFr ? '🟡 Marché stable' : '🟡 Stable market') : (isFr ? '🔴 Marché faible' : '🔴 Bear market')]} contentStyle={{ background: '#1A2A44', border: 'none', borderRadius: 8, fontSize: 12, color: 'white' }} />
-                        <ReferenceLine y={price} stroke="#E8E4DC" strokeDasharray="4 2" />
-                        <Line type="monotone" dataKey="optimistic" stroke="#16A34A" strokeWidth={2} dot={false} />
-                        <Line type="monotone" dataKey="value" stroke="#B8922A" strokeWidth={2} dot={false} />
-                        <Line type="monotone" dataKey="conservative" stroke="#DC2626" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
-                      </LineChart>
-                    </ResponsiveContainer>
-                    <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 8 }}>
-                      <span style={{ fontSize: 11, color: '#16A34A' }}>● {isFr ? 'Marché fort' : 'Bull market'}</span>
-                      <span style={{ fontSize: 11, color: '#B8922A' }}>● {isFr ? 'Marché stable' : 'Stable market'}</span>
-                      <span style={{ fontSize: 11, color: '#DC2626' }}>● {isFr ? 'Marché faible' : 'Bear market'}</span>
-                    </div>
-                    {lot.projection?.sell_recommendation && (
-                      <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '6px', padding: '8px 12px', marginTop: '6px' }}>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GL, letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>{isFr ? 'SORTIE OPTIMALE' : 'OPTIMAL EXIT'} · </span>
-                        <span style={{ fontSize: '12px', color: LTT2 }}>{lot.projection.sell_recommendation}</span>
+                  <div style={{ ...wCard, padding: '16px 20px' }}>
+                    {hasMarket && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: LTB, borderRadius: '8px', overflow: 'hidden' }}>
+                        <div style={{ background: LTC, padding: '16px 18px' }}>
+                          <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>MARCHÉ</div>
+                          <div style={{ fontSize: '14px', fontWeight: 700, color: '#34D399', marginBottom: '4px' }}>
+                            {marketTrend != null ? `↑ +${marketTrend}% YoY` : '—'}
+                          </div>
+                          <div style={{ fontSize: '11px', color: LTT3 }}>{isFr ? 'Prix catégorie' : 'Category prices'}</div>
+                        </div>
+                        <div style={{ background: LTC, padding: '16px 18px' }}>
+                          <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>LIQUIDITÉ</div>
+                          <div style={{ fontSize: '14px', fontWeight: 700, color: LTT1, marginBottom: '4px' }}>
+                            {sellThrough != null ? `${Math.round(sellThrough * 100)}%` : '—'}
+                          </div>
+                          <div style={{ fontSize: '11px', color: LTT3 }}>sell-through</div>
+                        </div>
+                        <div style={{ background: LTC, padding: '16px 18px' }}>
+                          <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>INSTITUTIONNEL</div>
+                          <div style={{ fontSize: '14px', fontWeight: 700, color: LTT1, marginBottom: '4px' }}>
+                            {exhibitions != null ? exhibitions : '—'}
+                          </div>
+                          <div style={{ fontSize: '11px', color: LTT3 }}>{isFr ? 'expositions 12 mois' : 'exhibitions 12m'}</div>
+                        </div>
                       </div>
                     )}
-                    <p style={{ fontSize: '11px', fontStyle: 'italic', color: LTT3, marginTop: '10px', lineHeight: 1.6 }}>
-                      {isFr ? "Projections basées sur les données historiques des enchères et la modélisation statistique. Les performances passées ne garantissent pas les résultats futurs. Nautilus n'est pas un conseiller financier." : "Projections based on historical auction data and statistical modeling, capped at 15% to reflect long-term market realism. Past performance does not guarantee future returns. Nautilus is not a financial advisor — this is not financial advice."}
-                    </p>
+                    {hasMarket && risks.length > 0 && (
+                      <hr style={{ border: 'none', borderTop: '1px solid var(--border-color, #E5E7EB)', margin: '12px 0' }} />
+                    )}
+                    {risks.length > 0 && (
+                      <div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>
+                          {isFr ? 'POINTS DE VIGILANCE' : 'WATCH POINTS'}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '6px' }}>
+                          {risks.map((text, i) => (
+                            <div key={i} style={{ fontSize: '12px', color: LTT2, lineHeight: 1.5 }}>• {text}</div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ) : <div />}
+                </div>
+              );
+            })()}
 
+            {/* ── SCÉNARIOS DE VALORISATION ───────────────────────────────────── */}
+            {canSeeAnalysis && visibleYears.length > 0 && (
+              <div style={{ padding: '0 40px 24px' }}>
+                <div style={wCard}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'SCÉNARIOS DE VALORISATION' : 'VALUATION SCENARIOS'} · {projCagr.toFixed(1)}% CAGR</div>
+                    {lot.projection?.artist_tier && (
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>{lot.projection.artist_tier.replace('_', ' ')}</span>
+                    )}
+                  </div>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                      <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                      <YAxis tickFormatter={(v: number) => `€${v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v}`} tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} width={48} />
+                      <Tooltip formatter={(val: number, name: string) => [`€${Number(val).toLocaleString()}`, name === 'optimistic' ? (isFr ? '🟢 Marché fort' : '🟢 Bull market') : name === 'value' ? (isFr ? '🟡 Marché stable' : '🟡 Stable market') : (isFr ? '🔴 Marché faible' : '🔴 Bear market')]} contentStyle={{ background: '#1A2A44', border: 'none', borderRadius: 8, fontSize: 12, color: 'white' }} />
+                      <ReferenceLine y={price} stroke="#E8E4DC" strokeDasharray="4 2" />
+                      <Line type="monotone" dataKey="optimistic" stroke="#16A34A" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="value" stroke="#B8922A" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="conservative" stroke="#DC2626" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 8 }}>
+                    <span style={{ fontSize: 11, color: '#16A34A' }}>● {isFr ? 'Marché fort' : 'Bull market'}</span>
+                    <span style={{ fontSize: 11, color: '#B8922A' }}>● {isFr ? 'Marché stable' : 'Stable market'}</span>
+                    <span style={{ fontSize: 11, color: '#DC2626' }}>● {isFr ? 'Marché faible' : 'Bear market'}</span>
+                  </div>
+                  {lot.projection?.sell_recommendation && (
+                    <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '6px', padding: '8px 12px', marginTop: '6px' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GL, letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>{isFr ? 'SORTIE OPTIMALE' : 'OPTIMAL EXIT'} · </span>
+                      <span style={{ fontSize: '12px', color: LTT2 }}>{lot.projection.sell_recommendation}</span>
+                    </div>
+                  )}
+                  <p style={{ fontSize: '11px', fontStyle: 'italic', color: LTT3, marginTop: '10px', lineHeight: 1.6 }}>
+                    {isFr ? "Projections basées sur les données historiques des enchères et la modélisation statistique. Les performances passées ne garantissent pas les résultats futurs. Nautilus n'est pas un conseiller financier." : "Projections based on historical auction data and statistical modeling, capped at 15% to reflect long-term market realism. Past performance does not guarantee future returns. Nautilus is not a financial advisor — this is not financial advice."}
+                  </p>
+                </div>
               </div>
             )}
 
@@ -1419,8 +1429,8 @@ export default function OpportunityDetail() {
             ) : (
               <>
                 {/* Full comparables table */}
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ {isFr ? 'VENTES COMPARABLES' : 'COMPARABLE SALES'}</div>
                 <div style={wCard}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ {isFr ? 'VENTES COMPARABLES' : 'COMPARABLE SALES'}</div>
                   <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
                     <thead>
                       <tr>
@@ -1574,8 +1584,9 @@ export default function OpportunityDetail() {
                 }
               />
             ) : (
+              <>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ {isFr ? 'SOURCES' : 'SOURCES'}</div>
               <div style={{ ...wCard, padding: '12px 20px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ {isFr ? 'SOURCES' : 'SOURCES'}</div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '0' }}>
 
                   {/* Lot source */}
@@ -1634,6 +1645,7 @@ export default function OpportunityDetail() {
                   {lot.auction_house_name ? ` This lot is listed by ${lot.auction_house_name.split('—')[0].trim()}.` : ''}
                 </p>
               </div>
+              </>
             )}
           </div>
 
