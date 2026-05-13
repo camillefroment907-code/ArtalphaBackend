@@ -248,7 +248,7 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     # --- Artsper — gallery platform ---
     try:
         from app.connectors.artsper_connector import fetch_lots as artsper_fetch
-        artsper_lots = await artsper_fetch(lots_per_source)
+        artsper_lots = await _with_timeout(artsper_fetch(lots_per_source), timeout=120, name="artsper")
         added = 0
         for lot in artsper_lots:
             if lot.external_id not in seen_ids:
@@ -263,7 +263,7 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     # --- Saatchi Art — primary market ---
     try:
         from app.connectors.saatchiart_connector import fetch_lots as saatchi_fetch
-        saatchi_lots = await saatchi_fetch(lots_per_source)
+        saatchi_lots = await _with_timeout(saatchi_fetch(lots_per_source), timeout=120, name="saatchi")
         added = 0
         for lot in saatchi_lots:
             if lot.external_id not in seen_ids:
@@ -278,7 +278,7 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     # --- Singulart — primary market ---
     try:
         from app.connectors.singulart_connector import fetch_lots as singulart_fetch
-        singulart_lots = await singulart_fetch(lots_per_source)
+        singulart_lots = await _with_timeout(singulart_fetch(lots_per_source), timeout=120, name="singulart")
         added = 0
         for lot in singulart_lots:
             if lot.external_id not in seen_ids:
