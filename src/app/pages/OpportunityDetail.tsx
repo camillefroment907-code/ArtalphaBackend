@@ -391,7 +391,7 @@ export default function OpportunityDetail() {
   // Light data row
   const dRow: React.CSSProperties = {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    padding: '9px 0', borderBottom: `1px solid #F0EDE6`,
+    padding: '6px 0', borderBottom: `1px solid #F0EDE6`,
   };
 
 
@@ -940,12 +940,12 @@ export default function OpportunityDetail() {
             )}
 
             {/* ── DATA GRID 50/50 ─────────────────────────────────────────────── */}
-            <div style={{ padding: '32px 40px' }}>
+            <div style={{ padding: '16px 40px' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'ANALYSE' : 'ANALYSIS'}</div>
               <div style={{ border: `0.5px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden', marginBottom: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
 
               {/* LEFT COLUMN — Real Cost Breakdown + Investment Analysis */}
-              <div style={{ padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: '20px', borderRight: `0.5px solid ${LTB}` }}>
+              <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '20px', borderRight: `0.5px solid ${LTB}` }}>
 
                 {realCost && (
                   <div>
@@ -960,11 +960,11 @@ export default function OpportunityDetail() {
                         <span style={{ fontSize: '13px', color: LTT1, fontWeight: 500 }}>{fmt(r.v)}</span>
                       </div>
                     ))}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0' }}>
                       <span style={{ fontSize: '13px', color: LTT1, fontWeight: 700 }}>{isFr ? 'Coût total' : 'All-in cost'}</span>
                       <span style={{ fontSize: '16px', color: GOLD, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{fmt(totalCost)}</span>
                     </div>
-                    <div style={{ background: '#FAFAF7', border: `1px solid ${LTB}`, borderRadius: '8px', padding: '10px 14px', marginTop: '14px' }}>
+                    <div style={{ background: '#FAFAF7', border: `1px solid ${LTB}`, borderRadius: '8px', padding: '6px 10px', marginTop: '14px' }}>
                       <div style={{ fontSize: '12px', color: LTT2 }}>{isFr ? `Nécessite +${breakEvenGain.toFixed(1)}% pour atteindre le seuil de rentabilité` : `Needs +${breakEvenGain.toFixed(1)}% to break even`}</div>
                       <div style={{ fontSize: '12px', color: GOLD, fontWeight: 600, marginTop: '3px' }}>{isFr ? 'Prix adjugé seuil :' : 'Break-even hammer:'} {fmt(realCost.breakeven_hammer)}</div>
                     </div>
@@ -1018,7 +1018,7 @@ export default function OpportunityDetail() {
               </div>
 
               {/* RIGHT COLUMN — Lot Details */}
-              <div style={{ padding: '22px 24px' }}>
+              <div style={{ padding: '16px 18px' }}>
                 <div style={sl}>{t('lot.lotDetails')}</div>
                 {([
                   { label: t('common.artist'),    value: lot.artist_name_raw, nav: `/app/artists/${encodeURIComponent(lot.artist_name_raw || '')}`, link: true },
@@ -1065,7 +1065,7 @@ export default function OpportunityDetail() {
               </div>
 
               {/* COL 3 — Stratégie de sortie */}
-              <div style={{ padding: '20px 22px', background: LT }}>
+              <div style={{ padding: '16px 18px', background: LT }}>
                 <div style={{ fontSize: '10px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '14px' }}>
                   {isFr ? 'STRATÉGIE DE SORTIE' : 'EXIT STRATEGY'}
                 </div>
@@ -1117,7 +1117,7 @@ export default function OpportunityDetail() {
                     const maxScale = nautVal * 1.1;
                     const pctOf = (v: number) => `${Math.min(100, (v / maxScale) * 100).toFixed(1)}%`;
                     return (
-                      <div style={{ marginBottom: '28px' }}>
+                      <div style={{ marginBottom: '16px' }}>
                         <div style={{ position: 'relative', height: '6px', background: LTB, borderRadius: '3px', marginBottom: '26px' }}>
                           <div style={{ position: 'absolute', left: pctOf(price), top: '-4px', width: '2px', height: '14px', background: '#34D399', borderRadius: '1px' }} />
                           {bidRef && <div style={{ position: 'absolute', left: pctOf(bidRef), top: '-4px', width: '2px', height: '14px', background: GOLD, borderRadius: '1px' }} />}
@@ -1345,7 +1345,7 @@ export default function OpportunityDetail() {
 
             {/* ── COMPARABLE SALES CARDS ────────────────────────────────────────── */}
             {displayComps.length > 0 && (
-              <div style={{ padding: '0 40px 40px' }}>
+              <div style={{ padding: '0 40px 16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'LOTS SIMILAIRES' : 'SIMILAR LOTS'}</div>
                   {(comparables as any)?.market_analysis && (
@@ -1374,7 +1374,7 @@ export default function OpportunityDetail() {
                         style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '10px', overflow: 'hidden', cursor: comp.is_historical ? 'default' : 'pointer' }}
                       >
                         {comp.image_url ? (
-                          <div style={{ height: '130px', overflow: 'hidden', position: 'relative' }}>
+                          <div style={{ height: '100px', overflow: 'hidden', position: 'relative' }}>
                             <img src={comp.image_url} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             {daysLabel && (
                               <span style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.65)', color: '#fff', fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>
@@ -1383,7 +1383,7 @@ export default function OpportunityDetail() {
                             )}
                           </div>
                         ) : (
-                          <div style={{ height: '130px', background: LT, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                          <div style={{ height: '100px', background: LT, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                             <span style={{ fontSize: '28px', opacity: 0.12 }}>◎</span>
                             {daysLabel && (
                               <span style={{ position: 'absolute', top: '8px', right: '8px', background: LTB, color: LTT3, fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>
@@ -1392,15 +1392,15 @@ export default function OpportunityDetail() {
                             )}
                           </div>
                         )}
-                        <div style={{ padding: '12px 14px' }}>
+                        <div style={{ padding: '10px 12px' }}>
                           <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
                             {comp.auction_house_name || comp.artist_name_raw || 'Unknown'}
                           </div>
-                          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '13px', color: LTT1, marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '12px', color: LTT1, marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
                             {comp.title || 'Untitled'}
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600, color: GOLD }}>€{compPrice.toLocaleString('en-GB')}</span>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: GOLD }}>€{compPrice.toLocaleString('en-GB')}</span>
                             {premRatio && premRatio > 1 ? (
                               <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GL, fontWeight: 600 }}>
                                 {Math.round(premRatio * 100)}% of est.
@@ -1420,7 +1420,7 @@ export default function OpportunityDetail() {
             )}
 
         {/* ──────────────── COMPARABLE SALES ──────────────── */}
-        <div style={{ padding: '32px 40px 48px' }}>
+        <div style={{ padding: '16px 40px 24px' }}>
             {comparables.length === 0 ? (
               <div style={{ ...wCard, textAlign: 'center', padding: '60px 24px' }}>
                 <div style={{ fontSize: '32px', opacity: 0.15, marginBottom: '16px' }}>◎</div>
@@ -1500,14 +1500,14 @@ export default function OpportunityDetail() {
           </div>
 
         {/* ──────────────── ANALYSIS ──────────────── */}
-        <div style={{ padding: '32px 40px 48px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={{ padding: '16px 40px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
             {/* AI Intelligence cards */}
             <div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'INTELLIGENCE IA' : 'AI INTELLIGENCE'}</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
 
-                <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '16px 20px', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                     <span style={{ color: GOLD, fontSize: '13px', lineHeight: 1 }}>◆</span>
                     <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1, fontWeight: 500 }}>{isFr ? "Mémo d'investissement" : 'Investment Memo'}</span>
@@ -1519,15 +1519,12 @@ export default function OpportunityDetail() {
                   <div style={{ marginBottom: '16px' }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#EFF6FF', border: '1px solid #BFDBFE', color: BL, padding: '3px 8px', borderRadius: '3px' }}>INVESTOR+</span>
                   </div>
-                  <button
+                  <div
                     onClick={!hasAccess ? () => { window.location.href = '/app/pricing'; } : (memo ? () => setShowMemo(true) : generateMemo)}
-                    disabled={memoLoading}
-                    onMouseEnter={e => { if (!memoLoading) (e.target as HTMLButtonElement).style.background = '#1A2332'; }}
-                    onMouseLeave={e => { if (!memoLoading) (e.target as HTMLButtonElement).style.background = DK; }}
-                    style={{ marginTop: 'auto', width: '100%', padding: '11px', background: DK, border: 'none', borderRadius: '8px', color: '#F0EDE6', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', cursor: memoLoading ? 'not-allowed' : 'pointer', textTransform: 'uppercase', opacity: memoLoading ? 0.6 : 1 }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: memoLoading ? 'rgba(198,168,90,0.4)' : GOLD, cursor: memoLoading ? 'not-allowed' : 'pointer', letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', marginTop: '12px' }}
                   >
-                    ◆ {memoLoading ? (isFr ? 'GÉNÉRATION…' : 'GENERATING…') : memo ? (isFr ? 'VOIR LE MÉMO' : 'VIEW MEMO') : (isFr ? 'GÉNÉRER LE MÉMO' : 'GENERATE MEMO')}
-                  </button>
+                    {memoLoading ? (isFr ? '◆ GÉNÉRATION…' : '◆ GENERATING…') : memo ? (isFr ? '◆ VOIR LE MÉMO →' : '◆ VIEW MEMO →') : (isFr ? '◆ GÉNÉRER LE MÉMO →' : '◆ GENERATE MEMO →')}
+                  </div>
                   {memo && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
                       <span style={{ padding: '3px 10px', background: memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.08)' : 'rgba(217,119,6,0.08)', border: `1px solid ${memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.25)' : 'rgba(217,119,6,0.25)'}`, fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: memo.recommendation === 'BUY' ? GL : AMB, borderRadius: '4px' }}>{memo.recommendation}</span>
@@ -1536,7 +1533,7 @@ export default function OpportunityDetail() {
                   )}
                 </div>
 
-                <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '16px 20px', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
                       <circle cx="8" cy="8" r="7" stroke="#9CA3AF" strokeWidth="1.2"/>
@@ -1552,14 +1549,12 @@ export default function OpportunityDetail() {
                   <div style={{ marginBottom: '16px' }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#F0F0FF', border: '1px solid #C7C7F0', color: '#5B5BD6', padding: '3px 8px', borderRadius: '3px' }}>FAMILY OFFICE+</span>
                   </div>
-                  <button
+                  <div
                     onClick={() => navigate('/app/pricing?plan=investor')}
-                    onMouseEnter={e => { (e.target as HTMLButtonElement).style.background = '#1A2332'; }}
-                    onMouseLeave={e => { (e.target as HTMLButtonElement).style.background = DK; }}
-                    style={{ marginTop: 'auto', width: '100%', padding: '11px', background: DK, border: 'none', borderRadius: '8px', color: '#F0EDE6', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', cursor: 'pointer', textTransform: 'uppercase' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: GOLD, cursor: 'pointer', letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', marginTop: '12px' }}
                   >
-                    + ANALYZE
-                  </button>
+                    {isFr ? '◆ ANALYSER →' : '◆ ANALYZE →'}
+                  </div>
                 </div>
 
               </div>
@@ -1567,7 +1562,7 @@ export default function OpportunityDetail() {
           </div>
 
         {/* ──────────────── DOCUMENTS ──────────────── */}
-        <div style={{ padding: '32px 40px 48px' }}>
+        <div style={{ padding: '16px 40px 24px' }}>
             {!hasAccess ? (
               <LockedBlock
                 title="Documents & Sources"
