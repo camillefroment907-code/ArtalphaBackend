@@ -645,9 +645,9 @@ export default function ArtistIntelligence() {
               <div style={{ background: 'var(--navy)', borderRadius: '10px', padding: '18px 22px', marginBottom: '20px' }}>
                 <div style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '12px' }}>◆ ANALYSE NAUTILUS</div>
                 {[
-                  { key: 'MOMENTUM', value: stats.momentum === 'rising' ? '↑ En hausse — activité croissante' : stats.momentum === 'falling' ? '↓ En baisse — activité décroissante' : '→ Stable — marché équilibré', color: stats.momentum === 'rising' ? '#16A34A' : stats.momentum === 'falling' ? '#F87171' : 'rgba(255,255,255,0.6)' },
+                  { key: 'MOMENTUM', value: stats.momentum === 'rising' ? '↑ En hausse — activité croissante' : (stats.momentum === 'falling' || stats.momentum === 'low') ? '↓ En baisse — activité décroissante' : '→ Stable — marché équilibré', color: stats.momentum === 'rising' ? '#16A34A' : (stats.momentum === 'falling' || stats.momentum === 'low') ? '#F87171' : 'rgba(255,255,255,0.6)' },
                   { key: 'CONVICTION', value: (stats.avg_score || 0) >= 80 ? `${stats.avg_score}/100 — Forte conviction` : (stats.avg_score || 0) >= 60 ? `${stats.avg_score}/100 — Intérêt modéré` : `${stats.avg_score || 0}/100 — Signal faible`, color: (stats.avg_score || 0) >= 60 ? '#C6A85A' : 'rgba(255,255,255,0.6)' },
-                  { key: 'TENDANCE', value: stats.trend_direction === 'up' ? 'Hausse sur 24 mois' : stats.trend_direction === 'down' ? 'Baisse sur 24 mois' : 'Latéral sur 24 mois', color: stats.trend_direction === 'up' ? '#16A34A' : stats.trend_direction === 'down' ? '#F87171' : 'rgba(255,255,255,0.6)' },
+                  { key: 'TENDANCE', value: (priceHistory?.statistics?.trend_direction ?? stats?.trend_direction) === 'up' ? 'Hausse sur 24 mois' : (priceHistory?.statistics?.trend_direction ?? stats?.trend_direction) === 'down' ? 'Baisse sur 24 mois' : 'Latéral sur 24 mois', color: (priceHistory?.statistics?.trend_direction ?? stats?.trend_direction) === 'up' ? '#16A34A' : (priceHistory?.statistics?.trend_direction ?? stats?.trend_direction) === 'down' ? '#F87171' : 'rgba(255,255,255,0.6)' },
                 ].map(row => (
                   <div key={row.key} style={{ display: 'flex', gap: '12px', alignItems: 'baseline', marginBottom: '8px' }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', minWidth: '110px', flexShrink: 0 }}>{row.key}</span>
@@ -742,7 +742,7 @@ export default function ArtistIntelligence() {
                 { label: isFr ? 'LOTS SUIVIS' : 'LOTS TRACKED', value: artist.total_lots?.toLocaleString() || '0', color: undefined },
                 { label: isFr ? 'PRIX MOYEN' : 'AVG PRICE', value: stats.avg_price ? `€${stats.avg_price.toLocaleString()}` : '—', color: undefined },
                 { label: isFr ? 'FOURCHETTE DE PRIX' : 'PRICE RANGE', value: stats.max_price ? `€${(stats.min_price || 0).toLocaleString()}–${(stats.max_price || 0).toLocaleString()}` : '—', color: undefined },
-                { label: 'MOMENTUM', value: isFr ? (stats.momentum === 'rising' ? 'EN HAUSSE' : stats.momentum === 'falling' ? 'EN BAISSE' : 'STABLE') : (stats.momentum || 'stable').toUpperCase(), color: stats.momentum === 'rising' ? '#34D399' : undefined },
+                { label: 'MOMENTUM', value: isFr ? (stats.momentum === 'rising' ? 'EN HAUSSE' : (stats.momentum === 'falling' || stats.momentum === 'low') ? 'EN BAISSE' : 'STABLE') : (stats.momentum || 'stable').toUpperCase(), color: stats.momentum === 'rising' ? '#34D399' : undefined },
               ].map(({ label, value, color }) => (
                 <div key={label} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px' }}>
                   <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px' }}>
@@ -753,13 +753,13 @@ export default function ArtistIntelligence() {
                   </div>
                 </div>
               ))}
-              {stats.trend_direction && (
+              {(priceHistory?.statistics?.trend_direction ?? stats?.trend_direction) && (
                 <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', gridColumn: 'span 2' }}>
                   <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px' }}>
                     TREND DIRECTION
                   </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: stats.trend_direction === 'up' ? '#34D399' : stats.trend_direction === 'down' ? '#F87171' : '#94A3B8' }}>
-                    {stats.trend_direction === 'up' ? 'UP ↑' : stats.trend_direction === 'down' ? 'DOWN ↓' : 'STABLE →'}
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: (priceHistory?.statistics?.trend_direction ?? stats?.trend_direction) === 'up' ? '#34D399' : (priceHistory?.statistics?.trend_direction ?? stats?.trend_direction) === 'down' ? '#F87171' : '#94A3B8' }}>
+                    {(priceHistory?.statistics?.trend_direction ?? stats?.trend_direction) === 'up' ? 'UP ↑' : (priceHistory?.statistics?.trend_direction ?? stats?.trend_direction) === 'down' ? 'DOWN ↓' : 'STABLE →'}
                   </div>
                 </div>
               )}
@@ -784,14 +784,17 @@ export default function ArtistIntelligence() {
             {oracle !== null && hasAccess && (
               <div style={{ background: 'var(--navy)', borderRadius: '10px', padding: '18px 22px' }}>
                 <div style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '14px' }}>◆ NAUTILUS ORACLE</div>
-                {Object.entries(oracle as Record<string, unknown>).map(([key, value]) =>
-                  typeof value === 'string' || typeof value === 'number' ? (
-                    <div key={key} style={{ marginBottom: '12px' }}>
-                      <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '3px' }}>{key.replace(/_/g, ' ')}</div>
-                      <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.75 }}>{String(value)}</div>
-                    </div>
-                  ) : null
-                )}
+                {(() => {
+                  const oracleDisplayKeys = ['oracle_signal', 'oracle_score_6m', 'oracle_score_18m', 'oracle_target_upside', 'oracle_narrative', 'confidence', 'oracle_window'];
+                  return Object.entries(oracle as Record<string, unknown>)
+                    .filter(([k, v]) => oracleDisplayKeys.includes(k) && v != null)
+                    .map(([key, value]) => (
+                      <div key={key} style={{ marginBottom: '12px' }}>
+                        <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '3px' }}>{key.replace(/_/g, ' ')}</div>
+                        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.75 }}>{String(value)}</div>
+                      </div>
+                    ));
+                })()}
               </div>
             )}
 

@@ -1054,12 +1054,28 @@ async def get_artist_intelligence(
                 movement = artist_row.movement
             break
 
+    # Try to get birth/death year from ArtistProfile
+    birth_year = None
+    death_year = None
+    try:
+        _p_result = await db.execute(
+            select(ArtistProfile).where(ArtistProfile.name.ilike(f"%{name_clean}%")).limit(1)
+        )
+        _p = _p_result.scalar_one_or_none()
+        if _p:
+            birth_year = _p.birth_year
+            death_year = _p.death_year
+    except Exception:
+        pass
+
     from app.api.lots import lot_to_list_dict
     response = {
         "artist_name": name_clean,
         "total_lots": len(lots),
         "nationality": nationality,
         "movement": movement,
+        "birth_year": birth_year,
+        "death_year": death_year,
         "statistics": {
             "avg_score": round(sum(scores) / len(scores), 1) if scores else 0,
             "max_score": round(max(scores), 1) if scores else 0,
