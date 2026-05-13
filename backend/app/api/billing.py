@@ -870,7 +870,7 @@ async def _handle_subscription_update(db: AsyncSession, stripe_sub: dict):
     )
     sub = result.scalar_one_or_none()
 
-    _UPGRADE_ORDER = ["free", "starter", "investor", "pro", "elite"]
+    _UPGRADE_ORDER = ["free", "starter", "investor", "pro", "institutional"]
 
     if sub:
         old_plan_str = _PLAN_VALUE_TO_ID.get(sub.plan.value, "free")
@@ -1011,6 +1011,7 @@ async def _handle_subscription_canceled(db: AsyncSession, stripe_sub: dict):
     )
     sub = result.scalar_one_or_none()
     if sub:
+        previous_plan_name = sub.plan.value if sub else "Nautilus"
         sub.plan = SubscriptionPlan.FREE
         sub.status = SubscriptionStatus.CANCELED
         sub.updated_at = datetime.utcnow()
@@ -1023,12 +1024,13 @@ async def _handle_subscription_canceled(db: AsyncSession, stripe_sub: dict):
                 datetime.fromtimestamp(period_end_ts).strftime("%d %B %Y")
                 if period_end_ts else ""
             )
-            asyncio.create_task(send_subscription_canceled_email(
+            await send_subscription_canceled_email(
                 to_email=canceled_user.email,
                 name=canceled_user.full_name or canceled_user.email,
-                end_date=end_date_str,
-                lang="fr",
-            ))
+                plan_name=previous_plan_name,
+                access_until=end_date_str,
+                lang=getattr(canceled_user, 'language', 'fr'),
+            )
             # Notify admin of cancellation
             asyncio.create_task(send_admin_notification(
                 subject=f"❌ Nautilus cancellation — {sub.plan.value} plan",
@@ -1079,9 +1081,18 @@ async def _handle_payment_failed(db: AsyncSession, invoice: dict):
     failed_user = user_result.scalar_one_or_none()
     if failed_user:
         failed_user.payment_failed_at = datetime.utcnow()
+        amount_eur = f"€{invoice.get('amount_due', 0) / 100:.2f}"
+        plan_name = sub.plan.value if sub else "Nautilus"
+        next_attempt_ts = invoice.get("next_payment_attempt")
+        retry_date = datetime.fromtimestamp(next_attempt_ts).strftime("%d/%m/%Y") if next_attempt_ts else ""
+        portal_url = "https://get-nautilus.com/app/pricing"
         asyncio.create_task(send_payment_failed_email(
             to_email=failed_user.email,
             name=failed_user.full_name or failed_user.email,
+            amount=amount_eur,
+            plan_name=plan_name,
+            retry_date=retry_date,
+            stripe_billing_portal_url=portal_url,
             lang=getattr(failed_user, 'language', 'fr'),
         ))
 
@@ -1115,9 +1126,9 @@ async def _handle_payment_succeeded(db: AsyncSession, invoice: dict):
             asyncio.create_task(send_payment_success_email(
                 to_email=paid_user.email,
                 name=paid_user.full_name or paid_user.email,
-                plan=sub.plan.value,
+                plan_name=sub.plan.value,
                 amount=amount_str,
-                period_end=period_end_str,
+                next_billing_date=period_end_str,
                 lang=getattr(paid_user, 'language', 'fr'),
             ))
             # Renewal confirmation — only for returning subscribers (account > 35 days old)
