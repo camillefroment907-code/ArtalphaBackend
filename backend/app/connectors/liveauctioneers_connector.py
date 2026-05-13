@@ -239,7 +239,7 @@ async def _fetch_all_seller_lots(
 ) -> List[dict]:
     """Fetch ALL open lots from a seller by their sellerId (all pages, no category filter)."""
     items: List[dict] = []
-    for page in range(1, 25):  # up to 600 lots
+    for page in range(1, 84):  # up to 2000 lots
         try:
             resp = await client.get(
                 SEARCH_URL,
@@ -267,7 +267,7 @@ async def _fetch_all_seller_lots(
     return items
 
 
-async def fetch_lots(limit: int = 600) -> List[LotNormalized]:
+async def fetch_lots(limit: int = 2000) -> List[LotNormalized]:
     """
     Fetch upcoming fine-art lots from LiveAuctioneers.
     Uses the internal search-party API — no authentication required.
@@ -280,7 +280,7 @@ async def fetch_lots(limit: int = 600) -> List[LotNormalized]:
     discovered_sellers: dict[int, str] = {}  # sellerId → sellerName
 
     # Pages per keyword: spread the budget across all queries
-    pages_per_query = max(2, min(5, limit // (len(ART_QUERIES) * 24) + 1))
+    pages_per_query = max(2, min(10, limit // (len(ART_QUERIES) * 24) + 1))
 
     try:
         async with httpx.AsyncClient(

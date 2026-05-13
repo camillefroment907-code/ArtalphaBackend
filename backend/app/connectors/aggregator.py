@@ -218,7 +218,7 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     # --- Phillips — public JSON API ---
     try:
         from app.connectors.phillips_connector import fetch_lots as phillips_fetch
-        phillips_lots = await phillips_fetch(lots_per_source)
+        phillips_lots = await _with_timeout(phillips_fetch(lots_per_source), timeout=60, name="phillips")
         added = 0
         for lot in phillips_lots:
             if lot.external_id not in seen_ids:
@@ -233,7 +233,7 @@ async def fetch_all_lots(lots_per_source: int = 5000) -> List[LotNormalized]:
     # --- Artcurial — public JSON API ---
     try:
         from app.connectors.artcurial_connector import fetch_lots as artcurial_fetch
-        artcurial_lots = await artcurial_fetch(lots_per_source)
+        artcurial_lots = await _with_timeout(artcurial_fetch(lots_per_source), timeout=60, name="artcurial")
         added = 0
         for lot in artcurial_lots:
             if lot.external_id not in seen_ids:
