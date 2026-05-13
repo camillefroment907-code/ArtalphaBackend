@@ -818,6 +818,14 @@ async def stripe_webhook(
         await _handle_payment_succeeded(db, data)
     elif event_type == "customer.subscription.trial_will_end":
         await _handle_trial_ending(db, data)
+    elif event_type == "checkout.session.completed":
+        subscription_id = data.get("subscription")
+        if subscription_id:
+            try:
+                stripe_sub = stripe.Subscription.retrieve(subscription_id)
+                await _handle_subscription_update(db, stripe_sub)
+            except Exception as e:
+                logger.warning("checkout_session_subscription_fetch_failed", error=str(e))
 
     # ── MARK AS PROCESSED ─────────────────────────────────────────
     try:
