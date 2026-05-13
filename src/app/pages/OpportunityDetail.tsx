@@ -52,6 +52,11 @@ function fmt(v?: number | null): string {
     : `€${v.toLocaleString('en-GB')}`;
 }
 
+const fmtExact = (v?: number | null): string => {
+  if (!v) return '—';
+  return '€' + Math.round(v).toLocaleString('fr-FR');
+};
+
 const isFrench = (s: string) =>
   /par rapport|d'acquisition|sous-évalué|artiste|liquidité|achat|vente|décote/i.test(s);
 
@@ -697,7 +702,7 @@ export default function OpportunityDetail() {
                 {isFr ? 'VOUS PAYEZ' : 'YOU PAY'}
               </div>
               <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 600, color: LTT1, lineHeight: 1 }}>
-                {fmt(price)}
+                {fmtExact(price)}
               </div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: GD, marginTop: '6px', fontWeight: 600 }}>
                 {isFr ? 'Bonne entrée' : 'Good entry'}
@@ -714,7 +719,7 @@ export default function OpportunityDetail() {
                   {isFr ? 'NE PAS DÉPASSER' : 'MAX BID'}
                 </div>
                 <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 600, color: GOLD, lineHeight: 1 }}>
-                  {fmt(avoidAbove ?? maxBid ?? (estHigh || null))}
+                  {fmtExact(avoidAbove ?? maxBid ?? estHigh)}
                 </div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#6B7280', marginTop: '6px' }}>
                   {isFr ? 'Seuil de rentabilité max' : 'Max breakeven threshold'}
@@ -736,7 +741,7 @@ export default function OpportunityDetail() {
                   {isFr ? 'RÉFÉRENCE MARCHÉ' : 'MARKET REFERENCE'}
                 </div>
                 <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 600, color: LTT1, lineHeight: 1 }}>
-                  {fmt(lot.fair_value_nautilus as number)}
+                  {fmtExact(lot.fair_value_nautilus as number)}
                 </div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, marginTop: '6px' }}>
                   {isFr ? 'Valeur médiane Nautilus' : 'Nautilus median value'}
@@ -803,9 +808,9 @@ export default function OpportunityDetail() {
                                 <div style={{ position: 'absolute', left: '99%', transform: 'translateX(-50%)', top: '-5px', width: '2px', height: '16px', background: '#9CA3AF', borderRadius: '1px' }} />
                               </div>
                               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontFamily: 'var(--font-mono)' }}>
-                                <div><div style={{ fontWeight: 700, color: '#34D399' }}>{fmt(price)}</div><div style={{ color: LTT3 }}>{isFr ? 'Entrée' : 'Entry'}</div></div>
-                                <div style={{ textAlign: 'center' }}><div style={{ fontWeight: 700, color: '#C6A85A' }}>{fmt(avoidAbove ?? maxBid)}</div><div style={{ color: LTT3 }}>Max bid</div></div>
-                                <div style={{ textAlign: 'right' }}><div style={{ fontWeight: 700, color: LTT2 }}>{fmt(lot.fair_value_nautilus)}</div><div style={{ color: LTT3 }}>{isFr ? 'Médiane' : 'Median'}</div></div>
+                                <div><div style={{ fontWeight: 700, color: '#34D399' }}>{fmtExact(price)}</div><div style={{ color: LTT3 }}>{isFr ? 'Entrée' : 'Entry'}</div></div>
+                                <div style={{ textAlign: 'center' }}><div style={{ fontWeight: 700, color: '#C6A85A' }}>{fmtExact(avoidAbove ?? maxBid)}</div><div style={{ color: LTT3 }}>Max bid</div></div>
+                                <div style={{ textAlign: 'right' }}><div style={{ fontWeight: 700, color: LTT2 }}>{fmtExact(lot.fair_value_nautilus)}</div><div style={{ color: LTT3 }}>{isFr ? 'Médiane' : 'Median'}</div></div>
                               </div>
                             </>
                           );
