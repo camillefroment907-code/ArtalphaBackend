@@ -260,6 +260,7 @@ async def list_lots(
     market_type: Optional[str] = Query(None, pattern="^(auction|primary|gallery)$"),
     min_confidence: Optional[float] = Query(None, ge=0, le=100),
     low_supply: bool = Query(False),
+    quality_tier: Optional[str] = Query(None),
     sort_by: str = Query("deal_score", pattern="^(deal_score|auction_date|created_at|current_price)$"),
     sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
     db: AsyncSession = Depends(get_db),
@@ -388,6 +389,8 @@ async def list_lots(
                 Lot.confidence_score.is_(None),  # don't filter out unscored lots
             )
         )
+    if quality_tier is not None:
+        filters.append(Lot.quality_tier == quality_tier)
     if low_supply:
         # Only keep lots whose artist has ≤ 3 active lots at auction
         supply_subq = (
