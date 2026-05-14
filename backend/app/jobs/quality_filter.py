@@ -174,7 +174,7 @@ def _has_minimum_data(lot: LotNormalized) -> bool:
     return not (price == 0 and est_low == 0 and est_high == 0)
 
 
-def _meets_minimum_price(lot: LotNormalized, minimum: float = 200.0) -> bool:
+def _meets_minimum_price(lot: LotNormalized, minimum: float = 50.0) -> bool:
     """Reject lots where ALL prices are below the minimum threshold."""
     price = lot.current_price or 0
     est_low = lot.estimate_low or 0
@@ -339,7 +339,7 @@ def filter_and_deduplicate(lots: List[LotNormalized]) -> tuple[List[LotNormalize
         if not _has_minimum_data(lot):
             stats["no_price"] += 1
             continue
-        if not _meets_minimum_price(lot, minimum=200.0):
+        if not _meets_minimum_price(lot, minimum=50.0):
             stats["below_min_price"] += 1
             continue
         if _is_price_on_request(lot):
@@ -347,7 +347,9 @@ def filter_and_deduplicate(lots: List[LotNormalized]) -> tuple[List[LotNormalize
             continue
         if not _passes_category_whitelist(lot):
             stats["category_rejected"] += 1
-            continue
+            if lot.raw_data is None:
+                lot.raw_data = {}
+            lot.raw_data["low_confidence_art"] = True
         qualified.append(lot)
 
     # Pass 1: intra-source dedup by title+artist
