@@ -396,7 +396,7 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                 stmt = pg_insert(Lot).values(
                     id=_lot_uuid,
                     external_id=lot_obj.external_id,
-                    source=lot_obj.source,
+                    source=lot_obj.source.value if hasattr(lot_obj.source, 'value') else lot_obj.source,
                     url=lot_obj.url,
                     image_url=lot_obj.image_url,
                     title=lot_obj.title,
