@@ -304,6 +304,7 @@ class Lot(Base):
 
     # Deal intelligence — no index=True, indexes in __table_args__
     deal_score = Column(Float, nullable=True)
+    quality_tier = Column(String(1), nullable=True, index=True)
     pct_below_low_estimate = Column(Float, nullable=True)
     pct_below_market_avg = Column(Float, nullable=True)
     score_breakdown = Column(JSON, nullable=True)

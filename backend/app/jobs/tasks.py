@@ -307,6 +307,16 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                         lang="fr",
                     )
 
+                # Compute quality_tier
+                _TRUST_LIST = {'artsy', 'liveauctioneers', 'invaluable', 'drouot', 'artcurial', 'phillips', 'bonhams', 'christies', 'sothebys', 'artmarketapi', 'catawiki', 'interencheres'}
+                _source_str = str(lot_data.source.value if hasattr(lot_data.source, "value") else lot_data.source)
+                if _source_str in _TRUST_LIST and (lot_data.current_price or 0) >= 500 and lot_data.artist_name_raw:
+                    _quality_tier = "A"
+                elif (lot_data.current_price or lot_data.estimate_low or 0) >= 200:
+                    _quality_tier = "B"
+                else:
+                    _quality_tier = "C"
+
                 # 6. Ensure URL is valid (fixes relative URLs, filters non-art,
                 #    falls back to verified search URL when direct link is missing)
                 clean_url = fix_url(
@@ -368,6 +378,7 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                     artist_website=lot_data.artist_website,
                     raw_data=lot_data.raw_data,
                     deal_score=score_result.deal_score,
+                    quality_tier=_quality_tier,
                     is_deal=score_result.is_deal,
                     pct_below_low_estimate=score_result.pct_below_low_estimate,
                     pct_below_market_avg=score_result.pct_below_market_avg,
@@ -410,6 +421,7 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                     artist_website=lot_obj.artist_website,
                     raw_data=lot_obj.raw_data,
                     deal_score=lot_obj.deal_score,
+                    quality_tier=lot_obj.quality_tier,
                     is_deal=lot_obj.is_deal,
                     pct_below_low_estimate=lot_obj.pct_below_low_estimate,
                     pct_below_market_avg=lot_obj.pct_below_market_avg,
@@ -628,6 +640,14 @@ async def _rescore_live_async():
                 lot.pct_below_market_avg = score_result.pct_below_market_avg
                 lot.score_breakdown = score_result.breakdown.model_dump()
                 lot.scored_at = datetime.utcnow()
+                _TRUST_LIST_R = {'artsy', 'liveauctioneers', 'invaluable', 'drouot', 'artcurial', 'phillips', 'bonhams', 'christies', 'sothebys', 'artmarketapi', 'catawiki', 'interencheres'}
+                _source_str_r = str(lot.source.value if hasattr(lot.source, "value") else lot.source)
+                if _source_str_r in _TRUST_LIST_R and (lot.current_price or 0) >= 500 and lot.artist_name_raw:
+                    lot.quality_tier = "A"
+                elif (lot.current_price or lot.estimate_low or 0) >= 200:
+                    lot.quality_tier = "B"
+                else:
+                    lot.quality_tier = "C"
 
             except Exception as e:
                 logger.warning("Re-score failed for lot", lot_id=str(lot.id), error=str(e))
