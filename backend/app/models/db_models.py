@@ -894,6 +894,8 @@ class BlogPost(Base):
     is_published = Column(Boolean, default=False)
     published_at = Column(DateTime, nullable=True)
     read_time_minutes = Column(Integer, default=5)
+    lang        = Column(String(2), nullable=False, server_default="fr", default="fr")
+    translations = Column(JSON, nullable=True)            # {"fr": "slug-fr", "en": "slug-en"}
     created_at  = Column(DateTime, default=datetime.utcnow)
     updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -71,6 +71,8 @@ def _serialize(post: BlogPost) -> dict:
         "is_published":      post.is_published,
         "published_at":      post.published_at.isoformat() if post.published_at else None,
         "read_time_minutes": post.read_time_minutes,
+        "lang":              getattr(post, "lang", "fr") or "fr",
+        "translations":      getattr(post, "translations", None) or {},
         "created_at":        post.created_at.isoformat(),
         "updated_at":        post.updated_at.isoformat() if post.updated_at else None,
     }
