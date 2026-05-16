@@ -2,7 +2,7 @@
  * /blog/:slug — Individual blog post.
  */
 import { useState, useEffect } from 'react';
-import { Link, useParams, useNavigate } from 'react-router';
+import { Link, useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useSEO } from '../../lib/useSEO';
 import { Logo } from '../components/Logo';
@@ -19,16 +19,6 @@ export default function BlogPostPage() {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
   const lang: 'fr' | 'en' = i18n.language?.startsWith('fr') ? 'fr' : 'en';
-
-  function switchLang(l: 'fr' | 'en') {
-    i18n.changeLanguage(l);
-    localStorage.setItem('i18nextLng', l);
-    // If the article has a translated version, navigate to it
-    const targetSlug = post?.translations?.[l];
-    if (targetSlug && targetSlug !== slug) {
-      navigate(`/blog/${targetSlug}`);
-    }
-  }
   const [post, setPost]       = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
@@ -88,7 +78,7 @@ export default function BlogPostPage() {
             {(['fr', 'en'] as const).map(l => (
               <button
                 key={l}
-                onClick={() => switchLang(l)}
+                onClick={() => { i18n.changeLanguage(l); localStorage.setItem('i18nextLng', l); }}
                 style={{
                   padding: '4px 10px',
                   borderRadius: '4px',
