@@ -1104,7 +1104,7 @@ async def _ingest_artsy_liveauctioneers_async():
                 stmt = pg_insert(LotModel).values(
                     id=_uuid.uuid4(),
                     external_id=lot.external_id,
-                    source=lot.source,
+                    source=cast(literal(src_val), PGEnum(name='auctionhouse', create_constraint=False)),
                     title=lot.title,
                     estimate_low=lot.estimate_low,
                     estimate_high=lot.estimate_high,
@@ -1112,7 +1112,7 @@ async def _ingest_artsy_liveauctioneers_async():
                     currency=lot.currency or "USD",
                     auction_date=lot.auction_date,
                     auction_house_name=lot.auction_house_name,
-                    status=LotStatus.UPCOMING,
+                    status=cast(literal(LotStatus.UPCOMING.value), PGEnum(name='lotstatus', create_constraint=False)),
                     market_type=lot.market_type or "AUCTION",
                     is_buy_now=False,
                     deal_score=50.0,
