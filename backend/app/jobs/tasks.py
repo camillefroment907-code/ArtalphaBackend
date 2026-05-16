@@ -741,7 +741,7 @@ async def _process_alerts_async():
                     select(func.count()).select_from(Alert).where(
                         and_(
                             Alert.user_id == user.id,
-                            Alert.created_at > datetime.utcnow() - timedelta(hours=24),
+                            Alert.sent_at > datetime.utcnow() - timedelta(hours=24),
                         )
                     )
                 )
