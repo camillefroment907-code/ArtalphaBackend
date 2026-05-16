@@ -17,7 +17,6 @@ function formatDate(iso: string | null) {
 export default function BlogPostPage() {
   const { slug } = useParams<{ slug: string }>();
   const { i18n } = useTranslation();
-  const navigate = useNavigate();
   const lang: 'fr' | 'en' = i18n.language?.startsWith('fr') ? 'fr' : 'en';
   const [post, setPost]       = useState<any>(null);
   const [loading, setLoading] = useState(true);
