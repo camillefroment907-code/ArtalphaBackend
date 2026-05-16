@@ -40,14 +40,6 @@ class _FaultTolerantEnum(TypeDecorator):
         self._fallback_member = fallback
         super().__init__(*args, **kwargs)
 
-    def load_dialect_impl(self, dialect):
-        """Tell asyncpg the real PostgreSQL enum type so it doesn't bind as VARCHAR."""
-        if dialect.name == 'postgresql':
-            from sqlalchemy.dialects.postgresql import ENUM as PGEnum
-            pg_type = self._enum_class.__name__.lower()
-            return dialect.type_descriptor(PGEnum(name=pg_type, create_constraint=False))
-        return super().load_dialect_impl(dialect)
-
     def process_bind_param(self, value, dialect):
         if value is None:
             return None

@@ -12,8 +12,8 @@ import structlog
 from app.jobs.celery_app import celery_app
 from app.config import get_settings
 from app.utils.url_validator import fix_url
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy import String
+from sqlalchemy.dialects.postgresql import insert as pg_insert, ENUM as PGEnum
+from sqlalchemy import String, cast, literal
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -396,7 +396,10 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                 stmt = pg_insert(Lot).values(
                     id=_lot_uuid,
                     external_id=lot_obj.external_id,
-                    source=lot_obj.source.value if hasattr(lot_obj.source, 'value') else str(lot_obj.source),
+                    source=cast(
+                        literal(lot_obj.source.value if hasattr(lot_obj.source, 'value') else str(lot_obj.source)),
+                        PGEnum(name='auctionhouse', create_constraint=False)
+                    ),
                     url=lot_obj.url,
                     image_url=lot_obj.image_url,
                     title=lot_obj.title,
@@ -414,7 +417,10 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                     auction_date=lot_obj.auction_date,
                     auction_house_name=lot_obj.auction_house_name,
                     auction_sale_title=lot_obj.auction_sale_title,
-                    status=lot_obj.status,
+                    status=cast(
+                        literal(lot_obj.status.value if hasattr(lot_obj.status, 'value') else str(lot_obj.status)),
+                        PGEnum(name='lotstatus', create_constraint=False)
+                    ),
                     market_type=lot_obj.market_type,
                     is_buy_now=lot_obj.is_buy_now,
                     gallery_name=lot_obj.gallery_name,
