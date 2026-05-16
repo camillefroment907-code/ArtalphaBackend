@@ -12,8 +12,8 @@ import structlog
 from app.jobs.celery_app import celery_app
 from app.config import get_settings
 from app.utils.url_validator import fix_url
-from sqlalchemy.dialects.postgresql import insert as pg_insert, ENUM as PGEnum
-from sqlalchemy import String, cast
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy import String
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -396,10 +396,7 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                 stmt = pg_insert(Lot).values(
                     id=_lot_uuid,
                     external_id=lot_obj.external_id,
-                    source=cast(
-                        lot_obj.source.value if hasattr(lot_obj.source, 'value') else str(lot_obj.source),
-                        PGEnum(name='auctionhouse', create_constraint=False)
-                    ),
+                    source=lot_obj.source.value if hasattr(lot_obj.source, 'value') else str(lot_obj.source),
                     url=lot_obj.url,
                     image_url=lot_obj.image_url,
                     title=lot_obj.title,
