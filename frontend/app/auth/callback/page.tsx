@@ -19,8 +19,16 @@ function CallbackHandler() {
     }
 
     if (token) {
+      // Store token first so the API call can authenticate
       setAuth({ id: "", email: "", full_name: "" } as any, token);
-      router.replace("/dashboard");
+      // Fetch real user data from backend
+      fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(u => {
+          if (u?.id) setAuth({ id: String(u.id), email: u.email, full_name: u.full_name || "" }, token);
+        })
+        .catch(() => {})
+        .finally(() => router.replace("/dashboard"));
     } else {
       router.replace("/auth/login?error=no_token");
     }
