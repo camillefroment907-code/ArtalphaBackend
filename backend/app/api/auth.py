@@ -260,16 +260,31 @@ async def google_auth(request: Request, body: GoogleAuthRequest, db: AsyncSessio
     try:
         from google.oauth2 import id_token
         from google.auth.transport import requests as google_requests
-        id_info = id_token.verify_oauth2_token(
-            body.credential,
-            google_requests.Request(),
+        # Accept both current and legacy client IDs during frontend migration
+        _client_ids = [
             settings.google_client_id,
-            clock_skew_in_seconds=10,
-        )
+            "641757535865-3mgk4b4a7lc1ajcbphu40jip5d1rbe84.apps.googleusercontent.com",
+        ]
+        id_info = None
+        last_exc: Exception | None = None
+        for _cid in _client_ids:
+            if not _cid:
+                continue
+            try:
+                id_info = id_token.verify_oauth2_token(
+                    body.credential,
+                    google_requests.Request(),
+                    _cid,
+                    clock_skew_in_seconds=10,
+                )
+                break
+            except Exception as e:
+                last_exc = e
+        if id_info is None:
+            raise last_exc or ValueError("No valid client_id")
     except Exception as exc:
-        print(f"GOOGLE_DEBUG: {type(exc).__name__}: {str(exc)}", flush=True)
         logger.error("Google token verification failed: %s", exc, exc_info=True)
-        raise HTTPException(400, f"Google error: {type(exc).__name__}: {str(exc)}")
+        raise HTTPException(400, "Invalid or expired Google token")
 
     email = id_info.get("email")
     name = id_info.get("name")
