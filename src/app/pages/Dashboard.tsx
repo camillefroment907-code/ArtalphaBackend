@@ -482,33 +482,6 @@ export default function Dashboard() {
                 })}
           </div>
 
-          {/* AI Brief (below table, full width) */}
-          {brief && (
-            <div style={{ background: '#1A2A44', borderRadius: '10px', padding: '18px 22px', display: 'flex', gap: '16px', alignItems: 'flex-start', marginTop: '20px' }}>
-              <div style={{ width: '28px', height: '28px', flexShrink: 0, marginTop: '2px' }}>
-                <svg viewBox="0 0 40 40" fill="none">
-                  <path d="M 20 4 A 16 16 0 0 1 36 20" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
-                  <path d="M 36 20 A 16 16 0 0 1 20 36" stroke="white" strokeWidth="2.2" strokeLinecap="round" opacity="0.5"/>
-                  <path d="M 20 36 A 8 8 0 0 1 12 28" stroke="#C6A85A" strokeWidth="2.2" strokeLinecap="round"/>
-                  <circle cx="20" cy="20" r="1.8" fill="#C6A85A"/>
-                </svg>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'white', letterSpacing: '0.04em' }}>{t('dashboard.aiMarketBrief')}</span>
-                  <span style={{ fontSize: '8px', fontWeight: 700, color: '#34D399', fontFamily: 'var(--font-mono)', background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.3)', padding: '1px 6px', borderRadius: '2px', letterSpacing: '0.12em' }}>LIVE</span>
-                </div>
-                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.7 }}>
-                  {brief.split(/(\[[^\]]+\]\([^)]+\))/g).map((part, i) => {
-                    const match = part.match(/\[([^\]]+)\]\(([^)]+)\)/);
-                    if (match) return <a key={i} href={match[2]} target="_blank" rel="noopener noreferrer" style={{color:'#C6A85A', textDecoration:'underline'}}>{match[1]}</a>;
-                    return <span key={i}>{part}</span>;
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-
         </div>
 
         {/* ══════════════════════════════════════════════
