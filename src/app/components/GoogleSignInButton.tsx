@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { setUser } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '89070287148-3nbgmu2iemongv63nnjqartfr3gdcs6p.apps.googleusercontent.com';
 
 interface Props {
   onError?: (error: string) => void;
