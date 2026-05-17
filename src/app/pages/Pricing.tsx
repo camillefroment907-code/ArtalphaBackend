@@ -188,8 +188,22 @@ export default function Pricing() {
   const p = PT[lang];
 
   useSEO({
-    title: 'Pricing · Nautilus',
-    description: 'Simple, transparent pricing for serious art investors. From first purchase to family office.',
+    title: lang === 'fr' ? 'Tarifs · Nautilus' : 'Pricing · Nautilus',
+    description: lang === 'fr'
+      ? "Accès gratuit, puis à partir de 19 €/mois. Essai 7 jours inclus. Intelligence de marché pour collectionneurs sérieux."
+      : 'Free access, then from €19/month. 7-day trial included. Art market intelligence for serious collectors.',
+    schema: {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: 'Nautilus',
+      description: 'Art market intelligence platform — AI scoring, real-time alerts, 30,000+ lots.',
+      url: 'https://get-nautilus.com/pricing',
+      offers: [
+        { '@type': 'Offer', name: 'Explorer', price: '0', priceCurrency: 'EUR', availability: 'https://schema.org/InStock' },
+        { '@type': 'Offer', name: 'Investor', price: '19', priceCurrency: 'EUR', availability: 'https://schema.org/InStock' },
+        { '@type': 'Offer', name: 'Pro', price: '99', priceCurrency: 'EUR', availability: 'https://schema.org/InStock' },
+      ],
+    },
   });
 
   useEffect(() => {

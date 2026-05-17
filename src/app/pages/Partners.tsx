@@ -1,4 +1,10 @@
+import { useSEO } from '../../lib/useSEO';
+
 export default function Partners() {
+  useSEO({
+    title: 'Partners · Nautilus',
+    description: 'Partner with Nautilus to deliver art market intelligence to your clients. Contact us at partners@get-nautilus.com.',
+  });
   return (
     <div style={{ minHeight: '100vh', background: '#FAFAF8', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px' }}>
       <div style={{ maxWidth: 640, textAlign: 'center' }}>

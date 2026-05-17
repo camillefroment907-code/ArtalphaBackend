@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { Logo } from '../components/Logo';
+import { useSEO } from '../../lib/useSEO';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 export default function FeedbackPage() {
+  useSEO({ title: 'Feedback · Nautilus', noindex: true });
   const [params] = useSearchParams();
   const type = params.get('type') || 'general';
   const [message, setMessage] = useState('');

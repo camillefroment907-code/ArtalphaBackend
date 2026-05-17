@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useSEO } from '../../lib/useSEO';
@@ -327,11 +327,24 @@ export default function FAQ() {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const sections = FAQ_DATA[lang];
 
+  const faqSchema = useMemo(() => ({
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: sections.flatMap(section =>
+      section.questions.map((q: { q: string; a: string }) => ({
+        '@type': 'Question',
+        name: q.q,
+        acceptedAnswer: { '@type': 'Answer', text: q.a },
+      }))
+    ),
+  }), [sections]);
+
   useSEO({
     title: lang === 'fr' ? 'FAQ · Nautilus' : 'FAQ · Nautilus',
     description: lang === 'fr'
       ? 'Toutes les réponses à vos questions sur Nautilus — score de conviction, plans, couverture, alertes et portefeuille.'
       : 'Answers to your questions about Nautilus — conviction score, plans, data coverage, alerts and portfolio tracking.',
+    schema: faqSchema,
   });
 
   const toggle = (key: string) => setOpen(prev => ({ ...prev, [key]: !prev[key] }));
