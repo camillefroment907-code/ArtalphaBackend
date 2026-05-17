@@ -195,24 +195,19 @@ export default function Dashboard() {
         <div style={{ display: 'flex', gap: '0', border: '1px solid #E8E4DC', borderRadius: '10px', overflow: 'hidden', background: 'white' }}>
           {[
             {
-              label: t('dashboard.statsExceptional'),
-              value: marketStats.exceptional > 0 ? marketStats.exceptional.toString() : '—',
-              accent: '#C0392B',
-            },
-            {
               label: t('dashboard.statsAvgConviction'),
               value: marketStats.avg_score > 0 ? `${marketStats.avg_score}/100` : '—',
               accent: '#1A2A44',
             },
             {
               label: t('dashboard.statsMarket'),
-              value: sentiment?.overall || 'NEUTRAL',
+              value: sentiment?.overall === 'BULLISH' ? 'Fenêtre d\'achat' : sentiment?.overall === 'BEARISH' ? 'Momentum faible' : 'Marché stable',
               accent: sentiment?.overall === 'BULLISH' ? '#2563EB' : '#6B7280',
             },
           ].map(({ label, value, accent }, i) => (
             <div key={label} style={{
               padding: '14px 28px',
-              borderRight: i < 2 ? '1px solid #E8E4DC' : 'none',
+              borderRight: i < 1 ? '1px solid #E8E4DC' : 'none',
               textAlign: 'center',
               minWidth: '110px',
             }}>
@@ -333,7 +328,7 @@ export default function Dashboard() {
 
           {/* ── KEY INSIGHTS ROW ── */}
           <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
             background: 'white', border: '1px solid #E8E4DC', borderRadius: '10px',
             overflow: 'hidden', marginBottom: '24px',
           }}>
@@ -353,13 +348,6 @@ export default function Dashboard() {
                 sub: t('dashboard.kpiMaxPotential'),
               },
               {
-                icon: '◆',
-                iconColor: '#C0392B',
-                value: marketStats.exceptional > 0 ? marketStats.exceptional.toString() : '0',
-                label: t('dashboard.kpiExceptional'),
-                sub: lang === 'fr' ? "Nouveaux deals aujourd'hui" : 'New deals today',
-              },
-              {
                 icon: '⏱',
                 iconColor: '#D97706',
                 value: closingSoonCount > 0 ? closingSoonCount.toString() : '0',
@@ -369,7 +357,7 @@ export default function Dashboard() {
             ].map(({ icon, iconColor, value, label, sub }, i) => (
               <div key={label} style={{
                 padding: '20px 22px',
-                borderRight: i < 3 ? '1px solid #E8E4DC' : 'none',
+                borderRight: i < 2 ? '1px solid #E8E4DC' : 'none',
                 display: 'flex', flexDirection: 'column', gap: '4px',
               }}>
                 <div style={{ fontSize: '18px', color: iconColor, lineHeight: 1, marginBottom: '4px' }}>{icon}</div>
