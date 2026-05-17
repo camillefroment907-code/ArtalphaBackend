@@ -37,7 +37,7 @@ def _run(coro):
 def send_weekly_briefs():
     """Monday 8am UTC — send Weekly Intelligence Brief to all paid users."""
     from app.services.email_newsletters import send_weekly_brief_email
-    from app.models.db_models import User, Subscription
+    from app.models.db_models import User, Subscription, AgentRecommendation, AgentAlert, Lot
     from sqlalchemy import select
 
     db = _get_sync_db()
@@ -50,25 +50,56 @@ def send_weekly_briefs():
             .where(User.is_active == True)
         )
         users = db.execute(stmt).scalars().all()
+
+        week_date = datetime.now(timezone.utc).strftime("%B %d, %Y")
+        sent = 0
+        for user in users:
+            try:
+                # Fetch top lots from active agent recommendations for this user
+                recs_stmt = (
+                    select(AgentRecommendation, Lot)
+                    .join(Lot, AgentRecommendation.lot_id == Lot.id)
+                    .join(AgentAlert, AgentRecommendation.alert_id == AgentAlert.id)
+                    .where(AgentRecommendation.user_id == user.id)
+                    .where(AgentAlert.is_active == True)
+                    .where(AgentRecommendation.verdict.in_(["STRONG_BUY", "BUY"]))
+                    .where(Lot.deal_score >= 70)
+                    .order_by(Lot.deal_score.desc())
+                    .limit(5)
+                )
+                rows = db.execute(recs_stmt).all()
+
+                top_lots = []
+                for rec, lot in rows:
+                    estimate = ""
+                    if lot.estimate_low and lot.estimate_high:
+                        estimate = f"€{int(lot.estimate_low):,} – €{int(lot.estimate_high):,}"
+                    elif lot.estimate_low:
+                        estimate = f"€{int(lot.estimate_low):,}+"
+                    date_str = lot.auction_date.strftime("%b %d") if lot.auction_date else ""
+                    top_lots.append({
+                        "artist":   lot.artist_name_raw or "",
+                        "title":    lot.title or "",
+                        "house":    lot.auction_house_name or "",
+                        "date":     date_str,
+                        "estimate": estimate,
+                        "score":    int(lot.deal_score or 0),
+                    })
+
+                _run(send_weekly_brief_email(
+                    to_email=user.email,
+                    week_date=week_date,
+                    top_lots=top_lots,
+                    artists_to_watch=[],
+                    market_insight="",
+                    closing_lots=[],
+                ))
+                sent += 1
+            except Exception as e:
+                logger.error("weekly_brief_failed user=%s error=%s", user.email, e)
+        logger.info("weekly_briefs_sent count=%d", sent)
     finally:
         db.close()
-
-    week_date = datetime.now(timezone.utc).strftime("%B %d, %Y")
-    sent = 0
-    for user in users:
-        try:
-            _run(send_weekly_brief_email(
-                to_email=user.email,
-                week_date=week_date,
-                top_lots=[],         # TODO: fetch from DB — top scored lots for user
-                artists_to_watch=[],
-                market_insight="",
-                closing_lots=[],
-            ))
-            sent += 1
-        except Exception as e:
-            logger.error("weekly_brief_failed user=%s error=%s", user.email, e)
-    logger.info("weekly_briefs_sent count=%d", sent)
 
 
 @celery_app.task(name="app.jobs.email_scheduler.send_weekly_momentum_signals")
