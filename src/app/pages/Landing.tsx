@@ -382,7 +382,7 @@ export default function Landing() {
           {/* Floating badge — top right */}
           <div style={{ position: 'absolute', top: '-16px', right: '-20px', background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 14px', boxShadow: '0 8px 32px rgba(10,22,40,0.12)', textAlign: 'center', minWidth: '110px' }}>
             <div style={{ fontSize: '8px', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '4px' }}>THIS WEEK</div>
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700, color: 'var(--navy)', lineHeight: 1 }}>{(lotCount ?? dailyLots()).toLocaleString()}</div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700, color: 'var(--navy)', lineHeight: 1 }}>{lotCount != null ? lotCount.toLocaleString() : '—'}</div>
             <div style={{ fontSize: '9px', color: 'var(--text-3)', marginTop: '2px' }}>lots analyzed</div>
           </div>
 
@@ -401,7 +401,7 @@ export default function Landing() {
           <div className="landing-urgency-strip" style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 40px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '32px', flexWrap: 'nowrap' }}>
             {[
               { icon: '⚡', text: t('landing.urgency3Lots'), highlight: true },
-              { icon: '◎', text: t('landing.urgencyTracked', { count: (lotCount ?? dailyLots()).toLocaleString() }), highlight: false },
+              { icon: '◎', text: t('landing.urgencyTracked', { count: lotCount != null ? lotCount.toLocaleString() : '—' }), highlight: false },
               { icon: '◈', text: t('landing.urgencyHouses'), highlight: false },
             ].map(({ icon, text, highlight }) => (
               <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
