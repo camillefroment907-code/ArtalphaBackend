@@ -958,9 +958,8 @@ export default function Landing() {
 
             {/* Col 1 — Brand */}
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <img src="/logo-nautilus.png" alt="Nautilus" style={{ height: '32px', width: 'auto' }} />
-                <span style={{ fontFamily: "-apple-system, 'Inter', 'Helvetica Neue', Arial, sans-serif", fontSize: '16px', color: 'white', letterSpacing: '-0.02em', fontWeight: 700 }}>Nautilus</span>
+              <div style={{ marginBottom: '12px' }}>
+                <Logo variant="horizontal" color="white" size={28} />
               </div>
               <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '14px' }}>
                 {t('landing.footerMktLabel')}
