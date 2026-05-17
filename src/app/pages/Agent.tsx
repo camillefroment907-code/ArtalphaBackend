@@ -350,6 +350,7 @@ function AgentPage() {
   const maxStrategies = limits?.max === 9999 ? '∞' : String(limits?.max ?? '—');
   const signalFeed = recs
     .filter(r => r.lot && (r.lot.deal_score ?? 0) >= 80)
+    .filter((r, _, arr) => !arr.some(x => x !== r && x.lot?.id === r.lot?.id && (x.lot?.deal_score ?? 0) > (r.lot?.deal_score ?? 0)))
     .sort((a, b) => (b.lot?.deal_score ?? 0) - (a.lot?.deal_score ?? 0));
 
   // ── Shared styles ─────────────────────────────────────────────
