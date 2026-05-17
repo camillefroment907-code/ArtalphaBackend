@@ -499,7 +499,11 @@ export default function Dashboard() {
                   <span style={{ fontSize: '8px', fontWeight: 700, color: '#34D399', fontFamily: 'var(--font-mono)', background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.3)', padding: '1px 6px', borderRadius: '2px', letterSpacing: '0.12em' }}>LIVE</span>
                 </div>
                 <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.7 }}>
-                  {brief}
+                  {brief.split(/(\[[^\]]+\]\([^)]+\))/g).map((part, i) => {
+                    const match = part.match(/\[([^\]]+)\]\(([^)]+)\)/);
+                    if (match) return <a key={i} href={match[2]} target="_blank" rel="noopener noreferrer" style={{color:'#C6A85A', textDecoration:'underline'}}>{match[1]}</a>;
+                    return <span key={i}>{part}</span>;
+                  })}
                 </div>
               </div>
             </div>
