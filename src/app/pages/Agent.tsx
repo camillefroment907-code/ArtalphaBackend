@@ -348,10 +348,16 @@ function AgentPage() {
   const avgConviction = recs.length > 0
     ? Math.round(recs.reduce((s, r) => s + r.conviction_score, 0) / recs.length) : 0;
   const maxStrategies = limits?.max === 9999 ? '∞' : String(limits?.max ?? '—');
+  const seen = new Set<string>();
   const signalFeed = recs
     .filter(r => r.lot && (r.lot.deal_score ?? 0) >= 80)
-    .filter((r, _, arr) => !arr.some(x => x !== r && x.lot?.title === r.lot?.title && x.lot?.auction_house_name === r.lot?.auction_house_name && (x.lot?.deal_score ?? 0) > (r.lot?.deal_score ?? 0)))
-    .sort((a, b) => (b.lot?.deal_score ?? 0) - (a.lot?.deal_score ?? 0));
+    .sort((a, b) => (b.lot?.deal_score ?? 0) - (a.lot?.deal_score ?? 0))
+    .filter(r => {
+      const key = `${r.lot?.title?.trim().toLowerCase()}|${r.lot?.auction_house_name?.trim().toLowerCase()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
   // ── Shared styles ─────────────────────────────────────────────
 
