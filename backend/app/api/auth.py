@@ -1,5 +1,8 @@
 import asyncio
+import logging
 import secrets
+
+logger = logging.getLogger(__name__)
 from datetime import timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -261,9 +264,12 @@ async def google_auth(request: Request, body: GoogleAuthRequest, db: AsyncSessio
             body.credential,
             google_requests.Request(),
             settings.google_client_id,
+            clock_skew_in_seconds=10,
         )
-    except Exception:
-        raise HTTPException(400, "Invalid or expired Google token")
+    except Exception as exc:
+        print(f"GOOGLE_DEBUG: {type(exc).__name__}: {str(exc)}", flush=True)
+        logger.error("Google token verification failed: %s", exc, exc_info=True)
+        raise HTTPException(400, f"Google error: {type(exc).__name__}: {str(exc)}")
 
     email = id_info.get("email")
     name = id_info.get("name")

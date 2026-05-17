@@ -98,7 +98,7 @@ PLANS = [
             "api": False,
         },
         "cta": "Start Starter",
-        "price_keys": {"monthly": "collector_monthly", "annual": "collector_annual"},
+        "price_keys": None,
     },
     {
         "id": "investor",
@@ -300,18 +300,10 @@ def _get_stripe():
 
 
 PRICE_MAP = {
-    "collector_monthly": settings.stripe_price_collector_monthly,
-    "collector_annual":  settings.stripe_price_collector_annual,
     "investor_monthly":  settings.stripe_price_investor_monthly,
     "investor_annual":   settings.stripe_price_investor_annual,
     "pro_monthly":       settings.stripe_price_pro_monthly,
     "pro_annual":        settings.stripe_price_pro_annual,
-    # Legacy aliases
-    "starter_monthly":   settings.stripe_price_collector_monthly,
-    "starter_annual":    settings.stripe_price_collector_annual,
-    "starter_yearly":    settings.stripe_price_collector_annual,
-    "investor_yearly":   settings.stripe_price_investor_annual,
-    "pro_yearly":        settings.stripe_price_pro_annual,
 }
 
 
@@ -327,8 +319,6 @@ def _price_id(price_key: str) -> str:
 
 def _plan_from_price_id(price_id: str) -> SubscriptionPlan:
     mapping: dict[str, SubscriptionPlan] = {}
-    for fld in (settings.stripe_price_collector_monthly, settings.stripe_price_collector_annual):
-        if fld: mapping[fld] = SubscriptionPlan.STARTER
     for fld in (settings.stripe_price_investor_monthly, settings.stripe_price_investor_annual):
         if fld: mapping[fld] = SubscriptionPlan.INVESTOR
     for fld in (settings.stripe_price_pro_monthly, settings.stripe_price_pro_annual):

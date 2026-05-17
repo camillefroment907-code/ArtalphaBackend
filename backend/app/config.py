@@ -59,9 +59,6 @@ class Settings(BaseSettings):
     stripe_publishable_key: Optional[str] = None
     stripe_webhook_secret: Optional[str] = None
     # Price IDs — field names must match Railway var names lowercased
-    # STRIPE_PRICE_COLLECTOR_MONTHLY → stripe_price_collector_monthly
-    stripe_price_collector_monthly: str = ""
-    stripe_price_collector_annual: str = ""
     stripe_price_investor_monthly: str = ""
     stripe_price_investor_annual: str = ""
     stripe_price_pro_monthly: str = ""
