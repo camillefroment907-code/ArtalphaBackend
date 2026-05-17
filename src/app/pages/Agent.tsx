@@ -235,7 +235,6 @@ function AgentPage() {
   const [saving, setSaving]     = useState(false);
   const [formError, setFormError] = useState('');
   const [matchCount, setMatchCount] = useState<number | null>(null);
-  const [fallbackLots, setFallbackLots] = useState<any[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   // ── Form fields ───────────────────────────────────────────────
@@ -265,13 +264,6 @@ function AgentPage() {
   }
 
   useEffect(() => { loadAll(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    fetch(`${BACKEND}/api/lots?status=upcoming&min_score=80&sort_by=deal_score&sort_dir=desc&page_size=5`)
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.items) setFallbackLots(d.items); })
-      .catch(() => {});
-  }, []);
 
   // Debounced match count when form is open
   useEffect(() => {
@@ -356,6 +348,9 @@ function AgentPage() {
   const avgConviction = recs.length > 0
     ? Math.round(recs.reduce((s, r) => s + r.conviction_score, 0) / recs.length) : 0;
   const maxStrategies = limits?.max === 9999 ? '∞' : String(limits?.max ?? '—');
+  const signalFeed = recs
+    .filter(r => r.lot && (r.lot.deal_score ?? 0) >= 80)
+    .sort((a, b) => (b.lot?.deal_score ?? 0) - (a.lot?.deal_score ?? 0));
 
   // ── Shared styles ─────────────────────────────────────────────
 
@@ -650,7 +645,7 @@ function AgentPage() {
             {isFr ? 'Signal feed · Score 80+' : 'Signal feed · Score 80+'}
           </div>
 
-          {fallbackLots.length === 0 ? (
+          {signalFeed.length === 0 ? (
             <div style={{ padding: '48px 0', textAlign: 'center' }}>
               <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
                 {isFr ? 'Aucune opportunité détectée pour le moment.' : 'No opportunities detected right now.'}
@@ -659,9 +654,9 @@ function AgentPage() {
           ) : (
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {fallbackLots.map(lot => (
+                {signalFeed.map(rec => { const lot = rec.lot!; return (
                   <a
-                    key={lot.id}
+                    key={rec.id}
                     href={`/app/opportunities/${lot.id}`}
                     style={{ textDecoration: 'none', display: 'block' }}
                   >
@@ -725,7 +720,7 @@ function AgentPage() {
                       </div>
                     </div>
                   </a>
-                ))}
+                ); })}
               </div>
 
               {/* CTA inline — bleu, bien intégré */}
@@ -797,7 +792,7 @@ function AgentPage() {
             </div>
             {[
               { label: isFr ? 'Lots upcoming' : 'Upcoming lots', value: '31 558' },
-              { label: isFr ? 'Score 80+' : 'Score 80+',         value: String(fallbackLots.length) },
+              { label: isFr ? 'Score 80+' : 'Score 80+',         value: String(signalFeed.length) },
               { label: isFr ? 'Vendus (30j)' : 'Sold (30d)',     value: '5 261' },
             ].map(({ label, value }) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
