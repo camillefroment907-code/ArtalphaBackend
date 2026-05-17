@@ -321,8 +321,8 @@ class Lot(Base):
     lot_fingerprint = Column(String(64), nullable=True)
 
     # Meta
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=text('NOW()'))
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=text('NOW()'), onupdate=datetime.utcnow)
     raw_data = Column(JSON, nullable=True)
 
     artist = relationship("Artist", back_populates="lots")
