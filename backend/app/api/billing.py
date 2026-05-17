@@ -798,24 +798,27 @@ async def stripe_webhook(
 
     data = event["data"]["object"]
 
-    if event_type in ("customer.subscription.created", "customer.subscription.updated"):
-        await _handle_subscription_update(db, data)
-    elif event_type == "customer.subscription.deleted":
-        await _handle_subscription_canceled(db, data)
-    elif event_type == "invoice.payment_failed":
-        await _handle_payment_failed(db, data)
-    elif event_type == "invoice.payment_succeeded":
-        await _handle_payment_succeeded(db, data)
-    elif event_type == "customer.subscription.trial_will_end":
-        await _handle_trial_ending(db, data)
-    elif event_type == "checkout.session.completed":
-        subscription_id = data.get("subscription")
-        if subscription_id:
-            try:
-                stripe_sub = stripe.Subscription.retrieve(subscription_id)
-                await _handle_subscription_update(db, stripe_sub)
-            except Exception as e:
-                logger.warning("checkout_session_subscription_fetch_failed", error=str(e))
+    try:
+        if event_type in ("customer.subscription.created", "customer.subscription.updated"):
+            await _handle_subscription_update(db, data)
+        elif event_type == "customer.subscription.deleted":
+            await _handle_subscription_canceled(db, data)
+        elif event_type == "invoice.payment_failed":
+            await _handle_payment_failed(db, data)
+        elif event_type == "invoice.payment_succeeded":
+            await _handle_payment_succeeded(db, data)
+        elif event_type == "customer.subscription.trial_will_end":
+            await _handle_trial_ending(db, data)
+        elif event_type == "checkout.session.completed":
+            subscription_id = data.get("subscription")
+            if subscription_id:
+                try:
+                    stripe_sub = stripe.Subscription.retrieve(subscription_id)
+                    await _handle_subscription_update(db, stripe_sub)
+                except Exception as e:
+                    logger.warning("checkout_session_subscription_fetch_failed", error=str(e))
+    except Exception as e:
+        logger.error("webhook_handler_failed event_type=%s error=%s", event_type, e, exc_info=True)
 
     # ── MARK AS PROCESSED ─────────────────────────────────────────
     try:
