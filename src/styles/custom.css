@@ -460,8 +460,24 @@ select:hover {
   /* Legal disclaimer — hidden on mobile */
   .legal-disclaimer { display: none !important; }
 
+  /* Larry — hidden on mobile */
+  .larry-launcher { display: none !important; }
+
   /* Explorer — tabs replaced by select, grid 2 cols */
   .explore-tabs-desktop { display: none !important; }
+  .explore-view-mode { display: none !important; }
+  .explore-live-badge { display: none !important; }
+  .explore-mobile-search {
+    display: block !important;
+    width: 140px;
+    padding: 6px 10px;
+    border: 1px solid #E8E4DC;
+    border-radius: 6px;
+    background: white;
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+  }
   .explore-tabs-mobile {
     display: block !important;
     width: 100%;
@@ -483,5 +499,6 @@ select:hover {
 /* Dashboard mobile-only hidden by default on desktop */
 .dashboard-mobile-only { display: none; }
 
-/* Explorer tab select hidden by default on desktop */
+/* Explorer tab select + mobile search hidden by default on desktop */
 .explore-tabs-mobile { display: none; }
+.explore-mobile-search { display: none; }

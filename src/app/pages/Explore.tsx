@@ -708,7 +708,7 @@ export default function Explore() {
           </button>
 
           {/* View mode */}
-          <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 }}>
+          <div className="explore-view-mode" style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 }}>
             {([
               { mode: 'grid-large' as ViewMode, label: '⊟', title: 'Large grid' },
               { mode: 'grid' as ViewMode, label: '⊞', title: 'Grid' },
@@ -720,11 +720,29 @@ export default function Explore() {
             ))}
           </div>
 
-          {/* LIVE dot */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: '4px' }}>
+          {/* LIVE dot — desktop */}
+          <div className="explore-live-badge" style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: '4px' }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--electric)', animation: 'pulse 2s infinite' }} />
             <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>LIVE</span>
           </div>
+
+          {/* Search input — mobile only */}
+          <input
+            className="explore-mobile-search"
+            type="text"
+            placeholder="Rechercher..."
+            value={search}
+            onChange={e => {
+              setSearch(e.target.value);
+              setSearchParams(prev => {
+                const p = new URLSearchParams(prev);
+                if (e.target.value) p.set('search', e.target.value);
+                else p.delete('search');
+                return p;
+              }, { replace: true });
+            }}
+            style={{ display: 'none' }}
+          />
         </div>
       </div>
 
