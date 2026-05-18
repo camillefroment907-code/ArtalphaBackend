@@ -1438,7 +1438,7 @@ export default function OpportunityDetail() {
                 {/* Full comparables table */}
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ {isFr ? 'VENTES COMPARABLES' : 'COMPARABLE SALES'}</div>
                 <div style={wCard}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
+                  <table className="lot-comp-table" style={{ width: '100%', borderCollapse: 'collapse' as const }}>
                     <thead>
                       <tr>
                         {(isFr ? ['Artiste', 'Titre', 'Prix', 'Score', 'Date'] : ['Artist', 'Title', 'Price', 'Score', 'Date']).flatMap((col, ci) => {

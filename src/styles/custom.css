@@ -510,6 +510,12 @@ select:hover {
   .lot-ai-grid         { grid-template-columns: 1fr !important; }
   .lot-comparables-grid { grid-template-columns: 1fr !important; overflow-x: hidden !important; max-width: 100% !important; }
   .lot-comparables-grid > * { min-width: 0 !important; max-width: 100% !important; }
+  .lot-comp-table { width: 100% !important; table-layout: fixed !important; }
+  .lot-comp-table th:nth-child(3), .lot-comp-table td:nth-child(3),
+  .lot-comp-table th:nth-child(5), .lot-comp-table td:nth-child(5),
+  .lot-comp-table th:nth-child(6), .lot-comp-table td:nth-child(6) { display: none !important; }
+  .lot-comp-table th:nth-child(1), .lot-comp-table td:nth-child(1) { width: 35% !important; }
+  .lot-comp-table th:nth-child(4), .lot-comp-table td:nth-child(4) { width: 25% !important; }
   .lot-memo-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .lot-reference-grid  { grid-template-columns: 1fr !important; }
 }
