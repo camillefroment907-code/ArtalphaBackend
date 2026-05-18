@@ -389,3 +389,26 @@ select:hover {
 @keyframes npsDrawCheck {
   to { stroke-dashoffset: 0; }
 }
+
+/* ── LANDING — MOBILE OVERRIDES (≤768px) ─────────────────────── */
+@media (max-width: 768px) {
+  /* Header: réduire padding, cacher liens nav + Sign In, garder Logo + CTA */
+  .landing-header { padding: 0 16px !important; }
+  .landing-nav a,
+  .landing-nav button:first-of-type { display: none !important; }
+
+  /* Hero: colonne unique, cacher mockup */
+  .landing-hero {
+    padding: 48px 20px !important;
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+  .landing-hero-right { display: none !important; }
+
+  /* Sections: ramener le padding horizontal à 20px */
+  .landing-signals-section,
+  .landing-section,
+  .landing-gated-section,
+  .landing-momentum-section { padding: 48px 20px !important; }
+  .landing-cta-section { padding: 60px 20px !important; }
+}

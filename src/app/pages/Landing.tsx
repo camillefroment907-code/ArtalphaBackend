@@ -270,7 +270,7 @@ export default function Landing() {
       {/* ── Public header ── */}
       <header className="landing-header" style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', height: '64px', padding: '0 80px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Logo variant="horizontal" color="dark" size={24} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+        <div className="landing-nav" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           <Link to="/app/pricing" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>{t('landing.footerPricing')}</Link>
           <Link to="/faq" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>{t('landing.footerFaq')}</Link>
           <Link to="/blog" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>{t('blog.title')}</Link>
