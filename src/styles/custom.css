@@ -439,6 +439,11 @@ select:hover {
 
   .landing-investors-grid { flex-direction: column !important; align-items: flex-start !important; gap: 4px !important; }
   .header-signin-btn { display: none !important; }
+  .login-right-panel,
+  .signup-right-panel,
+  .forgot-right-panel { display: none !important; }
+  .login-left-panel,
+  .signup-left-panel { flex: 1 1 100% !important; }
   .header-cta-btn { padding: 8px 14px !important; font-size: 12px !important; min-height: 36px !important; }
 
   /* Pricing page */

@@ -111,7 +111,7 @@ export default function ForgotPassword() {
       </div>
 
       {/* Right panel — artwork */}
-      <div style={{ flex: '0 0 42%', position: 'relative', overflow: 'hidden' }}>
+      <div className="forgot-right-panel" style={{ flex: '0 0 42%', position: 'relative', overflow: 'hidden' }}>
         <img
           src="/forgot-artwork.jpg"
           alt=""
