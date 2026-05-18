@@ -86,6 +86,26 @@ function LockedBlock({ preview, ctaText }: {
   );
 }
 
+// ── BLUR LOCK (non-daily-deal free users) ─────────────────────────────────────
+
+function BlurLock({ children, ctaText }: { children: React.ReactNode; ctaText: string }) {
+  return (
+    <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden' }}>
+      <div style={{ filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none' }}>
+        {children}
+      </div>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.55)', zIndex: 10 }}>
+        <span
+          onClick={() => window.location.href = '/app/pricing'}
+          style={{ cursor: 'pointer', background: '#1A2A44', color: '#C6A85A', fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', padding: '10px 20px', borderRadius: 3, display: 'flex', alignItems: 'center', gap: '7px' }}
+        >
+          🔒 {ctaText}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 
 export default function OpportunityDetail() {
@@ -791,33 +811,56 @@ export default function OpportunityDetail() {
             )}
 
           </div>
-          <div style={{ marginTop: '12px', display: 'flex', gap: '24px', padding: '12px 16px', background: 'rgba(10,15,30,0.04)', borderRadius: '6px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-            <div>
-              <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>{isFr ? 'ENTRÉE CIBLE' : 'TARGET ENTRY'}</div>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: LTT1 }}>{fmtExact(price)}</div>
+          {(!hasAccess && !isDailyDeal) ? (
+            <BlurLock ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}>
+              <div style={{ display: 'flex', gap: '24px', padding: '12px 16px', background: 'rgba(10,15,30,0.04)', borderRadius: '6px' }}>
+                <div><div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>{isFr ? 'ENTRÉE CIBLE' : 'TARGET ENTRY'}</div><div style={{ fontSize: '13px', fontWeight: 600, color: LTT1 }}>{fmtExact(price)}</div></div>
+                <div><div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>{isFr ? 'BID MAX' : 'MAX BID'}</div><div style={{ fontSize: '13px', fontWeight: 600, color: GOLD }}>{fmtExact(maxBid)}</div></div>
+                <div><div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>TIMING</div><div style={{ fontSize: '13px', fontWeight: 600, color: LTT1 }}>{isFr ? 'Fin de session' : 'End of session'}</div></div>
+              </div>
+            </BlurLock>
+          ) : (
+            <div style={{ marginTop: '12px', display: 'flex', gap: '24px', padding: '12px 16px', background: 'rgba(10,15,30,0.04)', borderRadius: '6px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+              <div><div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>{isFr ? 'ENTRÉE CIBLE' : 'TARGET ENTRY'}</div><div style={{ fontSize: '13px', fontWeight: 600, color: LTT1 }}>{fmtExact(price)}</div></div>
+              <div><div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>{isFr ? 'BID MAX' : 'MAX BID'}</div><div style={{ fontSize: '13px', fontWeight: 600, color: GOLD }}>{fmtExact(avoidAbove ?? maxBid)}</div></div>
+              <div><div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>TIMING</div><div style={{ fontSize: '13px', fontWeight: 600, color: LTT1 }}>{isFr ? 'Fin de session' : 'End of session'}</div></div>
             </div>
-            <div>
-              <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>{isFr ? 'BID MAX' : 'MAX BID'}</div>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: GOLD }}>{fmtExact(avoidAbove ?? maxBid)}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>TIMING</div>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: LTT1 }}>{isFr ? 'Fin de session' : 'End of session'}</div>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* ── INTELLIGENCE NAUTILUS ─────────────────────────────────────────── */}
         {!hasAccess ? (
           <div style={{ padding: '0 40px 24px' }}>
-            <LockedBlock
-              title="Intelligence Nautilus"
-              teaser=""
-              ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
-              ctaPrice="Investor"
-              planId="investor"
-              preview={<div style={{ display: 'flex', gap: '12px' }}>{[1,2,3].map(i=><div key={i} style={{ flex:1, height:'80px', background:LT, borderRadius:'8px' }}/>)}</div>}
-            />
+            {isDailyDeal ? (
+              <LockedBlock
+                title="Intelligence Nautilus"
+                teaser=""
+                ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
+                ctaPrice="Investor"
+                planId="investor"
+                preview={<div style={{ display: 'flex', gap: '12px' }}>{[1,2,3].map(i=><div key={i} style={{ flex:1, height:'80px', background:LT, borderRadius:'8px' }}/>)}</div>}
+              />
+            ) : (
+              <BlurLock ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <div style={{ flex: 1, background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 16px' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>◆ ANALYSE NAUTILUS</div>
+                    <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 600, color: LTT1 }}>{fmtExact(estLow)}</div>
+                    <div style={{ fontSize: '11px', color: GL, marginTop: '6px' }}>+{upsidePct.toFixed(0)}% {isFr ? 'décote estimée' : 'estimated upside'}</div>
+                  </div>
+                  <div style={{ flex: 1, background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 16px' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>SCORE OPPORTUNITÉ</div>
+                    <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 600, color: LTT1 }}>{dealScore.toFixed(0)}/100</div>
+                    <div style={{ fontSize: '11px', color: LTT3, marginTop: '6px' }}>{isFr ? 'Analyse algorithmique' : 'Algorithmic analysis'}</div>
+                  </div>
+                  <div style={{ flex: 1, background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 16px' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>SIGNAL MARCHÉ</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 800, color: verdict.gl }}>{verdict.icon} {verdict.label}</div>
+                    <div style={{ fontSize: '11px', color: LTT2, marginTop: '6px' }}>{verdict.sub}</div>
+                  </div>
+                </div>
+              </BlurLock>
+            )}
           </div>
         ) : canSeeAnalysis && (() => {
           const nautVal = lot.fair_value_nautilus as number | null;
@@ -972,7 +1015,31 @@ export default function OpportunityDetail() {
               {/* LEFT COLUMN — Real Cost Breakdown + Investment Analysis */}
               <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '20px', borderRight: `0.5px solid ${LTB}` }}>
 
-                {realCost && (
+                {(!hasAccess && !isDailyDeal) ? (
+                  <BlurLock ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}>
+                    <div>
+                      <div style={sl}>{isFr ? 'Analyse du coût réel' : 'Real Cost Breakdown'}</div>
+                      {[
+                        { k: isFr ? 'Prix adjugé' : 'Hammer price', v: fmt(price) },
+                        { k: isFr ? `Frais acheteur (${buyerPremiumPct}%)` : `Buyer's premium (${buyerPremiumPct}%)`, v: fmt(Math.round(price * (premiumMultiplier - 1))) },
+                        { k: isFr ? 'Coût de détention (3 ans)' : 'Holding cost (3yr)', v: fmt(Math.round(price * 0.045)) },
+                      ].map(r => (
+                        <div key={r.k} style={dRow}>
+                          <span style={{ fontSize: '13px', color: LTT2 }}>{r.k}</span>
+                          <span style={{ fontSize: '13px', color: LTT1, fontWeight: 500 }}>{r.v}</span>
+                        </div>
+                      ))}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0' }}>
+                        <span style={{ fontSize: '13px', color: LTT1, fontWeight: 700 }}>{isFr ? 'Coût total' : 'All-in cost'}</span>
+                        <span style={{ fontSize: '16px', color: GOLD, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{fmt(Math.round(price * premiumMultiplier * 1.045))}</span>
+                      </div>
+                      <div style={{ background: '#FAFAF7', border: `1px solid ${LTB}`, borderRadius: '8px', padding: '6px 10px', marginTop: '14px' }}>
+                        <div style={{ fontSize: '12px', color: LTT2 }}>{isFr ? `Nécessite +${(premiumMultiplier * 1.045 * 100 - 100).toFixed(1)}% pour atteindre le seuil de rentabilité` : `Needs +${(premiumMultiplier * 1.045 * 100 - 100).toFixed(1)}% to break even`}</div>
+                        <div style={{ fontSize: '12px', color: GOLD, fontWeight: 600, marginTop: '3px' }}>{isFr ? 'Prix adjugé seuil :' : 'Break-even hammer:'} {fmt(Math.round(price * premiumMultiplier * 1.045))}</div>
+                      </div>
+                    </div>
+                  </BlurLock>
+                ) : realCost && (
                   <div>
                     <div style={sl}>{t('lot.realCostBreakdown')}</div>
                     {([
@@ -1019,6 +1086,21 @@ export default function OpportunityDetail() {
                         <div style={{ fontSize: '11px', color: LTT3, marginTop: '6px' }}>{t('lot.vsEstimate')}</div>
                       </div>
                     </div>
+                  ) : (!hasAccess && !isDailyDeal) ? (
+                    <BlurLock ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                        {[
+                          { label: isFr ? 'Prix actuel' : 'Current Price', v: fmtExact(price), color: LTT1 },
+                          { label: isFr ? 'Valeur estimée' : 'Fair Value', v: fmtExact(estHigh), color: '#F0EDE6' },
+                          { label: 'Upside', v: `+${upsidePct.toFixed(0)}%`, color: GL },
+                        ].map(item => (
+                          <div key={item.label} style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 14px', textAlign: 'center' }}>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase' as const, color: LTT3, marginBottom: '10px' }}>{item.label}</div>
+                            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', fontWeight: 600, color: item.color, lineHeight: 1 }}>{item.v}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </BlurLock>
                   ) : (
                     <LockedBlock
                       title="Is this artwork truly worth buying?"
@@ -1359,14 +1441,35 @@ export default function OpportunityDetail() {
             {/* ── SCÉNARIOS DE VALORISATION ───────────────────────────────────── */}
             {!hasAccess ? (
               <div style={{ padding: '0 40px 24px' }}>
-                <LockedBlock
-                  title="Scénarios de valorisation"
-                  teaser=""
-                  ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
-                  ctaPrice="Investor"
-                  planId="investor"
-                  preview={<div style={{ height:'220px', background:LT, borderRadius:'8px' }}/>}
-                />
+                {isDailyDeal ? (
+                  <LockedBlock
+                    title="Scénarios de valorisation"
+                    teaser=""
+                    ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
+                    ctaPrice="Investor"
+                    planId="investor"
+                    preview={<div style={{ height:'220px', background:LT, borderRadius:'8px' }}/>}
+                  />
+                ) : (
+                  <BlurLock ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}>
+                    <div style={{ padding: '16px 20px' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'SCÉNARIOS DE VALORISATION' : 'VALUATION SCENARIOS'} · {projCagr.toFixed(1)}% CAGR</div>
+                      <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', alignItems: 'flex-end', height: '120px' }}>
+                        {[1, 3, 5, 10].map(y => (
+                          <div key={y} style={{ flex: 1, display: 'flex', flexDirection: 'column' as const, gap: '4px', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            <div style={{ width: '100%', background: '#16A34A', borderRadius: '3px 3px 0 0', height: `${Math.min(100, 30 + y * 7)}px`, opacity: 0.7 }} />
+                            <div style={{ fontSize: '10px', color: LTT3, fontFamily: 'var(--font-mono)' }}>{y}{isFr ? 'an' : 'yr'}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+                        <span style={{ fontSize: 11, color: '#16A34A' }}>● {isFr ? 'Marché fort' : 'Bull'}</span>
+                        <span style={{ fontSize: 11, color: '#B8922A' }}>● {isFr ? 'Stable' : 'Stable'}</span>
+                        <span style={{ fontSize: 11, color: '#DC2626' }}>● {isFr ? 'Faible' : 'Bear'}</span>
+                      </div>
+                    </div>
+                  </BlurLock>
+                )}
               </div>
             ) : canSeeAnalysis && visibleYears.length > 0 && (
               <div style={{ padding: '0 40px 24px' }}>
@@ -1407,7 +1510,29 @@ export default function OpportunityDetail() {
             )}
 
             {/* ── COMPARABLE SALES CARDS ────────────────────────────────────────── */}
-            {displayComps.length > 0 && (
+            {displayComps.length > 0 && (!hasAccess && !isDailyDeal) ? (
+              <div style={{ padding: '0 40px 16px' }}>
+                <BlurLock ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}>
+                  <div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ {isFr ? 'LOTS SIMILAIRES' : 'SIMILAR LOTS'}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                      {displayComps.slice(0, 3).map((comp: any) => (
+                        <div key={comp.id} style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '10px', overflow: 'hidden' }}>
+                          <div style={{ height: '90px', background: LT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {comp.image_url ? <img src={comp.image_url} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '24px', opacity: 0.12 }}>◎</span>}
+                          </div>
+                          <div style={{ padding: '10px 12px' }}>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '4px' }}>{comp.artist_name_raw || 'Unknown'}</div>
+                            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '12px', color: LTT1, marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{comp.title || 'Untitled'}</div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: GOLD }}>€{(comp.current_price || comp.estimate_low || 0).toLocaleString('en-GB')}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </BlurLock>
+              </div>
+            ) : displayComps.length > 0 && (
               <div style={{ padding: '0 40px 16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'LOTS SIMILAIRES' : 'SIMILAR LOTS'}</div>
@@ -1482,17 +1607,38 @@ export default function OpportunityDetail() {
               </div>
             )}
 
-        {/* ──────────────── COMPARABLE SALES ──────────────── */}
+            {/* ──────────────── COMPARABLE SALES ──────────────── */}
         <div style={{ padding: '16px 40px 24px' }}>
             {!hasAccess ? (
-              <LockedBlock
-                title="Ventes comparables"
-                teaser=""
-                ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
-                ctaPrice="Investor"
-                planId="investor"
-                preview={<div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>{[1,2,3].map(i=><div key={i} style={{ height:'44px', background:LT, borderRadius:'6px' }}/>)}</div>}
-              />
+              isDailyDeal ? (
+                <LockedBlock
+                  title="Ventes comparables"
+                  teaser=""
+                  ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
+                  ctaPrice="Investor"
+                  planId="investor"
+                  preview={<div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>{[1,2,3].map(i=><div key={i} style={{ height:'44px', background:LT, borderRadius:'6px' }}/>)}</div>}
+                />
+              ) : (
+                <BlurLock ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}>
+                  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '4px' }}>◆ {isFr ? 'VENTES COMPARABLES' : 'COMPARABLE SALES'}</div>
+                    {[
+                      { artist: lot.artist_name_raw || 'Unknown', title: isFr ? 'Œuvre similaire' : 'Similar work', price: fmt(Math.round(price * 0.9)) },
+                      { artist: lot.artist_name_raw || 'Unknown', title: isFr ? 'Œuvre comparable' : 'Comparable work', price: fmt(Math.round(price * 1.1)) },
+                      { artist: lot.artist_name_raw || 'Unknown', title: isFr ? 'Lot équivalent' : 'Equivalent lot', price: fmt(Math.round(price * 0.95)) },
+                    ].map((r, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: LTC, border: `1px solid ${LTB}`, borderRadius: '6px' }}>
+                        <div>
+                          <div style={{ fontSize: '12px', color: LTT1 }}>{r.artist}</div>
+                          <div style={{ fontSize: '11px', color: LTT3 }}>{r.title}</div>
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: GOLD }}>{r.price}</div>
+                      </div>
+                    ))}
+                  </div>
+                </BlurLock>
+              )
             ) : comparables.length === 0 ? (
               <div style={{ ...wCard, textAlign: 'center', padding: '60px 24px' }}>
                 <div style={{ fontSize: '32px', opacity: 0.15, marginBottom: '16px' }}>◎</div>
@@ -1577,7 +1723,7 @@ export default function OpportunityDetail() {
             {/* AI Intelligence cards */}
             <div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'INTELLIGENCE IA' : 'AI INTELLIGENCE'}</div>
-              {!hasAccess ? (
+              {!hasAccess && isDailyDeal ? (
                 <LockedBlock
                   title="AI Intelligence"
                   teaser=""
@@ -1589,55 +1735,85 @@ export default function OpportunityDetail() {
               ) : (
               <div className="lot-ai-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
 
-                <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                    <span style={{ color: GOLD, fontSize: '13px', lineHeight: 1 }}>◆</span>
-                    <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1, fontWeight: 500 }}>{isFr ? "Mémo d'investissement" : 'Investment Memo'}</span>
-                  </div>
-                  <div style={{ fontSize: '12px', color: LTT3, marginBottom: '16px', lineHeight: 1.5 }}>
-                    {isFr ? "Analyse générée par IA du potentiel d'investissement de ce lot." : "AI-generated analysis of this lot's investment potential."}
-                    <span style={{ color: LTT3, marginLeft: '4px' }}>· PDF · ~5 min</span>
-                  </div>
-                  <div style={{ marginBottom: '16px' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#EFF6FF', border: '1px solid #BFDBFE', color: BL, padding: '3px 8px', borderRadius: '3px' }}>INVESTOR+</span>
-                  </div>
-                  <div
-                    onClick={!hasAccess ? () => { window.location.href = '/app/pricing'; } : (memo ? () => setShowMemo(true) : generateMemo)}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: memoLoading ? 'rgba(198,168,90,0.4)' : GOLD, cursor: memoLoading ? 'not-allowed' : 'pointer', letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', marginTop: '12px' }}
-                  >
-                    {memoLoading ? (isFr ? '◆ GÉNÉRATION…' : '◆ GENERATING…') : memo ? (isFr ? '◆ VOIR LE MÉMO →' : '◆ VIEW MEMO →') : (isFr ? '◆ GÉNÉRER LE MÉMO →' : '◆ GENERATE MEMO →')}
-                  </div>
-                  {memo && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
-                      <span style={{ padding: '3px 10px', background: memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.08)' : 'rgba(217,119,6,0.08)', border: `1px solid ${memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.25)' : 'rgba(217,119,6,0.25)'}`, fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: memo.recommendation === 'BUY' ? GL : AMB, borderRadius: '4px' }}>{memo.recommendation}</span>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>Conviction {memo.conviction}/100</span>
+                {/* Investment Memo card */}
+                {(!hasAccess && !isDailyDeal) ? (
+                  <BlurLock ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}>
+                    <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '14px 18px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                        <span style={{ color: GOLD, fontSize: '13px' }}>◆</span>
+                        <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1, fontWeight: 500 }}>{isFr ? "Mémo d'investissement" : 'Investment Memo'}</span>
+                      </div>
+                      <div style={{ fontSize: '12px', color: LTT3, marginBottom: '16px', lineHeight: 1.5 }}>{isFr ? "Analyse IA du potentiel d'investissement." : "AI analysis of investment potential."}<span style={{ marginLeft: '4px' }}>· PDF · ~5 min</span></div>
+                      <div style={{ marginBottom: '16px' }}><span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#EFF6FF', border: '1px solid #BFDBFE', color: BL, padding: '3px 8px', borderRadius: '3px' }}>INVESTOR+</span></div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: GOLD, marginTop: '12px' }}>◆ {isFr ? 'GÉNÉRER LE MÉMO →' : 'GENERATE MEMO →'}</div>
                     </div>
-                  )}
-                </div>
+                  </BlurLock>
+                ) : (
+                  <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <span style={{ color: GOLD, fontSize: '13px', lineHeight: 1 }}>◆</span>
+                      <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1, fontWeight: 500 }}>{isFr ? "Mémo d'investissement" : 'Investment Memo'}</span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: LTT3, marginBottom: '16px', lineHeight: 1.5 }}>
+                      {isFr ? "Analyse générée par IA du potentiel d'investissement de ce lot." : "AI-generated analysis of this lot's investment potential."}
+                      <span style={{ color: LTT3, marginLeft: '4px' }}>· PDF · ~5 min</span>
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#EFF6FF', border: '1px solid #BFDBFE', color: BL, padding: '3px 8px', borderRadius: '3px' }}>INVESTOR+</span>
+                    </div>
+                    <div
+                      onClick={memo ? () => setShowMemo(true) : generateMemo}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: memoLoading ? 'rgba(198,168,90,0.4)' : GOLD, cursor: memoLoading ? 'not-allowed' : 'pointer', letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', marginTop: '12px' }}
+                    >
+                      {memoLoading ? (isFr ? '◆ GÉNÉRATION…' : '◆ GENERATING…') : memo ? (isFr ? '◆ VOIR LE MÉMO →' : '◆ VIEW MEMO →') : (isFr ? '◆ GÉNÉRER LE MÉMO →' : '◆ GENERATE MEMO →')}
+                    </div>
+                    {memo && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
+                        <span style={{ padding: '3px 10px', background: memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.08)' : 'rgba(217,119,6,0.08)', border: `1px solid ${memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.25)' : 'rgba(217,119,6,0.25)'}`, fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: memo.recommendation === 'BUY' ? GL : AMB, borderRadius: '4px' }}>{memo.recommendation}</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>Conviction {memo.conviction}/100</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-                      <circle cx="8" cy="8" r="7" stroke="#9CA3AF" strokeWidth="1.2"/>
-                      <circle cx="8" cy="8" r="4" stroke="#9CA3AF" strokeWidth="1.2"/>
-                      <circle cx="8" cy="8" r="1.5" fill="#9CA3AF"/>
-                    </svg>
-                    <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1, fontWeight: 500 }}>{isFr ? "Dossier d'investissement" : 'Investment Dossier'}</span>
+                {/* Dossier d'investissement card */}
+                {(!hasAccess && !isDailyDeal) ? (
+                  <BlurLock ctaText={isFr ? 'Passer Pro pour débloquer →' : 'PRO PLAN · UNLOCK →'}>
+                    <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '14px 18px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}><circle cx="8" cy="8" r="7" stroke="#9CA3AF" strokeWidth="1.2"/><circle cx="8" cy="8" r="4" stroke="#9CA3AF" strokeWidth="1.2"/><circle cx="8" cy="8" r="1.5" fill="#9CA3AF"/></svg>
+                        <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1, fontWeight: 500 }}>{isFr ? "Dossier d'investissement" : 'Investment Dossier'}</span>
+                      </div>
+                      <div style={{ fontSize: '12px', color: LTT3, marginBottom: '16px', lineHeight: 1.5 }}>{isFr ? "Projections 5/10/20 ans, valorisation artiste & verdict IA." : "5/10/20yr projections, artist valuation & AI verdict."}<span style={{ marginLeft: '4px' }}>· PDF</span></div>
+                      <div style={{ marginBottom: '16px' }}><span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#F0F0FF', border: '1px solid #C7C7F0', color: '#5B5BD6', padding: '3px 8px', borderRadius: '3px' }}>FAMILY OFFICE+</span></div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: GOLD, marginTop: '12px' }}>◆ {isFr ? 'ANALYSER →' : 'ANALYZE →'}</div>
+                    </div>
+                  </BlurLock>
+                ) : (
+                  <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                        <circle cx="8" cy="8" r="7" stroke="#9CA3AF" strokeWidth="1.2"/>
+                        <circle cx="8" cy="8" r="4" stroke="#9CA3AF" strokeWidth="1.2"/>
+                        <circle cx="8" cy="8" r="1.5" fill="#9CA3AF"/>
+                      </svg>
+                      <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1, fontWeight: 500 }}>{isFr ? "Dossier d'investissement" : 'Investment Dossier'}</span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: LTT3, marginBottom: '16px', lineHeight: 1.5 }}>
+                      {isFr ? "Analyse complète — projections 5/10/20 ans, valorisation artiste & verdict IA." : "Full analysis — 5/10/20yr projections, artist valuation & AI verdict."}
+                      <span style={{ color: LTT3, marginLeft: '4px' }}>· PDF · Analyse complète</span>
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#F0F0FF', border: '1px solid #C7C7F0', color: '#5B5BD6', padding: '3px 8px', borderRadius: '3px' }}>FAMILY OFFICE+</span>
+                    </div>
+                    <div
+                      onClick={() => navigate('/app/pricing?plan=investor')}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: GOLD, cursor: 'pointer', letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', marginTop: '12px' }}
+                    >
+                      {isFr ? '◆ ANALYSER →' : '◆ ANALYZE →'}
+                    </div>
                   </div>
-                  <div style={{ fontSize: '12px', color: LTT3, marginBottom: '16px', lineHeight: 1.5 }}>
-                    {isFr ? "Analyse complète — projections 5/10/20 ans, valorisation artiste & verdict IA." : "Full analysis — 5/10/20yr projections, artist valuation & AI verdict."}
-                    <span style={{ color: LTT3, marginLeft: '4px' }}>· PDF · Analyse complète</span>
-                  </div>
-                  <div style={{ marginBottom: '16px' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#F0F0FF', border: '1px solid #C7C7F0', color: '#5B5BD6', padding: '3px 8px', borderRadius: '3px' }}>FAMILY OFFICE+</span>
-                  </div>
-                  <div
-                    onClick={() => navigate('/app/pricing?plan=investor')}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: GOLD, cursor: 'pointer', letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', marginTop: '12px' }}
-                  >
-                    {isFr ? '◆ ANALYSER →' : '◆ ANALYZE →'}
-                  </div>
-                </div>
+                )}
 
               </div>
               )}
@@ -1647,20 +1823,55 @@ export default function OpportunityDetail() {
         {/* ──────────────── DOCUMENTS ──────────────── */}
         <div style={{ padding: '16px 40px 24px' }}>
             {!hasAccess ? (
-              <LockedBlock
-                title="Documents & Sources"
-                teaser="Unlock lot source, artist search, and auction house details with an Investor plan."
-                ctaText="Unlock Documents"
-                ctaPrice="Investor plan"
-                planId="investor"
-                preview={
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {[1, 2, 3].map(i => (
-                      <div key={i} style={{ height: '44px', background: LT, borderRadius: '8px' }} />
-                    ))}
+              isDailyDeal ? (
+                <LockedBlock
+                  title="Documents & Sources"
+                  teaser="Unlock lot source, artist search, and auction house details with an Investor plan."
+                  ctaText="Unlock Documents"
+                  ctaPrice="Investor plan"
+                  planId="investor"
+                  preview={
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {[1, 2, 3].map(i => (
+                        <div key={i} style={{ height: '44px', background: LT, borderRadius: '8px' }} />
+                      ))}
+                    </div>
+                  }
+                />
+              ) : (
+                <BlurLock ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}>
+                  <div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ SOURCES</div>
+                    <div style={{ ...wCard, padding: '12px 20px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '0' }}>
+                        <div style={{ ...dRow, paddingTop: '8px', paddingBottom: '8px' }}>
+                          <div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '2px' }}>LOT SOURCE</div>
+                            <div style={{ fontSize: '12px', color: LTT2 }}>{isFr ? 'Source masquée' : 'Source hidden'}</div>
+                          </div>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: BL, fontWeight: 600 }}>View lot ↗</span>
+                        </div>
+                        {lot.artist_name_raw && (
+                          <div style={{ ...dRow, paddingTop: '8px', paddingBottom: '8px' }}>
+                            <div>
+                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '2px' }}>ARTIST SEARCH</div>
+                              <div style={{ fontSize: '12px', color: LTT2 }}>{lot.artist_name_raw}</div>
+                            </div>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: BL, fontWeight: 600 }}>Search artist ↗</span>
+                          </div>
+                        )}
+                        <div style={{ ...dRow, paddingTop: '8px', paddingBottom: '8px' }}>
+                          <div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '2px' }}>AUCTION HOUSE</div>
+                            <div style={{ fontSize: '12px', color: LTT2 }}>{isFr ? 'Source masquée' : 'Source hidden'}</div>
+                          </div>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>—</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                }
-              />
+                </BlurLock>
+              )
             ) : (
               <>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ {isFr ? 'SOURCES' : 'SOURCES'}</div>
