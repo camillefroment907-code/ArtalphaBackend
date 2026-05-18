@@ -183,6 +183,7 @@ export default function Pricing() {
   const [loading, setLoading] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isAnnual, setIsAnnual] = useState(false);
+  const [openPlan, setOpenPlan] = useState<string>('investor');
   const { i18n } = useTranslation();
   const lang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
   const p = PT[lang];
@@ -338,7 +339,101 @@ export default function Pricing() {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', alignItems: 'stretch', height: 'calc(100vh - 220px)' }}>
+        {/* ── Mobile accordion (hidden on desktop via CSS) ── */}
+        <div className="pricing-mobile-accordion" style={{ display: 'none' }}>
+          {PLANS.map(plan => {
+            const isOpen = openPlan === plan.key;
+            const isHighlight = plan.highlight;
+            const annualSavings = plan.annualPrice ? (plan.price * 12 - plan.annualPrice) : 0;
+            const priceLabel = plan.key === 'free' ? '€0'
+              : plan.key === 'investor' ? '€19/mo'
+              : `€${isAnnual && plan.annualMonthly ? plan.annualMonthly : plan.price}/mo`;
+            const features: string[] = (p.planFeatures as any)[plan.key] || plan.features;
+            return (
+              <div key={plan.key} style={{ border: isHighlight ? '2px solid var(--navy)' : '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', marginBottom: '8px', background: isHighlight ? 'var(--navy)' : 'white' }}>
+                {/* Accordion header row */}
+                <button
+                  onClick={() => setOpenPlan(isOpen ? '' : plan.key)}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: 'none', border: 'none', cursor: 'pointer', gap: '12px' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {plan.badge && (
+                      <span style={{ fontSize: '8px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, fontFamily: 'var(--font-mono)', color: '#C6A85A', background: 'rgba(198,168,90,0.15)', border: '1px solid rgba(198,168,90,0.4)', padding: '2px 8px', borderRadius: '4px' }}>
+                        {plan.badge}
+                      </span>
+                    )}
+                    <span style={{ fontSize: '15px', fontWeight: 700, color: isHighlight ? 'white' : 'var(--text)', fontFamily: 'var(--font-mono)' }}>{plan.name}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: plan.key === 'investor' ? '#C6A85A' : isHighlight ? 'white' : 'var(--text)' }}>
+                      {priceLabel}
+                    </span>
+                    <span style={{ fontSize: '11px', color: isHighlight ? 'rgba(255,255,255,0.5)' : 'var(--text-3)', display: 'inline-block', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+                  </div>
+                </button>
+
+                {/* Collapsible content */}
+                {isOpen && (
+                  <div style={{ padding: '0 16px 20px', borderTop: `1px solid ${isHighlight ? 'rgba(255,255,255,0.12)' : 'var(--border)'}` }}>
+                    {/* Price detail */}
+                    <div style={{ paddingTop: '14px', marginBottom: '14px' }}>
+                      {plan.key === 'investor' && isAnnual && (
+                        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', marginBottom: '4px' }}>
+                          €190/year · save €{annualSavings}/year
+                        </div>
+                      )}
+                      {plan.key === 'investor' && (
+                        <div style={{ fontSize: '11px', fontStyle: 'italic', color: 'rgba(198,168,90,0.75)' }}>{p.foundingPrice}</div>
+                      )}
+                      {plan.key === 'pro' && isAnnual && plan.annualPrice && (
+                        <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                          €{plan.annualPrice}/year · save €{annualSavings}/year
+                        </div>
+                      )}
+                    </div>
+
+                    {/* CTA */}
+                    <div style={{ marginBottom: '16px' }}>
+                      {plan.key === 'free' ? (
+                        <button disabled style={{ width: '100%', height: '44px', borderRadius: '6px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', color: 'var(--text-3)', fontSize: '12px', fontWeight: 700, cursor: 'not-allowed', letterSpacing: '0.06em' }}>
+                          {(p.planCtas as any)[plan.key]}
+                        </button>
+                      ) : effectivePlan === plan.key ? (
+                        <div style={{ width: '100%', height: '44px', borderRadius: '6px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', color: 'var(--electric)', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          ✓ {p.currentPlan}
+                        </div>
+                      ) : (
+                        <button onClick={() => handleSelect(plan)} disabled={loading === plan.key} style={{ width: '100%', height: '44px', borderRadius: '6px', background: '#2563EB', color: 'white', border: 'none', fontSize: '13px', fontWeight: 700, cursor: loading === plan.key ? 'not-allowed' : 'pointer', opacity: loading === plan.key ? 0.7 : 1 }}>
+                          {loading === plan.key ? 'Loading...' : (p.planCtas as any)[plan.key]}
+                        </button>
+                      )}
+                      {plan.key === 'investor' && effectivePlan !== plan.key && (
+                        <div style={{ fontSize: '10px', color: isHighlight ? 'rgba(255,255,255,0.3)' : 'var(--text-3)', marginTop: '6px', textAlign: 'center', fontFamily: 'var(--font-mono)' }}>{p.limitedSpots}</div>
+                      )}
+                    </div>
+
+                    {/* Features */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {features.map((feature, i) => {
+                        const isNeg = feature.startsWith('✗');
+                        const label = isNeg ? feature.slice(1).trim() : feature;
+                        return (
+                          <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                            <span style={{ color: isNeg ? '#F87171' : (isHighlight ? 'var(--gold)' : 'var(--electric)'), fontSize: '10px', marginTop: '2px', flexShrink: 0 }}>{isNeg ? '✗' : '✓'}</span>
+                            <span style={{ fontSize: '13px', lineHeight: 1.5, color: isNeg ? (isHighlight ? 'rgba(255,255,255,0.35)' : 'var(--text-3)') : (isHighlight ? 'rgba(255,255,255,0.8)' : 'var(--text-2)') }}>{label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── Desktop grid ── */}
+        <div className="landing-plan-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', alignItems: 'stretch', height: 'calc(100vh - 220px)' }}>
           {PLANS.map(plan => {
             const isCurrentPlan = effectivePlan === plan.key;
             const isHighlight = plan.highlight;
@@ -572,7 +667,7 @@ export default function Pricing() {
         <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--text)', textAlign: 'center', marginBottom: '32px' }}>
           {p.comparePlans}
         </h2>
-        <div style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+        <div className="landing-compare-table" style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
           {/* Header */}
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', background: 'var(--navy)' }}>
             <div style={{ padding: '16px 20px', fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.1em' }}>FEATURE</div>
@@ -610,7 +705,7 @@ export default function Pricing() {
         <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--text)', marginBottom: '32px' }}>
           FAQ
         </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '24px' }}>
+        <div className="landing-faq-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '24px' }}>
           {p.faq.map(({ q, a }, i) => (
             <div key={i}>
               <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>{q}</div>

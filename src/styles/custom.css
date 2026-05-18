@@ -440,10 +440,8 @@ select:hover {
   .landing-investors-grid { flex-direction: column !important; align-items: flex-start !important; gap: 4px !important; }
 
   /* Pricing page */
-  .landing-plan-cards-grid {
-    grid-template-columns: 1fr !important;
-    height: auto !important;
-  }
+  .landing-plan-cards-grid { display: none !important; }
+  .pricing-mobile-accordion { display: block !important; }
   .landing-compare-table { overflow-x: auto !important; }
   .landing-faq-grid { grid-template-columns: 1fr !important; }
 }
