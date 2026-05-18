@@ -909,7 +909,7 @@ export default function OpportunityDetail() {
             const excerpt = sentences.slice(0, 3).join(' ').trim() || aiText.slice(0, 300);
             if (!excerpt) return null;
             return (
-              <div style={{ padding: '0 40px 24px' }}>
+              <div className="lot-desktop-only" style={{ padding: '0 40px 24px' }}>
                 <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '16px 22px' }}>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
                     ◆ {isFr ? 'LECTURE NAUTILUS' : 'NAUTILUS READ'}
@@ -1457,22 +1457,7 @@ export default function OpportunityDetail() {
             })()}
 
             {/* ── SCÉNARIOS DE VALORISATION ───────────────────────────────────── */}
-            {(!hasAccess && !isDailyDeal) ? (
-              <div style={{ padding: '0 40px 16px' }}>
-                <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '12px 16px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '6px' }}>
-                    {isFr ? 'PROJECTION DE VALEUR' : 'VALUE PROJECTION'} · {projCagr.toFixed(1)}% CAGR
-                  </div>
-                  <ResponsiveContainer width="100%" height={72}>
-                    <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                      <Line type="monotone" dataKey="optimistic" stroke="#16A34A" strokeWidth={1.5} dot={false} />
-                      <Line type="monotone" dataKey="value" stroke="#B8922A" strokeWidth={1.5} dot={false} />
-                      <Line type="monotone" dataKey="conservative" stroke="#DC2626" strokeWidth={1} dot={false} strokeDasharray="3 2" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            ) : !hasAccess ? (
+            {(!hasAccess && !isDailyDeal) ? null : !hasAccess ? (
               <div style={{ padding: '0 40px 24px' }}>
                 <LockedBlock
                   title="Scénarios de valorisation"
@@ -1629,6 +1614,71 @@ export default function OpportunityDetail() {
                 </div>
               </div>
             )}
+
+            {/* ── MOBILE FREE: LECTURE NAUTILUS + PAYWALL ── */}
+            {!hasAccess && !isDailyDeal && (() => {
+              const aiText = [lot.score_rationale, lot.ai_insight, Array.isArray((lot as any).rationale) ? (lot as any).rationale.join(' ') : (lot as any).rationale].filter(Boolean).join(' ').trim();
+              const sentences = aiText ? (aiText.match(/[^.!?]+[.!?]+/g) || []) : [];
+              const excerpt = sentences.slice(0, 3).join(' ').trim() || (aiText ? aiText.slice(0, 300) : null);
+              return (
+                <div className="lot-mobile-only" style={{ padding: '0 16px 8px' }}>
+                  {excerpt && (
+                    <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '16px 18px', marginBottom: '12px' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
+                        ◆ {isFr ? 'LECTURE NAUTILUS' : 'NAUTILUS READ'}
+                      </div>
+                      <p style={{ fontSize: '13px', color: LTT2, lineHeight: 1.7, margin: 0 }}>{excerpt}</p>
+                    </div>
+                  )}
+                  <div style={{ borderRadius: '12px', background: '#0F1824', border: '1px solid rgba(198,168,90,0.18)', marginBottom: '24px' }}>
+                    <div style={{ padding: '24px 24px 20px' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>
+                        ◆ NAUTILUS INVESTOR
+                      </div>
+                      <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 600, color: '#FFFFFF', marginBottom: '16px', lineHeight: 1.3 }}>
+                        {isFr ? 'Débloquez la conviction complète' : 'Unlock full conviction'}
+                      </div>
+                      {comparables.length > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '14px' }}>
+                          <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>{isFr ? 'Ventes comparables' : 'Comparable sales'}</span>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: 'rgba(255,255,255,0.15)', letterSpacing: '0.04em' }}>{'████ ████'}</span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px', marginBottom: '20px' }}>
+                        {[
+                          isFr ? '✓ Toutes les ventes comparables' : '✓ All comparable sales',
+                          isFr ? '✓ Valeur de référence Nautilus' : '✓ Nautilus reference value',
+                          isFr ? '✓ Scénarios de valorisation' : '✓ Valuation scenarios',
+                          isFr ? '✓ Intelligence Nautilus complète' : '✓ Full Nautilus intelligence',
+                          isFr ? '✓ Alertes et suivi de portefeuille' : '✓ Alerts & portfolio tracking',
+                        ].map((b, i) => (
+                          <div key={i} style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)' }}>{b}</div>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', marginBottom: '16px', fontStyle: 'italic' }}>
+                        {isFr ? '🔒 Rejoint par 1 200+ collectionneurs' : '🔒 Joined by 1,200+ collectors'}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <button
+                          onClick={() => navigate('/app/pricing')}
+                          style={{ maxWidth: '280px', width: '100%', padding: '14px 0', background: GOLD, color: '#0C1622', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                        >
+                          {isFr ? 'Passer Investor →' : 'Go Investor →'}
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '14px 24px' }}>
+                      <button
+                        onClick={() => navigate('/app/pricing')}
+                        style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '12px', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}
+                      >
+                        {isFr ? 'Analyse institutionnelle disponible avec Pro →' : 'Institutional analysis available with Pro →'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* ──────────────── COMPARABLE SALES ──────────────── */}
         <div style={{ padding: '16px 40px 24px' }}>
