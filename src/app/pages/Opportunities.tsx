@@ -318,10 +318,11 @@ function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => vo
         {/* Price + upside */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "10px" }}>
           <div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "var(--text-3)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2px" }}>Mise à prix</div>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: "15px", fontWeight: 700, color: "var(--text)" }}>
               {lot.price}
             </div>
-            {lot.estimateLow > 0 && (
+            {lot.estimateLow > 0 && lot.rawPrice !== lot.estimateLow && (
               <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--text-3)" }}>
                 est. {lot.estimateLowFmt}
               </div>
