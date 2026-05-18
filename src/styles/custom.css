@@ -455,6 +455,7 @@ select:hover {
   /* Dashboard responsive */
   .dashboard-desktop-only { display: none !important; }
   .dashboard-mobile-only { display: block !important; }
+  .dashboard-grid { grid-template-columns: 1fr !important; }
 }
 
 /* Dashboard mobile-only hidden by default on desktop */
