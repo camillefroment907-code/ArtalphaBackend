@@ -392,10 +392,10 @@ select:hover {
 
 /* ── LANDING — MOBILE OVERRIDES (≤768px) ─────────────────────── */
 @media (max-width: 768px) {
-  /* Header: réduire padding, cacher liens nav + Sign In, garder Logo + CTA */
+  /* Header: réduire padding, cacher nav desktop, afficher hamburger */
   .landing-header { padding: 0 16px !important; }
-  .landing-nav a,
-  .landing-nav button:first-of-type { display: none !important; }
+  .landing-nav { display: none !important; }
+  .landing-mobile-nav { display: flex !important; }
 
   /* Hero: colonne unique, cacher mockup */
   .landing-hero {
@@ -436,4 +436,12 @@ select:hover {
     padding: 16px !important;
   }
   .landing-sticky-cta button:not(:last-child) { width: 100% !important; }
+
+  /* Pricing page */
+  .landing-plan-cards-grid {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+  }
+  .landing-compare-table { overflow-x: auto !important; }
+  .landing-faq-grid { grid-template-columns: 1fr !important; }
 }

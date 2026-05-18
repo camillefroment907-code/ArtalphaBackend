@@ -177,6 +177,7 @@ export default function Landing() {
   const [tickerItems, setTickerItems]       = useState(SEED_TICKER);
   const [lotCount, setLotCount]             = useState<number | null>(null);
   const [showStickyCTA, setShowStickyCTA]   = useState(false);
+  const [menuOpen, setMenuOpen]             = useState(false);
   const [closingSoonCount, setClosingSoonCount] = useState<number>(0);
   const [bottomStats, setBottomStats] = useState<{ total: number | null, closing: number | null, exceptional: number | null }>({ total: null, closing: null, exceptional: null });
 
@@ -284,6 +285,45 @@ export default function Landing() {
             {t('landing.startFree')}
           </button>
         </div>
+
+        {/* ── Mobile nav (hamburger) — hidden on desktop via CSS ── */}
+        <div className="landing-mobile-nav" style={{ display: 'none', alignItems: 'center', gap: '12px' }}>
+          <button onClick={() => navigate('/app/signup')} style={{ background: '#4B6CF5', color: 'white', border: 'none', borderRadius: '7px', fontSize: '13px', fontWeight: 700, padding: '8px 16px', cursor: 'pointer' }}>
+            {t('landing.startFree')}
+          </button>
+          <button
+            onClick={() => setMenuOpen(o => !o)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center', justifyContent: 'center' }}
+            aria-label="Menu"
+          >
+            <span style={{ display: 'block', width: '22px', height: '2px', background: 'var(--text)', borderRadius: '2px', transition: 'transform 0.2s', transform: menuOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none' }} />
+            <span style={{ display: 'block', width: '22px', height: '2px', background: 'var(--text)', borderRadius: '2px', opacity: menuOpen ? 0 : 1, transition: 'opacity 0.2s' }} />
+            <span style={{ display: 'block', width: '22px', height: '2px', background: 'var(--text)', borderRadius: '2px', transition: 'transform 0.2s', transform: menuOpen ? 'rotate(-45deg) translate(5px, -5px)' : 'none' }} />
+          </button>
+        </div>
+
+        {/* ── Mobile dropdown menu ── */}
+        {menuOpen && (
+          <>
+            {/* Backdrop */}
+            <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 49 }} />
+            {/* Dropdown */}
+            <div style={{ position: 'absolute', top: '64px', left: 0, right: 0, background: 'rgba(255,255,255,0.98)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', zIndex: 50, padding: '8px 0' }}>
+              {[
+                { label: t('landing.footerPricing'), href: '/app/pricing' },
+                { label: t('landing.footerFaq'),     href: '/faq'         },
+                { label: t('blog.title'),             href: '/blog'        },
+              ].map(({ label, href }) => (
+                <Link key={href} to={href} onClick={() => setMenuOpen(false)} style={{ display: 'block', padding: '14px 20px', fontSize: '14px', color: 'var(--text-2)', textDecoration: 'none', borderBottom: '1px solid var(--border)' }}>
+                  {label}
+                </Link>
+              ))}
+              <button onClick={() => { setMenuOpen(false); navigate('/app/login'); }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '14px 20px', fontSize: '14px', color: 'var(--text-2)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                {t('common.signIn')}
+              </button>
+            </div>
+          </>
+        )}
       </header>
 
       {/* ── LIVE TICKER ── */}
