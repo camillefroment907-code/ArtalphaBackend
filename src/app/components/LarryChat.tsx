@@ -830,6 +830,7 @@ export function LarryChat({ lotId: existingLotId }: LarryChatProps) {
       {/* ── LAUNCHER BUTTON ── */}
       <button
         onClick={handleOpen}
+        className="larry-launcher"
         style={{
           position: 'fixed',
           bottom: '20px',

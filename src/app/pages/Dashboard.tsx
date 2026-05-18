@@ -157,7 +157,7 @@ export default function Dashboard() {
       {/* ══════════════════════════════════════════════
           HERO — full width, cream, no dark background
       ══════════════════════════════════════════════ */}
-      <div style={{
+      <div className="dashboard-desktop-only" style={{
         background: '#FAFAF8',
         borderBottom: '1px solid #E8E4DC',
         padding: '28px 48px',

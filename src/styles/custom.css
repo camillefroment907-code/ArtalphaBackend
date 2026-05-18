@@ -456,6 +456,12 @@ select:hover {
   .dashboard-desktop-only { display: none !important; }
   .dashboard-mobile-only { display: block !important; }
   .dashboard-grid { grid-template-columns: 1fr !important; }
+
+  /* Legal disclaimer — hidden on mobile */
+  .legal-disclaimer { display: none !important; }
+
+  /* Larry launcher — smaller on mobile */
+  .larry-launcher { width: 40px !important; height: 40px !important; bottom: 12px !important; right: 12px !important; }
 }
 
 /* Dashboard mobile-only hidden by default on desktop */

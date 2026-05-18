@@ -14,7 +14,7 @@ export function LegalDisclaimer() {
   }, []);
 
   return (
-    <div style={{
+    <div className="legal-disclaimer" style={{
       position: 'fixed',
       bottom: 0,
       left: 0,
