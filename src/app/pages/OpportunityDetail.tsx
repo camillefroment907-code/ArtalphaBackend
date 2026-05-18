@@ -405,7 +405,7 @@ export default function OpportunityDetail() {
   ].filter(p => p.value > 0);
 
   return (
-    <div style={{ minHeight: '100vh', background: LT }}>
+    <div className="lot-detail-page" style={{ minHeight: '100vh', background: LT }}>
       <style>{`
         @keyframes bpulse{0%,100%{height:8px;opacity:0.3}50%{height:28px;opacity:1}}
         @keyframes dot{0%,100%{opacity:1}50%{opacity:0.3}}
