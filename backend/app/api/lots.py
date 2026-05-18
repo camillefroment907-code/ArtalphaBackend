@@ -58,7 +58,7 @@ def serialize_lot(lot, plan: str) -> dict:
         "deal_score": lot.deal_score,
         "estimate_low": lot.estimate_low,
         "pct_below_low_estimate": lot.pct_below_low_estimate,
-        "auction_house_name": lot.auction_house_name,
+        "auction_house_name": "Source masquée" if plan == "free" else lot.auction_house_name,
         "currency": lot.currency,
     }
     if plan != "free":
@@ -112,7 +112,7 @@ ADMIN_EMAILS = {e.strip() for e in _get_settings().admin_emails.split(",") if e.
 
 # Max results per page by plan — enforced server-side so API bypass is impossible
 _PLAN_PAGE_LIMIT: dict[str, int] = {
-    "free":          3,
+    "free":          6,
     "starter":       10,
     "investor":      9999,
     "pro":           9999,
@@ -474,7 +474,7 @@ async def daily_unlock(db: AsyncSession = Depends(get_db)):
         )
         result2 = await db.execute(stmt2)
         lot = result2.scalar_one_or_none()
-    return serialize_lot(lot, "investor") if lot else {}
+    return serialize_lot(lot, "free") if lot else {}
 
 
 @router.get("/hot-deals")
@@ -1389,7 +1389,11 @@ async def get_closing_today(
 
 
 @router.get("/{lot_id}")
-async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
+async def get_lot(
+    lot_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
     result = await db.execute(
         select(Lot)
         .options(selectinload(Lot.artist))
@@ -1398,6 +1402,7 @@ async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
     lot = result.scalar_one_or_none()
     if not lot:
         raise HTTPException(status_code=404, detail="Lot not found")
+    lot_plan = await get_user_plan(current_user, db)
 
     # Serialize via schema then inject parsed dimension fields
     lot_dict = LotOut.model_validate(lot).model_dump(mode="json")
@@ -1605,6 +1610,15 @@ async def get_lot(lot_id: str, db: AsyncSession = Depends(get_db)):
         else:
             lot_dict["price_history"] = None
     except Exception:
+        lot_dict["price_history"] = None
+
+    if lot_plan == "free":
+        lot_dict["auction_house_name"] = "Source masquée"
+        lot_dict["url"] = None
+        lot_dict["oracle"] = None
+        lot_dict["projection"] = None
+        lot_dict["fair_value_nautilus"] = None
+        lot_dict["fair_value_confidence"] = None
         lot_dict["price_history"] = None
 
     return lot_dict

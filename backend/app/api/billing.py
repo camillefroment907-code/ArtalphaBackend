@@ -197,8 +197,8 @@ PLANS = [
 
 PLAN_LIMITS = {
     "free": {
-        "lots_per_day": 3,
-        "primary_lots": 3,
+        "lots_per_day": 6,
+        "primary_lots": 6,
         "convictions": False,
         "larry_messages": 3,
         "agent_alerts": 0,
