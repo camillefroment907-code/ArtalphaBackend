@@ -799,6 +799,69 @@ export default function OpportunityDetail() {
           </div>
         </div>
 
+        {/* ── MOBILE FREE: POURQUOI NAUTILUS SURVEILLE + COÛT RÉEL ─────────── */}
+        {!hasAccess && !isDailyDeal && (() => {
+          const compsAvgMob = comparables.length > 0
+            ? Math.round(comparables.reduce((s: number, c: any) => s + (c.current_price || 0), 0) / comparables.length)
+            : null;
+
+          const whyBullets: string[] = [];
+          if (upsidePct >= 5) whyBullets.push(isFr ? `Prix ${Math.round(upsidePct)}% inférieur aux ventes comparables récentes` : `Price ${Math.round(upsidePct)}% below recent comparable sales`);
+          if ((lot.artist?.sell_through_rate || 0) >= 0.6) whyBullets.push(isFr ? 'Marché actif pour cet artiste' : 'Active market for this artist');
+          if ((lot.deal_score || 0) >= 65 && upsidePct < 5) whyBullets.push(isFr ? 'Bonne entrée pour cette catégorie' : 'Good entry point for this category');
+          const ratStr = typeof lot.score_rationale === 'string' ? lot.score_rationale : (typeof (lot as any).rationale === 'string' ? (lot as any).rationale : '');
+          const firstSent = ratStr ? (ratStr.match(/^[^.!?]+[.!?]/)?.[0] ?? null) : null;
+          if (firstSent && whyBullets.length < 3) whyBullets.push(firstSent);
+          if (compsAvgMob && compsAvgMob > price * 1.05 && whyBullets.length < 3) whyBullets.push(isFr ? 'Entrée favorable par rapport aux œuvres similaires récentes' : 'Favorable entry vs. similar works sold recently');
+
+          if (whyBullets.length === 0 && price === 0) return null;
+          return (
+            <div className="lot-mobile-only" style={{ padding: '0 16px' }}>
+
+              {/* Pourquoi Nautilus surveille */}
+              {whyBullets.length > 0 && (
+                <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '16px 18px', marginBottom: '12px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>
+                    ◆ {isFr ? 'POURQUOI NAUTILUS SURVEILLE CE LOT' : 'WHY NAUTILUS IS WATCHING'}
+                  </div>
+                  {whyBullets.slice(0, 3).map((b, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: i < whyBullets.slice(0, 3).length - 1 ? '8px' : 0 }}>
+                      <span style={{ color: GOLD, fontSize: '11px', flexShrink: 0, marginTop: '2px' }}>◆</span>
+                      <span style={{ fontSize: '13px', color: LTT2, lineHeight: 1.55 }}>{b}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Coût réel */}
+              {price > 0 && (
+                <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '16px 18px', marginBottom: '12px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>
+                    ◆ {isFr ? 'COÛT RÉEL' : 'REAL COST'}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' as const }}>
+                    <div style={dRow}>
+                      <span style={{ fontSize: '13px', color: LTT2 }}>{isFr ? 'Coût estimé après frais' : 'Estimated cost after fees'}</span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>{fmtExact(Math.round(price * premiumMultiplier))}</span>
+                    </div>
+                    {compsAvgMob && compsAvgMob > 0 && (
+                      <div style={dRow}>
+                        <span style={{ fontSize: '13px', color: LTT2 }}>{isFr ? 'Revente moyenne historique' : 'Historical resale avg.'}</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>{fmtExact(compsAvgMob)}</span>
+                      </div>
+                    )}
+                    <div style={{ ...dRow, borderBottom: 'none' }}>
+                      <span style={{ fontSize: '13px', color: LTT2 }}>{isFr ? 'Hausse nécessaire pour rentabiliser' : 'Return needed to break even'}</span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: AMB }}>+{breakEvenGain.toFixed(0)}%</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          );
+        })()}
+
         {/* ── INTELLIGENCE NAUTILUS ─────────────────────────────────────────── */}
         {!hasAccess ? (
           <div style={{ padding: '0 40px 24px' }}>
@@ -1081,7 +1144,7 @@ export default function OpportunityDetail() {
                 {provRisk && (
                   <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px', padding: '12px 16px', marginTop: '14px' }}>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.13em', color: AMB, textTransform: 'uppercase', marginBottom: '8px' }}>
-                      DUE DILIGENCE · {isFr && provRisk.level === 'HIGH RISK' ? 'RISQUE ÉLEVÉ' : provRisk.level}
+                      {isFr ? "Points à vérifier avant d'enchérir" : 'Check these before bidding'}
                     </div>
                     {(provRisk.flags as { code: string; severity: string; label: string; detail: string }[]).map((f, i) => (
                       <div key={f.code}>
@@ -1431,8 +1494,33 @@ export default function OpportunityDetail() {
             {(!hasAccess && !isDailyDeal) ? (
               comparables.length > 0 && (
                 <div style={{ padding: '0 40px 8px' }}>
+                  {/* Desktop: count only */}
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, letterSpacing: '0.06em' }}>
                     {comparables.length} {isFr ? 'ventes comparables trouvées pour cet artiste' : 'comparable sales found for this artist'}
+                  </div>
+                  {/* Mobile: 2-3 real comparables + upgrade teaser */}
+                  <div className="lot-mobile-only" style={{ marginTop: '16px' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
+                      ◆ {isFr ? 'PREUVES MARCHÉ' : 'MARKET PROOF'}
+                    </div>
+                    {comparables.slice(0, 3).map((c: any, i: number) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: i < Math.min(2, comparables.length - 1) ? `1px solid ${LTB}` : 'none' }}>
+                        <span style={{ fontSize: '13px', color: LTT2 }}>
+                          {c.auction_house_name || (isFr ? 'Maison inconnue' : 'Unknown')}{c.auction_date ? ` — ${new Date(c.auction_date).getFullYear()}` : ''}
+                        </span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>
+                          €{Math.round(c.current_price || 0).toLocaleString('fr-FR')}
+                        </span>
+                      </div>
+                    ))}
+                    {comparables.length > 3 && (
+                      <div
+                        onClick={() => navigate('/app/pricing')}
+                        style={{ marginTop: '12px', fontSize: '12px', color: GOLD, cursor: 'pointer', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}
+                      >
+                        + {comparables.length - 3} {isFr ? 'ventes comparables supplémentaires avec Investor →' : 'more comparable sales with Investor →'}
+                      </div>
+                    )}
                   </div>
                 </div>
               )
@@ -1764,43 +1852,39 @@ export default function OpportunityDetail() {
 
       {/* ── PREMIUM UPGRADE BLOCK (free, non-daily-deal) ──────────────────────── */}
       {!hasAccess && !isDailyDeal && (
-        <div style={{ margin: '0 40px 48px', borderRadius: '12px', overflow: 'hidden', background: '#0F1824', border: '1px solid rgba(198,168,90,0.18)' }}>
+        <div className="lot-upgrade-block" style={{ margin: '0 40px 48px', borderRadius: '12px', overflow: 'hidden', background: '#0F1824', border: '1px solid rgba(198,168,90,0.18)' }}>
           <div style={{ padding: '28px 32px' }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.2em', textTransform: 'uppercase' as const, marginBottom: '14px' }}>
               ◆ NAUTILUS INVESTOR
             </div>
             <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', color: '#F0EDE6', fontWeight: 600, marginBottom: '20px', lineHeight: 1.3 }}>
-              {isFr ? "Débloquez l'analyse complète" : 'Unlock the full analysis'}
+              {isFr ? 'Débloquez la conviction complète' : 'Unlock full conviction'}
             </div>
 
-            <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column' as const, gap: '6px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: '6px' }}>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#6B7280' }}>IRR {isFr ? 'estimé' : 'estimate'}</span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: '#4B5563', letterSpacing: '0.05em', userSelect: 'none' as const }}>████</span>
+            {comparables.length > 0 && (
+              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: '6px' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#6B7280' }}>
+                  {comparables.length} {isFr ? 'ventes comparables · Prix moyen' : 'comparable sales · Avg price'}
+                </span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: '#4B5563', userSelect: 'none' as const }}>████</span>
               </div>
-              {comparables.length > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: '6px' }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#6B7280' }}>
-                    {comparables.length} {isFr ? 'ventes comparables · Prix moyen' : 'comparable sales · Avg price'}
-                  </span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: '#4B5563', userSelect: 'none' as const }}>████</span>
-                </div>
-              )}
-            </div>
+            )}
 
-            <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column' as const, gap: '5px' }}>
+            <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column' as const, gap: '7px' }}>
               {(isFr ? [
-                'Analyse coût détaillée',
-                'Comparables complets',
-                'Investment Memo',
-                'Signaux institutionnels',
+                "Jusqu'où enchérir sans surpayer",
+                'Le vrai coût après frais',
+                'Les comparables complets',
+                'Pourquoi ce lot est sous-évalué',
+                "Les risques réels avant d'acheter",
               ] : [
-                'Detailed cost analysis',
-                'Full comparables',
-                'Investment Memo',
-                'Institutional signals',
+                'How high to bid without overpaying',
+                'The true cost after all fees',
+                'Full comparable sales data',
+                'Why this lot is undervalued',
+                'The real risks before you bid',
               ]).map(f => (
-                <div key={f} style={{ fontSize: '12px', color: '#9CA3AF', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div key={f} style={{ fontSize: '13px', color: '#9CA3AF', display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <span style={{ color: GOLD, fontSize: '10px' }}>✓</span> {f}
                 </div>
               ))}
@@ -1814,10 +1898,21 @@ export default function OpportunityDetail() {
 
             <button
               onClick={() => navigate('/app/pricing')}
-              style={{ background: '#C6A85A', color: '#0F1824', border: 'none', padding: '12px 28px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, cursor: 'pointer' }}
+              style={{ background: '#C6A85A', color: '#0F1824', border: 'none', padding: '12px 28px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, cursor: 'pointer', width: '100%' }}
             >
               {isFr ? 'Passer Investor →' : 'Upgrade to Investor →'}
             </button>
+          </div>
+
+          <div style={{ padding: '14px 32px 20px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <div
+              onClick={() => navigate('/app/pricing?plan=pro')}
+              style={{ fontSize: '11px', color: '#4B5563', cursor: 'pointer', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', textAlign: 'center' as const }}
+            >
+              {isFr
+                ? 'Analyse institutionnelle complète disponible avec Pro →'
+                : 'Full institutional analysis available with Pro →'}
+            </div>
           </div>
         </div>
       )}
