@@ -428,4 +428,12 @@ select:hover {
   .landing-metrics-fr > div,
   .landing-metrics-en > div { grid-template-columns: 1fr !important; }
   .landing-footer-grid { grid-template-columns: 1fr !important; }
+  .landing-kpi-testimonials-grid { grid-template-columns: 1fr !important; }
+  .landing-sticky-cta {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    padding: 16px !important;
+  }
+  .landing-sticky-cta button:not(:last-child) { width: 100% !important; }
 }

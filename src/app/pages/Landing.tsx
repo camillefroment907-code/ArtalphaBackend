@@ -249,7 +249,7 @@ export default function Landing() {
 
       {/* ── Sticky CTA bar (after 50% scroll) ── */}
       {showStickyCTA && (
-        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100, background: 'var(--navy)', borderTop: '1px solid rgba(255,255,255,0.1)', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', boxShadow: '0 -4px 20px rgba(10,22,40,0.2)' }}>
+        <div className="landing-sticky-cta" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100, background: 'var(--navy)', borderTop: '1px solid rgba(255,255,255,0.1)', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', boxShadow: '0 -4px 20px rgba(10,22,40,0.2)' }}>
           <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-sans)' }}>
             {isFr ? (
               <><span style={{ color: 'var(--gold)', fontWeight: 700 }}>{closingSoonCount > 0 ? closingSoonCount : '—'} opportunités à fort potentiel</span> clôturent dans 48h</>
@@ -259,7 +259,7 @@ export default function Landing() {
           </span>
           <button
             onClick={() => navigate('/app/signup')}
-            style={{ background: 'var(--gold)', color: 'white', border: 'none', borderRadius: '6px', padding: '10px 24px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}
+            style={{ background: 'var(--gold)', color: 'white', border: 'none', borderRadius: '6px', padding: '10px 24px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em' }}
           >
             {isFr ? 'Commencer gratuitement →' : `${t('landing.startFree')} →`}
           </button>
@@ -790,7 +790,7 @@ export default function Landing() {
               </div>
 
               {/* FR — Block 4: KPI row */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '48px', textAlign: 'center' }}>
+              <div className="landing-kpi-testimonials-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '48px', textAlign: 'center' }}>
                 {[
                   { value: '4,9 / 5', label: 'SATISFACTION' },
                   { value: '+31%',    label: 'POTENTIEL MOYEN' },
