@@ -1,5 +1,5 @@
 """
-ArtAlpha AI Investment Agent
+Nautilus AI Investment Agent
 Analyzes lots against a user's AgentAlert using GPT-4o.
 Available for Investor plan and above.
 """
@@ -62,7 +62,7 @@ def _build_prompt(lot: Lot, alert: AgentAlert, lang: str = "fr") -> str:
 - Estimation basse : {_format_price(lot.estimate_low)}
 - Estimation haute : {_format_price(lot.estimate_high)}
 - Décote par rapport à l'estimation : {upside:.0f}%
-- Score deal ArtAlpha : {lot.deal_score:.0f}/100
+- Score deal Nautilus : {lot.deal_score:.0f}/100
 - Maison de vente : {lot.auction_house_name or (lot.source.value if lot.source else 'Inconnue')}
 - Date de vente : {lot.auction_date.strftime('%d/%m/%Y') if lot.auction_date else 'Non renseignée'}
 
