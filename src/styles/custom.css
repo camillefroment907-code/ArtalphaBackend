@@ -495,6 +495,12 @@ select:hover {
   /* Larry launcher — smaller on mobile */
   .larry-launcher { width: 40px !important; height: 40px !important; bottom: 12px !important; right: 12px !important; }
 
+  /* Explorer */
+  .explore-auction-note { display: none !important; }
+  .for-you-grid { grid-template-columns: 1fr !important; }
+  .for-you-grid .alpha-card-img-wrap { max-height: 300px !important; padding-top: 0 !important; height: 300px !important; }
+  .for-you-grid .alpha-card-img-wrap img { object-fit: cover !important; width: 100% !important; height: 100% !important; }
+
   /* Lot detail — grids */
   .lot-hero-grid       { grid-template-columns: 1fr !important; min-height: auto !important; }
   .lot-decision-grid   { grid-template-columns: 1fr !important; }
@@ -502,7 +508,8 @@ select:hover {
   .lot-investment-grid { grid-template-columns: 1fr !important; }
   .lot-context-grid    { grid-template-columns: 1fr !important; }
   .lot-ai-grid         { grid-template-columns: 1fr !important; }
-  .lot-comparables-grid { grid-template-columns: 1fr !important; }
+  .lot-comparables-grid { grid-template-columns: 1fr !important; overflow-x: hidden !important; max-width: 100% !important; }
+  .lot-comparables-grid > * { min-width: 0 !important; max-width: 100% !important; }
   .lot-memo-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .lot-reference-grid  { grid-template-columns: 1fr !important; }
 }

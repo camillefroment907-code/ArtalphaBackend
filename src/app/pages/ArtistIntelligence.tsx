@@ -521,7 +521,7 @@ export default function ArtistIntelligence() {
       <div style={{ minHeight: 'calc(100vh - 57px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--text)', marginBottom: '8px' }}>
-            Loading artist intelligence...
+            Chargement de l'intelligence artiste...
           </div>
         </div>
       </div>

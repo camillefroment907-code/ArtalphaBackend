@@ -259,7 +259,7 @@ function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => vo
       onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.transform = "translateY(0)"; el.style.boxShadow = "none"; el.style.borderColor = "var(--border)"; const img = el.querySelector("img") as HTMLImageElement | null; if (img) img.style.transform = "scale(1)"; }}
       style={{ background: "white", border: "1px solid var(--border)", borderRadius: "10px", overflow: "hidden", cursor: locked ? "default" : "pointer", transition: "transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease", contain: "layout style paint" }}
     >
-      <div style={{ position: "relative", paddingTop: "75%", background: "var(--bg-subtle)", overflow: "hidden" }}>
+      <div className="alpha-card-img-wrap" style={{ position: "relative", paddingTop: "75%", background: "var(--bg-subtle)", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0 }}><LotImage src={lot.imageUrl} alt={lot.title} /></div>
         <div style={{ position: "absolute", top: "10px", left: "10px", padding: "4px 10px", background: tierBg, border: `1px solid ${tierColor}40`, borderRadius: "4px" }}><span style={{ fontSize: "10px", fontWeight: 800, color: tierColor, letterSpacing: "0.1em" }}>{tier}</span></div>
         <div style={{ position: "absolute", top: "10px", right: "10px", padding: "4px 8px", background: "rgba(250,250,248,0.92)", backdropFilter: "blur(4px)", borderRadius: "4px", border: "1px solid var(--border)" }}><span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 700, color: "var(--navy)" }}>{Math.round(ds)}</span><span style={{ fontSize: "9px", color: "var(--text-3)" }}>/100</span></div>
@@ -989,19 +989,13 @@ export default function Explore() {
                     {total.toLocaleString()} lots
                   </div>
                   {(exploreTab === 'best' || exploreTab === 'auctions') && (
-                    <div style={{ fontSize: '11px', color: '#C9C5BC', fontFamily: 'var(--font-mono)', marginTop: '2px', letterSpacing: '0.03em', opacity: 0.7 }}>
+                    <div className="explore-auction-note" style={{ fontSize: '11px', color: '#C9C5BC', fontFamily: 'var(--font-mono)', marginTop: '2px', letterSpacing: '0.03em', opacity: 0.7 }}>
                       {t('explorer.auctionHousesNote')}
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Primary market label */}
-              {exploreTab === 'primary' && (
-                <div style={{ fontSize: '12px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', marginBottom: '16px' }}>
-                  {t('explorer.descPrimary')}
-                </div>
-              )}
 
               {/* Loading */}
               {exploreTab !== 'for-you' && loading && <NautilusLoader />}
@@ -1070,7 +1064,7 @@ export default function Explore() {
                           </span>
                         </div>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                      <div className="for-you-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                         {recos.map((reco: any, i: number) => {
                           const lot = reco.lot || reco;
                           const mapped = mapLot(lot);
