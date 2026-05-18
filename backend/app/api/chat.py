@@ -16,6 +16,7 @@ from app.database import get_db, AsyncSessionLocal
 from app.api.auth_utils import get_current_user
 from app.config import get_settings
 from app.utils.openai_guard import can_make_request, record_request
+from app.utils.plan_utils import get_user_plan
 from app.models.db_models import (
     User, ChatMessage, Lot, PortfolioItem,
     UserPreference, Subscription, SubscriptionStatus,
@@ -25,7 +26,6 @@ from app.services.web_intelligence import query_web_intelligence, needs_web_sear
 router = APIRouter(prefix="/chat", tags=["chat"])
 logger = structlog.get_logger(__name__)
 _settings = get_settings()
-_ADMIN_EMAILS = {e.strip() for e in _settings.admin_emails.split(",")}
 
 CHAT_LIMITS: dict[str, int] = {
     "free":          3,        # 3 lifetime messages (trial)
@@ -181,17 +181,6 @@ Above 65 = serious opportunity. Above 80 = exceptional.
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-
-async def _get_user_plan(user: User, db: AsyncSession) -> str:
-    if user.email.strip() in _ADMIN_EMAILS:
-        return "institutional"
-    result = await db.execute(
-        select(Subscription).where(Subscription.user_id == user.id)
-    )
-    sub = result.scalar_one_or_none()
-    if sub and sub.status.value.lower() in ("active", "trialing"):
-        return sub.plan.value.lower()
-    return "free"
 
 
 async def _get_monthly_usage(user_id, db: AsyncSession) -> int:
@@ -371,7 +360,7 @@ async def get_usage(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    plan = await _get_user_plan(current_user, db)
+    plan = await get_user_plan(current_user, db)
     limit = CHAT_LIMITS.get(plan, 0)
     used = await _get_monthly_usage(current_user.id, db)
     return {
@@ -387,7 +376,7 @@ async def get_history(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    plan = await _get_user_plan(current_user, db)
+    plan = await get_user_plan(current_user, db)
     if CHAT_LIMITS.get(plan, 3) == 0:
         raise HTTPException(403, "Larry is not available on your current plan.")
 
@@ -415,7 +404,7 @@ async def send_message(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    plan = await _get_user_plan(current_user, db)
+    plan = await get_user_plan(current_user, db)
     limit = CHAT_LIMITS.get(plan, 3)
 
     used = await _get_monthly_usage(current_user.id, db)
@@ -490,7 +479,7 @@ async def dashboard_brief(
     db: AsyncSession = Depends(get_db),
 ):
     """Dashboard AI market brief — Collector+ only. Free users get a locked response."""
-    plan = await _get_user_plan(current_user, db)
+    plan = await get_user_plan(current_user, db)
 
     if plan == "free":
         return {

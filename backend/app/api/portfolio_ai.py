@@ -11,31 +11,15 @@ import json
 
 from app.database import get_db
 from app.api.auth_utils import get_current_user
-from app.models.db_models import User, PortfolioItem, Subscription
+from app.models.db_models import User, PortfolioItem
 from app.config import get_settings
+from app.utils.plan_utils import get_user_plan
 
 router = APIRouter(prefix="/portfolio-ai", tags=["portfolio-ai"])
 settings = get_settings()
 
 _analysis_cache: dict = {}
 CACHE_HOURS = 6
-
-ADMIN_EMAILS = frozenset({
-    "camillefroment907@gmail.com",
-    "demo@hono.art",
-    "demo@balthus.art",
-})
-
-async def _get_user_plan(user: User, db: AsyncSession) -> str:
-    if user.email.strip() in ADMIN_EMAILS:
-        return "institutional"
-    result = await db.execute(
-        select(Subscription).where(Subscription.user_id == user.id)
-    )
-    sub = result.scalar_one_or_none()
-    if sub and sub.status.value.lower() in ("active", "trialing"):
-        return sub.plan.value.lower()
-    return "free"
 
 
 def _holding_period(purchase_date) -> str:
@@ -66,11 +50,11 @@ async def analyze_portfolio(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """AI portfolio analysis — Investor+ only."""
+    """AI portfolio analysis — Pro+ only."""
 
-    plan = await _get_user_plan(current_user, db)
-    if plan in ("free", "starter"):
-        raise HTTPException(403, "Portfolio AI analysis requires the Investor plan (€29/month).")
+    plan = await get_user_plan(current_user, db)
+    if plan in ("free", "starter", "investor"):
+        raise HTTPException(403, "Portfolio AI analysis requires the Pro plan (€99/month).")
 
     cache_key = str(current_user.id)
     if cache_key in _analysis_cache:
@@ -219,29 +203,26 @@ Return STRICT JSON (no markdown):
 }}"""
 
     try:
-        from openai import AsyncOpenAI
-        from app.utils.openai_guard import can_make_request, record_request
+        from anthropic import AsyncAnthropic
 
-        if not can_make_request():
-            raise HTTPException(503, "AI service temporarily at capacity. Try again in a few hours.")
+        if not settings.anthropic_api_key:
+            raise HTTPException(503, "AI service temporarily unavailable.")
 
-        client = AsyncOpenAI(api_key=settings.openai_api_key)
-        response = await client.chat.completions.create(
-            model="gpt-4o",  # upgraded from mini — portfolio analysis warrants full model
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a senior art investment analyst. Be specific, name-drop artists, reference market realities. Never be generic. Your analysis must be actionable."
-                },
-                {"role": "user", "content": prompt}
-            ],
+        client = AsyncAnthropic(api_key=settings.anthropic_api_key)
+        message = await client.messages.create(
+            model="claude-sonnet-4-5",
             max_tokens=1800,
             temperature=0.2,
-            response_format={"type": "json_object"},
+            system="You are a senior art investment analyst. Be specific, name-drop artists, reference market realities. Never be generic. Your analysis must be actionable.",
+            messages=[{"role": "user", "content": prompt}],
         )
-        record_request()
 
-        raw = response.choices[0].message.content.strip()
+        raw = message.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
         analysis_data = json.loads(raw)
 
         analysis = {

@@ -127,8 +127,22 @@ async def analyze_lot_for_alert(
 
         return result
 
+    except json.JSONDecodeError as e:
+        logger.warning(
+            "agent_analyze_json_error",
+            lot_id=str(lot.id),
+            alert_id=str(alert.id),
+            error=str(e),
+        )
+        return None
     except Exception as e:
-        logger.error("agent_analyze_failed", lot_id=str(lot.id), alert_id=str(alert.id), error=str(e))
+        logger.warning(
+            "agent_analyze_failed",
+            lot_id=str(lot.id),
+            alert_id=str(alert.id),
+            error=str(e),
+            error_type=type(e).__name__,
+        )
         return None
 
 

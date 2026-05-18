@@ -11,8 +11,9 @@ import json
 
 from app.database import get_db
 from app.api.auth_utils import get_current_user
-from app.models.db_models import User, Lot, Subscription, SubscriptionStatus
+from app.models.db_models import User, Lot
 from app.config import get_settings
+from app.utils.plan_utils import get_user_plan
 
 router = APIRouter(prefix="/memo", tags=["memo"])
 settings = get_settings()
@@ -20,24 +21,6 @@ settings = get_settings()
 # In-memory cache: lot_id → {memo, generated_at}
 _memo_cache: dict = {}
 CACHE_HOURS = 24
-
-ADMIN_EMAILS = frozenset({
-    "camillefroment907@gmail.com",
-    "demo@hono.art",
-    "demo@balthus.art",
-})
-
-
-async def _get_user_plan(user: User, db: AsyncSession) -> str:
-    if user.email.strip() in ADMIN_EMAILS:
-        return "institutional"
-    result = await db.execute(
-        select(Subscription).where(Subscription.user_id == user.id)
-    )
-    sub = result.scalar_one_or_none()
-    if sub and sub.status.value.lower() in ("active", "trialing"):
-        return sub.plan.value.lower()
-    return "free"
 
 
 @router.post("/{lot_id}")
@@ -49,7 +32,7 @@ async def generate_investment_memo(
     """Generate institutional investment memo for a lot. Investor+ only."""
 
     # Plan check
-    plan = await _get_user_plan(current_user, db)
+    plan = await get_user_plan(current_user, db)
     BLOCKED_PLANS = ("free", "starter")
     if plan in BLOCKED_PLANS:
         raise HTTPException(
@@ -57,7 +40,7 @@ async def generate_investment_memo(
             "Investment memos are available from the Investor plan (€29/month)."
         )
 
-    if not settings.openai_api_key:
+    if not settings.anthropic_api_key:
         raise HTTPException(503, "AI service temporarily unavailable.")
 
     # Check cache
@@ -122,18 +105,23 @@ FORMAT DE RÉPONSE (JSON strict, pas de markdown):
 Réponds UNIQUEMENT avec le JSON, aucun texte avant ou après."""
 
     try:
-        from openai import AsyncOpenAI
-        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        from anthropic import AsyncAnthropic
+        client = AsyncAnthropic(api_key=settings.anthropic_api_key)
 
-        response = await client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=800,
+        message = await client.messages.create(
+            model="claude-sonnet-4-5",
+            max_tokens=1024,
             temperature=0.3,
-            response_format={"type": "json_object"},
+            messages=[{"role": "user", "content": prompt}],
         )
 
-        raw = response.choices[0].message.content.strip()
+        raw = message.content[0].text.strip()
+        # Strip markdown code fences if Claude wraps JSON in them
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
         memo_data = json.loads(raw)
 
         memo = {
@@ -146,7 +134,7 @@ Réponds UNIQUEMENT avec le JSON, aucun texte avant ou après."""
             "estimate_high": est_high,
             "deal_score": score,
             "generated_at": datetime.utcnow().isoformat(),
-            "generated_by": "Nautilus AI · GPT-4o",
+            "generated_by": "Nautilus AI · Claude Sonnet",
             **memo_data,
         }
 

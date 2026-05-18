@@ -103,28 +103,11 @@ from app.models.db_models import (
 )
 from app.models.schemas import LotOut, LotListResponse, TopDeal, DashboardStats
 from app.api.auth_utils import get_current_user_optional, get_current_user
-from app.models.db_models import User, Subscription
-import os
+from app.models.db_models import User
+from app.config import get_settings as _get_settings
+from app.utils.plan_utils import get_user_plan
 
-ADMIN_EMAILS = frozenset({
-    "camillefroment907@gmail.com",
-    "demo@hono.art",
-    "demo@balthus.art",
-    *os.environ.get("ADMIN_EMAILS", "").split(","),
-}) - {""}
-
-
-async def get_user_plan(user: Optional[User], db: AsyncSession) -> str:
-    """Get effective plan — admins always get institutional."""
-    if not user:
-        return "free"
-    if user.email.strip() in ADMIN_EMAILS:
-        return "institutional"
-    result = await db.execute(select(Subscription).where(Subscription.user_id == user.id))
-    sub = result.scalar_one_or_none()
-    if sub and sub.status.value.lower() in ("active", "trialing") and sub.plan.value.upper() != "FREE":
-        return sub.plan.value.lower()
-    return "free"
+ADMIN_EMAILS = {e.strip() for e in _get_settings().admin_emails.split(",") if e.strip()}
 
 
 # Max results per page by plan — enforced server-side so API bypass is impossible
@@ -376,7 +359,7 @@ async def list_lots(
     if resolved_to:
         filters.append(Lot.auction_date <= resolved_to)
     if status:
-        filters.append(Lot.status == status)
+        filters.append(Lot.status.cast(String) == status)
     if market_type:
         try:
             filters.append(Lot.market_type == MarketType[market_type.upper()])

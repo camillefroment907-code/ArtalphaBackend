@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     # AI
     openai_api_key: Optional[str] = None
     openai_model: str = "gpt-4o"
+    anthropic_api_key: Optional[str] = None
 
     # Alerts
     telegram_bot_token: Optional[str] = None

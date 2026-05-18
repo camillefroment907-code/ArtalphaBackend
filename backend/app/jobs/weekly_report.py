@@ -10,7 +10,7 @@ from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import BgSessionLocal
-from app.models.db_models import User, Lot, UserPreference, Subscription, SubscriptionStatus, UserAlertPreferences
+from app.models.db_models import User, Lot, LotStatus, UserPreference, Subscription, SubscriptionStatus, UserAlertPreferences
 
 logger = logging.getLogger(__name__)
 
@@ -235,7 +235,7 @@ async def send_weekly_report() -> dict:
         lots_result = await db.execute(
             select(Lot)
             .where(
-                Lot.status == "live",
+                Lot.status == LotStatus.LIVE,
                 Lot.deal_score.isnot(None),
             )
             .order_by(desc(Lot.deal_score))
@@ -250,7 +250,7 @@ async def send_weekly_report() -> dict:
         # Stats
         stats_result = await db.execute(
             select(func.count(Lot.id), func.avg(Lot.deal_score))
-            .where(Lot.status == "live")
+            .where(Lot.status == LotStatus.LIVE)
         )
         total_live, avg_score = stats_result.one()
         avg_score = float(avg_score or 0)

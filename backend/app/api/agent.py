@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from app.database import get_db
 from app.api.auth_utils import get_current_user
 from app.config import get_settings
+from app.utils.plan_utils import get_user_plan
 from app.models.db_models import (
     User, AgentAlert, AgentRecommendation,
     Subscription, SubscriptionStatus, UserEvent,
@@ -36,20 +37,9 @@ AGENT_PLANS = set(k for k, v in AGENT_ALERT_LIMITS.items() if v > 0)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-async def _get_user_plan(user: User, db: AsyncSession) -> str:
-    if user.email.strip() in _ADMIN_EMAILS:
-        return "institutional"
-    result = await db.execute(
-        select(Subscription).where(Subscription.user_id == user.id)
-    )
-    sub = result.scalar_one_or_none()
-    if sub and sub.status.value.lower() in ("active", "trialing"):
-        return sub.plan.value.lower()
-    return "free"
-
 
 async def _require_agent_plan(user: User, db: AsyncSession) -> str:
-    plan = await _get_user_plan(user, db)
+    plan = await get_user_plan(user, db)
     if plan not in AGENT_PLANS:
         raise HTTPException(
             status_code=403,
@@ -122,7 +112,7 @@ async def get_limits(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    plan = await _get_user_plan(current_user, db)
+    plan = await get_user_plan(current_user, db)
     max_alerts = AGENT_ALERT_LIMITS.get(plan, 0)
     result = await db.execute(
         select(func.count(AgentAlert.id)).where(AgentAlert.user_id == current_user.id)
@@ -380,7 +370,7 @@ async def trigger_agent_run(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    plan = await _get_user_plan(current_user, db)
+    plan = await get_user_plan(current_user, db)
     if current_user.email.strip() not in _ADMIN_EMAILS:
         raise HTTPException(403, "Admin only.")
     import traceback

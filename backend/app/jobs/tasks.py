@@ -956,38 +956,44 @@ async def _run_ai_agents_async():
                     lang = "fr"
                     if user.preferences and user.preferences.language:
                         lang = user.preferences.language
-                    try:
-                        await send_deal_alert_email(
-                            to_email=user.email,
-                            artist_name=lot.artist_name_raw or "Unknown Artist",
-                            score=int(lot.deal_score or 0),
-                            auction_house=lot.auction_house_name or "",
-                            lot_title=lot.title or "Untitled",
-                            sale_date=sale_date,
-                            location="",
-                            estimate_range=estimate_range,
-                            upside_pct=int(lot.pct_below_low_estimate or 0),
-                            lot_url=lot_url,
-                            days_until_close=days_until_close,
-                            user_id=str(user.id),
-                            lang=lang,
-                            lot_image_url=lot.image_url,
-                            estimate_low_eur=float(lot.estimate_low or 0),
-                        )
-                        logger.info(
-                            "agent_email_sent",
-                            user_id=str(user.id),
-                            alert_id=str(alert.id),
-                            lot_id=str(lot.id),
-                            score=int(lot.deal_score or 0),
-                        )
-                    except Exception as email_err:
-                        logger.error(
-                            "agent_email_failed",
-                            user_id=str(user.id),
-                            lot_id=str(lot.id),
-                            error=str(email_err),
-                        )
+                    for attempt in range(3):
+                        try:
+                            await send_deal_alert_email(
+                                to_email=user.email,
+                                artist_name=lot.artist_name_raw or "Unknown Artist",
+                                score=int(lot.deal_score or 0),
+                                auction_house=lot.auction_house_name or "",
+                                lot_title=lot.title or "Untitled",
+                                sale_date=sale_date,
+                                location="",
+                                estimate_range=estimate_range,
+                                upside_pct=int(lot.pct_below_low_estimate or 0),
+                                lot_url=lot_url,
+                                days_until_close=days_until_close,
+                                user_id=str(user.id),
+                                lang=lang,
+                                lot_image_url=lot.image_url,
+                                estimate_low_eur=float(lot.estimate_low or 0),
+                            )
+                            logger.info(
+                                "agent_email_sent",
+                                user_id=str(user.id),
+                                alert_id=str(alert.id),
+                                lot_id=str(lot.id),
+                                score=int(lot.deal_score or 0),
+                            )
+                            break
+                        except Exception as email_err:
+                            if attempt == 2:
+                                logger.error(
+                                    "agent_email_failed_permanently",
+                                    user_id=str(user.id),
+                                    alert_id=str(alert.id),
+                                    lot_id=str(lot.id),
+                                    error=str(email_err),
+                                )
+                            else:
+                                await asyncio.sleep(5)
 
         await session.commit()
         logger.info("AI agents complete", total_recommendations=total_recs)
