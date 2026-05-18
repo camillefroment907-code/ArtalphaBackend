@@ -62,7 +62,7 @@ export function GoogleSignInButton({ onError }: Props) {
           size: 'large',
           text: 'continue_with',
           shape: 'rectangular',
-          width: 400,
+          width: Math.min(400, window.innerWidth - 48),
         });
         setLoaded(true);
       }
