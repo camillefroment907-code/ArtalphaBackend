@@ -810,7 +810,7 @@ export default function Landing() {
                   { value: '+37%', label: 'Bernard Buffet',        desc: 'Décote détectée, revalorisation rapide' },
                   { value: '71%',  label: 'Précision des signaux', desc: 'Lots score 75+' },
                 ].map(({ value, label, desc }, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '32px', paddingTop: '24px', paddingBottom: '24px', borderBottom: '1px solid #E8E4DC' }}>
+                  <div key={i} className="landing-investors-grid" style={{ display: 'flex', alignItems: 'center', gap: '32px', paddingTop: '24px', paddingBottom: '24px', borderBottom: '1px solid #E8E4DC' }}>
                     <div style={{ fontFamily: 'Georgia, serif', fontSize: '28px', fontWeight: 700, color: '#1A2A44', minWidth: '88px' }}>{value}</div>
                     <div style={{ fontSize: '15px', fontWeight: 500, color: '#1A2A44', minWidth: '180px' }}>{label}</div>
                     <div style={{ fontSize: '14px', color: '#9CA3AF', fontStyle: 'italic' }}>{desc}</div>
