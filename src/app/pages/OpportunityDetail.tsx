@@ -1509,35 +1509,28 @@ export default function OpportunityDetail() {
             {/* ── COMPARABLE SALES CARDS ────────────────────────────────────────── */}
             {(!hasAccess && !isDailyDeal) ? (
               comparables.length > 0 && (
-                <div style={{ padding: '0 40px 8px' }}>
-                  {/* Desktop: count only */}
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, letterSpacing: '0.06em' }}>
-                    {comparables.length} {isFr ? 'ventes comparables trouvées pour cet artiste' : 'comparable sales found for this artist'}
+                <div className="lot-mobile-only" style={{ padding: '0 16px 8px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
+                    ◆ {isFr ? 'PREUVES MARCHÉ' : 'MARKET PROOF'}
                   </div>
-                  {/* Mobile: 2-3 real comparables + upgrade teaser */}
-                  <div className="lot-mobile-only" style={{ marginTop: '16px' }}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
-                      ◆ {isFr ? 'PREUVES MARCHÉ' : 'MARKET PROOF'}
+                  {comparables.slice(0, 3).map((c: any, i: number) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: i < Math.min(2, comparables.length - 1) ? `1px solid ${LTB}` : 'none' }}>
+                      <span style={{ fontSize: '13px', color: LTT2 }}>
+                        {c.auction_house_name || (isFr ? 'Maison inconnue' : 'Unknown')}{c.auction_date ? ` — ${new Date(c.auction_date).getFullYear()}` : ''}
+                      </span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>
+                        €{Math.round(c.current_price || 0).toLocaleString('fr-FR')}
+                      </span>
                     </div>
-                    {comparables.slice(0, 3).map((c: any, i: number) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: i < Math.min(2, comparables.length - 1) ? `1px solid ${LTB}` : 'none' }}>
-                        <span style={{ fontSize: '13px', color: LTT2 }}>
-                          {c.auction_house_name || (isFr ? 'Maison inconnue' : 'Unknown')}{c.auction_date ? ` — ${new Date(c.auction_date).getFullYear()}` : ''}
-                        </span>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>
-                          €{Math.round(c.current_price || 0).toLocaleString('fr-FR')}
-                        </span>
-                      </div>
-                    ))}
-                    {comparables.length > 3 && (
-                      <div
-                        onClick={() => navigate('/app/pricing')}
-                        style={{ marginTop: '12px', fontSize: '12px', color: GOLD, cursor: 'pointer', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}
-                      >
-                        + {comparables.length - 3} {isFr ? 'ventes comparables supplémentaires avec Investor →' : 'more comparable sales with Investor →'}
-                      </div>
-                    )}
-                  </div>
+                  ))}
+                  {comparables.length > 3 && (
+                    <div
+                      onClick={() => navigate('/app/pricing')}
+                      style={{ marginTop: '12px', fontSize: '12px', color: GOLD, cursor: 'pointer', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}
+                    >
+                      + {comparables.length - 3} {isFr ? 'ventes comparables supplémentaires avec Investor →' : 'more comparable sales with Investor →'}
+                    </div>
+                  )}
                 </div>
               )
             ) : displayComps.length > 0 && (
@@ -1611,6 +1604,68 @@ export default function OpportunityDetail() {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+
+            {/* ── DESKTOP FREE: PAYWALL ── */}
+            {!hasAccess && !isDailyDeal && (
+              <div className="lot-upgrade-block" style={{ margin: '0 40px 32px', borderRadius: '12px', overflow: 'hidden', background: '#0F1824', border: '1px solid rgba(198,168,90,0.18)' }}>
+                <div style={{ padding: '28px 32px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.2em', textTransform: 'uppercase' as const, marginBottom: '14px' }}>
+                    ◆ NAUTILUS INVESTOR
+                  </div>
+                  <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', color: '#F0EDE6', fontWeight: 600, marginBottom: '20px', lineHeight: 1.3 }}>
+                    {isFr ? 'Débloquez la conviction complète' : 'Unlock full conviction'}
+                  </div>
+                  {comparables.length > 0 && (
+                    <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: '6px' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#6B7280' }}>
+                        {comparables.length} {isFr ? 'ventes comparables · Prix moyen' : 'comparable sales · Avg price'}
+                      </span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: '#4B5563', userSelect: 'none' as const }}>████</span>
+                    </div>
+                  )}
+                  <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column' as const, gap: '7px' }}>
+                    {(isFr ? [
+                      "Jusqu'où enchérir sans surpayer",
+                      'Le vrai coût après frais',
+                      'Les comparables complets',
+                      'Pourquoi ce lot est sous-évalué',
+                      "Les risques réels avant d'acheter",
+                    ] : [
+                      'How high to bid without overpaying',
+                      'The true cost after all fees',
+                      'Full comparable sales data',
+                      'Why this lot is undervalued',
+                      'The real risks before you bid',
+                    ]).map(f => (
+                      <div key={f} style={{ fontSize: '13px', color: '#9CA3AF', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span style={{ color: GOLD, fontSize: '10px' }}>✓</span> {f}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#6B7280', fontStyle: 'italic', lineHeight: 1.55, marginBottom: '22px' }}>
+                    {isFr
+                      ? 'Les membres Investor identifient en moyenne +34% de potentiel sur les lots score 80+.'
+                      : 'Investor members identify on average +34% more potential on lots with score 80+.'}
+                  </div>
+                  <button
+                    onClick={() => navigate('/app/pricing')}
+                    style={{ background: '#C6A85A', color: '#0F1824', border: 'none', padding: '12px 28px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, cursor: 'pointer', display: 'block', maxWidth: '280px', margin: '0 auto' }}
+                  >
+                    {isFr ? 'Passer Investor →' : 'Upgrade to Investor →'}
+                  </button>
+                </div>
+                <div style={{ padding: '14px 32px 20px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div
+                    onClick={() => navigate('/app/pricing?plan=pro')}
+                    style={{ fontSize: '11px', color: '#4B5563', cursor: 'pointer', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', textAlign: 'center' as const }}
+                  >
+                    {isFr
+                      ? 'Analyse institutionnelle complète disponible avec Pro →'
+                      : 'Full institutional analysis available with Pro →'}
+                  </div>
                 </div>
               </div>
             )}
@@ -1773,19 +1828,18 @@ export default function OpportunityDetail() {
         <div style={{ padding: '16px 40px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
             {/* AI Intelligence cards */}
+            {(!hasAccess && !isDailyDeal) ? null : (
             <div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'INTELLIGENCE IA' : 'AI INTELLIGENCE'}</div>
               {!hasAccess ? (
-                isDailyDeal ? (
-                  <LockedBlock
-                    title="AI Intelligence"
-                    teaser=""
-                    ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
-                    ctaPrice="Investor"
-                    planId="investor"
-                    preview={<div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>{[1,2].map(i=><div key={i} style={{ height:'140px', background:LT, borderRadius:'12px' }}/>)}</div>}
-                  />
-                ) : null
+                <LockedBlock
+                  title="AI Intelligence"
+                  teaser=""
+                  ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
+                  ctaPrice="Investor"
+                  planId="investor"
+                  preview={<div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>{[1,2].map(i=><div key={i} style={{ height:'140px', background:LT, borderRadius:'12px' }}/>)}</div>}
+                />
               ) : (
               <div className="lot-ai-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
 
@@ -1844,6 +1898,7 @@ export default function OpportunityDetail() {
               </div>
               )}
             </div>
+            )}
           </div>
 
         {/* ──────────────── DOCUMENTS ──────────────── */}
@@ -1931,72 +1986,6 @@ export default function OpportunityDetail() {
 
       </div>
 
-      {/* ── PREMIUM UPGRADE BLOCK (free, non-daily-deal) ──────────────────────── */}
-      {!hasAccess && !isDailyDeal && (
-        <div className="lot-upgrade-block" style={{ margin: '0 40px 48px', borderRadius: '12px', overflow: 'hidden', background: '#0F1824', border: '1px solid rgba(198,168,90,0.18)' }}>
-          <div style={{ padding: '28px 32px' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.2em', textTransform: 'uppercase' as const, marginBottom: '14px' }}>
-              ◆ NAUTILUS INVESTOR
-            </div>
-            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', color: '#F0EDE6', fontWeight: 600, marginBottom: '20px', lineHeight: 1.3 }}>
-              {isFr ? 'Débloquez la conviction complète' : 'Unlock full conviction'}
-            </div>
-
-            {comparables.length > 0 && (
-              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: '6px' }}>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#6B7280' }}>
-                  {comparables.length} {isFr ? 'ventes comparables · Prix moyen' : 'comparable sales · Avg price'}
-                </span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: '#4B5563', userSelect: 'none' as const }}>████</span>
-              </div>
-            )}
-
-            <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column' as const, gap: '7px' }}>
-              {(isFr ? [
-                "Jusqu'où enchérir sans surpayer",
-                'Le vrai coût après frais',
-                'Les comparables complets',
-                'Pourquoi ce lot est sous-évalué',
-                "Les risques réels avant d'acheter",
-              ] : [
-                'How high to bid without overpaying',
-                'The true cost after all fees',
-                'Full comparable sales data',
-                'Why this lot is undervalued',
-                'The real risks before you bid',
-              ]).map(f => (
-                <div key={f} style={{ fontSize: '13px', color: '#9CA3AF', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <span style={{ color: GOLD, fontSize: '10px' }}>✓</span> {f}
-                </div>
-              ))}
-            </div>
-
-            <div style={{ fontSize: '11px', color: '#6B7280', fontStyle: 'italic', lineHeight: 1.55, marginBottom: '22px' }}>
-              {isFr
-                ? 'Les membres Investor identifient en moyenne +34% de potentiel sur les lots score 80+.'
-                : 'Investor members identify on average +34% more potential on lots with score 80+.'}
-            </div>
-
-            <button
-              onClick={() => navigate('/app/pricing')}
-              style={{ background: '#C6A85A', color: '#0F1824', border: 'none', padding: '12px 28px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, cursor: 'pointer', display: 'block', maxWidth: '280px', margin: '0 auto' }}
-            >
-              {isFr ? 'Passer Investor →' : 'Upgrade to Investor →'}
-            </button>
-          </div>
-
-          <div style={{ padding: '14px 32px 20px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-            <div
-              onClick={() => navigate('/app/pricing?plan=pro')}
-              style={{ fontSize: '11px', color: '#4B5563', cursor: 'pointer', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', textAlign: 'center' as const }}
-            >
-              {isFr
-                ? 'Analyse institutionnelle complète disponible avec Pro →'
-                : 'Full institutional analysis available with Pro →'}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── IMAGE LIGHTBOX ───────────────────────────────────────────────────── */}
       {showLightbox && lot.image_url && (
