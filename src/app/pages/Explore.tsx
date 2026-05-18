@@ -248,12 +248,16 @@ function LotImage({ src, alt }: { src: string; alt: string }) {
 // ── AlphaCard ────────────────────────────────────────────────
 function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => void; locked: boolean }) {
   const nav = useNavigate();
+  const { i18n } = useTranslation();
+  const isFrCard = i18n.language?.startsWith('fr');
   const ds = lot.dealScore;
   const tier      = ds >= 80 ? "EXCEPTIONAL" : ds >= 65 ? "STRONG" : "INTERESTING";
+  const tierLabel = ds >= 80 ? (isFrCard ? "EXCEPTIONNEL" : "EXCEPTIONAL") : ds >= 65 ? (isFrCard ? "FORT" : "STRONG") : (isFrCard ? "INTÉRESSANT" : "INTERESTING");
   const tierColor = tier === "EXCEPTIONAL" ? "#C0392B" : tier === "STRONG" ? "var(--navy)" : "var(--gold-dim)";
   const tierBg    = tier === "EXCEPTIONAL" ? "rgba(192,57,43,0.08)" : tier === "STRONG" ? "rgba(26,42,68,0.08)" : "rgba(198,168,90,0.06)";
   return (
     <div
+      className="alpha-card"
       onClick={locked ? undefined : onClick}
       onMouseEnter={e => { if (locked) return; const el = e.currentTarget as HTMLDivElement; el.style.transform = "translateY(-4px)"; el.style.boxShadow = "0 12px 40px rgba(0,0,0,0.1)"; const img = el.querySelector("img") as HTMLImageElement | null; if (img) img.style.transform = "scale(1.05)"; }}
       onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.transform = "translateY(0)"; el.style.boxShadow = "none"; el.style.borderColor = "var(--border)"; const img = el.querySelector("img") as HTMLImageElement | null; if (img) img.style.transform = "scale(1)"; }}
@@ -261,7 +265,7 @@ function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => vo
     >
       <div className="alpha-card-img-wrap" style={{ position: "relative", paddingTop: "75%", background: "var(--bg-subtle)", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0 }}><LotImage src={lot.imageUrl} alt={lot.title} /></div>
-        <div style={{ position: "absolute", top: "10px", left: "10px", padding: "4px 10px", background: tierBg, border: `1px solid ${tierColor}40`, borderRadius: "4px" }}><span style={{ fontSize: "10px", fontWeight: 800, color: tierColor, letterSpacing: "0.1em" }}>{tier}</span></div>
+        <div style={{ position: "absolute", top: "10px", left: "10px", padding: "4px 10px", background: tierBg, border: `1px solid ${tierColor}40`, borderRadius: "4px" }}><span style={{ fontSize: "10px", fontWeight: 800, color: tierColor, letterSpacing: "0.1em" }}>{tierLabel}</span></div>
         <div style={{ position: "absolute", top: "10px", right: "10px", padding: "4px 8px", background: "rgba(250,250,248,0.92)", backdropFilter: "blur(4px)", borderRadius: "4px", border: "1px solid var(--border)" }}><span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 700, color: "var(--navy)" }}>{Math.round(ds)}</span><span style={{ fontSize: "9px", color: "var(--text-3)" }}>/100</span></div>
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "60px", background: "linear-gradient(to top, rgba(250,250,248,0.9), transparent)" }} />
       </div>
@@ -356,7 +360,8 @@ function LiveListRow({ lot, onClick }: { lot: MappedLot; onClick: () => void }) 
 
 // ── Explore component ─────────────────────────────────────────
 export default function Explore() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const exploreTab = (searchParams.get('tab') || 'best') as ExploreTab;
@@ -1060,7 +1065,7 @@ export default function Explore() {
                       <div style={{ marginBottom: '20px' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--gold-subtle)', border: '1px solid var(--gold-border)', borderRadius: '20px', padding: '4px 12px', marginBottom: '12px' }}>
                           <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold-dim)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
-                            {recos.length} RECOMMENDATIONS · UPDATED 6H AGO
+                            {recos.length} {isFr ? 'RECOMMANDATIONS' : 'RECOMMENDATIONS'} · {isFr ? 'MIS À JOUR IL Y A 6H' : 'UPDATED 6H AGO'}
                           </span>
                         </div>
                       </div>
@@ -1069,12 +1074,19 @@ export default function Explore() {
                           const lot = reco.lot || reco;
                           const mapped = mapLot(lot);
                           const reason = reco.reason || reco.recommendation_reason || reco.type || '';
-                          const reasonLabel = reason.includes('collection') ? 'Matches your collection' :
-                            reason.includes('momentum') ? 'Artist momentum signal' :
-                            reason.includes('price') ? 'Price below market median' :
-                            reason.includes('style') ? 'Matches your taste' :
-                            reason.includes('portfolio') ? 'Portfolio fit' :
-                            'Recommended for you';
+                          const reasonLabel = isFr
+                            ? (reason.includes('collection') ? 'Correspond à votre collection' :
+                               reason.includes('momentum') ? 'Signal momentum artiste' :
+                               reason.includes('price') ? 'Prix sous la médiane marché' :
+                               reason.includes('style') ? 'Correspond à vos goûts' :
+                               reason.includes('portfolio') ? 'Adapté à votre portfolio' :
+                               'Recommandé pour vous')
+                            : (reason.includes('collection') ? 'Matches your collection' :
+                               reason.includes('momentum') ? 'Artist momentum signal' :
+                               reason.includes('price') ? 'Price below market median' :
+                               reason.includes('style') ? 'Matches your taste' :
+                               reason.includes('portfolio') ? 'Portfolio fit' :
+                               'Recommended for you');
                           return (
                             <div key={reco.id || i} style={{ position: 'relative' }}>
                               <div style={{ position: 'absolute', top: '10px', left: '10px', zIndex: 10, background: 'var(--navy)', color: 'var(--gold)', padding: '3px 8px', borderRadius: '3px', fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)', letterSpacing: '0.08em', boxShadow: '0 2px 8px rgba(10,22,40,0.3)' }}>

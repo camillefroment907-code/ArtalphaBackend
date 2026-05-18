@@ -236,6 +236,7 @@ function AgentPage() {
   const [formError, setFormError] = useState('');
   const [matchCount, setMatchCount] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [expandedAlerts, setExpandedAlerts] = useState<Set<string>>(new Set());
 
   // ── Form fields ───────────────────────────────────────────────
   const [fname, setFname]             = useState('');
@@ -389,7 +390,7 @@ function AgentPage() {
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
 
       {/* ── HEADER DARK ─────────────────────────────────────── */}
-      <div style={{ background: '#0A1628', padding: '20px 32px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="agent-desktop-layout" style={{ background: '#0A1628', padding: '20px 32px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div>
            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.2em', color: 'rgba(198,168,90,0.65)', textTransform: 'uppercase', marginBottom: 4 }}>
@@ -466,7 +467,7 @@ function AgentPage() {
       </div>
 
       {/* ── 3-COLUMN BODY ───────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr 220px', minHeight: 'calc(100vh - 140px)' }}>
+      <div className="agent-desktop-layout" style={{ display: 'grid', gridTemplateColumns: '260px 1fr 220px', minHeight: 'calc(100vh - 140px)' }}>
 
         {/* ── COL LEFT : MES STRATÉGIES ───────────────────────── */}
         <div style={{ borderRight: '1px solid var(--border)', background: 'white', padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -843,6 +844,174 @@ function AgentPage() {
               </button>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ── MOBILE LAYOUT ───────────────────────────────────── */}
+      <div className="agent-mobile-layout">
+
+        {/* a) Header */}
+        <div style={{ background: '#0A1628', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.18em', color: 'rgba(198,168,90,0.65)', textTransform: 'uppercase', marginBottom: 3 }}>
+              {isFr ? 'Alertes · Temps réel' : 'Alerts · Real-time'}
+            </div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 400, color: 'white', lineHeight: 1.2 }}>
+              {isFr ? 'Mon analyste IA' : 'My AI Analyst'}
+            </div>
+          </div>
+          {limits?.can_create && (
+            <button
+              onClick={openCreateForm}
+              style={{ background: '#2563EB', color: 'white', border: 'none', borderRadius: 4, padding: '8px 14px', fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.06em', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+            >
+              {isFr ? '+ STRATÉGIE' : '+ STRATEGY'}
+            </button>
+          )}
+        </div>
+
+        {/* b) 3 metrics strip */}
+        <div style={{ display: 'flex', background: '#0A1628', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '10px 16px 14px' }}>
+          {[
+            { label: isFr ? 'Stratégies actives' : 'Active strategies', value: String(activeAlerts) },
+            { label: isFr ? 'Signaux détectés' : 'Signals detected', value: String(recs.length) },
+            { label: isFr ? 'Conviction moy.' : 'Avg conviction', value: avgConviction > 0 ? `${avgConviction}/100` : '—' },
+          ].map(({ label, value }, i) => (
+            <div key={label} style={{ flex: 1, paddingLeft: i > 0 ? 12 : 0, borderLeft: i > 0 ? '1px solid rgba(255,255,255,0.1)' : 'none', marginLeft: i > 0 ? 12 : 0 }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '7px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>{label}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '16px', fontWeight: 500, color: value === '—' ? 'rgba(255,255,255,0.2)' : 'white' }}>{value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ padding: '16px' }}>
+
+          {/* c) Signal Feed */}
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid var(--border)' }}>
+            {isFr ? 'Signaux détectés' : 'Detected signals'}
+          </div>
+
+          {signalFeed.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px 0 24px', fontSize: 12, color: 'var(--text-3)' }}>
+              {isFr ? 'Aucune opportunité détectée pour le moment.' : 'No opportunities detected right now.'}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+              {signalFeed.map(rec => {
+                const lot = rec.lot!;
+                return (
+                  <a key={rec.id} href={`/app/opportunities/${lot.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center',
+                      background: 'white', border: '1px solid var(--border)',
+                      borderLeft: `3px solid ${(lot.deal_score ?? 0) >= 85 ? '#C0392B' : '#B8922A'}`,
+                      borderRadius: '0 6px 6px 0', overflow: 'hidden',
+                    }}>
+                      {lot.image_url ? (
+                        <img src={lot.image_url} alt="" style={{ width: 80, height: 80, objectFit: 'cover', flexShrink: 0 }} />
+                      ) : (
+                        <div style={{ width: 80, height: 80, background: 'var(--bg-subtle)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: 18, color: 'var(--border)' }}>◇</span>
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0, padding: '10px 12px 10px 10px' }}>
+                        {lot.artist_name_raw && (
+                          <div style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: 'var(--text-3)', marginBottom: 2, letterSpacing: '0.08em' }}>
+                            {lot.artist_name_raw.toUpperCase()}
+                          </div>
+                        )}
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1A2A44', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 5 }}>
+                          {lot.title}
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: (lot.deal_score ?? 0) >= 85 ? '#C0392B' : '#B8922A' }}>
+                            {Math.round(lot.deal_score ?? 0)}/100
+                          </span>
+                          {lot.pct_below_low_estimate && (
+                            <span style={{ fontSize: 11, fontWeight: 600, color: '#16A34A' }}>
+                              +{Math.round(lot.pct_below_low_estimate)}% {isFr ? 'potentiel' : 'upside'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          )}
+
+          {/* d) Strategies accordion */}
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid var(--border)' }}>
+            {isFr ? 'Mes stratégies' : 'My strategies'}
+          </div>
+
+          {alerts.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px 0', fontSize: 12, color: 'var(--text-3)' }}>
+              {isFr ? "Aucune stratégie. Créez-en une pour recevoir des alertes." : "No strategies yet. Create one to get alerted."}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {alerts.map(alert => {
+                const isOpen = expandedAlerts.has(alert.id);
+                const horizonLabel: Record<string, string> = isFr
+                  ? { short: 'Court terme', medium: 'Moyen terme', long: 'Long terme' }
+                  : { short: 'Short term', medium: 'Medium term', long: 'Long term' };
+                return (
+                  <div key={alert.id} style={{ border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden', background: 'white' }}>
+                    <button
+                      onClick={() => setExpandedAlerts(prev => {
+                        const next = new Set(prev);
+                        if (next.has(alert.id)) next.delete(alert.id); else next.add(alert.id);
+                        return next;
+                      })}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 5, height: 5, borderRadius: '50%', flexShrink: 0, background: alert.is_active ? '#16A34A' : '#D1D5DB' }} />
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#1A2A44' }}>{alert.name}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                        <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                          {alert.recommendation_count > 0 ? `${alert.recommendation_count} sig.` : '—'}
+                        </span>
+                        <span style={{ fontSize: 11, color: 'var(--text-3)', display: 'inline-block', transition: 'transform 0.15s', transform: isOpen ? 'rotate(180deg)' : 'none' }}>▼</span>
+                      </div>
+                    </button>
+                    {isOpen && (
+                      <div style={{ padding: '0 14px 12px', display: 'flex', flexWrap: 'wrap', gap: 4, borderTop: '1px solid var(--border)' }}>
+                        {alert.category && (
+                          <span style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', padding: '2px 7px', borderRadius: 2, background: 'rgba(26,42,68,0.06)', color: '#1A2A44', border: '1px solid rgba(26,42,68,0.12)' }}>{alert.category}</span>
+                        )}
+                        {(alert.budget_min_eur || alert.budget_max_eur) && (
+                          <span style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', padding: '2px 7px', borderRadius: 2, background: 'rgba(198,168,90,0.07)', color: '#9A7A2A', border: '1px solid rgba(198,168,90,0.18)' }}>
+                            {alert.budget_min_eur && alert.budget_max_eur
+                              ? `${fmt(alert.budget_min_eur)} – ${fmt(alert.budget_max_eur)}`
+                              : alert.budget_max_eur ? `≤ ${fmt(alert.budget_max_eur)}` : `≥ ${fmt(alert.budget_min_eur)}`}
+                          </span>
+                        )}
+                        {alert.investment_horizon && (
+                          <span style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', padding: '2px 7px', borderRadius: 2, background: 'var(--bg-subtle)', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
+                            {horizonLabel[alert.investment_horizon] ?? alert.investment_horizon}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {limits?.can_create && (
+            <button
+              onClick={openCreateForm}
+              style={{ marginTop: 12, width: '100%', padding: '10px', fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em', color: '#2563EB', background: 'transparent', border: '1px dashed var(--border)', borderRadius: 4, cursor: 'pointer' }}
+            >
+              {isFr ? '+ NOUVELLE STRATÉGIE' : '+ NEW STRATEGY'}
+            </button>
+          )}
+
         </div>
       </div>
 

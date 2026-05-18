@@ -245,7 +245,7 @@ const fr: TranslationKeys = {
     typeDelete: 'Tapez SUPPRIMER pour confirmer',
     language: 'Langue',
     collection: 'Collection',
-    watchlist: 'Surveillance',
+    watchlist: 'Wishlist',
     artists: 'Artistes',
     subscription: 'Abonnement',
     riskAnalysis: 'Analyse des risques',

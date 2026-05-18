@@ -75,7 +75,7 @@ export default function Emerging() {
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 12 }}>
             ◆ NAUTILUS RADAR
           </div>
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 36, color: 'var(--text)', margin: '0 0 12px 0', fontWeight: 400 }}>
+          <h1 className="emerging-title" style={{ fontFamily: 'var(--font-serif)', fontSize: 36, color: 'var(--text)', margin: '0 0 12px 0', fontWeight: 400 }}>
             {t('emerging.title')}
           </h1>
           <p style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.7, margin: 0, maxWidth: 560 }}>
@@ -112,7 +112,7 @@ export default function Emerging() {
         {/* Artist grid */}
         {!loading && artists.length > 0 && (
           <div style={{ position: 'relative' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+            <div className="emerging-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
               {artists.map((artist) => (
                 <ArtistCard key={artist.id} artist={artist} navigate={navigate} />
               ))}
@@ -200,6 +200,7 @@ function ArtistCard({ artist, navigate }: { artist: EmergingArtist; navigate: Re
 
   return (
     <div
+      className="emerging-card"
       style={{
         background: 'white',
         border: '1px solid var(--border)',
@@ -221,7 +222,7 @@ function ArtistCard({ artist, navigate }: { artist: EmergingArtist; navigate: Re
       }}
     >
       {/* Photo */}
-      <div style={{ height: 200, background: 'var(--navy)', overflow: 'hidden', flexShrink: 0 }}>
+      <div className="emerging-card-img" style={{ height: 200, background: 'var(--navy)', overflow: 'hidden', flexShrink: 0 }}>
         {artist.image_url ? (
           <img
             src={artist.image_url}
@@ -239,7 +240,7 @@ function ArtistCard({ artist, navigate }: { artist: EmergingArtist; navigate: Re
       </div>
 
       {/* Body */}
-      <div style={{ padding: '14px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="emerging-card-body" style={{ padding: '14px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {/* Badges row */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {(() => {
@@ -264,6 +265,15 @@ function ArtistCard({ artist, navigate }: { artist: EmergingArtist; navigate: Re
               </span>
             );
           })()}
+          {artist.source && (
+            <span style={{
+              fontFamily: 'var(--font-mono)', fontSize: 9,
+              color: 'var(--text-3)', border: '1px solid var(--border)',
+              borderRadius: 3, padding: '2px 7px', letterSpacing: '0.1em',
+            }}>
+              {artist.source}
+            </span>
+          )}
         </div>
 
         {/* Name */}
@@ -271,18 +281,28 @@ function ArtistCard({ artist, navigate }: { artist: EmergingArtist; navigate: Re
           {artist.name}
         </div>
 
+        {/* Mobile: momentum score */}
+        {artist.momentum_score != null && (
+          <span className="emerging-card-score" style={{ fontSize: 12, fontWeight: 700, color: '#16A34A', fontFamily: 'var(--font-mono)' }}>
+            +{artist.momentum_score}%
+          </span>
+        )}
+
         {/* Bio excerpt */}
         {bio && (
-          <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.65, margin: 0, flex: 1 }}>
+          <p className="emerging-card-bio" style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.65, margin: 0, flex: 1 }}>
             {bio}
           </p>
         )}
 
         {/* CTA */}
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--electric)', letterSpacing: '0.05em', marginTop: 4 }}>
+        <div className="emerging-card-cta" style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--electric)', letterSpacing: '0.05em', marginTop: 4 }}>
           {t('emerging.viewArtist')}
         </div>
       </div>
+
+      {/* Mobile arrow */}
+      <span className="emerging-card-arrow" style={{ fontSize: 16, color: 'var(--text-3)', flexShrink: 0, paddingRight: 12 }}>→</span>
     </div>
   );
 }

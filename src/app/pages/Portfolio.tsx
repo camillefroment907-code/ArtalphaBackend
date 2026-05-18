@@ -387,7 +387,7 @@ export default function Portfolio() {
   // ── Tabs ───────────────────────────────────────────────────
   const TABS = [
     { key: 'collection', label: t('portfolio.collection') },
-    { key: 'risk', label: t('portfolio.riskAnalysis'), soon: true },
+    // { key: 'risk', label: t('portfolio.riskAnalysis'), soon: true }, // hidden for launch
     { key: 'watchlist', label: watchlist.length > 0 ? `${t('portfolio.watchlist')} (${watchlist.length})` : t('portfolio.watchlist') },
     { key: 'artists', label: favoriteArtists.length > 0 ? `${t('portfolio.artists')} (${favoriteArtists.length})` : t('portfolio.artists') },
     // { key: 'alerts', label: t('portfolio.alerts') }, // hidden for launch
@@ -895,7 +895,7 @@ export default function Portfolio() {
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
 
         {/* ── TAB BAR ───────────────────────────────────────────── */}
-        <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: '32px' }}>
+        <div className="portfolio-tabs" style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: '32px' }}>
           {TABS.map(({ key, label, soon }: any) => (
             <button
               key={key}
@@ -924,9 +924,9 @@ export default function Portfolio() {
           <div className="animate-fade-in">
 
             {/* ── PREMIUM DARK HEADER ─────────────────────────── */}
-            <div style={{ background: '#0A1628', borderRadius: 12, padding: '22px 24px', marginBottom: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
-                <div>
+            <div className="portfolio-dark-header" style={{ background: '#0A1628', borderRadius: 12, padding: '22px 24px', marginBottom: 20 }}>
+              <div className="portfolio-dark-header-inner" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+                <div className="portfolio-dark-header-left">
                   <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', color: 'rgba(198,168,90,0.65)', textTransform: 'uppercase', marginBottom: 6 }}>
                     Portfolio · Intelligence
                   </div>
@@ -936,14 +936,20 @@ export default function Portfolio() {
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
                     {currentLang === 'fr' ? 'Suivez la valeur, la liquidité et les signaux de votre collection.' : 'Track value, liquidity and signals of your collection.'}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                  <div className="portfolio-live-indicator" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
                     <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#16A34A', boxShadow: '0 0 0 3px rgba(22,163,74,0.15)' }} />
                     <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)' }}>
                       {currentLang === 'fr' ? 'Estimations mises à jour en continu' : 'Estimates updated continuously'}
                     </span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
+                {/* Mobile-only: compact badge next to title */}
+                {collectorBadge && (
+                  <div className="portfolio-mobile-badge-inline" style={{ border: '0.5px solid rgba(198,168,90,0.3)', borderRadius: 6, padding: '5px 10px', color: 'rgba(198,168,90,0.9)', fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', alignSelf: 'center' }}>
+                    ✦ {collectorBadge.label}
+                  </div>
+                )}
+                <div className="portfolio-dark-header-right" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
                   {collectorBadge && (
                     <div style={{ border: '0.5px solid rgba(198,168,90,0.3)', borderRadius: 8, padding: '10px 16px', textAlign: 'center', minWidth: 160 }}>
                       <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'rgba(198,168,90,0.7)', marginBottom: 4, textTransform: 'uppercase' }}>
@@ -975,8 +981,18 @@ export default function Portfolio() {
                 </div>
               </div>
 
+              {/* Mobile-only: add button full width */}
+              <div className="portfolio-mobile-add">
+                <button
+                  onClick={() => { setNewArtwork({ artist_name: '', title: '', year_created: '', medium: '', purchase_price: '', current_value: '', purchase_date: '', purchase_source: '', purchase_auction_house: '', purchase_location: '', country_of_origin: '', dimensions: '', condition: '', certificate_of_authenticity: 'false', authenticated_by: '', authentication_date: '', catalogue_raisonne_reference: '', storage_location: '', insured_value_eur: '', insurance_provider: '', notes: '' }); setShowAddModal(true); }}
+                  style={{ background: '#2563EB', color: 'white', border: 'none', borderRadius: 5, padding: '10px 16px', fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.06em', cursor: 'pointer', width: '100%', textAlign: 'center' }}
+                >
+                  {currentLang === 'fr' ? '+ Ajouter une œuvre' : '+ Add artwork'}
+                </button>
+              </div>
+
               {/* KPI strip */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', borderTop: '0.5px solid rgba(255,255,255,0.06)', paddingTop: 16 }}>
+              <div className="portfolio-kpi-strip" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', borderTop: '0.5px solid rgba(255,255,255,0.06)', paddingTop: 16 }}>
                 {(() => {
                   const sentimentVal = marketSentiment?.overall;
                   const sentimentLabel = sentimentVal === 'BULLISH'
@@ -1000,7 +1016,7 @@ export default function Portfolio() {
                     { label: currentLang === 'fr' ? 'Liquidité' : 'Liquidity', value: liquidityVal, sub: liquiditySub, subColor: liquidityColor, valueColor: liquidityColor },
                   ];
                   return kpis.map(({ label, value, sub, subColor, small, valueColor }, i) => (
-                    <div key={i} style={{ paddingLeft: i > 0 ? 16 : 0, paddingRight: i < 5 ? 16 : 0, borderRight: i < 5 ? '0.5px solid rgba(255,255,255,0.08)' : 'none' }}>
+                    <div key={i} className="portfolio-kpi-cell" style={{ paddingLeft: i > 0 ? 16 : 0, paddingRight: i < 5 ? 16 : 0, borderRight: i < 5 ? '0.5px solid rgba(255,255,255,0.08)' : 'none' }}>
                       <div style={{ fontSize: 8, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.3)', marginBottom: 4, textTransform: 'uppercase' }}>{label}</div>
                       <div style={{ fontSize: small ? 13 : 18, fontWeight: 500, color: valueColor || 'white', lineHeight: 1.2, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
                       {sub && <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: subColor }}>{sub}</div>}
@@ -1051,7 +1067,7 @@ export default function Portfolio() {
 
             {/* ── MINI VISUALISATIONS ──────────────────────────── */}
             {portfolioItems.length > 0 && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
+              <div className="portfolio-mini-viz" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
 
                 {/* Sparkline valeur portfolio */}
                 <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '16px' }}>
@@ -1626,7 +1642,7 @@ export default function Portfolio() {
 
                     {/* Strengths & Risks */}
                     {(aiAnalysis.strengths?.length > 0 || aiAnalysis.risks?.length > 0) && (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                      <div className="portfolio-strengths-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
                         {aiAnalysis.strengths?.length > 0 && (
                           <div style={{ background: 'rgba(0,180,120,0.05)', border: '1px solid rgba(0,180,120,0.18)', borderRadius: '6px', padding: '12px 14px' }}>
                             <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--electric)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', marginBottom: '8px' }}>STRENGTHS</div>
@@ -1738,15 +1754,15 @@ export default function Portfolio() {
             <div style={{ paddingTop: '32px', borderTop: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <div>
-                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', margin: '0 0 4px' }}>Market Opportunities</h2>
-                  <p style={{ fontSize: '12px', color: 'var(--text-3)', margin: 0 }}>Top scoring lots right now — updated every 15 min</p>
+                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', margin: '0 0 4px' }}>{currentLang === 'fr' ? 'Opportunités du marché' : 'Market Opportunities'}</h2>
+                  <p style={{ fontSize: '12px', color: 'var(--text-3)', margin: 0 }}>{currentLang === 'fr' ? 'Meilleurs lots en ce moment — mis à jour toutes les 15 min' : 'Top scoring lots right now — updated every 15 min'}</p>
                 </div>
                 <select
                   value={opportunitiesSort}
                   onChange={e => setOpportunitiesSort(e.target.value)}
                   style={{ padding: '7px 12px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', background: 'var(--bg)', color: 'var(--text)', outline: 'none', cursor: 'pointer' }}
                 >
-                  <option value="deal_score">Best score first</option>
+                  <option value="deal_score">{currentLang === 'fr' ? 'Meilleur score en premier' : 'Best score first'}</option>
                   <option value="price_asc">Price: low to high</option>
                   <option value="price_desc">Price: high to low</option>
                   <option value="date_asc">Closing soon</option>
@@ -1764,7 +1780,7 @@ export default function Portfolio() {
               )}
 
               {lotsLoading && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+                <div className="portfolio-opp-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
                   {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
                 </div>
               )}
@@ -1777,7 +1793,7 @@ export default function Portfolio() {
 
               {!lotsLoading && !lotsError && sortedLots.length > 0 && (
                 <>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+                  <div className="portfolio-opp-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
                     {displayedLots.map(lot => (
                       <AlphaCard key={lot.id} lot={lot} onClick={() => navigate(`/app/opportunities/${lot.id}`)} />
                     ))}
@@ -1787,7 +1803,7 @@ export default function Portfolio() {
                       onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
                       onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
                     >
-                      View all opportunities →
+                      {currentLang === 'fr' ? 'Voir toutes les opportunités →' : 'View all opportunities →'}
                     </Link>
                   </div>
                 </>
@@ -1950,7 +1966,7 @@ export default function Portfolio() {
             RISK ANALYSIS TAB
         ══════════════════════════════════════════════════════ */}
         {activeTab === 'risk' && (
-          <div className="animate-fade-in" style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'60px 40px',textAlign:'center'}}>
+          <div className="animate-fade-in" style={{display:'none',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'60px 40px',textAlign:'center'}}>
             <div style={{display:'inline-block',background:'rgba(198,168,90,0.12)',color:'#C6A85A',fontSize:11,fontWeight:700,letterSpacing:'0.15em',padding:'4px 14px',borderRadius:2,marginBottom:16,textTransform:'uppercase'}}>
               Coming soon
             </div>
@@ -2386,7 +2402,7 @@ export default function Portfolio() {
         {activeTab === 'subscription' && (
           <div className="animate-fade-in">
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 24px' }}>{currentLang === 'fr' ? "Abonnement" : 'Subscription'}</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}><div>
+            <div className="portfolio-main-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}><div>
 
             {/* Current plan hero card */}
             <div style={{
@@ -2726,7 +2742,7 @@ export default function Portfolio() {
         {activeTab === 'settings' && (
           <div className="animate-fade-in">
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--text)', margin: '0 0 24px' }}>{currentLang === 'fr' ? "Paramètres du compte" : 'Account Settings'}</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}><div>
+            <div className="portfolio-main-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}><div>
 
             {/* Profile */}
             <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '24px', marginBottom: '16px' }}>
