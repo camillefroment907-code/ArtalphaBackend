@@ -231,7 +231,7 @@ export default function Dashboard() {
         <div className="no-scrollbar" style={{ overflowY: 'auto', padding: '28px 32px', borderRight: '1px solid #E8E4DC' }}>
 
           {/* ── Section header ── */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
+          <div className="dashboard-desktop-only" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
             <div>
               <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '16px', fontWeight: 600, color: '#1A2A44', margin: 0 }}>
                 {t('dashboard.bestOpps')}
@@ -246,7 +246,7 @@ export default function Dashboard() {
           </div>
 
           {/* ── 4 opportunity cards ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '24px' }}>
+          <div className="dashboard-desktop-only" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '24px' }}>
             {topLots.length === 0
               ? Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="skeleton" style={{ borderRadius: '10px', height: '280px' }} />
@@ -327,7 +327,7 @@ export default function Dashboard() {
           </div>
 
           {/* ── KEY INSIGHTS ROW ── */}
-          <div style={{
+          <div className="dashboard-desktop-only" style={{
             display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
             background: 'white', border: '1px solid #E8E4DC', borderRadius: '10px',
             overflow: 'hidden', marginBottom: '24px',
@@ -371,7 +371,7 @@ export default function Dashboard() {
           </div>
 
           {/* ── RECENT EXCEPTIONAL TABLE ── */}
-          <div style={{ background: 'white', border: '1px solid #E8E4DC', borderRadius: '10px', overflow: 'hidden' }}>
+          <div className="dashboard-desktop-only" style={{ background: 'white', border: '1px solid #E8E4DC', borderRadius: '10px', overflow: 'hidden' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #E8E4DC' }}>
               <h3 style={{ fontFamily: 'Georgia, serif', fontSize: '15px', fontWeight: 600, color: '#1A2A44', margin: 0 }}>
                 {t('dashboard.recentExceptional')}
@@ -470,12 +470,76 @@ export default function Dashboard() {
                 })}
           </div>
 
+          {/* ── MOBILE VIEW ── */}
+          <div className="dashboard-mobile-only" style={{ display: 'none' }}>
+
+            {/* 3 métriques clés */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '20px' }}>
+              {[
+                { label: lang === 'fr' ? 'Lots suivis' : 'Lots tracked',     value: marketStats.total_lots > 0 ? marketStats.total_lots.toLocaleString() : '—' },
+                { label: lang === 'fr' ? 'Score moyen' : 'Avg score',        value: marketStats.avg_score > 0 ? `${marketStats.avg_score}/100` : '—' },
+                { label: lang === 'fr' ? 'Score ≥ 80' : 'Score ≥ 80',        value: marketStats.exceptional > 0 ? marketStats.exceptional.toString() : '—' },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ background: 'white', border: '1px solid #E8E4DC', borderRadius: '10px', padding: '14px 10px', textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'Georgia, serif', fontSize: '20px', fontWeight: 700, color: '#1A2A44', lineHeight: 1 }}>{value}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#9CA3AF', marginTop: '4px', letterSpacing: '0.06em' }}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Titre section */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h3 style={{ fontFamily: 'Georgia, serif', fontSize: '15px', fontWeight: 600, color: '#1A2A44', margin: 0 }}>
+                {t('dashboard.recentExceptional')}
+              </h3>
+            </div>
+
+            {/* 4 lots en cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+              {(topLots.length === 0 ? Array.from({ length: 4 }) : topLots.slice(0, 4)).map((lot: any, i: number) => {
+                if (!lot) return <div key={i} className="skeleton" style={{ height: '72px', borderRadius: '10px' }} />;
+                const ds = lot.deal_score ?? 0;
+                const badge = scoreBadge(ds);
+                const upside = Math.round(lot.pct_below_low_estimate ?? 0);
+                return (
+                  <div key={lot.id || i} onClick={() => navigate(`/app/opportunities/${lot.id}`)}
+                    style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'white', border: '1px solid #E8E4DC', borderRadius: '10px', padding: '12px', cursor: 'pointer' }}
+                  >
+                    <div style={{ width: '48px', height: '48px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, background: '#F3F0EB' }}>
+                      <LotImage src={lot.image_url} alt="" />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#1A2A44', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lot.title || '—'}</div>
+                      <div style={{ fontSize: '11px', color: '#9CA3AF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lot.auction_house_name || ''}</div>
+                    </div>
+                    <div style={{ flexShrink: 0, textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
+                      {upside > 0 && (
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#2563EB', fontFamily: 'var(--font-mono)' }}>+{upside}%</span>
+                      )}
+                      <span style={{ padding: '2px 7px', borderRadius: '4px', background: badge.bg, border: `1px solid ${badge.border}`, fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: badge.color }}>
+                        {Math.round(ds)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Bouton voir tous */}
+            <button
+              onClick={() => navigate('/app/explore')}
+              style={{ width: '100%', padding: '13px', background: '#1A2A44', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em' }}
+            >
+              {lang === 'fr' ? 'Voir tous les signaux →' : 'View all signals →'}
+            </button>
+          </div>
+
         </div>
 
         {/* ══════════════════════════════════════════════
             RIGHT SIDEBAR — 320px
         ══════════════════════════════════════════════ */}
-        <div className="no-scrollbar dashboard-sidebar" style={{ overflowY: 'auto', background: 'white', borderLeft: '1px solid #E8E4DC' }}>
+        <div className="no-scrollbar dashboard-sidebar dashboard-desktop-only" style={{ overflowY: 'auto', background: 'white', borderLeft: '1px solid #E8E4DC' }}>
 
           {/* Market Activity */}
           <div style={{ padding: '20px', borderBottom: '1px solid #E8E4DC' }}>

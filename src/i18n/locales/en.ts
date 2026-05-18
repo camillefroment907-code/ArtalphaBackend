@@ -100,7 +100,7 @@ const en = {
     kpiConvictionGe80: 'conviction score ≥ 80',
     kpiClosingSoon: 'Closing soon',
     kpiWithin24h: 'within 24 hours',
-    recentExceptional: 'Recent high conviction deals',
+    recentExceptional: "Today's Signals",
     colArtwork: 'Artwork',
     colArtist: 'Artist',
     colEstValue: 'Est. Value',

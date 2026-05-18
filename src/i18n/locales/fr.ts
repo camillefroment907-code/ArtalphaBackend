@@ -102,7 +102,7 @@ const fr: TranslationKeys = {
     kpiConvictionGe80: 'score de conviction ≥ 80',
     kpiClosingSoon: 'Clôture imminente',
     kpiWithin24h: 'dans les 24 heures',
-    recentExceptional: 'Deals haute conviction récents',
+    recentExceptional: 'Signaux du jour',
     colArtwork: 'Œuvre',
     colArtist: 'Artiste',
     colEstValue: 'Val. estimée',

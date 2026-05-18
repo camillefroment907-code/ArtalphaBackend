@@ -451,4 +451,11 @@ select:hover {
   .pricing-mobile-accordion { display: block !important; }
   .pricing-compare-section { display: none !important; }
   .landing-faq-grid { grid-template-columns: 1fr !important; }
+
+  /* Dashboard responsive */
+  .dashboard-desktop-only { display: none !important; }
+  .dashboard-mobile-only { display: block !important; }
 }
+
+/* Dashboard mobile-only hidden by default on desktop */
+.dashboard-mobile-only { display: none; }
