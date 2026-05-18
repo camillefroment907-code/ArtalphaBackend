@@ -478,14 +478,14 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
             onClick={() => navigate('/app/login')}
             style={{ fontSize: '14px', color: 'var(--text-2)', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px', minHeight: '44px' }}
           >
-            Sign in
+            Se connecter
           </button>
           <button
             className="btn btn-electric"
             onClick={() => navigate('/app/signup')}
             style={{ minHeight: '44px' }}
           >
-            Get access
+            Commencer gratuitement
           </button>
         </>
       ) : null /* mobile logged-in: hamburger already rendered above */}

@@ -63,16 +63,16 @@ export default function ContactSales() {
         <div style={{ textAlign: "center", maxWidth: "480px", padding: "48px" }}>
           <div style={{ fontSize: "48px", marginBottom: "24px" }}>✉️</div>
           <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "28px", color: "#1A1A1A", marginBottom: "12px" }}>
-            Message received
+            Message envoyé
           </h2>
           <p style={{ color: "#666", lineHeight: 1.7, marginBottom: "32px" }}>
-            Thank you for your interest in Nautilus Institutional. Our team will contact you within 24 hours.
+            Merci pour votre intérêt. Notre équipe vous contactera dans les 24 heures.
           </p>
           <button
             onClick={() => navigate("/pricing")}
             style={{ padding: "12px 28px", background: "#1A2A44", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: 600 }}
           >
-            Back to Pricing
+            Retour aux tarifs
           </button>
         </div>
       </div>
@@ -85,13 +85,13 @@ export default function ContactSales() {
 
         <div style={{ textAlign: "center", marginBottom: "40px" }}>
           <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#A38B4A", marginBottom: "12px" }}>
-            Institutional Access
+            Accès Institutionnel
           </div>
           <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "32px", fontWeight: 600, color: "#1A1A1A", marginBottom: "12px" }}>
-            Let's talk
+            Parlons-en
           </h1>
           <p style={{ fontSize: "15px", color: "#666", lineHeight: 1.7, maxWidth: "440px", margin: "0 auto" }}>
-            Custom pricing for auction houses, family offices, wealth managers and art funds. We'll build a plan around your needs.
+            Tarification sur mesure pour les maisons de vente, family offices, gestionnaires de patrimoine et fonds d'art. Nous construisons un plan adapté à vos besoins.
           </p>
         </div>
 
@@ -100,7 +100,7 @@ export default function ContactSales() {
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <div>
-                <label style={labelStyle}>Full Name *</label>
+                <label style={labelStyle}>Nom complet *</label>
                 <input required type="text" value={form.name} onChange={set("name")} placeholder="Alexandre Dupont" style={inputStyle} onFocus={focusGreen} onBlur={blurGrey} />
               </div>
               <div>
@@ -110,27 +110,27 @@ export default function ContactSales() {
             </div>
 
             <div>
-              <label style={labelStyle}>Company / Organization *</label>
+              <label style={labelStyle}>Société / Organisation *</label>
               <input required type="text" value={form.company} onChange={set("company")} placeholder="Dupont Family Office" style={inputStyle} onFocus={focusGreen} onBlur={blurGrey} />
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <div>
-                <label style={labelStyle}>Organization Type</label>
+                <label style={labelStyle}>Type d'organisation</label>
                 <select value={form.employees} onChange={set("employees")} style={{ ...inputStyle, appearance: "none" as any }} onFocus={focusGreen} onBlur={blurGrey}>
-                  <option value="">Select type</option>
+                  <option value="">Sélectionner</option>
                   <option value="family_office">Family Office</option>
-                  <option value="auction_house">Auction House</option>
-                  <option value="wealth_manager">Wealth Manager</option>
-                  <option value="art_fund">Art Fund</option>
-                  <option value="gallery">Gallery</option>
-                  <option value="other">Other</option>
+                  <option value="auction_house">Maison de vente</option>
+                  <option value="wealth_manager">Gestionnaire de patrimoine</option>
+                  <option value="art_fund">Fonds d'art</option>
+                  <option value="gallery">Galerie</option>
+                  <option value="other">Autre</option>
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Annual Art Budget</label>
+                <label style={labelStyle}>Budget art annuel</label>
                 <select value={form.budget} onChange={set("budget")} style={{ ...inputStyle, appearance: "none" as any }} onFocus={focusGreen} onBlur={blurGrey}>
-                  <option value="">Select range</option>
+                  <option value="">Sélectionner</option>
                   <option value="100k-500k">€100K – €500K</option>
                   <option value="500k-1m">€500K – €1M</option>
                   <option value="1m-5m">€1M – €5M</option>
@@ -140,11 +140,11 @@ export default function ContactSales() {
             </div>
 
             <div>
-              <label style={labelStyle}>What are you looking for?</label>
+              <label style={labelStyle}>Que recherchez-vous ?</label>
               <textarea
                 value={form.message}
                 onChange={set("message")}
-                placeholder="Describe your use case, team size, integration needs, or any specific requirements…"
+                placeholder="Décrivez votre cas d'usage, la taille de votre équipe, vos besoins d'intégration ou toute exigence spécifique…"
                 rows={4}
                 style={{ ...inputStyle, resize: "vertical", lineHeight: 1.6 }}
                 onFocus={focusGreen}
@@ -154,7 +154,7 @@ export default function ContactSales() {
 
             {status === "error" && (
               <div style={{ padding: "12px 16px", background: "rgba(192,57,43,0.06)", border: "1px solid rgba(192,57,43,0.2)", borderRadius: "6px", fontSize: "13px", color: "#C0392B" }}>
-                Something went wrong. Please email us at{" "}
+                Une erreur est survenue. Contactez-nous directement à{" "}
                 <a href="mailto:contact@get-nautilus.com" style={{ color: "#C0392B", fontWeight: 600 }}>contact@get-nautilus.com</a>
               </div>
             )}
@@ -166,11 +166,11 @@ export default function ContactSales() {
               onMouseEnter={(e) => { if (status !== "sending") (e.currentTarget as HTMLButtonElement).style.background = "#1A2A44"; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#1A2A44"; }}
             >
-              {status === "sending" ? "Sending…" : "Send Message →"}
+              {status === "sending" ? "Envoi en cours…" : "Envoyer →"}
             </button>
 
             <p style={{ textAlign: "center", fontSize: "12px", color: "#9A9A9A" }}>
-              We respond within 24 hours · contact@get-nautilus.com
+              Réponse sous 24h · contact@get-nautilus.com
             </p>
           </form>
         </div>
