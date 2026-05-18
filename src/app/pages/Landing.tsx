@@ -417,7 +417,7 @@ export default function Landing() {
 
       {/* ── METRICS ── */}
       {isFr ? (
-        <section style={{ borderTop: '1px solid #E8E4DC', borderBottom: '1px solid #E8E4DC', padding: '48px 120px', textAlign: 'center' }}>
+        <section className="landing-metrics-fr" style={{ borderTop: '1px solid #E8E4DC', borderBottom: '1px solid #E8E4DC', padding: '48px 120px', textAlign: 'center' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
             {[
               { value: '1,5M+',  label: t('landing.lotsAnalyzed'),  desc: 'transactions historiques'    },
@@ -433,7 +433,7 @@ export default function Landing() {
           </div>
         </section>
       ) : (
-        <section style={{ padding: '32px 120px', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', background: 'white' }}>
+        <section className="landing-metrics-en" style={{ padding: '32px 120px', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', background: 'white' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
             {[
               { value: '500K+', label: t('landing.lotsAnalyzed'),    sub: t('landing.lotsAnalyzedSub')    },
@@ -954,7 +954,7 @@ export default function Landing() {
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 40px' }}>
 
           {/* Top row — 4 columns */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '48px', marginBottom: '48px' }}>
+          <div className="landing-footer-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '48px', marginBottom: '48px' }}>
 
             {/* Col 1 — Brand */}
             <div>

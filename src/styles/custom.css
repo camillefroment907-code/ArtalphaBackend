@@ -411,4 +411,21 @@ select:hover {
   .landing-gated-section,
   .landing-momentum-section { padding: 48px 20px !important; }
   .landing-cta-section { padding: 60px 20px !important; }
+
+  /* TYPE A — grilles multi-colonnes → colonne unique */
+  .landing-urgency-strip { flex-wrap: wrap !important; }
+  .landing-signals-grid,
+  .landing-features-grid,
+  .landing-gated-grid,
+  .landing-momentum-grid,
+  .landing-featured-testimonial,
+  .landing-testimonials-grid { grid-template-columns: 1fr !important; }
+  .landing-trust-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* TYPE B — sections sans className */
+  .landing-metrics-fr,
+  .landing-metrics-en { padding: 32px 20px !important; }
+  .landing-metrics-fr > div,
+  .landing-metrics-en > div { grid-template-columns: 1fr !important; }
+  .landing-footer-grid { grid-template-columns: 1fr !important; }
 }
