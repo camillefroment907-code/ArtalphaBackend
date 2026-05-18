@@ -442,6 +442,7 @@ select:hover {
   /* Pricing page */
   .landing-plan-cards-grid { display: none !important; }
   .pricing-mobile-accordion { display: block !important; }
-  .landing-compare-table { overflow-x: auto !important; }
+  .pricing-compare-section { display: none !important; }
+  .pricing-compare-link { display: block !important; }
   .landing-faq-grid { grid-template-columns: 1fr !important; }
 }

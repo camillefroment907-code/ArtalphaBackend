@@ -663,7 +663,7 @@ export default function Pricing() {
       </div>
 
       {/* Compare table */}
-      <div style={{ maxWidth: '1100px', margin: '0 auto 64px', padding: '0 24px' }}>
+      <div id="compare" className="pricing-compare-section" style={{ maxWidth: '1100px', margin: '0 auto 64px', padding: '0 24px' }}>
         <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--text)', textAlign: 'center', marginBottom: '32px' }}>
           {p.comparePlans}
         </h2>
@@ -698,6 +698,13 @@ export default function Pricing() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Mobile compare link (hidden on desktop) */}
+      <div className="pricing-compare-link" style={{ display: 'none', textAlign: 'center', margin: '0 auto 32px', padding: '0 24px' }}>
+        <a href="/app/pricing#compare" style={{ fontSize: '13px', color: 'var(--electric)', textDecoration: 'none', fontWeight: 600 }}>
+          {p.comparePlans} en détail →
+        </a>
       </div>
 
       {/* FAQ */}
