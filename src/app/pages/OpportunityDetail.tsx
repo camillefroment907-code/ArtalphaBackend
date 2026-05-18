@@ -1651,10 +1651,10 @@ export default function OpportunityDetail() {
                       : 'Investor members identify on average +34% more potential on lots with score 80+.'}
                   </div>
                   <button
-                    onClick={() => navigate('/app/pricing')}
-                    style={{ background: '#C6A85A', color: '#0F1824', border: 'none', padding: '12px 28px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, cursor: 'pointer', display: 'block', maxWidth: '280px', margin: '0 auto' }}
+                    onClick={() => { navigate('/app/pricing'); window.scrollTo(0, 0); }}
+                    style={{ background: '#1A2A44', color: '#C6A85A', border: 'none', padding: '12px 28px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, cursor: 'pointer', display: 'block', maxWidth: '280px', margin: '0 auto' }}
                   >
-                    {isFr ? 'Passer Investor →' : 'Upgrade to Investor →'}
+                    {isFr ? 'INVESTOR+ · VOIR LES OFFRES →' : 'INVESTOR+ · SEE PLANS →'}
                   </button>
                 </div>
                 <div style={{ padding: '14px 32px 20px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
@@ -1715,10 +1715,10 @@ export default function OpportunityDetail() {
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
                         <button
-                          onClick={() => navigate('/app/pricing')}
-                          style={{ maxWidth: '280px', width: '100%', padding: '14px 0', background: GOLD, color: '#0C1622', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                          onClick={() => { navigate('/app/pricing'); window.scrollTo(0, 0); }}
+                          style={{ maxWidth: '280px', width: '100%', padding: '14px 0', background: '#1A2A44', color: '#C6A85A', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, border: 'none', borderRadius: '6px', cursor: 'pointer' }}
                         >
-                          {isFr ? 'Passer Investor →' : 'Go Investor →'}
+                          {isFr ? 'INVESTOR+ · VOIR LES OFFRES →' : 'INVESTOR+ · SEE PLANS →'}
                         </button>
                       </div>
                     </div>
