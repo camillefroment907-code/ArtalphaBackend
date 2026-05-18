@@ -498,7 +498,7 @@ select:hover {
   /* Explorer */
   .explore-auction-note { display: none !important; }
   .for-you-grid { grid-template-columns: 1fr !important; }
-  .for-you-grid .alpha-card-img-wrap { max-height: 300px !important; padding-top: 0 !important; height: 300px !important; }
+  .for-you-grid .alpha-card-img-wrap { height: 200px !important; padding-top: 0 !important; overflow: hidden !important; }
   .for-you-grid .alpha-card-img-wrap img { object-fit: cover !important; width: 100% !important; height: 100% !important; }
 
   /* Lot detail — page wrapper */
