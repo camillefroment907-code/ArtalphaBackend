@@ -437,7 +437,7 @@ export default function OpportunityDetail() {
       </div>
 
       {/* ═══ HERO — terminal 3-col ═══ */}
-      <div ref={heroRef} style={{ background: DK, display: 'grid', gridTemplateColumns: '300px 1fr 280px', minHeight: '380px' }}>
+      <div ref={heroRef} className="lot-hero-grid" style={{ background: DK, display: 'grid', gridTemplateColumns: '300px 1fr 280px', minHeight: '380px' }}>
 
         {/* COL 1 — Image */}
         <div className="lot-hero-image" style={{ background: DK4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', borderRight: `0.5px solid ${DKB}`, position: 'relative', paddingLeft: '16px' }}>
@@ -710,7 +710,7 @@ export default function OpportunityDetail() {
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>
             {isFr ? '◆ DÉCISION' : '◆ DECISION'}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+          <div className="lot-decision-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
 
             {/* Card 1 — VOUS PAYEZ */}
             <div style={{ background: LTC, border: `1px solid ${LTB}`, borderTop: `3px solid ${GD}`, borderRadius: '10px', padding: '18px 20px' }}>
@@ -812,7 +812,7 @@ export default function OpportunityDetail() {
 
                   {/* ROW A — Gap percentage + Price bar */}
                   {nautVal && gapPct !== null && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px', alignItems: 'center' }}>
+                    <div className="lot-reference-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px', alignItems: 'center' }}>
                       <div>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>
                           {isFr ? 'DÉCOTE ENTRÉE' : 'ENTRY DISCOUNT'}
@@ -943,7 +943,7 @@ export default function OpportunityDetail() {
             {/* ── DATA GRID 50/50 ─────────────────────────────────────────────── */}
             <div style={{ padding: '16px 40px' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'ANALYSE' : 'ANALYSIS'}</div>
-              <div style={{ border: `0.5px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden', marginBottom: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
+              <div className="lot-analysis-grid" style={{ border: `0.5px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden', marginBottom: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
 
               {/* LEFT COLUMN — Real Cost Breakdown + Investment Analysis */}
               <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '20px', borderRight: `0.5px solid ${LTB}` }}>
@@ -976,7 +976,7 @@ export default function OpportunityDetail() {
                 <div>
                   <div style={sl}>{t('lot.investmentAnalysis')}</div>
                   {canSeeAnalysis ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                    <div className="lot-investment-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
                       <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 14px', textAlign: 'center' }}>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', color: LTT3, marginBottom: '10px' }}>{t('lot.currentPrice')}</div>
                         <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', fontWeight: 600, color: LTT1, lineHeight: 1 }}>{fmt(price)}</div>
@@ -1267,7 +1267,7 @@ export default function OpportunityDetail() {
                   </div>
                   <div style={{ ...wCard, padding: '16px 20px' }}>
                     {hasMarket && (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: LTB, borderRadius: '8px', overflow: 'hidden' }}>
+                      <div className="lot-context-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: LTB, borderRadius: '8px', overflow: 'hidden' }}>
                         <div style={{ background: LTC, padding: '16px 18px' }}>
                           <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>MARCHÉ</div>
                           <div style={{ fontSize: '14px', fontWeight: 700, color: '#34D399', marginBottom: '4px' }}>
@@ -1364,7 +1364,7 @@ export default function OpportunityDetail() {
                     </div>
                   )}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: displayComps.length === 1 ? '1fr' : displayComps.length === 2 ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '16px' }}>
+                <div className="lot-comparables-grid" style={{ display: 'grid', gridTemplateColumns: displayComps.length === 1 ? '1fr' : displayComps.length === 2 ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '16px' }}>
                   {displayComps.map((comp: any) => {
                     const compPrice = comp.current_price || comp.estimate_low || 0;
                     const daysAgo = comp.days_since_sale;
@@ -1512,7 +1512,7 @@ export default function OpportunityDetail() {
             {/* AI Intelligence cards */}
             <div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'INTELLIGENCE IA' : 'AI INTELLIGENCE'}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="lot-ai-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
 
                 <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
@@ -1682,7 +1682,7 @@ export default function OpportunityDetail() {
                 </div>
                 <button onClick={() => setShowMemo(false)} style={{ background: 'none', border: 'none', color: '#6B7280', fontSize: '20px', cursor: 'pointer', padding: '0', lineHeight: 1 }}>×</button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginTop: '20px' }}>
+              <div className="lot-memo-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginTop: '20px' }}>
                 {[
                   { label: 'CURRENT PRICE', value: memo.current_price >= 1000 ? `€${(memo.current_price / 1000).toFixed(0)}K` : `€${memo.current_price}` },
                   { label: 'TARGET LOW',    value: memo.target_price?.low  ? `€${(memo.target_price.low  / 1000).toFixed(0)}K` : 'N/A' },

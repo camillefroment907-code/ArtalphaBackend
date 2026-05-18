@@ -494,6 +494,17 @@ select:hover {
 
   /* Larry launcher — smaller on mobile */
   .larry-launcher { width: 40px !important; height: 40px !important; bottom: 12px !important; right: 12px !important; }
+
+  /* Lot detail — grids */
+  .lot-hero-grid       { grid-template-columns: 1fr !important; min-height: auto !important; }
+  .lot-decision-grid   { grid-template-columns: 1fr !important; }
+  .lot-analysis-grid   { grid-template-columns: 1fr !important; }
+  .lot-investment-grid { grid-template-columns: 1fr !important; }
+  .lot-context-grid    { grid-template-columns: 1fr !important; }
+  .lot-ai-grid         { grid-template-columns: 1fr !important; }
+  .lot-comparables-grid { grid-template-columns: 1fr !important; }
+  .lot-memo-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .lot-reference-grid  { grid-template-columns: 1fr !important; }
 }
 
 /* Dashboard mobile-only hidden by default on desktop */
