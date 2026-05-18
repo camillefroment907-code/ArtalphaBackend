@@ -638,8 +638,8 @@ export default function Explore() {
         borderBottom: '1px solid var(--border)',
         flexShrink: 0,
       }}>
-        {/* LEFT: Tab pills */}
-        <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
+        {/* LEFT: Tab pills — desktop */}
+        <div className="explore-tabs-desktop" style={{ display: 'flex', gap: '4px', flex: 1 }}>
           {([
             { key: 'best', label: t('explorer.tabBestLots') },
             { key: 'auctions', label: t('explorer.tabAllAuctions') },
@@ -663,6 +663,20 @@ export default function Explore() {
             </button>
           ))}
         </div>
+
+        {/* LEFT: Tab select — mobile only */}
+        <select
+          className="explore-tabs-mobile"
+          value={exploreTab}
+          onChange={e => setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('tab', e.target.value); return p; })}
+          style={{ display: 'none' }}
+        >
+          <option value="best">{t('explorer.tabBestLots')}</option>
+          <option value="auctions">{t('explorer.tabAllAuctions')}</option>
+          <option value="primary">{t('explorer.tabPrimary')}</option>
+          <option value="convictions">{t('explorer.tabConvictions')}</option>
+          <option value="for-you">{t('explorer.tabForYou')}</option>
+        </select>
 
         {/* RIGHT: Filters + View mode + LIVE */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>

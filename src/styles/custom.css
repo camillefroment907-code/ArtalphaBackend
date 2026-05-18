@@ -460,9 +460,28 @@ select:hover {
   /* Legal disclaimer — hidden on mobile */
   .legal-disclaimer { display: none !important; }
 
+  /* Explorer — tabs replaced by select, grid 2 cols */
+  .explore-tabs-desktop { display: none !important; }
+  .explore-tabs-mobile {
+    display: block !important;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #E8E4DC;
+    border-radius: 8px;
+    background: white;
+    font-family: var(--font-sans, sans-serif);
+    font-size: 14px;
+    color: var(--text);
+    appearance: auto;
+  }
+  .explore-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
   /* Larry launcher — smaller on mobile */
   .larry-launcher { width: 40px !important; height: 40px !important; bottom: 12px !important; right: 12px !important; }
 }
 
 /* Dashboard mobile-only hidden by default on desktop */
 .dashboard-mobile-only { display: none; }
+
+/* Explorer tab select hidden by default on desktop */
+.explore-tabs-mobile { display: none; }
