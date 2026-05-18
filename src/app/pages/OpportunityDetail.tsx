@@ -1236,7 +1236,11 @@ export default function OpportunityDetail() {
               const marketTrend = priceHistory?.statistics?.trend_pct;
               const sellThrough = lot.artist?.sell_through_rate;
               const exhibitions = lot.artist_profile?.shows_last_12m;
-              const hasMarket = marketTrend != null || sellThrough != null || exhibitions != null;
+              const hasMarketTrend = marketTrend != null;
+              const hasSellThrough = sellThrough != null;
+              const hasExhibitions = exhibitions != null && exhibitions !== '' && exhibitions !== 0;
+              const metricCount = [hasMarketTrend, hasSellThrough, hasExhibitions].filter(Boolean).length;
+              const hasMarket = metricCount > 0;
 
               const risks: string[] = [];
               if (hasProvHighRisk)
@@ -1267,28 +1271,34 @@ export default function OpportunityDetail() {
                   </div>
                   <div style={{ ...wCard, padding: '16px 20px' }}>
                     {hasMarket && (
-                      <div className="lot-context-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: LTB, borderRadius: '8px', overflow: 'hidden' }}>
-                        <div style={{ background: LTC, padding: '16px 18px' }}>
-                          <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>MARCHÉ</div>
-                          <div style={{ fontSize: '14px', fontWeight: 700, color: '#34D399', marginBottom: '4px' }}>
-                            {marketTrend != null ? `↑ +${marketTrend}% YoY` : '—'}
+                      <div className="lot-context-grid" style={{ display: 'grid', gridTemplateColumns: `repeat(${metricCount}, 1fr)`, gap: '1px', background: LTB, borderRadius: '8px', overflow: 'hidden' }}>
+                        {hasMarketTrend && (
+                          <div style={{ background: LTC, padding: '16px 18px' }}>
+                            <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>MARCHÉ</div>
+                            <div style={{ fontSize: '14px', fontWeight: 700, color: '#34D399', marginBottom: '4px' }}>
+                              {`↑ +${marketTrend}% YoY`}
+                            </div>
+                            <div style={{ fontSize: '11px', color: LTT3 }}>{isFr ? 'Prix catégorie' : 'Category prices'}</div>
                           </div>
-                          <div style={{ fontSize: '11px', color: LTT3 }}>{isFr ? 'Prix catégorie' : 'Category prices'}</div>
-                        </div>
-                        <div style={{ background: LTC, padding: '16px 18px' }}>
-                          <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>LIQUIDITÉ</div>
-                          <div style={{ fontSize: '14px', fontWeight: 700, color: LTT1, marginBottom: '4px' }}>
-                            {sellThrough != null ? `${Math.round(sellThrough * 100)}%` : '—'}
+                        )}
+                        {hasSellThrough && (
+                          <div style={{ background: LTC, padding: '16px 18px' }}>
+                            <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>LIQUIDITÉ</div>
+                            <div style={{ fontSize: '14px', fontWeight: 700, color: LTT1, marginBottom: '4px' }}>
+                              {`${Math.round(sellThrough! * 100)}%`}
+                            </div>
+                            <div style={{ fontSize: '11px', color: LTT3 }}>sell-through</div>
                           </div>
-                          <div style={{ fontSize: '11px', color: LTT3 }}>sell-through</div>
-                        </div>
-                        <div style={{ background: LTC, padding: '16px 18px' }}>
-                          <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>INSTITUTIONNEL</div>
-                          <div style={{ fontSize: '14px', fontWeight: 700, color: LTT1, marginBottom: '4px' }}>
-                            {exhibitions != null ? exhibitions : '—'}
+                        )}
+                        {hasExhibitions && (
+                          <div style={{ background: LTC, padding: '16px 18px' }}>
+                            <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>INSTITUTIONNEL</div>
+                            <div style={{ fontSize: '14px', fontWeight: 700, color: LTT1, marginBottom: '4px' }}>
+                              {exhibitions}
+                            </div>
+                            <div style={{ fontSize: '11px', color: LTT3 }}>{isFr ? 'expositions 12 mois' : 'exhibitions 12m'}</div>
                           </div>
-                          <div style={{ fontSize: '11px', color: LTT3 }}>{isFr ? 'expositions 12 mois' : 'exhibitions 12m'}</div>
-                        </div>
+                        )}
                       </div>
                     )}
                     {hasMarket && risks.length > 0 && (
