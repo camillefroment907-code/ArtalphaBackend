@@ -474,7 +474,11 @@ async def daily_unlock(db: AsyncSession = Depends(get_db)):
         )
         result2 = await db.execute(stmt2)
         lot = result2.scalar_one_or_none()
-    return serialize_lot(lot, "free") if lot else {}
+    if not lot:
+        return {}
+    payload = serialize_lot(lot, "free")
+    payload["rationale"] = lot.score_rationale or None
+    return payload
 
 
 @router.get("/hot-deals")

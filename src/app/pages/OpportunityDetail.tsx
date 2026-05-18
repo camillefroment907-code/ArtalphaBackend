@@ -62,8 +62,8 @@ const isFrench = (s: string) =>
 
 // ── LOCKED BLOCK (light theme) ────────────────────────────────────────────────
 
-function LockedBlock({ preview }: {
-  title: string; teaser: string; ctaText: string; ctaPrice: string;
+function LockedBlock({ preview, ctaText }: {
+  title: string; teaser: string; ctaText?: string; ctaPrice: string;
   planId: string; preview?: React.ReactNode;
 }) {
   return (
@@ -79,7 +79,7 @@ function LockedBlock({ preview }: {
       </div>
       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
         <span onClick={() => window.location.href = '/app/pricing'} style={{ cursor: 'pointer', background: '#1A2A44', color: '#C6A85A', fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', padding: '8px 18px', borderRadius: 3 }}>
-          INVESTOR+ · UNLOCK →
+          {ctaText || 'INVESTOR+ · UNLOCK →'}
         </span>
       </div>
     </div>
@@ -136,11 +136,13 @@ export default function OpportunityDetail() {
   }, [id]);
 
   const limits         = getPlanLimits();
-  const plan           = isDailyDeal ? 'investor' : getUserPlan();
-  const hasAccess      = isDailyDeal || ["investor", "pro", "elite", "institutional"].includes(plan);
-  const canSeeAnalysis = isDailyDeal || limits.hasProjections || limits.hasArtistCotation;
-  const canSeeAI       = isDailyDeal || limits.hasAIVerdict;
-  const visibleYears   = isDailyDeal ? [5, 10, 20] : (limits.projectionYears || []);
+  const plan           = getUserPlan();
+  const paidPlans      = ["investor", "pro", "elite", "institutional"];
+  const isPaid         = paidPlans.includes(plan);
+  const hasAccess      = isPaid;
+  const canSeeAnalysis = isPaid && (limits.hasProjections || limits.hasArtistCotation);
+  const canSeeAI       = isPaid && limits.hasAIVerdict;
+  const visibleYears   = isPaid ? (limits.projectionYears || []) : [];
 
   const generateMemo = async () => {
     if (!lot?.id) return;
@@ -572,7 +574,7 @@ export default function OpportunityDetail() {
           {/* External link */}
           <div>
             {!hasAccess ? (
-              <span onClick={() => { window.location.href = '/app/pricing'; }} style={{ cursor: 'pointer', color: '#2563EB', fontSize: 13, fontWeight: 600, letterSpacing: '0.04em' }}>🔒 Unlock source — Investor plan →</span>
+              <span onClick={() => { window.location.href = '/app/pricing'; }} style={{ cursor: 'pointer', color: '#2563EB', fontSize: 13, fontWeight: 600, letterSpacing: '0.04em' }}>🔒 {isFr ? 'Accès Investor →' : 'Investor access →'}</span>
             ) : (
               <a href={trackUrl} target="_blank" rel="noopener noreferrer"
                 onClick={() => trackEvent('lot_external_click', 'lot', lot.id, {
@@ -777,6 +779,17 @@ export default function OpportunityDetail() {
               </div>
             )}
 
+            {isDailyDeal && !isPaid && (lot as any).rationale && (
+              <div style={{ border: `1px solid rgba(198,168,90,0.35)`, borderRadius: '8px', padding: '14px 18px' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  ◆ SIGNAL NAUTILUS
+                </div>
+                <p style={{ fontSize: '12px', color: LTT2, lineHeight: 1.65, margin: 0 }}>
+                  {String((lot as any).rationale).split('.')[0] + '.'}
+                </p>
+              </div>
+            )}
+
           </div>
           <div style={{ marginTop: '12px', display: 'flex', gap: '24px', padding: '12px 16px', background: 'rgba(10,15,30,0.04)', borderRadius: '6px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
             <div>
@@ -795,7 +808,18 @@ export default function OpportunityDetail() {
         </div>
 
         {/* ── INTELLIGENCE NAUTILUS ─────────────────────────────────────────── */}
-        {canSeeAnalysis && (() => {
+        {!hasAccess ? (
+          <div style={{ padding: '0 40px 24px' }}>
+            <LockedBlock
+              title="Intelligence Nautilus"
+              teaser=""
+              ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
+              ctaPrice="Investor"
+              planId="investor"
+              preview={<div style={{ display: 'flex', gap: '12px' }}>{[1,2,3].map(i=><div key={i} style={{ flex:1, height:'80px', background:LT, borderRadius:'8px' }}/>)}</div>}
+            />
+          </div>
+        ) : canSeeAnalysis && (() => {
           const nautVal = lot.fair_value_nautilus as number | null;
           const gapPct = nautVal && price > 0 ? Math.round((1 - price / nautVal) * 100) : null;
           const aiRationale = lot.ai_insight || (Array.isArray((lot as any).rationale) ? (lot as any).rationale.join(' ') : (lot as any).rationale);
@@ -1232,7 +1256,18 @@ export default function OpportunityDetail() {
             })()}
 
             {/* ── CONTEXTE MARCHÉ & VIGILANCE ──────────────────────────────────── */}
-            {canSeeAnalysis && (() => {
+            {!hasAccess ? (
+              <div style={{ padding: '0 40px 24px' }}>
+                <LockedBlock
+                  title="Contexte marché"
+                  teaser=""
+                  ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
+                  ctaPrice="Investor"
+                  planId="investor"
+                  preview={<div style={{ display: 'flex', gap: '12px' }}>{[1,2,3].map(i=><div key={i} style={{ flex:1, height:'72px', background:LT, borderRadius:'8px' }}/>)}</div>}
+                />
+              </div>
+            ) : canSeeAnalysis && (() => {
               const marketTrend = priceHistory?.statistics?.trend_pct;
               const sellThrough = lot.artist?.sell_through_rate;
               const exhibitions = lot.artist_profile?.shows_last_12m;
@@ -1322,7 +1357,18 @@ export default function OpportunityDetail() {
             })()}
 
             {/* ── SCÉNARIOS DE VALORISATION ───────────────────────────────────── */}
-            {canSeeAnalysis && visibleYears.length > 0 && (
+            {!hasAccess ? (
+              <div style={{ padding: '0 40px 24px' }}>
+                <LockedBlock
+                  title="Scénarios de valorisation"
+                  teaser=""
+                  ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
+                  ctaPrice="Investor"
+                  planId="investor"
+                  preview={<div style={{ height:'220px', background:LT, borderRadius:'8px' }}/>}
+                />
+              </div>
+            ) : canSeeAnalysis && visibleYears.length > 0 && (
               <div style={{ padding: '0 40px 24px' }}>
                 <div style={wCard}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
@@ -1438,7 +1484,16 @@ export default function OpportunityDetail() {
 
         {/* ──────────────── COMPARABLE SALES ──────────────── */}
         <div style={{ padding: '16px 40px 24px' }}>
-            {comparables.length === 0 ? (
+            {!hasAccess ? (
+              <LockedBlock
+                title="Ventes comparables"
+                teaser=""
+                ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
+                ctaPrice="Investor"
+                planId="investor"
+                preview={<div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>{[1,2,3].map(i=><div key={i} style={{ height:'44px', background:LT, borderRadius:'6px' }}/>)}</div>}
+              />
+            ) : comparables.length === 0 ? (
               <div style={{ ...wCard, textAlign: 'center', padding: '60px 24px' }}>
                 <div style={{ fontSize: '32px', opacity: 0.15, marginBottom: '16px' }}>◎</div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, letterSpacing: '0.1em' }}>No comparable sales found for this lot.</div>
@@ -1522,6 +1577,16 @@ export default function OpportunityDetail() {
             {/* AI Intelligence cards */}
             <div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'INTELLIGENCE IA' : 'AI INTELLIGENCE'}</div>
+              {!hasAccess ? (
+                <LockedBlock
+                  title="AI Intelligence"
+                  teaser=""
+                  ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
+                  ctaPrice="Investor"
+                  planId="investor"
+                  preview={<div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>{[1,2].map(i=><div key={i} style={{ height:'140px', background:LT, borderRadius:'12px' }}/>)}</div>}
+                />
+              ) : (
               <div className="lot-ai-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
 
                 <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', flexDirection: 'column' }}>
@@ -1575,6 +1640,7 @@ export default function OpportunityDetail() {
                 </div>
 
               </div>
+              )}
             </div>
           </div>
 
