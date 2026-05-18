@@ -619,6 +619,31 @@ export default function OpportunityDetail() {
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: verdict.dk, lineHeight: 1 }}>{verdict.icon} {verdict.label}</div>
           </div>
 
+          {/* Block 2b — SIGNAUX MARCHÉ VIVANT (mobile only) */}
+          {(() => {
+            const signals: string[] = [];
+            const wcount = (lot as any).wishlist_count || (lot as any).watchlist_count;
+            if (wcount) signals.push(isFr ? `👁 ${wcount} suivis` : `👁 ${wcount} watching`);
+            const artistTrend = lot.artist?.trend;
+            if (artistTrend) {
+              const isUp = artistTrend === 'up' || artistTrend === 'rising';
+              const isDown = artistTrend === 'down' || artistTrend === 'falling';
+              signals.push(isUp
+                ? (isFr ? '↑ Artiste en hausse' : '↑ Rising artist')
+                : isDown
+                ? (isFr ? '↓ Artiste en baisse' : '↓ Falling artist')
+                : (isFr ? '→ Artiste stable' : '→ Stable artist'));
+            }
+            if (signals.length === 0) return null;
+            return (
+              <div className="lot-mobile-only" style={{ padding: '10px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', gap: '14px', flexWrap: 'wrap' as const }}>
+                {signals.map((s, i) => (
+                  <span key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.04em' }}>{s}</span>
+                ))}
+              </div>
+            );
+          })()}
+
           {/* Block 3 — VS COMPARABLES */}
           {lot.fair_value_nautilus && price > 0 && (() => {
             const heroGapPct = Math.round((1 - price / (lot.fair_value_nautilus as number)) * 100);
@@ -694,7 +719,7 @@ export default function OpportunityDetail() {
       </div>
 
       {/* ═══ LIGHT ZONE ═══ */}
-      <div style={{ background: LT }}>
+      <div className="lot-light-zone" style={{ background: LT }}>
 
         {/* ── SCORE PILLARS STRIP ──────────────────────────────────────────── */}
         {scorePillars.length > 0 && (
@@ -851,8 +876,10 @@ export default function OpportunityDetail() {
                       </div>
                     )}
                     <div style={{ ...dRow, borderBottom: 'none' }}>
-                      <span style={{ fontSize: '13px', color: LTT2 }}>{isFr ? 'Hausse nécessaire pour rentabiliser' : 'Return needed to break even'}</span>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: AMB }}>+{breakEvenGain.toFixed(0)}%</span>
+                      <span style={{ fontSize: '13px', color: LTT2 }}>{isFr ? 'Seuil de rentabilité' : 'Break-even price'}</span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: AMB }}>
+                        {fmtExact(realCost?.breakeven_hammer ? Math.round(realCost.breakeven_hammer) : Math.round(price * premiumMultiplier * (1 + breakEvenGain / 100)))}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -864,8 +891,8 @@ export default function OpportunityDetail() {
 
         {/* ── INTELLIGENCE NAUTILUS ─────────────────────────────────────────── */}
         {!hasAccess ? (
-          <div style={{ padding: '0 40px 24px' }}>
-            {isDailyDeal ? (
+          isDailyDeal ? (
+            <div style={{ padding: '0 40px 24px' }}>
               <LockedBlock
                 title="Intelligence Nautilus"
                 teaser=""
@@ -874,20 +901,24 @@ export default function OpportunityDetail() {
                 planId="investor"
                 preview={<div style={{ display: 'flex', gap: '12px' }}>{[1,2,3].map(i=><div key={i} style={{ flex:1, height:'80px', background:LT, borderRadius:'8px' }}/>)}</div>}
               />
-            ) : (() => {
-              const aiText = [lot.score_rationale, lot.ai_insight, Array.isArray((lot as any).rationale) ? (lot as any).rationale.join(' ') : (lot as any).rationale].filter(Boolean).join(' ');
-              const firstSentence = aiText ? (aiText.match(/^[^.!?]+[.!?]/) || [aiText.slice(0, 120)])[0] : null;
-              if (!firstSentence) return null;
-              return (
+            </div>
+          ) : (() => {
+            const aiText = [lot.score_rationale, lot.ai_insight, Array.isArray((lot as any).rationale) ? (lot as any).rationale.join(' ') : (lot as any).rationale].filter(Boolean).join(' ').trim();
+            if (!aiText) return null;
+            const sentences = aiText.match(/[^.!?]+[.!?]+/g) || [];
+            const excerpt = sentences.slice(0, 3).join(' ').trim() || aiText.slice(0, 300);
+            if (!excerpt) return null;
+            return (
+              <div style={{ padding: '0 40px 24px' }}>
                 <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '16px 22px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>
-                    ◆ {isFr ? 'ANALYSE NAUTILUS' : 'NAUTILUS ANALYSIS'}
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
+                    ◆ {isFr ? 'LECTURE NAUTILUS' : 'NAUTILUS READ'}
                   </div>
-                  <p style={{ fontSize: '13px', color: LTT2, lineHeight: 1.65, margin: 0 }}>{firstSentence}</p>
+                  <p style={{ fontSize: '13px', color: LTT2, lineHeight: 1.7, margin: 0 }}>{excerpt}</p>
                 </div>
-              );
-            })()}
-          </div>
+              </div>
+            );
+          })()
         ) : canSeeAnalysis && (() => {
           const nautVal = lot.fair_value_nautilus as number | null;
           const gapPct = nautVal && price > 0 ? Math.round((1 - price / nautVal) * 100) : null;
@@ -1898,7 +1929,7 @@ export default function OpportunityDetail() {
 
             <button
               onClick={() => navigate('/app/pricing')}
-              style={{ background: '#C6A85A', color: '#0F1824', border: 'none', padding: '12px 28px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, cursor: 'pointer', width: '100%' }}
+              style={{ background: '#C6A85A', color: '#0F1824', border: 'none', padding: '12px 28px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, cursor: 'pointer', display: 'block', maxWidth: '280px', margin: '0 auto' }}
             >
               {isFr ? 'Passer Investor →' : 'Upgrade to Investor →'}
             </button>

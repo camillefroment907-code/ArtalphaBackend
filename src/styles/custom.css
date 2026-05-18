@@ -533,6 +533,8 @@ select:hover {
   .lot-mobile-only { display: block !important; }
   /* Lot detail — reduce upgrade block margin on mobile */
   .lot-upgrade-block { margin: 0 16px 32px !important; }
+  /* Lot detail — reduce 40px section gutters to 16px on mobile */
+  .lot-light-zone > div { padding-left: 16px !important; padding-right: 16px !important; }
 
   /* Agent */
   .agent-desktop-layout { display: none !important; }
