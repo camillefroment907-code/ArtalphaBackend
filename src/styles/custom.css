@@ -438,6 +438,8 @@ select:hover {
   .landing-sticky-cta button:not(:last-child) { width: 100% !important; }
 
   .landing-investors-grid { flex-direction: column !important; align-items: flex-start !important; gap: 4px !important; }
+  .header-signin-btn { display: none !important; }
+  .header-cta-btn { padding: 8px 14px !important; font-size: 12px !important; min-height: 36px !important; }
 
   /* Pricing page */
   .landing-plan-cards-grid { display: none !important; }
