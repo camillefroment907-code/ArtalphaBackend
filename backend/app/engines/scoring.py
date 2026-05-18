@@ -1,5 +1,5 @@
 """
-HONO Deal Scoring Engine
+Nautilus Deal Scoring Engine
 Proprietary algorithm for detecting underpriced auction lots.
 
 Score (0-100) components:
@@ -194,7 +194,7 @@ def build_rationale(
         bullets.append("Maison de vente de premier rang — provenance certifiée")
 
     if not bullets:
-        bullets.append("Lot analysé par l'algorithme HONO")
+        bullets.append("Lot analysé par l'algorithme Nautilus")
 
     return bullets[:4]
 
@@ -219,7 +219,7 @@ def generate_ai_insight(
     elif deal_score >= 75:
         parts.append(f"{name} constitue une opportunité d'achat intéressante selon nos indicateurs.")
     else:
-        parts.append(f"{name} mérite attention selon l'analyse HONO.")
+        parts.append(f"{name} mérite attention selon l'analyse Nautilus.")
 
     if pct_below_estimate is not None and pct_below_estimate > 15:
         parts.append(

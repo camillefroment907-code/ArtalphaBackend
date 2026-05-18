@@ -1,5 +1,5 @@
 """
-HONO Background Tasks
+Nautilus Background Tasks
 All async operations are wrapped with asyncio.run() for Celery compatibility.
 """
 import asyncio

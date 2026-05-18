@@ -1,5 +1,5 @@
 """
-HONO Backend Tests
+Nautilus Backend Tests
 Run: pytest backend/tests/ -v
 """
 import pytest

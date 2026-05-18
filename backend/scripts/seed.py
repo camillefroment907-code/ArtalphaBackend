@@ -1,5 +1,5 @@
 """
-HONO Seed Script
+Nautilus Seed Script
 Populates the database with realistic auction data for development/demo.
 Run: python scripts/seed.py
 """

@@ -1,5 +1,5 @@
 """
-HONO — AI Auction Deal Finder
+Nautilus — AI Auction Deal Finder
 FastAPI Application
 """
 from contextlib import asynccontextmanager
@@ -83,7 +83,7 @@ logger = structlog.get_logger()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting HONO API", env=settings.environment)
+    logger.info("Starting Nautilus API", env=settings.environment)
 
     # Retry DB connection up to 5 times with a hard 5-second timeout per attempt.
     # asyncpg's default TCP timeout can be 60s, which causes Railway's 300s healthcheck
@@ -125,7 +125,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    logger.info("HONO API shutting down")
+    logger.info("Nautilus API shutting down")
 
 
 async def _run_migrations_bg():
@@ -138,7 +138,7 @@ async def _run_migrations_bg():
 
 
 app = FastAPI(
-    title="HONO — AI Auction Deal Finder",
+    title="Nautilus — AI Auction Deal Finder",
     description="Detect underpriced auction lots across major platforms",
     version="1.0.0",
     docs_url="/docs",
@@ -201,7 +201,7 @@ app.include_router(collection_router,       prefix="/api")
 
 @app.get("/")
 async def root():
-    return {"name": "HONO API", "version": "5.0.0", "docs": "/docs", "status": "operational"}
+    return {"name": "Nautilus API", "version": "5.0.0", "docs": "/docs", "status": "operational"}
 
 
 @app.get("/api/proxy/image")

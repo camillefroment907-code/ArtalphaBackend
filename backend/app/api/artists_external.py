@@ -142,7 +142,7 @@ async def get_artist_lots(
 async def external_get_deals(
     min_score: float = Query(75, ge=0, le=100),
     limit: int = Query(10, ge=1, le=50),
-    api_key: Optional[str] = Query(None, description="Your HONO API key"),
+    api_key: Optional[str] = Query(None, description="Your Nautilus API key"),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -203,4 +203,4 @@ async def external_get_deals(
 
 @external_router.get("/health")
 async def health():
-    return {"status": "ok", "service": "HONO API", "version": "1.0.0"}
+    return {"status": "ok", "service": "Nautilus API", "version": "1.0.0"}

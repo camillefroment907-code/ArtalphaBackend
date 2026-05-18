@@ -1,4 +1,4 @@
-"""HONO Portfolio API — track artwork acquisitions and project values."""
+"""Nautilus Portfolio API — track artwork acquisitions and project values."""
 import csv
 import io
 import json
