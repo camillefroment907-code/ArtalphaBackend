@@ -210,6 +210,9 @@ export default function ArtistDetail() {
   const [notFound, setNotFound] = useState(false);
   const [wikiBio, setWikiBio] = useState<string | null>(null);
   const [oracle, setOracle] = useState(null);
+  const [plan, setPlan] = useState(getUserPlan());
+  useEffect(() => { setPlan(getUserPlan()); }, []);
+  const hasFullAccess = ["investor", "pro", "elite", "institutional"].includes(plan);
 
   useEffect(() => {
     if (!name) return;
@@ -283,9 +286,6 @@ export default function ArtistDetail() {
     );
   }
 
-  const [plan, setPlan] = useState(getUserPlan());
-  useEffect(() => { setPlan(getUserPlan()); }, []);
-  const hasFullAccess = ["investor", "pro", "elite", "institutional"].includes(plan);
   const fmtP = (v: number) => v >= 1_000_000 ? `€${(v/1_000_000).toFixed(1)}M` : v >= 1_000 ? `€${Math.round(v/1_000)}K` : `€${v}`;
   const prices = (data.lots || []).map(l => l.current_price).filter((p): p is number => p !== null && p > 0);
   const priceRecord = prices.length ? Math.max(...prices) : null;

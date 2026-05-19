@@ -687,7 +687,7 @@ export default function ArtistIntelligence() {
               </div>
             )}
 
-            {auctionHouseStats.length > 0 && (
+            {hasAccess && auctionHouseStats.length > 0 && (
               <div>
                 <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '10px' }}>
                   {isFr ? 'PRINCIPALES MAISONS DE VENTE' : 'TOP AUCTION HOUSES'}
@@ -886,7 +886,21 @@ export default function ArtistIntelligence() {
           </div>
         )}
 
-        {priceHistory && (
+        {!hasAccess && (
+          <div style={{ margin: '0 0 24px', padding: '20px 24px', background: 'var(--navy)', borderRadius: 8, maxWidth: 320 }}>
+            <div style={{ fontSize: 9, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.15em', marginBottom: 10 }}>
+              ◆ {isFr ? 'FONCTIONNALITÉ INVESTOR+' : 'INVESTOR+ FEATURE'}
+            </div>
+            <div style={{ fontSize: 14, color: '#fff', fontFamily: 'Georgia,serif', fontWeight: 400, lineHeight: 1.5, marginBottom: 14 }}>
+              {isFr ? 'Débloquez l\'analyse complète des prix' : 'Unlock full price analysis'}
+            </div>
+            <a href="/app/pricing" style={{ display: 'inline-block', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: '#C6A85A', letterSpacing: '0.12em', textDecoration: 'none', borderBottom: '1px solid rgba(198,168,90,0.35)', paddingBottom: 2 }}>
+              {isFr ? 'Passer Investor — €19/mois →' : 'Get Investor access — €19/mo →'}
+            </a>
+          </div>
+        )}
+
+        {priceHistory && hasAccess && (
           <PriceChart
             data={priceHistory.price_by_year}
             stats={{ ...priceHistory.statistics, total_sales: priceHistory.total_sales }}
