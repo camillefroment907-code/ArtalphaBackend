@@ -427,29 +427,47 @@ export default function ArtistDetail() {
                     {data.ai_brief}
                   </p>
                 </div>
-              ) : wikiBio ? (
-                <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>
-                    ◆ NAUTILUS ANALYST BRIEF
+              ) : hasFullAccess ? (
+                wikiBio ? (
+                  <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>
+                      ◆ NAUTILUS ANALYST BRIEF
+                    </div>
+                    <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0, display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {wikiBio}
+                    </p>
                   </div>
-                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0, display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {wikiBio}
-                  </p>
-                </div>
-              ) : data.biography ? (
-                <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>
-                    ◆ NAUTILUS ANALYST BRIEF
+                ) : data.biography ? (
+                  <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>
+                      ◆ NAUTILUS ANALYST BRIEF
+                    </div>
+                    <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>
+                      {data.biography.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')}
+                    </p>
                   </div>
-                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>
-                    {data.biography.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')}
-                  </p>
-                </div>
+                ) : (
+                  <div style={{ background: '#F5F3EE', border: '1px solid #E8E4DD', borderRadius: 8, padding: '16px 20px' }}>
+                    <p style={{ fontSize: 12, fontStyle: 'italic', color: '#9CA3AF', margin: 0, lineHeight: 1.6 }}>
+                      Market data available — artist biography coming soon.
+                    </p>
+                  </div>
+                )
               ) : (
-                <div style={{ background: '#F5F3EE', border: '1px solid #E8E4DD', borderRadius: 8, padding: '16px 20px' }}>
-                  <p style={{ fontSize: 12, fontStyle: 'italic', color: '#9CA3AF', margin: 0, lineHeight: 1.6 }}>
-                    Market data available — artist biography coming soon.
-                  </p>
+                <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px', filter: 'blur(5px)', userSelect: 'none', pointerEvents: 'none' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
+                    <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>
+                      {wikiBio || data.biography || (isFr ? 'Biographie et analyse complète disponibles avec le plan Investor. Accédez aux données de carrière, aux tendances de marché et à l\'historique complet des ventes de cet artiste.' : 'Full biography and analysis available with the Investor plan. Access career data, market trends and complete sales history for this artist.')}
+                    </p>
+                  </div>
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(12,22,34,0.78)', borderRadius: 10, gap: 10 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.15em' }}>◆ {isFr ? 'FONCTIONNALITÉ INVESTOR+' : 'INVESTOR+ FEATURE'}</div>
+                    <div style={{ fontSize: 15, color: '#fff', fontFamily: 'Georgia,serif', marginBottom: 4 }}>{isFr ? 'Débloquez la biographie complète' : 'Unlock full biography'}</div>
+                    <a href="/app/pricing" style={{ background: '#C6A85A', color: '#0C1622', padding: '9px 20px', fontSize: 11, fontWeight: 700, textDecoration: 'none', borderRadius: 4, fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>
+                      {isFr ? 'Passer Investor →' : 'Get Investor access →'}
+                    </a>
+                  </div>
                 </div>
               )}
             </div>
@@ -589,19 +607,37 @@ export default function ArtistDetail() {
                   <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
                   <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>{data.ai_brief}</p>
                 </div>
-              ) : wikiBio ? (
-                <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
-                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0, display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{wikiBio}</p>
-                </div>
-              ) : data.biography ? (
-                <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
-                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>{data.biography.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')}</p>
-                </div>
+              ) : hasFullAccess ? (
+                wikiBio ? (
+                  <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
+                    <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0, display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{wikiBio}</p>
+                  </div>
+                ) : data.biography ? (
+                  <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
+                    <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>{data.biography.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')}</p>
+                  </div>
+                ) : (
+                  <div style={{ background: '#F5F3EE', border: '1px solid #E8E4DD', borderRadius: 8, padding: '16px 20px' }}>
+                    <p style={{ fontSize: 12, fontStyle: 'italic', color: '#9CA3AF', margin: 0, lineHeight: 1.6 }}>Market data available — artist biography coming soon.</p>
+                  </div>
+                )
               ) : (
-                <div style={{ background: '#F5F3EE', border: '1px solid #E8E4DD', borderRadius: 8, padding: '16px 20px' }}>
-                  <p style={{ fontSize: 12, fontStyle: 'italic', color: '#9CA3AF', margin: 0, lineHeight: 1.6 }}>Market data available — artist biography coming soon.</p>
+                <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px', filter: 'blur(5px)', userSelect: 'none', pointerEvents: 'none' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
+                    <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>
+                      {wikiBio || data.biography || (isFr ? 'Biographie et analyse complète disponibles avec le plan Investor. Accédez aux données de carrière, aux tendances de marché et à l\'historique complet des ventes de cet artiste.' : 'Full biography and analysis available with the Investor plan. Access career data, market trends and complete sales history for this artist.')}
+                    </p>
+                  </div>
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(12,22,34,0.78)', borderRadius: 10, gap: 10 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.15em' }}>◆ {isFr ? 'FONCTIONNALITÉ INVESTOR+' : 'INVESTOR+ FEATURE'}</div>
+                    <div style={{ fontSize: 15, color: '#fff', fontFamily: 'Georgia,serif', marginBottom: 4 }}>{isFr ? 'Débloquez la biographie complète' : 'Unlock full biography'}</div>
+                    <a href="/app/pricing" style={{ background: '#C6A85A', color: '#0C1622', padding: '9px 20px', fontSize: 11, fontWeight: 700, textDecoration: 'none', borderRadius: 4, fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>
+                      {isFr ? 'Passer Investor →' : 'Get Investor access →'}
+                    </a>
+                  </div>
                 </div>
               )}
             </div>

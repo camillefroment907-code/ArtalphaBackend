@@ -623,7 +623,7 @@ export default function ArtistIntelligence() {
               const aboveEst = priceHistory?.statistics?.sell_above_estimate_pct;
               const fmtStat = (v: number) => v >= 1_000_000 ? `€${(v/1_000_000).toFixed(1)}M` : v >= 1_000 ? `€${Math.round(v/1_000)}K` : `€${Math.round(v)}`;
               const cols = [
-                rec != null ? { key: 'record', label: 'RECORD', value: fmtStat(rec), color: '#C6A85A', big: true } : null,
+                rec != null ? { key: 'record', label: isFr ? 'PRIX RECORD' : 'RECORD', value: fmtStat(rec), color: '#C6A85A', big: true } : null,
                 trendPct != null ? { key: 'trend', label: 'TREND', value: `${trendPct >= 0 ? '↑' : '↓'} ${Math.abs(trendPct)}%`, color: trendPct >= 0 ? '#34D399' : '#F87171', big: true } : null,
                 aboveEst != null ? { key: 'above', label: 'AU-DESSUS EST.', value: `${aboveEst}%`, color: '#60A5FA', big: true } : null,
               ].filter(Boolean) as { key: string; label: string; value: string; color: string; big: boolean }[];
@@ -990,7 +990,7 @@ export default function ArtistIntelligence() {
                 background: 'var(--bg-subtle)',
                 borderBottom: '1px solid var(--border)',
               }}>
-                {['FORMAT', 'VOLUME', isFr ? 'PRIX MOY.' : 'AVG PRICE', 'RECORD', isFr ? 'ENTRÉE' : 'ENTRY', isFr ? 'AU-DESSUS EST.' : 'ABOVE EST.'].map(h => (
+                {['FORMAT', 'VOLUME', isFr ? 'PRIX MOY.' : 'AVG PRICE', isFr ? 'PRIX RECORD' : 'RECORD', isFr ? 'ENTRÉE' : 'ENTRY', isFr ? 'AU-DESSUS EST.' : 'ABOVE EST.'].map(h => (
                   <div key={h} style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>
                     {h}
                   </div>
@@ -1100,7 +1100,7 @@ export default function ArtistIntelligence() {
             <div style={{ display: 'flex', gap: '20px', marginTop: '10px', flexWrap: 'wrap' }}>
               {[
                 { label: isFr ? 'PRIX MOY.' : 'AVG PRICE', desc: isFr ? 'Prix adjugé moyen (EUR)' : 'Mean hammer price (EUR)' },
-                { label: 'RECORD', desc: isFr ? 'Prix adjugé le plus élevé' : 'Highest hammer price achieved' },
+                { label: isFr ? 'PRIX RECORD' : 'RECORD', desc: isFr ? 'Prix adjugé le plus élevé' : 'Highest hammer price achieved' },
                 { label: isFr ? 'ENTRÉE' : 'ENTRY', desc: isFr ? "Prix adjugé le plus bas (investissement min.)" : 'Lowest hammer price (min. investment)' },
                 { label: isFr ? 'AU-DESSUS EST.' : 'ABOVE EST.', desc: isFr ? "% des ventes dépassant l'estimation haute" : '% of sales exceeding high estimate' },
               ].map(({ label, desc }) => (
