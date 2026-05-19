@@ -84,11 +84,6 @@ const PLANS: Plan[] = [
       'Unlimited Investment Memos',
       'Unlimited active strategies',
       'Alerts from score 60+',
-      'Arbitrage signals',
-      'Price projections (12/24 months)',
-      'Portfolio IRR tracking',
-      '+€X gained from Nautilus signals',
-      'Export CSV / PDF',
       'Priority support',
     ],
   },
@@ -107,11 +102,6 @@ const COMPARE_ROWS = [
   { feature: 'AI art analyst',          free: '✗',             investor: '20/month',       pro: 'Unlimited',   institutional: 'Unlimited' },
   { feature: 'Investment Memo',         free: '✗',             investor: '✓',              pro: 'Unlimited',   institutional: 'Unlimited' },
   { feature: 'Active strategies',       free: '✗',             investor: '1',              pro: 'Unlimited',   institutional: 'Unlimited' },
-  { feature: 'Arbitrage signals',       free: '✗',             investor: '✗',              pro: '✓',           institutional: '✓'         },
-  { feature: 'Price projections',       free: '✗',             investor: '✗',              pro: '✓',           institutional: '✓'         },
-  { feature: 'Portfolio IRR',           free: '✗',             investor: '✗',              pro: '✓',           institutional: '✓'         },
-  { feature: '+€X performance track',   free: '✗',             investor: '✗',              pro: '✓',           institutional: '✓'         },
-  { feature: 'Export CSV/PDF',          free: '✗',             investor: '✗',              pro: '✓',           institutional: '✓'         },
   { feature: 'Support',                 free: 'Community',     investor: 'Email',          pro: 'Priority',    institutional: 'Dedicated' },
 ];
 
@@ -133,7 +123,7 @@ const PT = {
     planFeatures: {
       free: ['6 scored lots per day','Deal score visible (0–100)','Upside % visible','Collection: 1 artwork max','Wishlist: 3 lots max','Artists followed: 5 max','✗ Auction source hidden','✗ Bidding links locked','✗ No alerts','✗ No AI analyst'],
       investor: ['Unlimited scored lots','Full auction source revealed','Direct bidding links','How to bid guide','Early access — before free users','Real-time alerts (score ≥ 70)','Ask your AI art analyst (20/month)','Investment Memo (Investor+)','1 active strategy','Basic portfolio tracking'],
-      pro: ['Everything in Investor','Unlimited AI art analyst','Unlimited Investment Memos','Unlimited active strategies','Alerts from score 60+','Arbitrage signals','Price projections (12/24 months)','Portfolio IRR tracking','+€X gained from Nautilus signals','Export CSV / PDF','Priority support'],
+      pro: ['Everything in Investor','Unlimited AI art analyst','Unlimited Investment Memos','Unlimited active strategies','Alerts from score 60+','Priority support'],
     },
     faq: [
       { q: 'How does the 7-day trial work?', a: "Full access to your chosen plan for 7 days. No credit card needed to start. If you don't cancel before the trial ends, you'll be charged automatically." },
@@ -159,7 +149,7 @@ const PT = {
     planFeatures: {
       free: ['6 lots scorés par jour','Score de conviction (0–100)','Potentiel % visible','Collection : 1 œuvre max','Wishlist : 3 lots max','Artistes suivis : 5 max','✗ Source de vente masquée','✗ Liens enchères verrouillés','✗ Pas d\'alertes','✗ Pas d\'analyste IA'],
       investor: ['Lots scorés illimités','Source de vente révélée','Liens enchères directs','Guide enchères','Accès anticipé — avant users gratuits','Alertes temps réel (score ≥ 70)','Analyste IA art (20/mois)','Mémo investissement (Investor+)','1 stratégie active','Suivi portfolio basique'],
-      pro: ['Tout Investor inclus','Analyste IA illimité','Mémos investissement illimités','Stratégies illimitées','Alertes dès score 60+','Signaux arbitrage','Projections prix (12/24 mois)','Suivi IRR portfolio','+€X via signaux Nautilus','Export CSV / PDF','Support prioritaire'],
+      pro: ['Tout Investor inclus','Analyste IA illimité','Mémos investissement illimités','Stratégies illimitées','Alertes dès score 60+','Support prioritaire'],
     },
     faq: [
       { q: "Comment fonctionne l'essai 7 jours ?", a: "Accès complet à votre plan choisi pendant 7 jours. Aucune carte bancaire requise. Si vous n'annulez pas avant la fin de l'essai, vous serez facturé automatiquement." },
