@@ -531,8 +531,10 @@ select:hover {
   .lot-reference-grid  { grid-template-columns: 1fr !important; }
   /* Lot detail — mobile-only sections */
   .lot-mobile-only { display: block !important; }
-  /* Lot detail — reduce upgrade block margin on mobile */
-  .lot-upgrade-block { margin: 0 16px 32px !important; }
+  /* Lot detail — hide desktop-only elements on mobile */
+  .lot-desktop-only { display: none !important; }
+  /* Lot detail — hide bottom upgrade block on mobile (replaced by inline one) */
+  .lot-upgrade-block { display: none !important; }
   /* Lot detail — reduce 40px section gutters to 16px on mobile */
   .lot-light-zone > div { padding-left: 16px !important; padding-right: 16px !important; }
 
