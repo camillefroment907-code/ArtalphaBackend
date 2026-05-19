@@ -896,7 +896,7 @@ export default function ArtistIntelligence() {
 
         {!hasAccess && (
           <div style={{ margin: '0 0 24px', padding: '20px 24px', background: 'var(--navy)', borderRadius: 8, maxWidth: 320 }}>
-            <div style={{ fontSize: 9, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.15em', marginBottom: 10 }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', marginBottom: '14px' }}>
               ◆ {isFr ? 'OPPORTUNITÉS INVESTOR+' : 'INVESTOR+ OPPORTUNITIES'}
             </div>
             <div style={{ fontSize: 14, color: '#fff', fontFamily: 'Georgia,serif', fontWeight: 400, lineHeight: 1.5, marginBottom: 8 }}>
