@@ -141,6 +141,8 @@ export default function OpportunityDetail() {
   const paidPlans      = ["investor", "pro", "elite", "institutional"];
   const isPaid         = paidPlans.includes(plan);
   const hasAccess      = isPaid;
+  const isInvestor     = ['investor', 'pro', 'institutional'].includes(plan);
+  const isPro          = ['pro', 'institutional'].includes(plan);
   const canSeeAnalysis = isPaid && (limits.hasProjections || limits.hasArtistCotation);
   const canSeeAI       = isPaid && limits.hasAIVerdict;
   const visibleYears   = isPaid ? (limits.projectionYears || []) : [];
@@ -1887,12 +1889,25 @@ export default function OpportunityDetail() {
                   <div style={{ marginBottom: '16px' }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#F0F0FF', border: '1px solid #C7C7F0', color: '#5B5BD6', padding: '3px 8px', borderRadius: '3px' }}>FAMILY OFFICE+</span>
                   </div>
-                  <div
-                    onClick={() => navigate('/app/pricing?plan=investor')}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: GOLD, cursor: 'pointer', letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', marginTop: '12px' }}
-                  >
-                    {isFr ? '◆ ANALYSER →' : '◆ ANALYZE →'}
-                  </div>
+                  {isPro ? (
+                    <div
+                      onClick={() => navigate('/app/pricing?plan=pro')}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: GOLD, cursor: 'pointer', letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', marginTop: '12px' }}
+                    >
+                      {isFr ? '◆ ANALYSER →' : '◆ ANALYZE →'}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: '12px' }}>
+                      <LockedBlock
+                        title={isFr ? "Dossier d'investissement" : 'Investment Dossier'}
+                        teaser=""
+                        ctaText={isFr ? 'Passer Pro pour débloquer →' : 'UPGRADE TO PRO →'}
+                        ctaPrice="Pro"
+                        planId="pro"
+                        preview={<div style={{ height: '40px', background: LT, borderRadius: '6px' }} />}
+                      />
+                    </div>
+                  )}
                 </div>
 
               </div>
