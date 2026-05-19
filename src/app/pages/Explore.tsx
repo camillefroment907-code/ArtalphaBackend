@@ -472,15 +472,6 @@ export default function Explore() {
       .finally(() => setPlanLoading(false));
   }, []);
 
-  const [dailyDeal, setDailyDeal] = useState<any>(null);
-  useEffect(() => {
-    if (userPlan === 'free') {
-      fetch(`${BACKEND}/api/lots/daily-unlock`)
-        .then(r => r.json())
-        .then(data => setDailyDeal(data))
-        .catch(() => {});
-    }
-  }, [userPlan]);
 
   const PLAN_LIMITS: Record<string, number> = {
     free: 6, starter: 10, investor: 99999, pro: 99999, institutional: 99999, elite: 99999,
@@ -917,23 +908,6 @@ export default function Explore() {
           ) : (
             <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "0 24px 60px" }}>
               <div ref={gridRef} />
-              {userPlan === 'free' && dailyDeal && (
-                <div style={{marginBottom:24,padding:16,background:'#1A2A44',borderRadius:8,display:'flex',gap:16,alignItems:'center',cursor:'pointer'}}
-                  onClick={() => window.location.href=`/app/opportunities/${dailyDeal.id}`}>
-                  <img
-                    src={dailyDeal.image_url || ''}
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    alt={dailyDeal.title || ''}
-                    style={{width:64,height:64,objectFit:'cover',borderRadius:4}}
-                  />
-                  <div>
-                    <div style={{fontSize:10,color:'#C6A85A',letterSpacing:'0.15em',fontWeight:700,marginBottom:4}}>⚡ DEAL OF THE DAY · FULLY UNLOCKED</div>
-                    <div style={{color:'#fff',fontSize:15,fontWeight:600}}>{dailyDeal.artist_name_raw}</div>
-                    <div style={{color:'rgba(255,255,255,0.6)',fontSize:13}}>{dailyDeal.title}</div>
-                  </div>
-                  <div style={{marginLeft:'auto',color:'#C6A85A',fontSize:13,fontWeight:600}}>View deal →</div>
-                </div>
-              )}
               {/* Active filter chips */}
               {hasActiveFilters && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '10px 0 4px', alignItems: 'center' }}>
