@@ -15,6 +15,7 @@ from app.database import get_db
 from app.models.db_models import PortfolioItem, User, Wishlist, UserPreference, Lot
 from app.api.auth_utils import get_current_user
 from app.engines.projections import project_value
+from app.api.billing import _get_user_plan, PLAN_LIMITS
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
@@ -350,11 +351,21 @@ async def add_favorite_artist(
         select(UserPreference).where(UserPreference.user_id == current_user.id)
     )
     pref = result.scalar_one_or_none()
+    current_list = list(pref.favorite_artists or []) if pref else []
+
+    plan = await _get_user_plan(current_user, db)
+    limits = PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])
+    max_artists = limits.get("max_followed_artists", 9999)
+    if max_artists < 9999 and artist_name not in current_list and len(current_list) >= max_artists:
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "ARTISTS_LIMIT", "limit": max_artists},
+        )
+
     if not pref:
         pref = UserPreference(user_id=current_user.id, favorite_artists=[artist_name])
         db.add(pref)
     else:
-        current_list = list(pref.favorite_artists or [])
         if artist_name not in current_list:
             current_list.append(artist_name)
             pref.favorite_artists = current_list

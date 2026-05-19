@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from app.database import get_db
 from app.api.auth_utils import get_current_user
 from app.models.db_models import User, PortfolioItem, CollectionValuation, SaleRequest
+from app.api.billing import _get_user_plan, PLAN_LIMITS
 
 router = APIRouter(prefix="/collection", tags=["collection"])
 
@@ -312,6 +313,19 @@ async def create_item(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    plan = await _get_user_plan(current_user, db)
+    limits = PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])
+    max_items = limits.get("max_collection_items", 9999)
+    if max_items < 9999:
+        count_result = await db.execute(
+            select(func.count(PortfolioItem.id)).where(PortfolioItem.user_id == current_user.id)
+        )
+        count = count_result.scalar() or 0
+        if count >= max_items:
+            raise HTTPException(
+                status_code=403,
+                detail={"code": "COLLECTION_LIMIT", "limit": max_items},
+            )
     data = body.model_dump(exclude_none=True)
     item = PortfolioItem(user_id=current_user.id, **data)
     db.add(item)

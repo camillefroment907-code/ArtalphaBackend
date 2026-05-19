@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { getPlanLimits, getToken, getUserPlan } from '../../lib/auth';
 import { AIAnalyst } from '../components/AIAnalyst';
+import { UpgradeModal } from '../components/UpgradeModal';
 import {
   XAxis, YAxis, Tooltip,
   ReferenceLine, ResponsiveContainer, LineChart, Line,
@@ -107,6 +108,7 @@ export default function OpportunityDetail() {
   const [subscribed, setSubscribed]       = useState(false);
   const [subId, setSubId]                 = useState<string | null>(null);
   const [subLoading, setSubLoading]       = useState(false);
+  const [upgradeModal, setUpgradeModal]   = useState<'wishlist' | 'source' | 'provenance' | null>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const isFr = i18n.language?.startsWith('fr');
 
@@ -404,6 +406,13 @@ export default function OpportunityDetail() {
 
   return (
     <div className="lot-detail-page" style={{ minHeight: '100vh', background: LT }}>
+      {upgradeModal && (
+        <UpgradeModal
+          type={upgradeModal}
+          isFr={isFr}
+          onClose={() => setUpgradeModal(null)}
+        />
+      )}
       <style>{`
         @keyframes bpulse{0%,100%{height:8px;opacity:0.3}50%{height:28px;opacity:1}}
         @keyframes dot{0%,100%{opacity:1}50%{opacity:0.3}}
@@ -678,7 +687,9 @@ export default function OpportunityDetail() {
                     method: 'POST',
                     headers: { Authorization: `Bearer ${getToken()}` },
                   });
-                  if (r.ok) {
+                  if (r.status === 403) {
+                    setUpgradeModal('wishlist');
+                  } else if (r.ok) {
                     setSubscribed(true);
                     setSubId(id);
                     trackEvent('lot_watchlist_add', 'lot', lot.id, {
@@ -1127,7 +1138,6 @@ export default function OpportunityDetail() {
                   { label: t('lot.house'),         value: lot.auction_house_name },
                   { label: t('common.closes'),     value: auctionDateFmt },
                   { label: 'Lot #',                value: lot.lot_number },
-                  { label: t('common.source'),     value: !hasAccess ? null : sourceLabel, href: !hasAccess ? undefined : trackUrl },
                 ] as { label: string; value?: string | null; nav?: string; link?: boolean; href?: string }[]).filter(r => r.value).map(r => (
                   <div key={r.label} style={dRow}>
                     <span style={{ fontSize: '13px', color: LTT2, minWidth: '80px', flexShrink: 0 }}>{r.label}</span>
@@ -1142,6 +1152,17 @@ export default function OpportunityDetail() {
                     )}
                   </div>
                 ))}
+                {!hasAccess && (
+                  <div style={dRow}>
+                    <span style={{ fontSize: '13px', color: LTT2, minWidth: '80px', flexShrink: 0 }}>{t('common.source')}</span>
+                    <span
+                      onClick={() => setUpgradeModal('source')}
+                      style={{ fontSize: '13px', color: '#C6A85A', cursor: 'pointer', fontStyle: 'italic', opacity: 0.8 }}
+                    >
+                      {isFr ? '🔒 Source masquée' : '🔒 Source hidden'}
+                    </span>
+                  </div>
+                )}
 
                 {/* Due diligence / provenance alert */}
                 {provRisk && (

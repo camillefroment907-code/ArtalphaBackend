@@ -207,6 +207,9 @@ PLAN_LIMITS = {
         "portfolio_items": 3,
         "artist_profiles": True,
         "deal_score": True,
+        "max_collection_items": 1,
+        "max_wishlist_items": 3,
+        "max_followed_artists": 5,
     },
     "starter": {  # Collector
         "lots_per_day": 10,
@@ -219,6 +222,9 @@ PLAN_LIMITS = {
         "portfolio_items": 10,
         "artist_profiles": True,
         "deal_score": True,
+        "max_collection_items": 9999,
+        "max_wishlist_items": 9999,
+        "max_followed_artists": 9999,
     },
     "investor": {
         "lots_per_day": 99999,
@@ -231,6 +237,9 @@ PLAN_LIMITS = {
         "portfolio_items": 99999,
         "artist_profiles": True,
         "deal_score": True,
+        "max_collection_items": 9999,
+        "max_wishlist_items": 9999,
+        "max_followed_artists": 9999,
     },
     "pro": {  # Family Office
         "lots_per_day": 99999,
@@ -243,6 +252,9 @@ PLAN_LIMITS = {
         "portfolio_items": 99999,
         "artist_profiles": True,
         "deal_score": True,
+        "max_collection_items": 9999,
+        "max_wishlist_items": 9999,
+        "max_followed_artists": 9999,
     },
     "institutional": {
         "lots_per_day": 99999,
@@ -255,6 +267,9 @@ PLAN_LIMITS = {
         "portfolio_items": 99999,
         "artist_profiles": True,
         "deal_score": True,
+        "max_collection_items": 9999,
+        "max_wishlist_items": 9999,
+        "max_followed_artists": 9999,
     },
 }
 

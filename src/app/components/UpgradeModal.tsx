@@ -1,36 +1,69 @@
+export type UpgradeModalType = 'collection' | 'wishlist' | 'artists' | 'source' | 'provenance' | 'generic';
+
 interface UpgradeModalProps {
   onClose: () => void;
+  type?: UpgradeModalType;
+  isFr?: boolean;
 }
 
-export function UpgradeModal({ onClose }: UpgradeModalProps) {
+const MESSAGES: Record<UpgradeModalType, { fr: { body: string }; en: { body: string } }> = {
+  collection: {
+    fr: { body: 'Vous suivez déjà 1 œuvre. Les membres Investor suivent leur collection complète avec valorisation en temps réel et alertes de marché.' },
+    en: { body: 'You\'re already tracking 1 artwork. Investor members track their full collection with real-time valuation and market alerts.' },
+  },
+  wishlist: {
+    fr: { body: 'Vous suivez déjà 3 lots. Les membres Investor suivent le marché complet avec alertes temps réel dès score ≥ 70.' },
+    en: { body: 'You\'re already following 3 lots. Investor members follow the full market with real-time alerts when score ≥ 70.' },
+  },
+  artists: {
+    fr: { body: 'Vous suivez déjà 5 artistes. Les membres Investor reçoivent des alertes en temps réel quand leurs artistes apparaissent sur le marché.' },
+    en: { body: 'You\'re already following 5 artists. Investor members receive real-time alerts when their artists appear on the market.' },
+  },
+  source: {
+    fr: { body: 'Découvrez où acheter ce lot. Les membres Investor accèdent à la source exacte et aux liens d\'enchères directs.' },
+    en: { body: 'Discover where to buy this lot. Investor members access the exact source and direct auction links.' },
+  },
+  provenance: {
+    fr: { body: 'Les membres Investor accèdent aux documents et à l\'historique de provenance complet.' },
+    en: { body: 'Investor members access full provenance documents and complete ownership history.' },
+  },
+  generic: {
+    fr: { body: 'Accédez à cette fonctionnalité et à toute l\'intelligence du marché de l\'art.' },
+    en: { body: 'Access this feature and the full art market intelligence suite.' },
+  },
+};
+
+export function UpgradeModal({ onClose, type = 'generic', isFr = true }: UpgradeModalProps) {
+  const lang = isFr ? 'fr' : 'en';
+  const { body } = MESSAGES[type][lang];
+
   return (
     <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(26,42,68,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(10,20,35,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(2px)' }}
       onClick={onClose}
     >
       <div
-        style={{ background: '#fff', padding: 40, maxWidth: 420, width: '100%', textAlign: 'center', borderTop: '3px solid #C6A85A' }}
+        style={{ background: '#0F1923', border: '1px solid rgba(198,168,90,0.25)', borderTop: '2px solid #C6A85A', padding: '32px 36px', maxWidth: 400, width: 'calc(100% - 48px)', borderRadius: 6 }}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{ color: '#C6A85A', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase' as const, marginBottom: 12 }}>
-          INVESTOR FEATURE
+        <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', color: '#C6A85A', textTransform: 'uppercase', marginBottom: 16 }}>
+          ◆ INVESTOR+
         </div>
-        <div style={{ color: '#1A2A44', fontFamily: 'Georgia, serif', fontSize: 22, marginBottom: 12 }}>
-          Unlock this opportunity
-        </div>
-        <div style={{ color: '#888', fontSize: 14, lineHeight: 1.7, marginBottom: 24 }}>
-          See the auction source, bidding link, and fair value.<br />
-          Get early access before the market reacts.
-        </div>
+        <p style={{ fontFamily: 'Georgia, serif', fontSize: 15, color: 'rgba(255,255,255,0.9)', lineHeight: 1.6, margin: '0 0 24px' }}>
+          {body}
+        </p>
         <a
           href="/app/pricing"
-          style={{ display: 'block', background: '#2563EB', color: '#fff', padding: '14px 32px', fontSize: 13, fontWeight: 600, letterSpacing: '0.06em', textDecoration: 'none' }}
+          style={{ display: 'inline-block', fontFamily: 'var(--font-mono, monospace)', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#C6A85A', textDecoration: 'none', borderBottom: '1px solid rgba(198,168,90,0.4)', paddingBottom: 2 }}
         >
-          Get founding access — €19/month →
+          {isFr ? 'Passer Investor →' : 'Get Investor access →'}
         </a>
-        <div style={{ marginTop: 12, color: '#C6A85A', fontSize: 11 }}>
-          Founding price · Increases to €99 at launch
-        </div>
+        <button
+          onClick={onClose}
+          style={{ display: 'block', marginTop: 20, background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: 11, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
+        >
+          {isFr ? 'Fermer' : 'Close'}
+        </button>
       </div>
     </div>
   );

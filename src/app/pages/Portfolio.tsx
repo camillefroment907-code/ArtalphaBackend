@@ -4,6 +4,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { getUser, getToken, logout, PLAN_LIMITS } from '../../lib/auth';
 import { getSubscription, cancelSubscription } from '../../lib/api';
+import { UpgradeModal, type UpgradeModalType } from '../components/UpgradeModal';
 import { getUsageStatus, PLAN_LIMITS as USAGE_LIMITS } from '../../lib/analysisUsage';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
@@ -277,6 +278,9 @@ export default function Portfolio() {
 
   // ── Correlation matrix (Risk tab) ─────────────────────────
   const [corrMatrix, setCorrMatrix] = useState<any>(null);
+
+  // ── Upgrade modal ──────────────────────────────────────────
+  const [upgradeModal, setUpgradeModal] = useState<UpgradeModalType | null>(null);
   const [corrLoading, setCorrLoading] = useState(false);
 
   // ── Market lots ────────────────────────────────────────────
@@ -530,6 +534,11 @@ export default function Portfolio() {
   async function handleAddItem(e: React.FormEvent) {
     e.preventDefault();
     if (!addForm.title || !addForm.purchase_price_eur) return;
+    if (plan === 'free' && portfolioItems.length >= 1) {
+      setShowAddModal(false);
+      setUpgradeModal('collection');
+      return;
+    }
     setAddLoading(true);
     setAddError('');
     try {
@@ -545,6 +554,11 @@ export default function Portfolio() {
           notes: addForm.notes || null,
         }),
       });
+      if (res.status === 403) {
+        setShowAddModal(false);
+        setUpgradeModal('collection');
+        return;
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setAddForm({ title: '', artist_name: '', purchase_price_eur: '', purchase_date: '', medium: '', notes: '' });
       setShowAddModal(false);
@@ -558,6 +572,11 @@ export default function Portfolio() {
 
   const handleAddArtwork = async () => {
     if (!newArtwork.artist_name || !newArtwork.title || !newArtwork.purchase_price) return;
+    if (plan === 'free' && portfolioItems.length >= 1) {
+      setShowAddModal(false);
+      setUpgradeModal('collection');
+      return;
+    }
     try {
       const resp = await fetch(`${BACKEND}/api/collection/items`, {
         method: 'POST',
@@ -586,6 +605,11 @@ export default function Portfolio() {
           notes: newArtwork.notes || null,
         }),
       });
+      if (resp.status === 403) {
+        setShowAddModal(false);
+        setUpgradeModal('collection');
+        return;
+      }
       if (resp.ok) {
         setNewArtwork({ artist_name: '', title: '', year_created: '', medium: '', purchase_price: '', current_value: '', purchase_date: '', purchase_source: '', purchase_auction_house: '', purchase_location: '', country_of_origin: '', dimensions: '', condition: '', certificate_of_authenticity: 'false', authenticated_by: '', authentication_date: '', catalogue_raisonne_reference: '', storage_location: '', insured_value_eur: '', insurance_provider: '', notes: '' });
         setShowAddModal(false);
@@ -672,16 +696,25 @@ export default function Portfolio() {
 
   const addFavoriteArtist = async () => {
     if (!newArtistName.trim()) return;
+    if (plan === 'free' && favoriteArtists.length >= 5) {
+      setUpgradeModal('artists');
+      return;
+    }
     try {
-      await fetch(`${BACKEND}/api/portfolio/favorite-artists`, {
+      const r = await fetch(`${BACKEND}/api/portfolio/favorite-artists`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ artist_name: newArtistName.trim() }),
       });
+      if (r.status === 403) {
+        setShowAddArtist(false);
+        setUpgradeModal('artists');
+        return;
+      }
       setNewArtistName('');
       setShowAddArtist(false);
-      const r = await fetch(`${BACKEND}/api/portfolio/favorite-artists`, { headers: { Authorization: `Bearer ${getToken()}` } });
-      const d = await r.json();
+      const rList = await fetch(`${BACKEND}/api/portfolio/favorite-artists`, { headers: { Authorization: `Bearer ${getToken()}` } });
+      const d = await rList.json();
       setFavoriteArtists(d.artists || []);
       trackEvent('artist_follow', 'artist', newArtistName.trim(), {
         artist_name: newArtistName.trim(),
@@ -892,6 +925,13 @@ export default function Portfolio() {
 
   return (
     <div className="page" style={{ background: 'var(--bg)', minHeight: '100vh', paddingBottom: '80px' }}>
+      {upgradeModal && (
+        <UpgradeModal
+          type={upgradeModal}
+          isFr={currentLang === 'fr'}
+          onClose={() => setUpgradeModal(null)}
+        />
+      )}
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
 
         {/* ── TAB BAR ───────────────────────────────────────────── */}

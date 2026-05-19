@@ -1,7 +1,7 @@
 import json
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, or_, and_, String
+from sqlalchemy import select, delete, or_, and_, String, func
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from pydantic import BaseModel
@@ -11,6 +11,7 @@ from app.models.db_models import Wishlist, Lot, User, LotStatus, MarketType
 from app.models.schemas import LotOut
 from app.api.auth_utils import get_current_user
 from app.config import get_settings
+from app.api.billing import _get_user_plan, PLAN_LIMITS
 
 router = APIRouter(prefix="/wishlist", tags=["wishlist"])
 _settings = get_settings()
@@ -190,6 +191,20 @@ async def add_to_wishlist(
     existing = (await db.execute(stmt)).scalar_one_or_none()
     if existing:
         return {"ok": True, "message": "Already in wishlist"}
+
+    plan = await _get_user_plan(current_user, db)
+    limits = PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])
+    max_items = limits.get("max_wishlist_items", 9999)
+    if max_items < 9999:
+        count_result = await db.execute(
+            select(func.count(Wishlist.id)).where(Wishlist.user_id == current_user.id)
+        )
+        count = count_result.scalar() or 0
+        if count >= max_items:
+            raise HTTPException(
+                status_code=403,
+                detail={"code": "WISHLIST_LIMIT", "limit": max_items},
+            )
 
     db.add(Wishlist(user_id=current_user.id, lot_id=lot_id))
     await db.commit()
