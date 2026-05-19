@@ -44,7 +44,7 @@ export function UpgradeModal({ onClose, type = 'generic', isFr = true }: Upgrade
         onClick={onClose}
       />
       <div
-        style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 9999, background: '#0F1923', border: '1px solid rgba(198,168,90,0.25)', borderTop: '2px solid #C6A85A', padding: '32px 36px', maxWidth: 400, width: 'calc(100% - 48px)', borderRadius: 6 }}
+        style={{ position: 'fixed', top: '120px', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: '#0F1923', border: '1px solid rgba(198,168,90,0.25)', borderTop: '2px solid #C6A85A', padding: '32px 36px', maxWidth: 400, width: 'calc(100% - 48px)', borderRadius: 6 }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', color: '#C6A85A', textTransform: 'uppercase', marginBottom: 16 }}>
