@@ -897,10 +897,13 @@ export default function ArtistIntelligence() {
         {!hasAccess && (
           <div style={{ margin: '0 0 24px', padding: '20px 24px', background: 'var(--navy)', borderRadius: 8, maxWidth: 320 }}>
             <div style={{ fontSize: 9, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.15em', marginBottom: 10 }}>
-              ◆ {isFr ? 'FONCTIONNALITÉ INVESTOR+' : 'INVESTOR+ FEATURE'}
+              ◆ {isFr ? 'OPPORTUNITÉS INVESTOR+' : 'INVESTOR+ OPPORTUNITIES'}
             </div>
-            <div style={{ fontSize: 14, color: '#fff', fontFamily: 'Georgia,serif', fontWeight: 400, lineHeight: 1.5, marginBottom: 14 }}>
-              {isFr ? 'Débloquez l\'analyse complète des prix' : 'Unlock full price analysis'}
+            <div style={{ fontSize: 14, color: '#fff', fontFamily: 'Georgia,serif', fontWeight: 400, lineHeight: 1.5, marginBottom: 8 }}>
+              {isFr ? 'Voir où les collectionneurs achètent maintenant' : 'See where collectors are buying now'}
+            </div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginBottom: 14, lineHeight: 1.6 }}>
+              {isFr ? 'Opportunités sous estimation · liquidité · timing d\'achat' : 'Below-estimate opportunities · liquidity · buy timing'}
             </div>
             <a href="/app/pricing" style={{ display: 'inline-block', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: '#C6A85A', letterSpacing: '0.12em', textDecoration: 'none', borderBottom: '1px solid rgba(198,168,90,0.35)', paddingBottom: 2 }}>
               {isFr ? 'Passer Investor — €19/mois →' : 'Get Investor access — €19/mo →'}
@@ -977,14 +980,7 @@ export default function ArtistIntelligence() {
             );
         })()}
 
-        {!hasAccess ? (
-          <div style={{textAlign:'center',padding:'64px 24px',background:'#f8f8f6',borderRadius:8,marginTop:32,border:'1px solid #e8e4dc'}}>
-            <div style={{fontSize:11,letterSpacing:'0.2em',color:'#C6A85A',marginBottom:12,fontWeight:700}}>INVESTOR+ FEATURE</div>
-            <div style={{fontSize:22,fontFamily:'Georgia,serif',color:'#1A2A44',marginBottom:12,fontWeight:600}}>Unlock full artist intelligence</div>
-            <div style={{fontSize:14,color:'#666',marginBottom:28,lineHeight:1.6}}>Format performance, geographic arbitrage, auction timing, liquidity depth and all tracked lots.</div>
-            <a href="/app/pricing" style={{display:'inline-block',background:'#2563EB',color:'#fff',padding:'14px 32px',fontSize:13,fontWeight:600,textDecoration:'none',borderRadius:4,letterSpacing:'0.04em'}}>Get Investor access — €19/mo →</a>
-          </div>
-        ) : (
+        {!hasAccess ? null : (
           <>
             {/* Format Performance Matrix */}
             {formatMatrix.length > 0 && (
