@@ -1,5 +1,5 @@
 """
-ArtAlpha Billing API — Complete Stripe Integration
+Nautilus Billing API — Complete Stripe Integration
 Plans: Free | Starter €9 | Investor €29 | Pro €99 | Institutional (Contact Sales)
 """
 import asyncio

@@ -1,5 +1,5 @@
 """
-ArtAlpha n8n Integration Endpoints
+Nautilus n8n Integration Endpoints
 Called by n8n workflows — no auth required (protected by API key header).
 """
 from fastapi import APIRouter, Depends, Header, HTTPException

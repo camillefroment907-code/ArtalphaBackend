@@ -1,5 +1,5 @@
 """
-ArtAlpha Quality Filter
+Nautilus Quality Filter
 Runs before DB insert — eliminates noise, normalizes data, deduplicates cross-source.
 """
 import re

@@ -1,5 +1,5 @@
 """
-ArtAlpha Alert Engine
+Nautilus Alert Engine
 Sends deal alerts via Telegram and Email (Resend).
 """
 import asyncio
@@ -64,7 +64,7 @@ def _format_alert_message(
         lines.append(f"🔗 {lot.url}")
 
     lines.append("")
-    lines.append("— ArtAlpha | AI Auction Intelligence")
+    lines.append("— Nautilus | AI Auction Intelligence")
 
     return "\n".join(lines)
 

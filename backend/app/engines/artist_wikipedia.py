@@ -25,7 +25,7 @@ async def fetch_artist_from_wikipedia(artist_name: str) -> Optional[Dict[str, An
 
     try:
         async with httpx.AsyncClient(timeout=10, headers={
-            "User-Agent": "ArtAlpha/1.0 (art investment platform; contact@artalpha.io)"
+            "User-Agent": "Nautilus/1.0 (art investment platform; contact@get-nautilus.com)"
         }) as client:
 
             wiki_data = await _fetch_wikipedia_summary(client, name)

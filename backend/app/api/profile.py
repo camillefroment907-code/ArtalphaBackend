@@ -1,5 +1,5 @@
 """
-ArtAlpha Profile API
+Nautilus Profile API
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession

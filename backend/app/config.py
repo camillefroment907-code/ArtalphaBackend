@@ -6,7 +6,7 @@ from typing import Optional
 
 class Settings(BaseSettings):
     # App
-    app_name: str = "ArtAlpha"
+    app_name: str = "Nautilus"
     environment: str = "development"
     backend_url: str = "http://localhost:8000"
     frontend_url: str = "http://localhost:3000"
