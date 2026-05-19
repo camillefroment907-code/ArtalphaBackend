@@ -103,7 +103,7 @@ export default function OpportunityDetail() {
   const [comparables, setComparables]     = useState<any[]>([]);
   const [marketAnalysis, setMarketAnalysis] = useState<any>(null);
   const [stickyVisible, setStickyVisible] = useState(false);
-  const [isDailyDeal, setIsDailyDeal]     = useState(false);
+
   const [subscribed, setSubscribed]       = useState(false);
   const [subId, setSubId]                 = useState<string | null>(null);
   const [subLoading, setSubLoading]       = useState(false);
@@ -128,13 +128,6 @@ export default function OpportunityDetail() {
     };
     return map[text] || text;
   };
-
-  useEffect(() => {
-    fetch(`${BACKEND}/api/lots/daily-unlock`)
-      .then(r => r.json())
-      .then(data => { if (data?.id && data.id === id) setIsDailyDeal(true); })
-      .catch(() => {});
-  }, [id]);
 
   const limits         = getPlanLimits();
   const plan           = getUserPlan();
@@ -807,16 +800,6 @@ export default function OpportunityDetail() {
               </div>
             )}
 
-            {isDailyDeal && !isPaid && (lot as any).rationale && (
-              <div style={{ border: `1px solid rgba(198,168,90,0.35)`, borderRadius: '8px', padding: '14px 18px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '8px' }}>
-                  ◆ SIGNAL NAUTILUS
-                </div>
-                <p style={{ fontSize: '12px', color: LTT2, lineHeight: 1.65, margin: 0 }}>
-                  {String((lot as any).rationale).split('.')[0] + '.'}
-                </p>
-              </div>
-            )}
 
           </div>
           <div style={{ marginTop: '12px', display: 'flex', gap: '24px', padding: '12px 16px', background: 'rgba(10,15,30,0.04)', borderRadius: '6px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
@@ -827,7 +810,7 @@ export default function OpportunityDetail() {
         </div>
 
         {/* ── MOBILE FREE: POURQUOI NAUTILUS SURVEILLE + COÛT RÉEL ─────────── */}
-        {!hasAccess && !isDailyDeal && (() => {
+        {!hasAccess && (() => {
           const compsAvgMob = comparables.length > 0
             ? Math.round(comparables.reduce((s: number, c: any) => s + (c.current_price || 0), 0) / comparables.length)
             : null;
@@ -893,18 +876,7 @@ export default function OpportunityDetail() {
 
         {/* ── INTELLIGENCE NAUTILUS ─────────────────────────────────────────── */}
         {!hasAccess ? (
-          isDailyDeal ? (
-            <div style={{ padding: '0 40px 24px' }}>
-              <LockedBlock
-                title="Intelligence Nautilus"
-                teaser=""
-                ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
-                ctaPrice="Investor"
-                planId="investor"
-                preview={<div style={{ display: 'flex', gap: '12px' }}>{[1,2,3].map(i=><div key={i} style={{ flex:1, height:'80px', background:LT, borderRadius:'8px' }}/>)}</div>}
-              />
-            </div>
-          ) : (() => {
+          (() => {
             const aiText = [lot.score_rationale, lot.ai_insight, Array.isArray((lot as any).rationale) ? (lot as any).rationale.join(' ') : (lot as any).rationale].filter(Boolean).join(' ').trim();
             if (!aiText) return null;
             const sentences = aiText.match(/[^.!?]+[.!?]+/g) || [];
@@ -1121,7 +1093,7 @@ export default function OpportunityDetail() {
                         <div style={{ fontSize: '11px', color: LTT3, marginTop: '6px' }}>{t('lot.vsEstimate')}</div>
                       </div>
                     </div>
-                  ) : (!hasAccess && !isDailyDeal) ? null : (
+                  ) : !hasAccess ? null : (
                     <LockedBlock
                       title="Is this artwork truly worth buying?"
                       teaser="Unlock fair value analysis, upside potential, and 5-year price projections before you decide."
@@ -1155,7 +1127,7 @@ export default function OpportunityDetail() {
                   { label: t('lot.house'),         value: lot.auction_house_name },
                   { label: t('common.closes'),     value: auctionDateFmt },
                   { label: 'Lot #',                value: lot.lot_number },
-                  { label: t('common.source'),     value: !hasAccess ? (isDailyDeal ? 'Source locked' : null) : sourceLabel, href: !hasAccess ? undefined : trackUrl },
+                  { label: t('common.source'),     value: !hasAccess ? null : sourceLabel, href: !hasAccess ? undefined : trackUrl },
                 ] as { label: string; value?: string | null; nav?: string; link?: boolean; href?: string }[]).filter(r => r.value).map(r => (
                   <div key={r.label} style={dRow}>
                     <span style={{ fontSize: '13px', color: LTT2, minWidth: '80px', flexShrink: 0 }}>{r.label}</span>
@@ -1165,8 +1137,6 @@ export default function OpportunityDetail() {
                       <a href={r.href} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: BL, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px' }}>
                         {r.value} ↗
                       </a>
-                    ) : r.label === t('common.source') && !hasAccess && isDailyDeal ? (
-                      <span onClick={() => { window.location.href = '/app/pricing'; }} style={{ cursor: 'pointer', color: '#2563EB', fontSize: 13, fontWeight: 600, letterSpacing: '0.04em' }}>🔒 Unlock source — Investor plan →</span>
                     ) : (
                       <span style={{ fontSize: '13px', color: LTT1, fontWeight: 500, textAlign: 'right', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.value}</span>
                     )}
@@ -1342,7 +1312,7 @@ export default function OpportunityDetail() {
               return (
                 <div style={{ padding: '0 40px 24px' }}>
                   <div style={{ position: 'relative', background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden' }}>
-                    {canSeeAnalysis ? content : (!hasAccess && !isDailyDeal) ? null : (
+                    {canSeeAnalysis ? content : !hasAccess ? null : (
                       <>
                         <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none' as const }}>{content}</div>
                         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
@@ -1358,7 +1328,7 @@ export default function OpportunityDetail() {
             })()}
 
             {/* ── CONTEXTE MARCHÉ & VIGILANCE ──────────────────────────────────── */}
-            {(!hasAccess && !isDailyDeal) ? null : !hasAccess ? (
+            {!hasAccess ? null : !hasAccess ? (
               <div style={{ padding: '0 40px 24px' }}>
                 <LockedBlock
                   title="Contexte marché"
@@ -1459,7 +1429,7 @@ export default function OpportunityDetail() {
             })()}
 
             {/* ── SCÉNARIOS DE VALORISATION ───────────────────────────────────── */}
-            {(!hasAccess && !isDailyDeal) ? null : !hasAccess ? (
+            {!hasAccess ? null : !hasAccess ? (
               <div style={{ padding: '0 40px 24px' }}>
                 <LockedBlock
                   title="Scénarios de valorisation"
@@ -1509,7 +1479,7 @@ export default function OpportunityDetail() {
             )}
 
             {/* ── COMPARABLE SALES CARDS ────────────────────────────────────────── */}
-            {(!hasAccess && !isDailyDeal) ? (
+            {!hasAccess ? (
               comparables.length > 0 && (
                 <div className="lot-mobile-only" style={{ padding: '0 16px 8px' }}>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
@@ -1611,7 +1581,7 @@ export default function OpportunityDetail() {
             )}
 
             {/* ── DESKTOP FREE: PAYWALL ── */}
-            {!hasAccess && !isDailyDeal && (
+            {!hasAccess && (
               <div className="lot-upgrade-block" style={{ margin: '0 40px 32px', borderRadius: '12px', overflow: 'hidden', background: '#0F1824', border: '1px solid rgba(198,168,90,0.18)' }}>
                 <div style={{ padding: '28px 32px' }}>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.2em', textTransform: 'uppercase' as const, marginBottom: '14px' }}>
@@ -1673,7 +1643,7 @@ export default function OpportunityDetail() {
             )}
 
             {/* ── MOBILE FREE: LECTURE NAUTILUS + PAYWALL ── */}
-            {!hasAccess && !isDailyDeal && (() => {
+            {!hasAccess && (() => {
               const aiText = [lot.score_rationale, lot.ai_insight, Array.isArray((lot as any).rationale) ? (lot as any).rationale.join(' ') : (lot as any).rationale].filter(Boolean).join(' ').trim();
               const sentences = aiText ? (aiText.match(/[^.!?]+[.!?]+/g) || []) : [];
               const excerpt = sentences.slice(0, 3).join(' ').trim() || (aiText ? aiText.slice(0, 300) : null);
@@ -1739,7 +1709,7 @@ export default function OpportunityDetail() {
 
             {/* ──────────────── COMPARABLE SALES ──────────────── */}
         <div style={{ padding: '16px 40px 24px' }}>
-            {(!hasAccess && !isDailyDeal) ? null : !hasAccess ? (
+            {!hasAccess ? null : !hasAccess ? (
               <LockedBlock
                 title="Ventes comparables"
                 teaser=""
@@ -1830,7 +1800,7 @@ export default function OpportunityDetail() {
         <div style={{ padding: '16px 40px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
             {/* AI Intelligence cards */}
-            {(!hasAccess && !isDailyDeal) ? null : (
+            {!hasAccess ? null : (
             <div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'INTELLIGENCE IA' : 'AI INTELLIGENCE'}</div>
               {!hasAccess ? (
@@ -1918,7 +1888,7 @@ export default function OpportunityDetail() {
 
         {/* ──────────────── DOCUMENTS ──────────────── */}
         <div style={{ padding: '16px 40px 24px' }}>
-            {(!hasAccess && !isDailyDeal) ? null : !hasAccess ? (
+            {!hasAccess ? null : !hasAccess ? (
               <LockedBlock
                 title="Documents & Sources"
                 teaser="Unlock lot source, artist search, and auction house details with an Investor plan."
