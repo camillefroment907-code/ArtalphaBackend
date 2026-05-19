@@ -185,7 +185,8 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 export default function ArtistDetail() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
   const { id: name } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [data, setData] = useState<ArtistProfile | null>(null);
@@ -605,9 +606,10 @@ export default function ArtistDetail() {
               )}
             </div>
             <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8f8f6', borderRadius: 8, marginTop: 24 }}>
-              <div style={{ fontSize: 13, letterSpacing: '0.15em', color: '#C6A85A', marginBottom: 8 }}>INVESTOR+ FEATURE</div>
-              <div style={{ fontSize: 20, fontFamily: 'Georgia,serif', color: '#1A2A44', marginBottom: 16 }}>Full artist intelligence is available from the Investor plan</div>
-              <a href="/app/pricing" style={{ background: '#2563EB', color: '#fff', padding: '12px 28px', fontSize: 13, fontWeight: 600, textDecoration: 'none', borderRadius: 4 }}>Unlock full access →</a>
+              <div style={{ fontSize: 13, letterSpacing: '0.15em', color: '#C6A85A', marginBottom: 8 }}>{isFr ? 'FONCTIONNALITÉ INVESTOR+' : 'INVESTOR+ FEATURE'}</div>
+              <div style={{ fontSize: 20, fontFamily: 'Georgia,serif', color: '#1A2A44', marginBottom: 12 }}>{isFr ? 'Débloquez l\'intelligence artiste complète' : 'Unlock full artist intelligence'}</div>
+              <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 20, maxWidth: 420, margin: '0 auto 20px' }}>{isFr ? 'Performance par format, arbitrage géographique, timing des ventes, profondeur de liquidité et tous les lots suivis.' : 'Format performance, geographic arbitrage, auction timing, liquidity depth and all tracked lots.'}</div>
+              <a href="/app/pricing" style={{ background: '#2563EB', color: '#fff', padding: '12px 28px', fontSize: 13, fontWeight: 600, textDecoration: 'none', borderRadius: 4 }}>{isFr ? 'Accéder à Investor — €19/mois →' : 'Get Investor access — €19/mo →'}</a>
             </div>
           </>
         )}
