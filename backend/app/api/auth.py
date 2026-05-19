@@ -77,17 +77,6 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Preferences creation failed: {type(e).__name__}: {e}")
 
-    # Fire-and-forget welcome email (non-blocking — failures won't affect registration)
-    try:
-        asyncio.create_task(send_welcome_email(
-            to_email=user.email,
-            name=user.full_name or user.email,
-            plan="free",
-            lang=user.language,
-        ))
-    except Exception:
-        pass
-
     # Fire-and-forget verification email
     try:
         verify_token = create_access_token(
@@ -186,6 +175,15 @@ async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
 
     user.is_verified = True
     await db.commit()
+    try:
+        asyncio.create_task(send_welcome_email(
+            to_email=user.email,
+            name=user.full_name or user.email,
+            plan="free",
+            lang=getattr(user, 'language', 'fr'),
+        ))
+    except Exception:
+        pass
     return RedirectResponse(url=f"{settings.frontend_url}/app/explore?verified=true")
 
 
