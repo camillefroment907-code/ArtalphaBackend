@@ -56,6 +56,17 @@ export default function BlogPostPage() {
   });
 
   useEffect(() => {
+    const fontId = 'nautilus-blog-fonts';
+    if (!document.getElementById(fontId)) {
+      const link = document.createElement('link');
+      link.id = fontId;
+      link.rel = 'stylesheet';
+      link.href = 'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&family=DM+Mono:wght@400;500&display=swap';
+      document.head.appendChild(link);
+    }
+  }, []);
+
+  useEffect(() => {
     if (!slug) return;
     fetch(`${BACKEND}/api/blog/${slug}`)
       .then(r => { if (!r.ok) throw new Error('Not found'); return r.json(); })
@@ -157,16 +168,8 @@ export default function BlogPostPage() {
 
           {/* Content */}
           <div
-            style={{ fontSize: '16px', color: 'var(--text)', lineHeight: 1.85, fontFamily: 'var(--font-sans)' }}
-            dangerouslySetInnerHTML={{ __html: localize(post.content)
-              .replace(/^# (.+)$/gm, '<h1 style="font-family:var(--font-serif);font-size:28px;font-weight:700;margin:40px 0 16px">$1</h1>')
-              .replace(/^## (.+)$/gm, '<h2 style="font-family:var(--font-serif);font-size:22px;font-weight:600;margin:32px 0 12px">$1</h2>')
-              .replace(/^### (.+)$/gm, '<h3 style="font-size:18px;font-weight:600;margin:24px 0 10px">$1</h3>')
-              .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-              .replace(/\*(.+?)\*/g, '<em>$1</em>')
-              .replace(/\n\n/g, '</p><p style="margin:0 0 18px">')
-              .replace(/^/, '<p style="margin:0 0 18px">') + '</p>'
-            }}
+            style={{ fontSize: '16px', lineHeight: 1.85 }}
+            dangerouslySetInnerHTML={{ __html: localize(post.content) }}
           />
 
           {/* CTA */}

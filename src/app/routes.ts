@@ -41,6 +41,8 @@ const AdminRecommendations  = lazy(() => import('./pages/AdminRecommendations'))
 const AdminDashboard        = lazy(() => import('./pages/AdminDashboard'));
 const Blog                  = lazy(() => import('./pages/Blog'));
 const BlogPost              = lazy(() => import('./pages/BlogPost'));
+const BlogArticleOpportunites2026  = lazy(() => import('./pages/BlogArticleOpportunites2026'));
+const BlogArticleArtAuction2026    = lazy(() => import('./pages/BlogArticleArtAuction2026'));
 const FeedbackPage          = lazy(() => import('./pages/FeedbackPage'));
 const ForgotPassword           = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword            = lazy(() => import('./pages/ResetPassword'));
@@ -67,6 +69,8 @@ export const router = createBrowserRouter([
   },
   // Blog
   { path: '/blog',       Component: Blog     },
+  { path: '/blog/opportunites-encheres-2026',   Component: BlogArticleOpportunites2026 },
+  { path: '/blog/art-auction-opportunities-2026', Component: BlogArticleArtAuction2026 },
   { path: '/blog/:slug', Component: BlogPost },
   // Feedback
   { path: '/feedback', Component: FeedbackPage },
