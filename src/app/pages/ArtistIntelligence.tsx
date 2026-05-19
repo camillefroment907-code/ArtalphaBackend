@@ -843,10 +843,12 @@ export default function ArtistIntelligence() {
               </span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-              {artist.top_lots.map((lot: any) => (
+              {(hasAccess ? artist.top_lots : artist.top_lots.slice(0, 2)).map((lot: any, idx: number) => {
+                const locked = !hasAccess && idx >= 0;
+                return (
                 <div key={lot.id}
-                  onClick={() => navigate(`/app/opportunities/${lot.id}`)}
-                  style={{ background: 'white', border: '1px solid var(--border)', borderTop: `2px solid ${scoreColor(lot.deal_score || 0)}`, borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', transition: 'all 0.15s' }}
+                  onClick={() => locked ? (window.location.href = '/app/pricing') : navigate(`/app/opportunities/${lot.id}`)}
+                  style={{ background: 'white', border: '1px solid var(--border)', borderTop: `2px solid ${scoreColor(lot.deal_score || 0)}`, borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', transition: 'all 0.15s', position: 'relative' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-md)'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'none'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; }}
                 >
@@ -861,9 +863,14 @@ export default function ArtistIntelligence() {
                     <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(10,22,40,0.85)', padding: '3px 7px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: 'white' }}>
                       {lot.deal_score != null ? `${Math.round(lot.deal_score)}/100` : '—'}
                     </div>
+                    {locked && (
+                      <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(12,22,34,0.88)', borderRadius: 3, padding: '3px 7px', fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#C6A85A', letterSpacing: '0.12em' }}>
+                        INVESTOR
+                      </div>
+                    )}
                   </div>
                   <div style={{ padding: '12px 14px' }}>
-                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: '13px', color: 'var(--text)', marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: '13px', color: 'var(--text)', marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...(locked ? { filter: 'blur(4px)', userSelect: 'none' } : {}) }}>
                       {lot.title}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -881,7 +888,8 @@ export default function ArtistIntelligence() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
