@@ -314,11 +314,11 @@ export default function OpportunityDetail() {
     if (hasProvHighRisk)
       return { label: isFr ? 'RISQUE ÉLEVÉ' : 'HIGH RISK', dk: '#EF4444', gl: RED,  icon: '⚠', sub: isFr ? 'Problème de provenance détecté' : 'Provenance issue detected' };
     if ((lot.deal_score || 0) >= 80 && upsidePct >= 20 && !hasCycleRisk)
-      return { label: 'BUY',       dk: GD,        gl: GL,   icon: '↑', sub: isFr ? 'Signal fort de conviction' : 'Strong conviction signal' };
+      return { label: isFr ? 'ACHETER' : 'BUY',  dk: GD,        gl: GL,   icon: '↑', sub: isFr ? 'Signal fort de conviction' : 'Strong conviction signal' };
     if ((lot.deal_score || 0) >= 65 && upsidePct >= 10)
       return { label: isFr ? 'SURVEILLER' : 'WATCH',     dk: '#FBBF24',  gl: AMB,  icon: '◎', sub: isFr ? 'À surveiller de près' : 'Monitor closely' };
     if ((lot.deal_score || 0) < 50 || upsidePct < 0)
-      return { label: 'PASS',      dk: '#EF4444',  gl: RED,  icon: '↓', sub: isFr ? 'Sous le seuil de conviction' : 'Below conviction threshold' };
+      return { label: isFr ? 'PASSER' : 'PASS', dk: '#EF4444',  gl: RED,  icon: '↓', sub: isFr ? 'Sous le seuil de conviction' : 'Below conviction threshold' };
     return   { label: isFr ? 'SURVEILLER' : 'WATCH',     dk: '#FBBF24',  gl: AMB,  icon: '◎', sub: isFr ? 'Signal insuffisant' : 'Insufficient signal' };
   })();
 
@@ -327,7 +327,7 @@ export default function OpportunityDetail() {
   const riskLabel = riskFlagCount >= 2 ? (isFr ? 'RISQUE ÉLEVÉ' : 'HIGH RISK') : riskFlagCount === 1 ? (isFr ? 'MODÉRÉ' : 'MODERATE') : (isFr ? 'FAIBLE RISQUE' : 'LOW RISK');
 
   const dealScore     = lot.deal_score || 0;
-  const stickyTier    = dealScore >= 80 ? 'EXCEPTIONAL' : dealScore >= 65 ? 'STRONG' : 'INTERESTING';
+  const stickyTier    = dealScore >= 80 ? (isFr ? 'EXCEPTIONNEL' : 'EXCEPTIONAL') : dealScore >= 65 ? (isFr ? 'FORT' : 'STRONG') : (isFr ? 'INTÉRESSANT' : 'INTERESTING');
   const totalCost     = realCost ? realCost.cost_basis : price;
   const breakEvenGain = realCost ? realCost.needed_gain_pct : 26;
   const netGain       = upsidePct - breakEvenGain;
@@ -403,10 +403,10 @@ export default function OpportunityDetail() {
   // Score pillars — real score_breakdown keys
   const sb = (lot as any).score_breakdown || {};
   const scorePillars = [
-    { label: 'PRICING',   value: Math.round(sb.below_estimate_score ?? 0) },
-    { label: 'LIQUIDITY', value: Math.round(sb.liquidity_score ?? lot.artist?.liquidity_score ?? 0) },
-    { label: 'MOMENTUM',  value: lot.artist?.trend === 'rising' ? 75 : lot.artist?.trend === 'stable' ? 50 : 25 },
-    { label: 'SELL-THR',  value: Math.round(lot.artist?.sell_through_rate ?? 0) },
+    { label: isFr ? 'VALORISATION' : 'PRICING',    value: Math.round(sb.below_estimate_score ?? 0) },
+    { label: isFr ? 'LIQUIDITÉ' : 'LIQUIDITY',      value: Math.round(sb.liquidity_score ?? lot.artist?.liquidity_score ?? 0) },
+    { label: 'MOMENTUM',                             value: lot.artist?.trend === 'rising' ? 75 : lot.artist?.trend === 'stable' ? 50 : 25 },
+    { label: isFr ? 'TAUX DE VENTE' : 'SELL-THR',  value: Math.round(lot.artist?.sell_through_rate ?? 0) },
   ].filter(p => p.value > 0);
 
   return (
@@ -506,7 +506,7 @@ export default function OpportunityDetail() {
               )}
               {priceHistory?.statistics?.sell_above_estimate_pct != null && (
                 <div>
-                  <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '3px', textTransform: 'uppercase' as const }}>SELL-THROUGH</div>
+                  <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '3px', textTransform: 'uppercase' as const }}>{isFr ? 'TAUX DE VENTE' : 'SELL-THROUGH'}</div>
                   <div style={{ fontSize: '13px', fontWeight: 700, color: 'white' }}>{priceHistory.statistics.sell_above_estimate_pct}%</div>
                 </div>
               )}
@@ -1032,7 +1032,7 @@ export default function OpportunityDetail() {
                           fontFamily: 'var(--font-mono)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.08em', padding: '2px 7px', borderRadius: '3px',
                           color: lot.artist.trend === 'up' ? GL : lot.artist.trend === 'down' ? RED : LTT3,
                           background: lot.artist.trend === 'up' ? '#F0FDF4' : lot.artist.trend === 'down' ? '#FEF2F2' : LT,
-                        }}>{lot.artist.trend === 'up' ? '↑ RISING' : lot.artist.trend === 'down' ? '↓ FALLING' : '→ STABLE'}</span>
+                        }}>{lot.artist.trend === 'up' ? (isFr ? '↑ EN HAUSSE' : '↑ RISING') : lot.artist.trend === 'down' ? (isFr ? '↓ EN BAISSE' : '↓ FALLING') : (isFr ? '→ STABLE' : '→ STABLE')}</span>
                       )}
                     </div>
                     <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' as const }}>
@@ -1250,7 +1250,7 @@ export default function OpportunityDetail() {
                           {bidRef && <div style={{ position: 'absolute', left: pctOf(bidRef), top: '-4px', width: '2px', height: '14px', background: GOLD, borderRadius: '1px' }} />}
                           <div style={{ position: 'absolute', left: pctOf(nautVal), top: '-4px', width: '2px', height: '14px', background: LTT3, borderRadius: '1px' }} />
                           <div style={{ position: 'absolute', left: pctOf(price), top: '18px', transform: 'translateX(-50%)', fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#34D399', letterSpacing: '0.08em', whiteSpace: 'nowrap' as const }}>
-                            {isFr ? 'ENTRÉE' : 'ENTRY'}
+                            {isFr ? 'ENTRÉE CIBLE' : 'ENTRY'}
                           </div>
                           {bidRef && (
                             <div style={{ position: 'absolute', left: pctOf(bidRef), top: '18px', transform: 'translateX(-50%)', fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.08em', whiteSpace: 'nowrap' as const }}>
@@ -1943,7 +1943,7 @@ export default function OpportunityDetail() {
                   {trackUrl && (
                     <div style={{ ...dRow, paddingTop: '8px', paddingBottom: '8px' }}>
                       <div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '2px' }}>LOT SOURCE</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '2px' }}>{isFr ? 'SOURCE DU LOT' : 'LOT SOURCE'}</div>
                         <div style={{ fontSize: '12px', color: LTT2 }}>{lot.auction_house_name || resolvedSource || 'Auction'}</div>
                       </div>
                       <a
@@ -1952,7 +1952,7 @@ export default function OpportunityDetail() {
                         rel="noopener noreferrer"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: BL, textDecoration: 'none', fontWeight: 600 }}
                       >
-                        View lot ↗
+                        {isFr ? 'Voir le lot ↗' : 'View lot ↗'}
                       </a>
                     </div>
                   )}
@@ -1961,7 +1961,7 @@ export default function OpportunityDetail() {
                   {lot.artist_name_raw && (
                     <div style={{ ...dRow, paddingTop: '8px', paddingBottom: '8px' }}>
                       <div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '2px' }}>ARTIST SEARCH</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '2px' }}>{isFr ? 'RECHERCHE ARTISTE' : 'ARTIST SEARCH'}</div>
                         <div style={{ fontSize: '12px', color: LTT2 }}>{lot.artist_name_raw}</div>
                       </div>
                       <a
@@ -1970,7 +1970,7 @@ export default function OpportunityDetail() {
                         rel="noopener noreferrer"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: BL, textDecoration: 'none', fontWeight: 600 }}
                       >
-                        Search artist ↗
+                        {isFr ? 'Rechercher l\'artiste ↗' : 'Search artist ↗'}
                       </a>
                     </div>
                   )}
@@ -1979,7 +1979,7 @@ export default function OpportunityDetail() {
                   {lot.auction_house_name && (
                     <div style={{ ...dRow, paddingTop: '8px', paddingBottom: '8px', borderBottom: 'none' }}>
                       <div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '2px' }}>AUCTION HOUSE</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '2px' }}>{isFr ? 'MAISON DE VENTE' : 'AUCTION HOUSE'}</div>
                         <div style={{ fontSize: '12px', color: LTT2 }}>{lot.auction_house_name}</div>
                       </div>
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>
@@ -1991,8 +1991,10 @@ export default function OpportunityDetail() {
                 </div>
 
                 <p style={{ fontSize: '11px', color: LTT3, margin: '10px 0 0', lineHeight: 1.5 }}>
-                  Source links may redirect via Nautilus tracking before landing on the auction platform.
-                  {lot.auction_house_name ? ` This lot is listed by ${lot.auction_house_name.split('—')[0].trim()}.` : ''}
+                  {isFr
+                    ? `Les liens sources peuvent rediriger via le tracking Nautilus avant d'accéder à la plateforme de vente.${lot.auction_house_name ? ` Ce lot est proposé par ${lot.auction_house_name.split('—')[0].trim()}.` : ''}`
+                    : `Source links may redirect via Nautilus tracking before landing on the auction platform.${lot.auction_house_name ? ` This lot is listed by ${lot.auction_house_name.split('—')[0].trim()}.` : ''}`
+                  }
                 </p>
               </div>
               </>
