@@ -184,6 +184,22 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+function LockedBlock({ preview, ctaText }: { preview?: React.ReactNode; ctaText?: string }) {
+  return (
+    <div style={{ position: 'relative', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+      <div style={{ filter: 'blur(4px)', pointerEvents: 'none', padding: '14px 16px', userSelect: 'none' }}>
+        {preview || <div style={{ height: 48, background: 'var(--surface-2)', borderRadius: 4 }} />}
+      </div>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span onClick={() => { window.location.href = '/app/pricing'; }}
+          style={{ cursor: 'pointer', background: '#1A2A44', color: '#C6A85A', fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', padding: '8px 18px', borderRadius: 3 }}>
+          {ctaText || 'INVESTOR+ · UNLOCK →'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function ArtistDetail() {
   const { t, i18n } = useTranslation();
   const isFr = i18n.language?.startsWith('fr');
@@ -270,6 +286,10 @@ export default function ArtistDetail() {
   const [plan, setPlan] = useState(getUserPlan());
   useEffect(() => { setPlan(getUserPlan()); }, []);
   const hasFullAccess = ["investor", "pro", "elite", "institutional"].includes(plan);
+  const fmtP = (v: number) => v >= 1_000_000 ? `€${(v/1_000_000).toFixed(1)}M` : v >= 1_000 ? `€${Math.round(v/1_000)}K` : `€${v}`;
+  const prices = (data.lots || []).map(l => l.current_price).filter((p): p is number => p !== null && p > 0);
+  const priceRecord = prices.length ? Math.max(...prices) : null;
+  const priceMin = prices.length ? Math.min(...prices) : null;
   const showTrend = data.shows_prev_12m !== undefined && data.shows_prev_12m !== null;
   const trendUp = showTrend && data.shows_last_12m > (data.shows_prev_12m ?? 0);
 
@@ -601,51 +621,181 @@ export default function ArtistDetail() {
         </div>
         ) : (
           <>
-            <div style={{ marginBottom: 40 }}>
-              {data.ai_brief ? (
-                <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
-                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>{data.ai_brief}</p>
+            {/* ── STATS ROW (visible free) ───────────────────────────────── */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 32 }}>
+              <div style={{ flex: 1, background: 'var(--navy)', borderRadius: 6, padding: '14px 18px' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.15em', marginBottom: 6 }}>{isFr ? 'PRIX RECORD' : 'PRICE RECORD'}</div>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, color: 'white' }}>{priceRecord ? fmtP(priceRecord) : '—'}</div>
+              </div>
+              <div style={{ flex: 1, background: 'var(--navy)', borderRadius: 6, padding: '14px 18px' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.15em', marginBottom: 6 }}>{isFr ? 'LOTS SUIVIS' : 'TRACKED LOTS'}</div>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, color: 'white' }}>{data.lots?.length ?? '—'}</div>
+              </div>
+              <div style={{ flex: 1, background: 'var(--navy)', borderRadius: 6, padding: '14px 18px' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.15em', marginBottom: 6 }}>{isFr ? 'FOURCHETTE' : 'PRICE RANGE'}</div>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, color: 'white' }}>
+                  {priceMin !== null && priceRecord !== null
+                    ? priceMin === priceRecord ? fmtP(priceMin) : `${fmtP(priceMin)}–${fmtP(priceRecord)}`
+                    : '—'}
                 </div>
-              ) : hasFullAccess ? (
-                wikiBio ? (
-                  <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
-                    <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0, display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{wikiBio}</p>
-                  </div>
-                ) : data.biography ? (
-                  <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px' }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
-                    <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>{data.biography.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')}</p>
-                  </div>
-                ) : (
-                  <div style={{ background: '#F5F3EE', border: '1px solid #E8E4DD', borderRadius: 8, padding: '16px 20px' }}>
-                    <p style={{ fontSize: 12, fontStyle: 'italic', color: '#9CA3AF', margin: 0, lineHeight: 1.6 }}>Market data available — artist biography coming soon.</p>
-                  </div>
-                )
-              ) : (
-                <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden' }}>
-                  <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px', filter: 'blur(5px)', userSelect: 'none', pointerEvents: 'none' }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
-                    <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>
-                      {wikiBio || data.biography || (isFr ? 'Biographie et analyse complète disponibles avec le plan Investor. Accédez aux données de carrière, aux tendances de marché et à l\'historique complet des ventes de cet artiste.' : 'Full biography and analysis available with the Investor plan. Access career data, market trends and complete sales history for this artist.')}
-                    </p>
-                  </div>
-                  <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(12,22,34,0.78)', borderRadius: 10, gap: 10 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.15em' }}>◆ {isFr ? 'FONCTIONNALITÉ INVESTOR+' : 'INVESTOR+ FEATURE'}</div>
-                    <div style={{ fontSize: 15, color: '#fff', fontFamily: 'Georgia,serif', marginBottom: 4 }}>{isFr ? 'Débloquez la biographie complète' : 'Unlock full biography'}</div>
-                    <a href="/app/pricing" style={{ background: '#C6A85A', color: '#0C1622', padding: '9px 20px', fontSize: 11, fontWeight: 700, textDecoration: 'none', borderRadius: 4, fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>
-                      {isFr ? 'Passer Investor →' : 'Get Investor access →'}
-                    </a>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
-            <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8f8f6', borderRadius: 8, marginTop: 24 }}>
-              <div style={{ fontSize: 13, letterSpacing: '0.15em', color: '#C6A85A', marginBottom: 8 }}>{isFr ? 'FONCTIONNALITÉ INVESTOR+' : 'INVESTOR+ FEATURE'}</div>
-              <div style={{ fontSize: 20, fontFamily: 'Georgia,serif', color: '#1A2A44', marginBottom: 12 }}>{isFr ? 'Débloquez l\'intelligence artiste complète' : 'Unlock full artist intelligence'}</div>
-              <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 20, maxWidth: 420, margin: '0 auto 20px' }}>{isFr ? 'Performance par format, arbitrage géographique, timing des ventes, profondeur de liquidité et tous les lots suivis.' : 'Format performance, geographic arbitrage, auction timing, liquidity depth and all tracked lots.'}</div>
-              <a href="/app/pricing" style={{ background: '#2563EB', color: '#fff', padding: '12px 28px', fontSize: 13, fontWeight: 600, textDecoration: 'none', borderRadius: 4 }}>{isFr ? 'Accéder à Investor — €19/mois →' : 'Get Investor access — €19/mo →'}</a>
+
+            {/* ── FIRST LOT (visible free) ───────────────────────────────── */}
+            {data.lots && data.lots.length > 0 && (
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.12em', marginBottom: 12 }}>
+                  {isFr ? 'OPPORTUNITÉ EN COURS' : 'CURRENT OPPORTUNITY'}
+                </div>
+                <div style={{ maxWidth: 240 }}>
+                  <LotCard lot={data.lots[0]} />
+                </div>
+              </div>
+            )}
+
+            {/* ── CTA BLOCK (after first lot, above-fold) ───────────────── */}
+            <div style={{ margin: '0 0 36px', padding: '20px 24px', background: 'var(--navy)', borderRadius: 8, maxWidth: 320 }}>
+              <div style={{ fontSize: 9, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.15em', marginBottom: 10 }}>
+                ◆ {isFr ? 'INTELLIGENCE INVESTOR+' : 'INVESTOR+ INTELLIGENCE'}
+              </div>
+              <div style={{ fontSize: 14, color: '#fff', fontFamily: 'Georgia,serif', fontWeight: 400, lineHeight: 1.5, marginBottom: 14 }}>
+                {isFr ? 'Débloquez l\'intelligence artiste complète' : 'Unlock full artist intelligence'}
+              </div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', lineHeight: 1.9, marginBottom: 16 }}>
+                {(isFr ? [
+                  'Les meilleures opportunités d\'achat actuelles',
+                  'Performance par maison de vente',
+                  'Détection de biais de prix',
+                  'Liquidité et momentum réel',
+                ] : [
+                  'Best current buying opportunities',
+                  'Performance by auction house',
+                  'Price bias detection',
+                  'Real liquidity and momentum',
+                ]).map((b, i) => <div key={i}>· {b}</div>)}
+              </div>
+              <a href="/app/pricing" style={{ display: 'inline-block', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: '#C6A85A', letterSpacing: '0.12em', textDecoration: 'none', borderBottom: '1px solid rgba(198,168,90,0.35)', paddingBottom: 2 }}>
+                {isFr ? 'Passer Investor — €19/mois →' : 'Get Investor access — €19/mo →'}
+              </a>
+            </div>
+
+            {/* ── OTHER LOTS (locked: image/score/prix visible, titre flouté) */}
+            {data.lots && data.lots.length > 1 && (
+              <div style={{ marginBottom: 40 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                  {data.lots.slice(1).map(lot => {
+                    const score = lot.deal_score ?? 0;
+                    const scoreColor = score >= 70 ? 'var(--gold)' : score >= 55 ? 'var(--electric)' : 'var(--text-3)';
+                    return (
+                      <div key={lot.id}
+                        onClick={() => { window.location.href = '/app/pricing'; }}
+                        style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden', cursor: 'pointer', position: 'relative' }}
+                      >
+                        <div style={{ height: 160, background: 'var(--surface)', overflow: 'hidden' }}>
+                          {lot.image_url
+                            ? <img src={lot.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : <div style={{ width: '100%', height: '100%', background: 'var(--surface-2)' }} />}
+                        </div>
+                        <div style={{ padding: '12px 14px' }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 4, filter: 'blur(4px)', userSelect: 'none' }}>
+                            {lot.title}
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text)' }}>
+                              {lot.current_price ? `€${lot.current_price.toLocaleString()}` : '—'}
+                            </div>
+                            {lot.deal_score !== null && (
+                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: scoreColor, border: `1px solid ${scoreColor}`, borderRadius: 3, padding: '2px 6px' }}>
+                                {Math.round(score)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(12,22,34,0.88)', borderRadius: 3, padding: '3px 7px', fontFamily: 'var(--font-mono)', fontSize: 9, color: '#C6A85A', letterSpacing: '0.12em' }}>
+                          INVESTOR
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── BIO (flouté, Investor+) ────────────────────────────────── */}
+            <div style={{ marginBottom: 40 }}>
+              <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden' }}>
+                <div style={{ background: 'var(--navy)', borderRadius: 10, padding: '18px 22px', filter: 'blur(5px)', userSelect: 'none', pointerEvents: 'none' }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: 8 }}>◆ NAUTILUS ANALYST BRIEF</div>
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, margin: 0 }}>
+                    {wikiBio || data.biography || (isFr ? 'Biographie et analyse complète disponibles avec le plan Investor. Accédez aux données de carrière, aux tendances de marché et à l\'historique complet des ventes de cet artiste.' : 'Full biography and analysis available with the Investor plan. Access career data, market trends and complete sales history for this artist.')}
+                  </p>
+                </div>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(12,22,34,0.78)', borderRadius: 10, gap: 10 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.15em' }}>◆ {isFr ? 'FONCTIONNALITÉ INVESTOR+' : 'INVESTOR+ FEATURE'}</div>
+                  <div style={{ fontSize: 15, color: '#fff', fontFamily: 'Georgia,serif', marginBottom: 4 }}>{isFr ? 'Débloquez la biographie complète' : 'Unlock full biography'}</div>
+                  <a href="/app/pricing" style={{ background: '#C6A85A', color: '#0C1622', padding: '9px 20px', fontSize: 11, fontWeight: 700, textDecoration: 'none', borderRadius: 4, fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>
+                    {isFr ? 'Passer Investor →' : 'Get Investor access →'}
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* ── SIGNALS (premier visible, reste locké) ────────────────── */}
+            {data.signals && data.signals.length > 0 && (
+              <div style={{ marginBottom: 32 }}>
+                <SectionTitle>{t('artist.investmentSignals')}</SectionTitle>
+                {/* First signal — visible */}
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', background: 'white', border: '1px solid var(--border)', borderRadius: 6, marginBottom: 10 }}>
+                  <span style={{ fontSize: 16, color: data.signals[0].color === 'gold' ? 'var(--gold)' : data.signals[0].color === 'electric' ? 'var(--electric)' : 'var(--navy)', flexShrink: 0 }}>
+                    {data.signals[0].icon}
+                  </span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{data.signals[0].label}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{data.signals[0].detail}</div>
+                  </div>
+                </div>
+                {/* Rest locked */}
+                {data.signals.length > 1 && (
+                  <LockedBlock
+                    preview={
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {data.signals.slice(1).map((sig, i) => (
+                          <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', background: 'white', border: '1px solid var(--border)', borderRadius: 6 }}>
+                            <span style={{ fontSize: 16, flexShrink: 0 }}>{sig.icon}</span>
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{sig.label}</div>
+                              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{sig.detail}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    }
+                    ctaText={isFr ? 'INVESTOR+ · VOIR TOUS →' : 'INVESTOR+ · SEE ALL →'}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* ── MARKET DATA (labels visibles, valeurs floutées) ───────── */}
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ flex: 1, background: 'white', border: '1px solid var(--border)', borderRadius: 6, padding: '18px 20px' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 10 }}>
+                  {isFr ? 'Représentation galerie' : 'Gallery Representation'}
+                </div>
+                <LockedBlock
+                  preview={<div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{data.top_gallery_name || 'Data unavailable'}</div>}
+                  ctaText="INVESTOR →"
+                />
+              </div>
+              <div style={{ flex: 1, background: 'white', border: '1px solid var(--border)', borderRadius: 6, padding: '18px 20px' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 10 }}>
+                  {isFr ? 'Activité marché' : 'Market Activity'}
+                </div>
+                <LockedBlock
+                  preview={<div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>{data.shows_last_12m} {isFr ? 'expositions' : 'shows'}</div>}
+                  ctaText="INVESTOR →"
+                />
+              </div>
             </div>
           </>
         )}
