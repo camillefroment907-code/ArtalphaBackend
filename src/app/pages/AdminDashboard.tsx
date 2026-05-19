@@ -165,7 +165,7 @@ export default function AdminDashboard() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
                     {[
                       { plan: 'Free', price: '—', color: '#6B7280' },
-                      { plan: 'investor', price: '€29/mo', color: '#2563EB' },
+                      { plan: 'investor', price: '€19/mo', color: '#2563EB' },
                       { plan: 'pro', price: '€49/mo', color: '#16A34A' },
                       { plan: 'institutional', price: '€199/mo', color: '#B8922A' },
                     ].map(({ plan, price, color }) => (

@@ -209,7 +209,7 @@ export default function Legal() {
               rows={[
                 ['Free', '€0', '—', '30', 'None'],
                 ['Collector', 'Founding price — €19/mo', '€182.40', '100', 'None'],
-                ['Investor', '€29', '€190/year', 'Unlimited', '20'],
+                ['Investor', '€19', '€190/year', 'Unlimited', '20'],
                 ['Family Office', '€99', '€950.40', 'Unlimited', '100'],
                 ['Institutional', 'Custom', 'Custom', 'Unlimited', '999'],
               ]}

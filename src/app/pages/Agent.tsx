@@ -128,7 +128,7 @@ function LockedPage() {
             {isFr ? "Activer mon analyste IA →" : "Activate my AI analyst →"}
           </button>
           <div style={{ marginTop: '10px', fontSize: '11px', color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-mono)' }}>
-            {isFr ? "Disponible dès le plan Investor · 29€/mois · Résiliable à tout moment" : "Available from Investor plan · €29/month · Cancel anytime"}
+            {isFr ? "Disponible dès le plan Investor · 19€/mois · Résiliable à tout moment" : "Available from Investor plan · €19/month · Cancel anytime"}
           </div>
         </div>
       </div>

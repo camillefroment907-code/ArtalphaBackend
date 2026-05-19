@@ -1238,7 +1238,7 @@ export default function Opportunities() {
                           >
                             <span style={{ fontSize: "14px" }}>🔒</span>
                             <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text)" }}>Investor plan</span>
-                            <span style={{ fontSize: "11px", color: "var(--text-3)" }}>from €29/month</span>
+                            <span style={{ fontSize: "11px", color: "var(--text-3)" }}>from €19/month</span>
                           </div>
                         )}
                       </div>
@@ -1279,7 +1279,7 @@ export default function Opportunities() {
                     >
                       <div style={{ fontSize: "16px", marginBottom: "6px" }}>🔒</div>
                       <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text)" }}>Investor plan</div>
-                      <div style={{ fontSize: "11px", color: "var(--text-3)" }}>from €29/month</div>
+                      <div style={{ fontSize: "11px", color: "var(--text-3)" }}>from €19/month</div>
                     </div>
                   </div>
                 ))}

@@ -296,7 +296,7 @@ export function AIAnalyst({ rawLot }: Props) {
           onClick={() => navigate('/app/pricing')}
           style={{ padding: '11px 26px', background: 'var(--navy)', color: 'white', border: 'none', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
         >
-          Unlock from €29/month →
+          Unlock from €19/month →
         </button>
       </div>
     );
