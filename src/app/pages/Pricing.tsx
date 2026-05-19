@@ -131,7 +131,7 @@ const PT = {
     planDescriptions: { free: 'Discover the market at your own pace.', investor: 'For active art collectors.', pro: 'For serious art investors.' },
     planCtas: { free: 'Current Plan', investor: 'Get founding access →', pro: 'GO PRO →' },
     planFeatures: {
-      free: ['6 scored lots per day','Deal score visible (0–100)','Upside % visible','1 top deal fully unlocked daily','✗ Auction source hidden','✗ Bidding links locked','✗ No alerts','✗ No AI analyst'],
+      free: ['6 scored lots per day','Deal score visible (0–100)','Upside % visible','Collection: 1 artwork max','Wishlist: 3 lots max','Artists followed: 5 max','✗ Auction source hidden','✗ Bidding links locked','✗ No alerts','✗ No AI analyst'],
       investor: ['Unlimited scored lots','Full auction source revealed','Direct bidding links','How to bid guide','Early access — before free users','Real-time alerts (score ≥ 70)','Ask your AI art analyst (20/month)','Investment Memo (Investor+)','1 active strategy','Basic portfolio tracking'],
       pro: ['Everything in Investor','Unlimited AI art analyst','Unlimited Investment Memos','Unlimited active strategies','Alerts from score 60+','Arbitrage signals','Price projections (12/24 months)','Portfolio IRR tracking','+€X gained from Nautilus signals','Export CSV / PDF','Priority support'],
     },
@@ -157,7 +157,7 @@ const PT = {
     planDescriptions: { free: 'Découvrez le marché à votre rythme.', investor: "Pour les collectionneurs d'art actifs.", pro: 'Pour les investisseurs art sérieux.' },
     planCtas: { free: 'Plan actuel', investor: 'Accès fondateur →', pro: 'PASSER PRO →' },
     planFeatures: {
-      free: ['6 lots scorés par jour','Score de conviction (0–100)','Potentiel % visible','1 meilleur lot débloqué par jour','✗ Source de vente masquée','✗ Liens enchères verrouillés','✗ Pas d\'alertes','✗ Pas d\'analyste IA'],
+      free: ['6 lots scorés par jour','Score de conviction (0–100)','Potentiel % visible','Collection : 1 œuvre max','Wishlist : 3 lots max','Artistes suivis : 5 max','✗ Source de vente masquée','✗ Liens enchères verrouillés','✗ Pas d\'alertes','✗ Pas d\'analyste IA'],
       investor: ['Lots scorés illimités','Source de vente révélée','Liens enchères directs','Guide enchères','Accès anticipé — avant users gratuits','Alertes temps réel (score ≥ 70)','Analyste IA art (20/mois)','Mémo investissement (Investor+)','1 stratégie active','Suivi portfolio basique'],
       pro: ['Tout Investor inclus','Analyste IA illimité','Mémos investissement illimités','Stratégies illimitées','Alertes dès score 60+','Signaux arbitrage','Projections prix (12/24 mois)','Suivi IRR portfolio','+€X via signaux Nautilus','Export CSV / PDF','Support prioritaire'],
     },

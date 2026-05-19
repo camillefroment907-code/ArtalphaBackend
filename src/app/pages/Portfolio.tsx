@@ -2507,12 +2507,21 @@ export default function Portfolio() {
                 {t('portfolio.planIncludes')}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                {(userPlan === 'free' ? [
-                  '3 opportunities/day',
-                  'Basic deal score',
-                  '3 Larry messages',
-                  '3 portfolio items',
-                ] : userPlan === 'starter' ? [
+                {(userPlan === 'free' ? (currentLang === 'fr' ? [
+                  '6 lots scorés par jour',
+                  'Score de conviction (0–100)',
+                  'Potentiel % visible',
+                  'Collection : 1 œuvre max',
+                  'Wishlist : 3 lots max',
+                  'Artistes suivis : 5 max',
+                ] : [
+                  '6 scored lots per day',
+                  'Deal score (0–100)',
+                  'Upside % visible',
+                  'Collection: 1 artwork max',
+                  'Wishlist: 3 lots max',
+                  'Artists followed: 5 max',
+                ]) :userPlan === 'starter' ? [
                   '10 opportunities/day',
                   'Full deal score + rationale',
                   '10 Larry messages/month',
