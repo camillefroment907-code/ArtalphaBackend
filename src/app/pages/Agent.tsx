@@ -320,7 +320,16 @@ function AgentPage() {
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify(buildPayload()),
       });
-      if (!res.ok) { const err = await res.json(); throw new Error(err.detail ?? 'Error'); }
+      if (!res.ok) {
+        const err = await res.json();
+        const detail: string = err.detail ?? '';
+        const isLimitError = detail.includes('alerte') || detail.toLowerCase().includes('limit') || detail.toLowerCase().includes('max');
+        throw new Error(isLimitError
+          ? (isFr
+            ? `Limite atteinte — votre plan permet ${limits?.max ?? 1} stratégie${(limits?.max ?? 1) > 1 ? 's' : ''}. Passez à un plan supérieur pour en créer davantage.`
+            : `Limit reached — your plan allows ${limits?.max ?? 1} strateg${(limits?.max ?? 1) > 1 ? 'ies' : 'y'}. Upgrade to create more.`)
+          : (detail || 'Error'));
+      }
       closeForm();
       await loadAll();
     } catch (e: unknown) {

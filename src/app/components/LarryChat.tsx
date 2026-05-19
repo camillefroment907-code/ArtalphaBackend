@@ -61,7 +61,8 @@ const cleanLarry = (text: string) =>
     .trim();
 
 export function LarryChat({ lotId: existingLotId }: LarryChatProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
   const getCurrentLotId = () => {
     const path = window.location.pathname;
     if (!path.includes('/opportunities/')) return null;
@@ -428,8 +429,8 @@ export function LarryChat({ lotId: existingLotId }: LarryChatProps) {
               )}
               {/* Usage */}
               {usage && usage.limit < 9999 && (
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono, monospace)', paddingInline: '6px' }}>
-                  {usage.used}/{usage.limit}
+                <div style={{ fontSize: '10px', color: usage.used >= usage.limit ? '#F87171' : 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono, monospace)', paddingInline: '6px' }}>
+                  {usage.limit - usage.used}/{usage.limit} {isFr ? 'msg restants' : 'msgs left'}
                 </div>
               )}
               {/* Close */}
