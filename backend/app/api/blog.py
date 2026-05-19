@@ -37,6 +37,8 @@ class BlogPostCreate(BaseModel):
     tags:              Optional[List[str]] = []
     is_published:      Optional[bool] = False
     read_time_minutes: Optional[int]  = 5
+    lang:              Optional[str]  = "fr"
+    translations:      Optional[dict] = None
 
 
 class BlogPostUpdate(BaseModel):
@@ -48,6 +50,8 @@ class BlogPostUpdate(BaseModel):
     tags:              Optional[List[str]] = None
     is_published:      Optional[bool] = None
     read_time_minutes: Optional[int]  = None
+    lang:              Optional[str]  = None
+    translations:      Optional[dict] = None
 
 
 def _slugify(title: str) -> str:
@@ -155,6 +159,8 @@ async def create_post(
         is_published=body.is_published or False,
         published_at=datetime.utcnow() if body.is_published else None,
         read_time_minutes=body.read_time_minutes or 5,
+        lang=body.lang or "fr",
+        translations=body.translations or {},
     )
     db.add(post)
     await db.commit()
