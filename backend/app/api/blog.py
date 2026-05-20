@@ -187,8 +187,12 @@ async def update_post(
         post.published_at = datetime.utcnow()
     for field, value in updates.items():
         setattr(post, field, value)
+    # Explicit override for published_at (model_dump may drop datetime objects)
+    if body.published_at is not None:
+        post.published_at = body.published_at
     post.updated_at = datetime.utcnow()
     await db.commit()
+    await db.refresh(post)
     return _serialize(post)
 
 
