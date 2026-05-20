@@ -12,7 +12,7 @@ Admin:
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, func, desc, update
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -184,15 +184,16 @@ async def update_post(
     updates = body.model_dump(exclude_none=True)
     # If publishing for the first time, set published_at
     if updates.get("is_published") and not post.published_at:
-        post.published_at = datetime.utcnow()
-    for field, value in updates.items():
-        setattr(post, field, value)
-    # Explicit override for published_at (model_dump may drop datetime objects)
-    if body.published_at is not None:
-        post.published_at = body.published_at
-    post.updated_at = datetime.utcnow()
+        updates["published_at"] = datetime.utcnow()
+    updates["updated_at"] = datetime.utcnow()
+    # Use UPDATE statement to ensure all fields (incl. published_at) are persisted
+    await db.execute(
+        update(BlogPost).where(BlogPost.slug == slug).values(**updates)
+    )
     await db.commit()
-    await db.refresh(post)
+    # Re-fetch to return fresh state
+    result2 = await db.execute(select(BlogPost).where(BlogPost.slug == slug))
+    post = result2.scalar_one()
     return _serialize(post)
 
 
