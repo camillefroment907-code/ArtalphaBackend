@@ -42,16 +42,17 @@ class BlogPostCreate(BaseModel):
 
 
 class BlogPostUpdate(BaseModel):
-    title:             Optional[str]  = None
-    excerpt:           Optional[str]  = None
-    content:           Optional[str]  = None
-    cover_image:       Optional[str]  = None
-    author:            Optional[str]  = None
+    title:             Optional[str]      = None
+    excerpt:           Optional[str]      = None
+    content:           Optional[str]      = None
+    cover_image:       Optional[str]      = None
+    author:            Optional[str]      = None
     tags:              Optional[List[str]] = None
-    is_published:      Optional[bool] = None
-    read_time_minutes: Optional[int]  = None
-    lang:              Optional[str]  = None
-    translations:      Optional[dict] = None
+    is_published:      Optional[bool]     = None
+    published_at:      Optional[datetime] = None
+    read_time_minutes: Optional[int]      = None
+    lang:              Optional[str]      = None
+    translations:      Optional[dict]     = None
 
 
 def _slugify(title: str) -> str:
