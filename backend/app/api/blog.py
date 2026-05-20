@@ -12,7 +12,7 @@ Admin:
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc, update
+from sqlalchemy import select, func, desc, update, text
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -186,12 +186,25 @@ async def update_post(
     if updates.get("is_published") and not post.published_at:
         updates["published_at"] = datetime.utcnow()
     updates["updated_at"] = datetime.utcnow()
-    # Use UPDATE statement to ensure all fields (incl. published_at) are persisted
-    await db.execute(
-        update(BlogPost).where(BlogPost.slug == slug).values(**updates)
-    )
+
+    # Apply all non-datetime fields via ORM
+    for field, value in updates.items():
+        if field != "published_at":
+            setattr(post, field, value)
+
+    # Apply published_at via raw SQL to bypass ORM tracking issues
+    if body.published_at is not None:
+        await db.execute(
+            text("UPDATE blog_posts SET published_at = :dt WHERE slug = :slug"),
+            {"dt": body.published_at, "slug": slug},
+        )
+    elif "published_at" in updates:
+        await db.execute(
+            text("UPDATE blog_posts SET published_at = :dt WHERE slug = :slug"),
+            {"dt": updates["published_at"], "slug": slug},
+        )
+
     await db.commit()
-    # Re-fetch to return fresh state
     result2 = await db.execute(select(BlogPost).where(BlogPost.slug == slug))
     post = result2.scalar_one()
     return _serialize(post)
