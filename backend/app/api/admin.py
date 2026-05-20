@@ -1610,10 +1610,24 @@ async def update_user_plan(
         new_plan = SubscriptionPlan(new_plan_str)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid plan: {new_plan_str}")
+    # Upsert subscription
+    sub = (await db.execute(
+        select(Subscription).where(Subscription.user_id == user_id)
+    )).scalar_one_or_none()
+    if sub:
+        sub.plan = new_plan
+        sub.status = SubscriptionStatus.ACTIVE
+        sub.updated_at = datetime.utcnow()
+    else:
+        sub = Subscription(
+            user_id=user_id,
+            plan=new_plan,
+            status=SubscriptionStatus.ACTIVE,
+        )
+        db.add(sub)
+    # Sync users.plan
     await db.execute(
-        update(Subscription)
-        .where(Subscription.user_id == user_id)
-        .values(plan=new_plan, status=SubscriptionStatus.ACTIVE)
+        update(User).where(User.id == user_id).values(plan=new_plan)
     )
     await db.commit()
     return {"status": "updated", "user_id": user_id, "new_plan": new_plan_str}
