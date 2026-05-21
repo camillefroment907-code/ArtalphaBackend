@@ -115,6 +115,7 @@ async function fetchLotsFromAPI(params: Record<string, any>) {
   if (params.max_price)          qs.set("max_price", String(params.max_price));
   if (params.artist)             qs.set("artist", params.artist);
   if (params.category)           qs.set("category", params.category);
+  if (params.categories)         qs.set("categories", params.categories);
   if (params.medium)             qs.set("medium", params.medium);
   if (params.auction_house)      qs.set("auction_house", params.auction_house);
   if (params.artist_tier)        qs.set("artist_tier", params.artist_tier);
@@ -401,6 +402,7 @@ export default function Explore() {
   const [sortDir, setSortDir]         = useState(searchParams.get('sort_dir') || 'desc');
   const [artist, setArtist]           = useState(searchParams.get('artist') || '');
   const [auctionHouse, setAuctionHouse] = useState(searchParams.get('auction_house') || '');
+  const [profileCategories, setProfileCategories] = useState<string[]>([]);
 
   // Pre-apply filters from onboarding profile when arriving via ?onboarding=1
   useEffect(() => {
@@ -440,7 +442,10 @@ export default function Explore() {
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (!data) return;
-        if (data.preferred_categories?.length > 0) setCategory(data.preferred_categories[0]);
+        if (data.preferred_categories?.length > 0) {
+          setProfileCategories(data.preferred_categories);
+          setCategory(data.preferred_categories[0]);
+        }
         if (data.investment_budget && BUDGET_MAX[data.investment_budget]) setMaxPrice(BUDGET_MAX[data.investment_budget]);
         setSortBy('deal_score');
         setSortDir('desc');
@@ -580,6 +585,10 @@ export default function Explore() {
         if (minPrice > 0)    p.set('min_price', String(minPrice));
         if (maxPrice > 0)    p.set('max_price', String(maxPrice));
         if (category)        p.set('category', CATEGORY_API_MAP[category] || category);
+        if (profileCategories.length > 1) {
+          p.set('categories', profileCategories.join(','));
+          p.delete('category'); // categories takes precedence
+        }
         if (sources.length)    p.set('sources', sources.join(','));
         if (search.trim())     p.set('search', search.trim());
         if (provenance)        p.set('provenance', PROVENANCE_KEYWORD_MAP[provenance] || provenance);
@@ -622,7 +631,7 @@ export default function Explore() {
     }, 300);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exploreTab, refreshKey, minScore, maxScore, minPrice, maxPrice, category, provenance, sources, search, sortBy, sortDir, dateFilter, artist, auctionHouse]);
+  }, [exploreTab, refreshKey, minScore, maxScore, minPrice, maxPrice, category, profileCategories, provenance, sources, search, sortBy, sortDir, dateFilter, artist, auctionHouse]);
 
   const loadMore = async () => {
     if (loadingMore || currentPage >= totalPages) return;
@@ -653,6 +662,9 @@ export default function Explore() {
           min_price: minPrice > 0 ? minPrice : undefined,
           max_price: maxPrice > 0 ? maxPrice : undefined,
           category: category ? (CATEGORY_API_MAP[category] || category) : undefined,
+          categories: profileCategories.length > 1
+            ? profileCategories.join(',')
+            : undefined,
           sources: sources.length ? sources.join(',') : undefined,
           artist: artist.trim() || undefined,
           auction_house: auctionHouse.trim() || undefined,
