@@ -17,20 +17,18 @@ function useIsMobile(breakpoint = 900) {
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 const NAV_ITEMS = [
-  { tKey: 'nav.signalFeed',   label: '', to: '/app/dashboard', dropdown: null },
-  { tKey: 'nav.explorer',     label: '', to: '/app/explore',   dropdown: 'explorer' },
-  { tKey: 'nav.artists',      label: '', to: '/app/artists',   dropdown: null },
-  { tKey: 'nav.emerging',     label: '', to: '/app/emerging',  dropdown: null },
-  { tKey: 'nav.calendar',     label: '', to: '/app/calendar',  dropdown: null },
-  { tKey: 'nav.intelligence', label: '', to: '/app/agent',     dropdown: null },
-  { tKey: 'nav.portfolio',    label: '', to: '/app/portfolio', dropdown: null },
+  { tKey: 'nav.maSelection', label: '', to: '/app/dashboard', dropdown: null },
+  { tKey: 'nav.leMarche',    label: '', to: '/app/explore',   dropdown: 'explorer' },
+  { tKey: 'nav.artists',     label: '', to: '/app/artists',   dropdown: null },
+  { tKey: 'nav.alerts',      label: '', to: '/app/agent',     dropdown: null },
+  { tKey: 'nav.calendar',    label: '', to: '/app/calendar',  dropdown: null },
+  { tKey: 'nav.portfolio',   label: '', to: '/app/portfolio', dropdown: null },
 ];
 
 const EXPLORER_ITEMS = [
-  { icon: '◆', labelKey: 'explorer.bestLots',    subKey: 'explorer.bestLotsSub',    to: '/app/explore?tab=best' },
-  { icon: '◉', labelKey: 'explorer.allAuctions', subKey: 'explorer.allAuctionsSub', to: '/app/explore?tab=auctions' },
-  { icon: '◐', labelKey: 'explorer.primary',     subKey: 'explorer.primarySub',     to: '/app/explore?tab=primary' },
-  { icon: '★', labelKey: 'explorer.convictions', subKey: 'explorer.convictionsSub', to: '/app/explore?tab=convictions' },
+  { icon: '◆', labelKey: 'explorer.bestLots',     subKey: 'explorer.bestLotsSub',     to: '/app/explore?tab=best' },
+  { icon: '◉', labelKey: 'explorer.allAuctions',  subKey: 'explorer.allAuctionsSub',  to: '/app/explore?tab=auctions' },
+  { icon: '◐', labelKey: 'explorer.directArtist', subKey: 'explorer.directArtistSub', to: '/app/explore?tab=primary' },
 ];
 
 const PLAN_LABELS: Record<string, string> = {
@@ -140,7 +138,7 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
     }}>
 
       {/* Logo */}
-      <Link to={getToken() ? '/app/explore' : '/'} style={{ textDecoration: 'none', flexShrink: 0 }}>
+      <Link to={getToken() ? '/app/dashboard' : '/'} style={{ textDecoration: 'none', flexShrink: 0 }}>
         <Logo variant="horizontal" color="dark" size={28} />
       </Link>
 

@@ -1,6 +1,7 @@
 const en = {
   nav: {
     dashboard: 'Dashboard', signalFeed: 'Signal Feed', explorer: 'Explorer',
+    maSelection: 'Ma Sélection', leMarche: 'Le Marché',
     artists: 'Artists', emerging: 'Emerging', calendar: 'Calendar',
     intelligence: 'Intelligence', portfolio: 'Portfolio',
     signOut: 'Sign out', getAccess: 'Get access', signIn: 'Sign in',
@@ -19,6 +20,7 @@ const en = {
     allAuctions: 'All Auctions', allAuctionsSub: 'Global auction feed',
     primary: 'Primary', primarySub: 'Galleries & emerging artists',
     convictions: 'Convictions', convictionsSub: 'Highest confidence picks',
+    directArtist: 'Direct Artist', directArtistSub: 'Buy directly from artists — no gallery commission',
     filters: 'Filters', hideFilters: 'Hide',
     sortBy: 'Sort by', search: 'Title, artist, keyword...',
     noResults: 'Unable to connect to the auction database',

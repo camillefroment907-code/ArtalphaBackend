@@ -3,6 +3,7 @@ import type { TranslationKeys } from './en';
 const fr: TranslationKeys = {
   nav: {
     dashboard: 'Tableau de bord', signalFeed: 'Signal Feed', explorer: 'Explorer',
+    maSelection: 'Ma Sélection', leMarche: 'Le Marché',
     artists: 'Artistes', emerging: 'Émergents', calendar: 'Calendrier',
     intelligence: 'Intelligence', portfolio: 'Portfolio',
     signOut: 'Se déconnecter', getAccess: 'Accéder', signIn: 'Se connecter',
@@ -21,6 +22,7 @@ const fr: TranslationKeys = {
     allAuctions: 'Toutes les Enchères', allAuctionsSub: 'Flux mondial des enchères',
     primary: 'Marché Primaire', primarySub: 'Galeries & artistes émergents',
     convictions: 'Convictions', convictionsSub: 'Sélection haute conviction',
+    directArtist: 'Direct Artiste', directArtistSub: 'Achetez directement aux artistes — sans commission galerie',
     filters: 'Filtres', hideFilters: 'Masquer',
     sortBy: 'Trier par', search: 'Titre, artiste, mot-clé...',
     noResults: 'Impossible de se connecter à la base de données',
