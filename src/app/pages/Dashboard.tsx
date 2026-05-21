@@ -160,7 +160,7 @@ export default function Dashboard() {
             .catch(() => {});
 
           // Bloc 3 — En direct des artistes
-          cachedFetch(`${BACKEND}/api/lots?tab=primary&page_size=3&sort_by=deal_score`)
+          cachedFetch(`${BACKEND}/api/lots/primary?page_size=3&sort_by=deal_score`)
             .then((d: any) => setDirectLots(d.items || []))
             .catch(() => {});
         })
