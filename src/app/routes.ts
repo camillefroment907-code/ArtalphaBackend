@@ -49,6 +49,7 @@ const ResetPassword            = lazy(() => import('./pages/ResetPassword'));
 const VerifyEmailRequired      = lazy(() => import('./pages/VerifyEmailRequired'));
 const VerifyEmail              = lazy(() => import('./pages/VerifyEmail'));
 const Partners                 = lazy(() => import('./pages/Partners'));
+const Preferences              = lazy(() => import('./pages/Preferences'));
 
 export const router = createBrowserRouter([
   {
@@ -148,6 +149,7 @@ export const router = createBrowserRouter([
       { path: 'portfolio', Component: Portfolio },
       { path: 'agent', Component: Agent },
       { path: 'onboarding', Component: Onboarding },
+      { path: 'profile/preferences', Component: Preferences },
       { path: 'visualizer', Component: RoomVisualizer },
       { path: 'calendar', Component: AuctionCalendar },
       { path: 'emerging', Component: Emerging },
