@@ -580,9 +580,11 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
         fontSize: '12px', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em',
       }}>
-        <span style={{ color: 'var(--gold)', fontWeight: 700 }}>◆ FREE TRIAL</span>
+        <span style={{ color: 'var(--gold)', fontWeight: 700 }}>
+          ◆ {t('nav.trialBadge')}
+        </span>
         <span style={{ color: 'rgba(255,255,255,0.7)' }}>
-          {getTrialDaysLeft()} day{getTrialDaysLeft() !== 1 ? 's' : ''} remaining — full Investor access
+          {t(getTrialDaysLeft() === 1 ? 'nav.trialDaysOne' : 'nav.trialDaysOther', { count: getTrialDaysLeft() })}
         </span>
         <button
           onClick={() => navigate('/app/pricing')}
@@ -593,7 +595,7 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
             cursor: 'pointer', letterSpacing: '0.06em', fontFamily: 'var(--font-mono)',
           }}
         >
-          UPGRADE →
+          {t('nav.trialUpgrade')}
         </button>
       </div>
     )}

@@ -2,6 +2,10 @@ const en = {
   nav: {
     dashboard: 'Dashboard', signalFeed: 'Signal Feed', explorer: 'Explorer',
     maSelection: 'Ma Sélection', leMarche: 'Le Marché',
+    trialBadge: 'FREE TRIAL',
+    trialDaysOne: '{{count}} day remaining — full Investor access',
+    trialDaysOther: '{{count}} days remaining — full Investor access',
+    trialUpgrade: 'UPGRADE →',
     artists: 'Artists', emerging: 'Emerging', calendar: 'Calendar',
     intelligence: 'Intelligence', portfolio: 'Portfolio',
     signOut: 'Sign out', getAccess: 'Get access', signIn: 'Sign in',

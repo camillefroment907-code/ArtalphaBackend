@@ -4,6 +4,10 @@ const fr: TranslationKeys = {
   nav: {
     dashboard: 'Tableau de bord', signalFeed: 'Signal Feed', explorer: 'Explorer',
     maSelection: 'Ma Sélection', leMarche: 'Le Marché',
+    trialBadge: 'ESSAI GRATUIT',
+    trialDaysOne: '{{count}} jour restant — accès Investor complet',
+    trialDaysOther: '{{count}} jours restants — accès Investor complet',
+    trialUpgrade: 'PASSER AU PLAN →',
     artists: 'Artistes', emerging: 'Émergents', calendar: 'Calendrier',
     intelligence: 'Intelligence', portfolio: 'Portfolio',
     signOut: 'Se déconnecter', getAccess: 'Accéder', signIn: 'Se connecter',
