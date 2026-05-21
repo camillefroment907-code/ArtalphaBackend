@@ -267,7 +267,7 @@ async def list_lots(
         page_size = max_per_page
 
     # ── Cache lookup ─────────────────────────────────────────────────────────
-    cache_key = f"lots:{plan}:{sort_by}:{sort_dir}:{min_score}:{page}:{page_size}:{category or ''}:{search or ''}:{provenance or ''}:{source or ''}:{sources or ''}:{min_price or 0}:{max_price or 0}:{auction_date_from or ''}:{auction_date_to or ''}"
+    cache_key = f"lots:{plan}:{sort_by}:{sort_dir}:{min_score}:{page}:{page_size}:{category or ''}:{categories or ''}:{search or ''}:{provenance or ''}:{source or ''}:{sources or ''}:{min_price or 0}:{max_price or 0}:{auction_date_from or ''}:{auction_date_to or ''}"
     cached = get_cached(cache_key, ttl=120)
     if cached:
         response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=120"
