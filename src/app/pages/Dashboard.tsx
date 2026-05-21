@@ -206,7 +206,7 @@ export default function Dashboard() {
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           {(!userProfile?.preferred_categories?.length) && (
             <button
-              onClick={() => navigate('/app/onboarding')}
+              onClick={() => navigate('/app/onboarding?edit=1')}
               style={{ fontSize: '12px', padding: '8px 16px', background: '#1A2A44', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
             >
               {lang === 'fr' ? 'Personnaliser ma sélection →' : 'Personalize my selection →'}
@@ -214,7 +214,7 @@ export default function Dashboard() {
           )}
           {userProfile?.preferred_categories?.length > 0 && (
             <button
-              onClick={() => navigate('/app/onboarding')}
+              onClick={() => navigate('/app/profile/preferences')}
               style={{ fontSize: '12px', padding: '8px 16px', background: 'none', color: '#6B7280', border: '1px solid #E8E4DC', borderRadius: '6px', cursor: 'pointer' }}
             >
               {lang === 'fr' ? 'Modifier mes préférences' : 'Edit preferences'}
@@ -243,7 +243,7 @@ export default function Dashboard() {
               </div>
             </div>
             <button
-              onClick={() => navigate('/app/onboarding')}
+              onClick={() => navigate('/app/onboarding?edit=1')}
               style={{ flexShrink: 0, marginLeft: '24px', padding: '10px 20px', background: '#1A2A44', color: '#C6A85A', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               {lang === 'fr' ? 'Compléter mon profil →' : 'Complete my profile →'}
@@ -263,7 +263,7 @@ export default function Dashboard() {
                   {lang === 'fr' ? 'Basé sur votre profil' : 'Based on your profile'}
                 </div>
               </div>
-              <button onClick={() => navigate('/app/explore?tab=best')}
+              <button onClick={() => navigate('/app/explore?profile=1')}
                 style={{ fontSize: '12px', color: '#1A2A44', fontWeight: 600, background: 'none', border: '1px solid #E8E4DC', borderRadius: '6px', padding: '6px 14px', cursor: 'pointer' }}>
                 {lang === 'fr' ? 'Voir tout →' : 'View all →'}
               </button>
@@ -288,7 +288,7 @@ export default function Dashboard() {
                   {lang === 'fr' ? 'Meilleures opportunités du moment' : 'Top opportunities right now'}
                 </div>
               </div>
-              <button onClick={() => navigate('/app/explore?tab=best')}
+              <button onClick={() => navigate('/app/explore?profile=1')}
                 style={{ fontSize: '12px', color: '#1A2A44', fontWeight: 600, background: 'none', border: '1px solid #E8E4DC', borderRadius: '6px', padding: '6px 14px', cursor: 'pointer' }}>
                 {lang === 'fr' ? 'Voir tout →' : 'View all →'}
               </button>
