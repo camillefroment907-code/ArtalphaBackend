@@ -80,7 +80,11 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
         )
         db.add(sub)
         await db.commit()
-        await db.refresh(user)
+        # Reload with subscription so active_plan is computed correctly
+        result2 = await db.execute(
+            select(User).where(User.id == user.id).options(selectinload(User.subscription))
+        )
+        user = result2.scalar_one()
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Preferences creation failed: {type(e).__name__}: {e}")
