@@ -141,14 +141,17 @@ export default function Dashboard() {
           const budgetMax = profile.investment_budget
             ? BUDGET_MAX[profile.investment_budget] ?? 999999
             : 999999;
-          const firstCat = profile.preferred_categories?.[0] || '';
-
           // Bloc 1 — Sélection pour vous
           const selUrl = new URL(`${BACKEND}/api/lots`);
           selUrl.searchParams.set('sort_by', 'deal_score');
           selUrl.searchParams.set('page_size', '4');
           selUrl.searchParams.set('min_score', '55');
-          if (firstCat) selUrl.searchParams.set('category', firstCat);
+          const cats = profile.preferred_categories || [];
+          if (cats.length === 1) {
+            selUrl.searchParams.set('category', cats[0]);
+          } else if (cats.length > 1) {
+            selUrl.searchParams.set('categories', cats.join(','));
+          }
           if (budgetMax < 999999) selUrl.searchParams.set('estimate_max', String(Math.round(budgetMax * 1.2)));
           cachedFetch(selUrl.toString(), { headers: { Authorization: `Bearer ${token}` } })
             .then((d: any) => setSelectionLots(d.items || []))
