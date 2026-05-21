@@ -126,6 +126,10 @@ export default function Dashboard() {
     const cats = profile?.preferred_categories || [];
     if (cats.length === 1) url.searchParams.set('category', cats[0]);
     else if (cats.length > 1) url.searchParams.set('categories', cats.join(','));
+    const budgetMax = profile?.investment_budget
+      ? BUDGET_MAX[profile.investment_budget] ?? 999999
+      : 999999;
+    if (budgetMax < 999999) url.searchParams.set('estimate_max', String(budgetMax));
     return url.toString();
   };
 
