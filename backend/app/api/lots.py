@@ -235,6 +235,7 @@ async def list_lots(
     provenance: Optional[str] = Query(None),
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
+    estimate_max: Optional[float] = Query(None),
     # Both naming conventions accepted (frontend sends auction_date_from)
     auction_from: Optional[datetime] = None,
     auction_to: Optional[datetime] = None,
@@ -374,6 +375,36 @@ async def list_lots(
         filters.append(
             or_(Lot.current_price <= max_price, Lot.estimate_low <= max_price)
         )
+    if estimate_max is not None and estimate_max > 0:
+        # Approximate currency conversion rates to EUR
+        _FX = {
+            'EUR': 1.0, 'USD': 0.92, 'GBP': 1.17,
+            'SEK': 0.087, 'CHF': 1.05, 'DKK': 0.134,
+            'NOK': 0.087, 'JPY': 0.006, 'HKD': 0.118,
+            'AUD': 0.59, 'CAD': 0.68,
+        }
+        # Build OR conditions: for each currency, compute threshold in that currency
+        currency_conds = []
+        for curr, rate in _FX.items():
+            if rate > 0:
+                threshold = estimate_max / rate
+                currency_conds.append(
+                    and_(
+                        Lot.currency == curr,
+                        or_(
+                            Lot.estimate_low <= threshold,
+                            Lot.estimate_low.is_(None),
+                        )
+                    )
+                )
+        # Also handle NULL currency — assume EUR
+        currency_conds.append(
+            and_(
+                Lot.currency.is_(None),
+                or_(Lot.estimate_low <= estimate_max, Lot.estimate_low.is_(None))
+            )
+        )
+        filters.append(or_(*currency_conds))
     if resolved_from:
         filters.append(Lot.auction_date >= resolved_from)
     if resolved_to:
