@@ -227,6 +227,7 @@ async def list_lots(
     # Multi-source (market tab) — comma-separated: "drouot,invaluable"
     sources: Optional[str] = Query(None),
     category: Optional[str] = None,
+    categories: Optional[str] = Query(None),  # comma-separated: "Paintings,Drawings"
     medium: Optional[str] = None,
     auction_house: Optional[str] = Query(None),
     artist: Optional[str] = None,
@@ -308,21 +309,40 @@ async def list_lots(
                 pass
         if valid_enums:
             filters.append(or_(*[Lot.source == e for e in valid_enums]))
-    if category:
-        # Fallback keywords for lots where category is NULL — match against medium/title
-        _CAT_FALLBACK: dict[str, list[str]] = {
-            "Paintings":          ["oil", "paint", "huile", "acrylic", "canvas", "toile", "watercolor", "aquarelle"],
-            "Prints & Multiples": ["print", "lithograph", "gravure", "etching", "screenprint", "estampe", "woodcut"],
-            "Drawings":           ["drawing", "dessin", "pastel", "pencil", "crayon", "gouache", "charcoal", "ink"],
-            "Sculpture":          ["sculpture", "bronze", "ceramic", "marble", "terracotta", "resin"],
-            "Photography":        ["photo", "photograph", "tirage"],
-            "Street Art":         ["street art", "urban art", "graffiti", "spray"],
-        }
-        category_conds = [Lot.category.ilike(f"%{category}%")]
-        for kw in _CAT_FALLBACK.get(category, []):
-            category_conds.append(Lot.medium.ilike(f"%{kw}%"))
-            category_conds.append(Lot.title.ilike(f"%{kw}%"))
-        filters.append(or_(*category_conds))
+    _CAT_FR_TO_EN: dict[str, str] = {
+        'Peinture': 'Paintings',
+        'Estampes & Éditions': 'Prints & Multiples',
+        'Estampes': 'Prints & Multiples',
+        'Sculpture': 'Sculpture',
+        'Photographie': 'Photography',
+        'Dessin & Papier': 'Drawings',
+        'Dessin': 'Drawings',
+        'Art urbain': 'Street Art',
+    }
+    _CAT_FALLBACK: dict[str, list[str]] = {
+        "Paintings":          ["oil", "paint", "huile", "acrylic", "canvas", "toile", "watercolor", "aquarelle"],
+        "Prints & Multiples": ["print", "lithograph", "gravure", "etching", "screenprint", "estampe", "woodcut"],
+        "Drawings":           ["drawing", "dessin", "pastel", "pencil", "crayon", "gouache", "charcoal", "ink"],
+        "Sculpture":          ["sculpture", "bronze", "ceramic", "marble", "terracotta", "resin"],
+        "Photography":        ["photo", "photograph", "tirage"],
+        "Street Art":         ["street art", "urban art", "graffiti", "spray"],
+    }
+
+    # Build normalized category list (supports FR and EN, single or multi)
+    cat_list: list[str] = []
+    if categories:
+        cat_list = [_CAT_FR_TO_EN.get(c.strip(), c.strip()) for c in categories.split(',') if c.strip()]
+    elif category:
+        cat_list = [_CAT_FR_TO_EN.get(category, category)]
+
+    if cat_list:
+        multi_conds = []
+        for cat in cat_list:
+            multi_conds.append(Lot.category.ilike(f"%{cat}%"))
+            for kw in _CAT_FALLBACK.get(cat, []):
+                multi_conds.append(Lot.medium.ilike(f"%{kw}%"))
+                multi_conds.append(Lot.title.ilike(f"%{kw}%"))
+        filters.append(or_(*multi_conds))
     if medium:
         filters.append(Lot.medium.ilike(f"%{medium}%"))
     if auction_house:
