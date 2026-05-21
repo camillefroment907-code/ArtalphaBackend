@@ -10,18 +10,18 @@ const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-produc
 // ── Data ──────────────────────────────────────────────────────────────────────
 
 const PROFILES = [
-  { value: 'first_time',    icon: '🌱', label: 'First acquisition',          labelFr: 'Première acquisition',          sub: 'Starting your collection',                    subFr: 'Vous débutez votre collection' },
-  { value: 'collector',     icon: '🖼️', label: 'Active collector',            labelFr: 'Collectionneur actif',           sub: 'Buying regularly, you know the market',       subFr: 'Vous achetez régulièrement, vous connaissez le marché' },
-  { value: 'investor',      icon: '📈', label: 'Financial investor',          labelFr: 'Investisseur financier',         sub: 'Returns and portfolio diversification',       subFr: 'Rendements et diversification de portefeuille' },
-  { value: 'family_office', icon: '🏛️', label: 'Family office / Institution', labelFr: 'Family office / Institution',   sub: 'Structured allocation, large ticket',         subFr: 'Allocation structurée, grands tickets' },
+  { value: 'beginner',         icon: '🌱', label: "I'm discovering the market",      labelFr: 'Je découvre le marché',              sub: 'First steps, guided approach',         subFr: 'Premiers pas, approche guidée' },
+  { value: 'casual_collector', icon: '🖼️', label: 'I buy occasionally',              labelFr: "J'achète déjà occasionnellement",    sub: 'Building my collection step by step',  subFr: 'Je construis ma collection progressivement' },
+  { value: 'performance',      icon: '📈', label: "I'm looking for returns",         labelFr: 'Je cherche du rendement',            sub: 'Art as a financial asset',             subFr: "L'art comme actif financier" },
+  { value: 'wealth',           icon: '🏛️', label: "I'm building an art patrimony",   labelFr: 'Je construis un patrimoine artistique', sub: 'Long-term, selective, ambitious',   subFr: 'Long terme, sélectif, ambitieux' },
 ];
 
 const BUDGETS = [
-  { key: 'under_1k',   label: '< €1 000',           sub: 'Prints, emerging artists',        subFr: 'Estampes, artistes émergents',       icon: '◇' },
-  { key: '1k_5k',      label: '€1 000 – €5 000',    sub: 'Emerging & mid-market',            subFr: 'Émergent & mid-market',              icon: '◈' },
-  { key: '5k_20k',     label: '€5 000 – €20 000',   sub: 'Established emerging artists',     subFr: 'Artistes émergents établis',         icon: '◆' },
-  { key: '20k_100k',   label: '€20 000 – €100 000', sub: 'Blue-chip & post-war masters',     subFr: "Blue-chip & maîtres d'après-guerre", icon: '◆◆' },
-  { key: 'above_100k', label: '> €100 000',          sub: 'Institutional grade',              subFr: 'Grade institutionnel',               icon: '◆◆◆' },
+  { key: 'under_500',  label: '< €500',              labelFr: '< €500',              sub: 'Entry level',         subFr: 'Premier achat',         icon: '◇' },
+  { key: '500_2k',     label: '€500 – €2 000',       labelFr: '€500 – €2 000',       sub: 'Emerging artists',    subFr: 'Artistes émergents',     icon: '◈' },
+  { key: '2k_10k',     label: '€2 000 – €10 000',    labelFr: '€2 000 – €10 000',    sub: 'Established market',  subFr: 'Marché confirmé',        icon: '◆' },
+  { key: '10k_50k',    label: '€10 000 – €50 000',   labelFr: '€10 000 – €50 000',   sub: 'Blue chip access',    subFr: 'Accès blue chip',        icon: '◆◆' },
+  { key: 'above_50k',  label: '> €50 000',            labelFr: '> €50 000',           sub: 'Institutional grade', subFr: 'Niveau institutionnel',  icon: '◆◆◆' },
 ];
 
 const HORIZONS = [
@@ -31,14 +31,12 @@ const HORIZONS = [
 ];
 
 const CATEGORIES = [
-  { label: 'Paintings',          labelFr: 'Peintures',           icon: '🖌️' },
-  { label: 'Prints & Editions',  labelFr: 'Estampes & Éditions', icon: '🖨️' },
-  { label: 'Sculpture',          labelFr: 'Sculpture',           icon: '🗿' },
-  { label: 'Photography',        labelFr: 'Photographie',        icon: '📷' },
-  { label: 'Works on Paper',     labelFr: 'Œuvres sur papier',   icon: '📄' },
-  { label: 'Street Art',         labelFr: 'Street Art',          icon: '🎭' },
-  { label: 'NFT & Digital',      labelFr: 'NFT & Art numérique', icon: '💾' },
-  { label: 'Design & Furniture', labelFr: 'Design & Mobilier',   icon: '🪑' },
+  { label: 'Peinture',            labelFr: 'Peinture',            icon: '🎨' },
+  { label: 'Estampes & Éditions', labelFr: 'Estampes & Éditions', icon: '🖨️' },
+  { label: 'Sculpture',           labelFr: 'Sculpture',           icon: '🗿' },
+  { label: 'Photographie',        labelFr: 'Photographie',        icon: '📷' },
+  { label: 'Dessin & Papier',     labelFr: 'Dessin & Papier',     icon: '✏️' },
+  { label: 'Art urbain',          labelFr: 'Art urbain',          icon: '🏙️' },
 ];
 
 const MOTIVATIONS = [
@@ -80,8 +78,17 @@ export default function Onboarding() {
   useEffect(() => {
     if (step !== 7 || previewLots.length > 0) return;
     const token = getToken();
+    const BUDGET_MAX: Record<string, number> = {
+      under_500: 500,
+      '500_2k': 2000,
+      '2k_10k': 10000,
+      '10k_50k': 50000,
+      above_50k: 999999,
+    };
+    const budgetMax = BUDGET_MAX[budget ?? ''] ?? 999999;
     const params = new URLSearchParams({ sort_by: 'deal_score', sort_dir: 'desc', page_size: '10' });
     if (categories.length > 0) params.set('categories', categories.join(','));
+    params.set('estimate_max', String(budgetMax));
     fetch(`${BACKEND}/api/lots?${params.toString()}`, token ? { headers: { Authorization: `Bearer ${token}` } } : {})
       .then(r => r.ok ? r.json() : { items: [] })
       .then(d => {
@@ -124,7 +131,7 @@ export default function Onboarding() {
     } catch { /* silent */ }
     localStorage.setItem('nautilus_show_tour', '1');
     localStorage.removeItem('nautilus_tour_seen');
-    navigate('/app/explore');
+    navigate('/app/explore?onboarding=1');
   };
 
   const handleSkip = () => {
