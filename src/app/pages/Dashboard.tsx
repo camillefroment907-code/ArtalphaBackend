@@ -100,7 +100,7 @@ export default function Dashboard() {
 
           // Bloc 1 — Sélection pour vous
           const selUrl = new URL(`${BACKEND}/api/lots`);
-          selUrl.searchParams.set('sort_by', 'deal_score_desc');
+          selUrl.searchParams.set('sort_by', 'deal_score');
           selUrl.searchParams.set('page_size', '4');
           selUrl.searchParams.set('min_score', '55');
           if (firstCat) selUrl.searchParams.set('category', firstCat);
@@ -110,12 +110,12 @@ export default function Dashboard() {
             .catch(() => {});
 
           // Bloc 2 — Signaux forts (global)
-          cachedFetch(`${BACKEND}/api/lots?sort_by=deal_score_desc&page_size=4&min_score=65`)
+          cachedFetch(`${BACKEND}/api/lots?sort_by=deal_score&page_size=4&min_score=65`)
             .then((d: any) => setDiscoveryLots(d.items || []))
             .catch(() => {});
 
           // Bloc 3 — En direct des artistes
-          cachedFetch(`${BACKEND}/api/lots?tab=primary&page_size=3&sort_by=deal_score_desc`)
+          cachedFetch(`${BACKEND}/api/lots?tab=primary&page_size=3&sort_by=deal_score`)
             .then((d: any) => setDirectLots(d.items || []))
             .catch(() => {});
         })
@@ -319,7 +319,7 @@ export default function Dashboard() {
                       <LotImage src={lot.image_url} alt={lot.title} />
                     </div>
                     <div style={{ padding: '12px' }}>
-                      <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{lot.artist_name || '—'}</div>
+                      <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{lot.artist_name_raw || lot.artist?.name || '—'}</div>
                       <div style={{ fontSize: '13px', fontWeight: 600, color: '#1A2A44', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '8px' }}>{lot.title || '—'}</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontSize: '12px', color: '#374151' }}>{lot.estimate_low ? fmtPrice(lot.estimate_low) : '—'}</span>
@@ -362,7 +362,7 @@ export default function Dashboard() {
                       <LotImage src={lot.image_url} alt={lot.title} />
                     </div>
                     <div style={{ padding: '12px' }}>
-                      <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{lot.artist_name || '—'}</div>
+                      <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{lot.artist_name_raw || lot.artist?.name || '—'}</div>
                       <div style={{ fontSize: '13px', fontWeight: 600, color: '#1A2A44', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '8px' }}>{lot.title || '—'}</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontSize: '12px', color: '#374151' }}>{lot.estimate_low ? fmtPrice(lot.estimate_low) : '—'}</span>
@@ -400,7 +400,7 @@ export default function Dashboard() {
                       <LotImage src={lot.image_url} alt={lot.title} />
                     </div>
                     <div style={{ padding: '10px 12px' }}>
-                      <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', marginBottom: '2px', textTransform: 'uppercase' }}>{lot.artist_name || '—'}</div>
+                      <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', marginBottom: '2px', textTransform: 'uppercase' }}>{lot.artist_name_raw || lot.artist?.name || '—'}</div>
                       <div style={{ fontSize: '12px', fontWeight: 600, color: '#1A2A44', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lot.title || '—'}</div>
                       <div style={{ fontSize: '12px', color: '#374151', marginTop: '6px' }}>{lot.estimate_low ? fmtPrice(lot.estimate_low) : '—'}</div>
                     </div>
