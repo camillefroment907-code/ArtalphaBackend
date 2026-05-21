@@ -194,6 +194,7 @@ class LotOut(BaseModel):
     fomo_level: Optional[str] = None
     score_rationale: Optional[str] = None
     confidence_score: Optional[float] = None
+    estimate_low_eur: Optional[float] = None
 
     class Config:
         from_attributes = True
@@ -218,6 +219,16 @@ class LotOut(BaseModel):
                 self.fomo_level = 'medium'
             else:
                 self.fomo_level = 'low'
+        _FX_TO_EUR = {
+            'EUR': 1.0, 'USD': 0.92, 'GBP': 1.17,
+            'SEK': 0.087, 'CHF': 1.05, 'DKK': 0.134,
+            'NOK': 0.087, 'JPY': 0.006, 'HKD': 0.118,
+            'AUD': 0.59, 'CAD': 0.68,
+        }
+        if self.estimate_low and self.currency:
+            rate = _FX_TO_EUR.get(self.currency.upper(), None)
+            if rate:
+                self.estimate_low_eur = round(self.estimate_low * rate, 0)
         return self
 
 
