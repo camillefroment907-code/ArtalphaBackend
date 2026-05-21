@@ -84,11 +84,11 @@ function LotCard({ lot, lang, onClick }: { lot: any; lang: string; onClick: () =
         )}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '8px' }}>
           <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-            {lot.estimate_low
-              ? (lot.currency && lot.currency !== 'EUR'
-                  ? `${Math.round(lot.estimate_low).toLocaleString()} ${lot.currency}`
-                  : fmtPrice(lot.estimate_low))
-              : '—'}
+            {lot.estimate_low_eur
+              ? fmtPrice(lot.estimate_low_eur)
+              : lot.estimate_low
+                ? fmtPrice(lot.estimate_low)
+                : '—'}
           </span>
           <span style={{ padding: '3px 8px', borderRadius: '4px', background: badge.bg, border: `1px solid ${badge.border}`, fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: badge.color }}>
             {Math.round(score)}
