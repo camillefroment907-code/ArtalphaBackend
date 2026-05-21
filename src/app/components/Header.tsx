@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Logo } from './Logo';
-import { getUser, logout, getUserPlan, getToken } from '../../lib/auth';
+import { getUser, logout, getUserPlan, getToken, isTrialActive, getTrialDaysLeft } from '../../lib/auth';
 
 function useIsMobile(breakpoint = 900) {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < breakpoint);
@@ -571,6 +571,32 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
             <span style={{ opacity: 0.6 }}>→</span> Sign out
           </button>
         </div>
+      </div>
+    )}
+    {/* ── Trial banner ── */}
+    {user && isTrialActive() && (
+      <div style={{
+        background: 'linear-gradient(90deg, var(--navy) 0%, #1a2e45 100%)',
+        borderBottom: '1px solid rgba(198,168,90,0.3)',
+        padding: '8px 20px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
+        fontSize: '12px', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em',
+      }}>
+        <span style={{ color: 'var(--gold)', fontWeight: 700 }}>◆ FREE TRIAL</span>
+        <span style={{ color: 'rgba(255,255,255,0.7)' }}>
+          {getTrialDaysLeft()} day{getTrialDaysLeft() !== 1 ? 's' : ''} remaining — full Investor access
+        </span>
+        <button
+          onClick={() => navigate('/app/pricing')}
+          style={{
+            background: 'var(--gold)', color: 'var(--navy)',
+            border: 'none', borderRadius: '4px',
+            padding: '4px 12px', fontSize: '11px', fontWeight: 700,
+            cursor: 'pointer', letterSpacing: '0.06em', fontFamily: 'var(--font-mono)',
+          }}
+        >
+          UPGRADE →
+        </button>
       </div>
     )}
     </>

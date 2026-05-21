@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 from app.config import get_settings
 from app.database import get_db
-from app.models.db_models import User, UserPreference, AlertChannel, Subscription
+from app.models.db_models import User, UserPreference, AlertChannel, Subscription, SubscriptionPlan, SubscriptionStatus
 from app.models.schemas import UserRegister, UserLogin, TokenResponse, UserOut
 from app.api.auth_utils import hash_password, verify_password, create_access_token, get_current_user
 from app.services.email_service import send_welcome_email, send_verification_email, send_password_reset_email
@@ -40,6 +40,7 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
 
     try:
         from datetime import datetime
+        trial_end = datetime.utcnow() + timedelta(days=7)
         user = User(
             email=body.email,
             hashed_password=hash_password(body.password),
@@ -48,6 +49,7 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
             is_verified=False,
             marketing_consent=body.marketing_consent,
             language=body.language if body.language in ("fr", "en") else "fr",
+            trial_end=trial_end,
         )
         user.accepted_terms_at = datetime.utcnow()
         user.accepted_terms_ip = request.client.host if request.client else None
@@ -71,6 +73,12 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
             language="fr",
         )
         db.add(prefs)
+        sub = Subscription(
+            user_id=user.id,
+            plan=SubscriptionPlan.INVESTOR,
+            status=SubscriptionStatus.TRIALING,
+        )
+        db.add(sub)
         await db.commit()
         await db.refresh(user)
     except Exception as e:
@@ -98,13 +106,20 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
     except Exception:
         pass
 
-    token = create_access_token({"sub": str(user.id), "email": user.email, "plan": "free"})
+    plan = user.active_plan.value.lower()
+    trial_end_iso = user.trial_end.isoformat() if user.trial_end else None
+    token = create_access_token({
+        "sub": str(user.id), "email": user.email, "plan": plan,
+        "trial_end": trial_end_iso, "trial_active": user.trial_active,
+    })
     return TokenResponse(
         access_token=token,
         user_id=str(user.id),
         email=user.email,
-        plan="free",
+        plan=plan,
         onboarding_completed=user.onboarding_completed,
+        trial_end=user.trial_end,
+        trial_active=user.trial_active,
     )
 
 
@@ -204,13 +219,19 @@ async def login(request: Request, body: UserLogin, db: AsyncSession = Depends(ge
     plan = user.active_plan.value.lower()
     if user.email == "camillefroment907@gmail.com":
         plan = "institutional"
-    token = create_access_token({"sub": str(user.id), "email": user.email, "plan": plan})
+    trial_end_iso = user.trial_end.isoformat() if user.trial_end else None
+    token = create_access_token({
+        "sub": str(user.id), "email": user.email, "plan": plan,
+        "trial_end": trial_end_iso, "trial_active": user.trial_active,
+    })
     return TokenResponse(
         access_token=token,
         user_id=str(user.id),
         email=user.email,
         plan=plan,
         is_verified=user.is_verified,
+        trial_end=user.trial_end,
+        trial_active=user.trial_active,
     )
 
 

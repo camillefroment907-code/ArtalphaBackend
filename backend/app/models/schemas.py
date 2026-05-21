@@ -70,6 +70,8 @@ class TokenResponse(BaseModel):
     is_verified: bool = True
     plan: str = "free"
     onboarding_completed: bool = False
+    trial_end: Optional[datetime] = None
+    trial_active: bool = False
 
 
 class UserOut(BaseModel):
@@ -79,6 +81,8 @@ class UserOut(BaseModel):
     is_active: bool
     created_at: datetime
     plan: str = "free"
+    trial_end: Optional[datetime] = None
+    trial_active: bool = False
 
     class Config:
         from_attributes = True

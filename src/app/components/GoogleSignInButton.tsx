@@ -39,8 +39,10 @@ export function GoogleSignInButton({ onError }: Props) {
               id: data.user_id,
               email: data.email,
               name: data.email,
-              plan: 'free',
+              plan: (data.plan ?? 'free') as any,
               token: data.access_token,
+              trial_end: data.trial_end ?? null,
+              trial_active: data.trial_active ?? false,
             });
 
             if (data.is_new_user) {

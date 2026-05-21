@@ -216,6 +216,8 @@ export default function Login() {
         plan: (res.plan ?? 'free') as any,
         token: res.access_token,
         is_verified: res.is_verified ?? true,
+        trial_end: res.trial_end ?? null,
+        trial_active: res.trial_active ?? false,
       });
       if (res.is_verified === false) {
         navigate('/app/verify-email-required');

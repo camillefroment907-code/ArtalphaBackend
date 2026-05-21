@@ -157,6 +157,7 @@ class User(Base):
     onboarding_completed = Column(Boolean, default=False, nullable=False)
     language = Column(String(2), nullable=False, server_default="fr", default="fr")
     payment_failed_at = Column(DateTime, nullable=True)
+    trial_end = Column(DateTime, nullable=True)
 
     preferences = relationship("UserPreference", back_populates="user", uselist=False)
     alerts = relationship("Alert", back_populates="user")
@@ -165,9 +166,22 @@ class User(Base):
 
     @property
     def active_plan(self) -> "SubscriptionPlan":
-        if self.subscription and self.subscription.status == SubscriptionStatus.ACTIVE:
-            return self.subscription.plan
+        if self.subscription:
+            if self.subscription.status == SubscriptionStatus.ACTIVE:
+                return self.subscription.plan
+            if self.subscription.status == SubscriptionStatus.TRIALING:
+                if self.trial_end and self.trial_end > datetime.utcnow():
+                    return self.subscription.plan
         return SubscriptionPlan.FREE
+
+    @property
+    def trial_active(self) -> bool:
+        return (
+            self.trial_end is not None
+            and self.trial_end > datetime.utcnow()
+            and self.subscription is not None
+            and self.subscription.status == SubscriptionStatus.TRIALING
+        )
 
     @property
     def plan(self) -> str:

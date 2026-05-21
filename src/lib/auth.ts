@@ -7,6 +7,8 @@ export interface AuthUser {
   plan: 'free' | 'starter' | 'investor' | 'pro' | 'elite' | 'institutional';
   token: string;
   is_verified?: boolean;
+  trial_end?: string | null;
+  trial_active?: boolean;
 }
 
 export interface PlanLimits {
@@ -182,4 +184,17 @@ export function getFreeLimit(): number {
 
 export function canAccessFeature(feature: keyof Omit<PlanLimits, 'projectionYears' | 'name' | 'maxOpportunities' | 'maxWatchlist'>): boolean {
   return !!getPlanLimits()[feature];
+}
+
+export function isTrialActive(): boolean {
+  const user = getUser();
+  if (!user?.trial_active || !user?.trial_end) return false;
+  return new Date(user.trial_end) > new Date();
+}
+
+export function getTrialDaysLeft(): number {
+  const user = getUser();
+  if (!user?.trial_end) return 0;
+  const ms = new Date(user.trial_end).getTime() - Date.now();
+  return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
 }

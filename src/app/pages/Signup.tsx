@@ -183,6 +183,8 @@ export default function Signup() {
         name: res.name ?? name,
         plan: (res.plan ?? 'free') as any,
         token: res.access_token,
+        trial_end: res.trial_end ?? null,
+        trial_active: res.trial_active ?? false,
       });
       localStorage.setItem('nautilus_show_tour', '1');
       navigate('/app/verify-email-required');
