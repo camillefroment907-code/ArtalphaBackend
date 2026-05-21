@@ -449,6 +449,7 @@ export default function Explore() {
         if (data.investment_budget && BUDGET_MAX[data.investment_budget]) setMaxPrice(BUDGET_MAX[data.investment_budget]);
         setSortBy('deal_score');
         setSortDir('desc');
+        setRefreshKey(k => k + 1);
       })
       .catch(() => {})
       .finally(() => {
