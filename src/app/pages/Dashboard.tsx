@@ -56,6 +56,13 @@ export default function Dashboard() {
   const [brief, setBrief]                   = useState<string>('');
   const [refreshKey, setRefreshKey]         = useState(0);
   const [closingSoonCount, setClosingSoonCount] = useState(0);
+  const [userProfile, setUserProfile] = useState<{
+    preferred_categories: string[];
+    investment_budget: string | null;
+  } | null>(null);
+  const [selectionLots, setSelectionLots] = useState<any[]>([]);
+  const [discoveryLots, setDiscoveryLots] = useState<any[]>([]);
+  const [directLots, setDirectLots] = useState<any[]>([]);
 
   // Auto-refresh every 2 minutes
   useEffect(() => {
@@ -66,6 +73,54 @@ export default function Dashboard() {
   useEffect(() => {
     const token = getToken();
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+    if (token) {
+      fetch(`${BACKEND}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then((profile: any) => {
+          if (!profile) return;
+          setUserProfile({
+            preferred_categories: profile.preferred_categories || [],
+            investment_budget: profile.investment_budget || null,
+          });
+
+          const BUDGET_MAX: Record<string, number> = {
+            under_500: 600,
+            '500_2k': 2500,
+            '2k_10k': 12000,
+            '10k_50k': 60000,
+            above_50k: 999999,
+          };
+          const budgetMax = profile.investment_budget
+            ? BUDGET_MAX[profile.investment_budget] ?? 999999
+            : 999999;
+          const firstCat = profile.preferred_categories?.[0] || '';
+
+          // Bloc 1 — Sélection pour vous
+          const selUrl = new URL(`${BACKEND}/api/lots`);
+          selUrl.searchParams.set('sort_by', 'deal_score_desc');
+          selUrl.searchParams.set('page_size', '4');
+          selUrl.searchParams.set('min_score', '55');
+          if (firstCat) selUrl.searchParams.set('category', firstCat);
+          if (budgetMax < 999999) selUrl.searchParams.set('estimate_max', String(Math.round(budgetMax * 1.2)));
+          cachedFetch(selUrl.toString(), { headers: { Authorization: `Bearer ${token}` } })
+            .then((d: any) => setSelectionLots(d.items || []))
+            .catch(() => {});
+
+          // Bloc 2 — Signaux forts (global)
+          cachedFetch(`${BACKEND}/api/lots?sort_by=deal_score_desc&page_size=4&min_score=65`)
+            .then((d: any) => setDiscoveryLots(d.items || []))
+            .catch(() => {});
+
+          // Bloc 3 — En direct des artistes
+          cachedFetch(`${BACKEND}/api/lots?tab=primary&page_size=3&sort_by=deal_score_desc`)
+            .then((d: any) => setDirectLots(d.items || []))
+            .catch(() => {});
+        })
+        .catch(() => {});
+    }
 
     // Dashboard stats — total lots, avg score, deals today, real source count
     fetch(`${BACKEND}/api/lots/stats`)
@@ -229,6 +284,131 @@ export default function Dashboard() {
 
         {/* LEFT — scrollable main */}
         <div className="no-scrollbar" style={{ overflowY: 'auto', padding: '28px 32px', borderRight: '1px solid #E8E4DC' }}>
+
+          {/* ── BLOC 1 — Sélection pour vous ── */}
+          {selectionLots.length > 0 && (
+            <div style={{ marginBottom: '32px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
+                <div>
+                  <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '18px', fontWeight: 600, color: '#1A2A44', margin: 0 }}>
+                    {lang === 'fr' ? 'Sélection pour vous' : 'Your selection'}
+                  </h2>
+                  {userProfile?.preferred_categories?.length > 0 && (
+                    <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', marginTop: '3px', letterSpacing: '0.04em' }}>
+                      {userProfile.preferred_categories.slice(0, 2).join(' · ')}
+                      {userProfile.investment_budget && ` · ${{
+                        under_500: '< €500', '500_2k': '€500–2k', '2k_10k': '€2k–10k',
+                        '10k_50k': '€10k–50k', above_50k: '> €50k'
+                      }[userProfile.investment_budget] || ''}`}
+                    </div>
+                  )}
+                </div>
+                <button onClick={() => navigate('/app/explore?tab=best')}
+                  style={{ fontSize: '12px', color: 'var(--electric)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
+                  {lang === 'fr' ? 'Voir tout →' : 'View all →'}
+                </button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
+                {selectionLots.map((lot: any) => (
+                  <div key={lot.id} onClick={() => navigate(`/app/lot/${lot.id}`)}
+                    style={{ background: 'white', border: '1px solid #E8E4DC', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', transition: 'border-color 0.15s' }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = '#1A2A44')}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = '#E8E4DC')}
+                  >
+                    <div style={{ height: '160px', background: '#F7F4EF' }}>
+                      <LotImage src={lot.image_url} alt={lot.title} />
+                    </div>
+                    <div style={{ padding: '12px' }}>
+                      <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{lot.artist_name || '—'}</div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#1A2A44', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '8px' }}>{lot.title || '—'}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', color: '#374151' }}>{lot.estimate_low ? fmtPrice(lot.estimate_low) : '—'}</span>
+                        <span style={{ padding: '2px 7px', borderRadius: '4px', background: (lot.deal_score >= 80) ? '#EFF6FF' : '#F7F4EF', border: `1px solid ${(lot.deal_score >= 80) ? '#BFDBFE' : '#E8E4DC'}`, fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: (lot.deal_score >= 80) ? '#2563EB' : '#6B7280' }}>
+                          {Math.round(lot.deal_score ?? 0)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── BLOC 2 — Signaux forts ── */}
+          {discoveryLots.length > 0 && (
+            <div style={{ marginBottom: '32px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
+                <div>
+                  <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '18px', fontWeight: 600, color: '#1A2A44', margin: 0 }}>
+                    {lang === 'fr' ? 'Signaux forts' : 'Strong signals'}
+                  </h2>
+                  <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', marginTop: '3px' }}>
+                    {lang === 'fr' ? 'Meilleurs scores toutes catégories' : 'Best scores across all categories'}
+                  </div>
+                </div>
+                <button onClick={() => navigate('/app/explore?tab=best')}
+                  style={{ fontSize: '12px', color: 'var(--electric)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
+                  {lang === 'fr' ? 'Voir tout →' : 'View all →'}
+                </button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
+                {discoveryLots.map((lot: any) => (
+                  <div key={lot.id} onClick={() => navigate(`/app/lot/${lot.id}`)}
+                    style={{ background: 'white', border: '1px solid #E8E4DC', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', transition: 'border-color 0.15s' }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = '#1A2A44')}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = '#E8E4DC')}
+                  >
+                    <div style={{ height: '160px', background: '#F7F4EF' }}>
+                      <LotImage src={lot.image_url} alt={lot.title} />
+                    </div>
+                    <div style={{ padding: '12px' }}>
+                      <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{lot.artist_name || '—'}</div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#1A2A44', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '8px' }}>{lot.title || '—'}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', color: '#374151' }}>{lot.estimate_low ? fmtPrice(lot.estimate_low) : '—'}</span>
+                        <span style={{ padding: '2px 7px', borderRadius: '4px', background: (lot.deal_score >= 80) ? '#EFF6FF' : '#F7F4EF', border: `1px solid ${(lot.deal_score >= 80) ? '#BFDBFE' : '#E8E4DC'}`, fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: (lot.deal_score >= 80) ? '#2563EB' : '#6B7280' }}>
+                          {Math.round(lot.deal_score ?? 0)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── BLOC 3 — En direct des artistes ── */}
+          {directLots.length > 0 && (
+            <div style={{ marginBottom: '32px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
+                <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '18px', fontWeight: 600, color: '#1A2A44', margin: 0 }}>
+                  {lang === 'fr' ? 'En direct des artistes' : 'Direct from artists'}
+                </h2>
+                <button onClick={() => navigate('/app/explore?tab=primary')}
+                  style={{ fontSize: '12px', color: 'var(--electric)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
+                  {lang === 'fr' ? 'Voir tout →' : 'View all →'}
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', overflowX: 'auto' }}>
+                {directLots.map((lot: any) => (
+                  <div key={lot.id} onClick={() => navigate(`/app/lot/${lot.id}`)}
+                    style={{ minWidth: '200px', background: 'white', border: '1px solid #E8E4DC', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', flexShrink: 0 }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = '#1A2A44')}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = '#E8E4DC')}
+                  >
+                    <div style={{ height: '140px', background: '#F7F4EF' }}>
+                      <LotImage src={lot.image_url} alt={lot.title} />
+                    </div>
+                    <div style={{ padding: '10px 12px' }}>
+                      <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', marginBottom: '2px', textTransform: 'uppercase' }}>{lot.artist_name || '—'}</div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#1A2A44', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lot.title || '—'}</div>
+                      <div style={{ fontSize: '12px', color: '#374151', marginTop: '6px' }}>{lot.estimate_low ? fmtPrice(lot.estimate_low) : '—'}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ── Section header ── */}
           <div className="dashboard-desktop-only" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
