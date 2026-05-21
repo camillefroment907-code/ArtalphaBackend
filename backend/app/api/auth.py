@@ -258,9 +258,28 @@ async def resend_verification(
     return {"message": "Verification email sent."}
 
 
+_EUR_TO_BUDGET_KEY = {500.0: 'under_500', 2000.0: '500_2k', 10000.0: '2k_10k', 50000.0: '10k_50k', 999999.0: 'above_50k'}
+_BUDGET_KEY_TO_EUR = {v: k for k, v in _EUR_TO_BUDGET_KEY.items()}
+
+
 @router.get("/me", response_model=UserOut)
-async def me(current_user: User = Depends(get_current_user)):
-    return current_user
+async def me(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    pref_result = await db.execute(select(UserPreference).where(UserPreference.user_id == current_user.id))
+    pref = pref_result.scalar_one_or_none()
+    budget_key = _EUR_TO_BUDGET_KEY.get(pref.min_lot_budget_eur) if pref and pref.min_lot_budget_eur else None
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "is_active": current_user.is_active,
+        "created_at": current_user.created_at,
+        "plan": current_user.plan,
+        "trial_end": current_user.trial_end,
+        "trial_active": current_user.trial_active,
+        "investment_budget": budget_key,
+        "preferred_categories": pref.categories if pref else None,
+        "investment_horizon": pref.investment_horizon if pref else None,
+    }
 
 
 @router.post("/logout")
@@ -385,7 +404,9 @@ class UpdateProfileRequest(BaseModel):
     address: Optional[str] = None
     collector_type: Optional[str] = None
     investment_horizon: Optional[str] = None
+    investment_budget: Optional[str] = None
     annual_budget: Optional[float] = None
+    preferred_categories: Optional[List[str]] = None
     expected_return: Optional[float] = None
     preferred_styles: Optional[str] = None
     preferred_regions: Optional[str] = None
@@ -419,8 +440,12 @@ async def update_profile(
         pref.collector_type = body.collector_type
     if body.investment_horizon is not None:
         pref.investment_horizon = body.investment_horizon
+    if body.investment_budget is not None:
+        pref.min_lot_budget_eur = _BUDGET_KEY_TO_EUR.get(body.investment_budget)
     if body.annual_budget is not None:
         pref.min_lot_budget_eur = body.annual_budget
+    if body.preferred_categories is not None:
+        pref.categories = body.preferred_categories
     if body.preferred_styles is not None:
         pref.preferred_periods = [body.preferred_styles] if body.preferred_styles else []
     if body.preferred_regions is not None:

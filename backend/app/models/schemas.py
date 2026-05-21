@@ -83,6 +83,9 @@ class UserOut(BaseModel):
     plan: str = "free"
     trial_end: Optional[datetime] = None
     trial_active: bool = False
+    investment_budget: Optional[str] = None
+    preferred_categories: Optional[List[str]] = None
+    investment_horizon: Optional[str] = None
 
     class Config:
         from_attributes = True

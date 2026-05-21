@@ -402,6 +402,30 @@ export default function Explore() {
   const [artist, setArtist]           = useState(searchParams.get('artist') || '');
   const [auctionHouse, setAuctionHouse] = useState(searchParams.get('auction_house') || '');
 
+  // Pre-apply filters from onboarding profile when arriving via ?onboarding=1
+  useEffect(() => {
+    if (searchParams.get('onboarding') !== '1') return;
+    const token = getToken();
+    if (!token) {
+      setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete('onboarding'); return p; }, { replace: true });
+      return;
+    }
+    const BUDGET_MAX: Record<string, number> = {
+      under_500: 500, '500_2k': 2000, '2k_10k': 10000, '10k_50k': 50000, above_50k: 999999,
+    };
+    fetch(`${BACKEND}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        if (data.preferred_categories?.length > 0) setCategory(data.preferred_categories[0]);
+        if (data.investment_budget && BUDGET_MAX[data.investment_budget]) setMaxPrice(BUDGET_MAX[data.investment_budget]);
+      })
+      .catch(() => {})
+      .finally(() => {
+        setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete('onboarding'); return p; }, { replace: true });
+      });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const resetFilters = () => {
     setMinScore(0); setMaxScore(0); setMinPrice(0); setMaxPrice(0);
     setCategory(''); setProvenance(''); setSources([]);
