@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { getToken } from '../../lib/auth';
@@ -100,106 +100,99 @@ export default function Dashboard() {
   const { i18n } = useTranslation();
   const lang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
 
-  const [marketStats, setMarketStats] = useState<{ total_lots: number; avg_score: number; exceptional: number }>({ total_lots: 0, avg_score: 0, exceptional: 0 });
-  const [refreshKey, setRefreshKey]   = useState(0);
   const [userProfile, setUserProfile] = useState<{
     preferred_categories: string[];
     investment_budget: string | null;
   } | null>(null);
-  const [selectionLots, setSelectionLots] = useState<any[]>([]);
-  const [discoveryLots, setDiscoveryLots] = useState<any[]>([]);
-  const [directLots, setDirectLots]       = useState<any[]>([]);
+  const [lots, setLots] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [totalLots, setTotalLots] = useState(0);
+  const profileLoadedRef = useRef(false);
 
-  // Auto-refresh every 2 minutes
-  useEffect(() => {
-    const interval = setInterval(() => setRefreshKey(k => k + 1), 2 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+  const BUDGET_MAX: Record<string, number> = {
+    under_500: 600, '500_2k': 2500, '2k_10k': 12000,
+    '10k_50k': 60000, above_50k: 999999,
+  };
 
+  const buildFetchUrl = (profile: any, pageNum: number) => {
+    const url = new URL(`${BACKEND}/api/lots`);
+    url.searchParams.set('sort_by', 'deal_score');
+    url.searchParams.set('page_size', '12');
+    url.searchParams.set('page', String(pageNum));
+    url.searchParams.set('min_score', '50');
+    const cats = profile?.preferred_categories || [];
+    if (cats.length === 1) url.searchParams.set('category', cats[0]);
+    else if (cats.length > 1) url.searchParams.set('categories', cats.join(','));
+    const budgetMax = profile?.investment_budget
+      ? BUDGET_MAX[profile.investment_budget] ?? 999999
+      : 999999;
+    if (budgetMax < 999999) url.searchParams.set('estimate_max', String(Math.round(budgetMax * 1.2)));
+    return url.toString();
+  };
+
+  // Load profile then first page
   useEffect(() => {
     const token = getToken();
-
-    if (token) {
-      fetch(`${BACKEND}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
+    if (!token) { setLoading(false); return; }
+    fetch(`${BACKEND}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then((profile: any) => {
+        const p = {
+          preferred_categories: profile?.preferred_categories || [],
+          investment_budget: profile?.investment_budget || null,
+        };
+        setUserProfile(p);
+        profileLoadedRef.current = true;
+        const url = buildFetchUrl(p, 1);
+        return cachedFetch(url, { headers: { Authorization: `Bearer ${token}` } });
       })
-        .then(r => r.ok ? r.json() : null)
-        .then((profile: any) => {
-          if (!profile) return;
-          setUserProfile({
-            preferred_categories: profile.preferred_categories || [],
-            investment_budget: profile.investment_budget || null,
-          });
-
-          const BUDGET_MAX: Record<string, number> = {
-            under_500: 600,
-            '500_2k': 2500,
-            '2k_10k': 12000,
-            '10k_50k': 60000,
-            above_50k: 999999,
-          };
-          const budgetMax = profile.investment_budget
-            ? BUDGET_MAX[profile.investment_budget] ?? 999999
-            : 999999;
-          // Bloc 1 — Sélection pour vous
-          const selUrl = new URL(`${BACKEND}/api/lots`);
-          selUrl.searchParams.set('sort_by', 'deal_score');
-          selUrl.searchParams.set('page_size', '4');
-          selUrl.searchParams.set('min_score', '55');
-          const cats = profile.preferred_categories || [];
-          if (cats.length === 1) {
-            selUrl.searchParams.set('category', cats[0]);
-          } else if (cats.length > 1) {
-            selUrl.searchParams.set('categories', cats.join(','));
-          }
-          if (budgetMax < 999999) selUrl.searchParams.set('estimate_max', String(Math.round(budgetMax * 1.2)));
-          cachedFetch(selUrl.toString(), { headers: { Authorization: `Bearer ${token}` } })
-            .then((d: any) => setSelectionLots(d.items || []))
-            .catch(() => {});
-
-          // Bloc 2 — Signaux forts (global)
-          cachedFetch(`${BACKEND}/api/lots?sort_by=deal_score&page_size=4&min_score=65`)
-            .then((d: any) => setDiscoveryLots(d.items || []))
-            .catch(() => {});
-
-          // Bloc 3 — En direct des artistes
-          cachedFetch(`${BACKEND}/api/lots/primary?page_size=3&sort_by=deal_score`)
-            .then((d: any) => setDirectLots(d.items || []))
-            .catch(() => {});
-        })
-        .catch(() => {});
-    }
-
-    // Dashboard stats — total lots, avg score, deals today
-    fetch(`${BACKEND}/api/lots/stats`)
-      .then(r => r.json())
       .then((d: any) => {
-        setMarketStats(prev => ({
-          ...prev,
-          total_lots: d.total_lots_tracked || prev.total_lots,
-          avg_score: d.avg_deal_score ? Math.round(d.avg_deal_score) : prev.avg_score,
-          exceptional: d.deals_detected_today ?? prev.exceptional,
-        }));
+        setLots((d?.items || []).map((l: any) => l));
+        setTotalLots(d?.total || 0);
+        setHasMore((d?.items || []).length === 12);
+        setPage(1);
       })
-      .catch(() => {});
-  }, [refreshKey]);
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    const token = getToken();
+    const nextPage = page + 1;
+    try {
+      const url = buildFetchUrl(userProfile, nextPage);
+      const d = await cachedFetch(url, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+      const newItems = d?.items || [];
+      setLots(prev => [...prev, ...newItems]);
+      setPage(nextPage);
+      setHasMore(newItems.length === 12);
+    } catch {} finally { setLoadingMore(false); }
+  };
+
+  const hasProfile = (userProfile?.preferred_categories?.length ?? 0) > 0;
 
   return (
     <div style={{ minHeight: 'calc(100vh - 57px)', background: '#FAFAF8' }}>
 
       {/* ── HEADER ── */}
-      <div style={{ padding: '32px 48px 24px', borderBottom: '1px solid #E8E4DC', background: 'white', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+      <div style={{ padding: '28px 48px 20px', borderBottom: '1px solid #E8E4DC', background: 'white', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
         <div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#9CA3AF', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>
-            {lang === 'fr' ? 'Votre sélection' : 'Your selection'}
-            {userProfile?.preferred_categories?.length > 0 && (
-              <span style={{ marginLeft: '8px', color: '#C6A85A' }}>
-                · {userProfile.preferred_categories.slice(0, 2).join(' · ')}
-                {userProfile.investment_budget && ` · ${{
+            {hasProfile ? (
+              <span>
+                {userProfile!.preferred_categories.slice(0, 3).join(' · ')}
+                {userProfile!.investment_budget && ` · ${{
                   under_500: '< €500', '500_2k': '€500–2k', '2k_10k': '€2k–10k',
                   '10k_50k': '€10k–50k', above_50k: '> €50k'
-                }[userProfile.investment_budget] || ''}`}
+                }[userProfile!.investment_budget] || ''}`}
               </span>
+            ) : (
+              <span>{lang === 'fr' ? 'Votre sélection personnalisée' : 'Your personal selection'}</span>
             )}
           </div>
           <h1 style={{ fontFamily: 'Georgia, serif', fontSize: '28px', fontWeight: 600, color: '#1A2A44', margin: 0, letterSpacing: '-0.01em' }}>
@@ -207,134 +200,98 @@ export default function Dashboard() {
           </h1>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          {(!userProfile?.preferred_categories?.length) && (
-            <button
-              onClick={() => navigate('/app/onboarding?edit=1')}
-              style={{ fontSize: '12px', padding: '8px 16px', background: '#1A2A44', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
-            >
-              {lang === 'fr' ? 'Personnaliser ma sélection →' : 'Personalize my selection →'}
-            </button>
+          <button
+            onClick={() => navigate('/app/profile/preferences')}
+            style={{ fontSize: '12px', padding: '8px 16px', background: 'none', color: '#6B7280', border: '1px solid #E8E4DC', borderRadius: '6px', cursor: 'pointer' }}
+          >
+            {lang === 'fr' ? (hasProfile ? 'Modifier mes préférences' : 'Personnaliser →') : (hasProfile ? 'Edit preferences' : 'Personalize →')}
+          </button>
+          {totalLots > 0 && (
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#9CA3AF' }}>
+              {totalLots.toLocaleString()} {lang === 'fr' ? 'opportunités' : 'opportunities'}
+            </div>
           )}
-          {userProfile?.preferred_categories?.length > 0 && (
-            <button
-              onClick={() => navigate('/app/profile/preferences')}
-              style={{ fontSize: '12px', padding: '8px 16px', background: 'none', color: '#6B7280', border: '1px solid #E8E4DC', borderRadius: '6px', cursor: 'pointer' }}
-            >
-              {lang === 'fr' ? 'Modifier mes préférences' : 'Edit preferences'}
-            </button>
-          )}
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#9CA3AF' }}>
-            {marketStats.total_lots > 0 ? `${marketStats.total_lots.toLocaleString()} lots` : ''}
-          </div>
         </div>
       </div>
 
-      {/* ── MAIN FEED ── */}
+      {/* ── FEED ── */}
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '40px 48px' }}>
 
         {/* No profile banner */}
-        {!userProfile?.preferred_categories?.length && (
-          <div style={{ background: '#FBF5E9', border: '1px solid rgba(198,168,90,0.3)', borderRadius: '10px', padding: '20px 24px', marginBottom: '40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {!loading && !hasProfile && (
+          <div style={{ background: '#FBF5E9', border: '1px solid rgba(198,168,90,0.25)', borderRadius: '12px', padding: '24px 28px', marginBottom: '40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px' }}>
             <div>
-              <div style={{ fontFamily: 'Georgia, serif', fontSize: '15px', fontWeight: 600, color: '#1A2A44', marginBottom: '4px' }}>
-                {lang === 'fr' ? 'Personnalisez votre sélection' : 'Personalize your selection'}
+              <div style={{ fontFamily: 'Georgia, serif', fontSize: '16px', fontWeight: 600, color: '#1A2A44', marginBottom: '6px' }}>
+                {lang === 'fr' ? 'Nautilus apprend à vous connaître' : 'Nautilus is learning your taste'}
               </div>
-              <div style={{ fontSize: '13px', color: '#6B7280' }}>
+              <div style={{ fontSize: '13px', color: '#6B7280', lineHeight: 1.6 }}>
                 {lang === 'fr'
-                  ? 'Indiquez vos catégories et budget pour voir des œuvres qui vous correspondent vraiment.'
-                  : 'Tell us your categories and budget to see artworks that truly match your taste.'}
+                  ? 'Dites-nous ce que vous aimez et nous sélectionnons pour vous. En attendant, voici les meilleures opportunités du moment.'
+                  : 'Tell us what you love and we\'ll curate for you. Meanwhile, here are today\'s top opportunities.'}
               </div>
             </div>
             <button
-              onClick={() => navigate('/app/onboarding?edit=1')}
-              style={{ flexShrink: 0, marginLeft: '24px', padding: '10px 20px', background: '#1A2A44', color: '#C6A85A', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              onClick={() => navigate('/app/profile/preferences')}
+              style={{ flexShrink: 0, padding: '12px 24px', background: '#1A2A44', color: '#C6A85A', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '0.02em' }}
             >
-              {lang === 'fr' ? 'Compléter mon profil →' : 'Complete my profile →'}
+              {lang === 'fr' ? 'Personnaliser ma sélection →' : 'Personalize my selection →'}
             </button>
           </div>
         )}
 
-        {/* BLOC 1 — Sélection pour vous */}
-        {selectionLots.length > 0 && (
-          <div style={{ marginBottom: '56px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
-              <div>
-                <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '20px', fontWeight: 600, color: '#1A2A44', margin: '0 0 4px' }}>
-                  {lang === 'fr' ? 'Sélection pour vous' : 'Selected for you'}
-                </h2>
-                <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'var(--font-mono)' }}>
-                  {lang === 'fr' ? 'Basé sur votre profil' : 'Based on your profile'}
+        {/* Loading state */}
+        {loading && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} style={{ background: 'white', border: '1px solid #E8E4DC', borderRadius: '10px', overflow: 'hidden' }}>
+                <div className="skeleton" style={{ height: '200px' }} />
+                <div style={{ padding: '14px' }}>
+                  <div className="skeleton" style={{ height: '10px', width: '60%', marginBottom: '8px', borderRadius: '4px' }} />
+                  <div className="skeleton" style={{ height: '14px', width: '90%', marginBottom: '8px', borderRadius: '4px' }} />
+                  <div className="skeleton" style={{ height: '11px', width: '40%', borderRadius: '4px' }} />
                 </div>
               </div>
-              <button onClick={() => navigate('/app/explore?profile=1')}
-                style={{ fontSize: '12px', color: '#1A2A44', fontWeight: 600, background: 'none', border: '1px solid #E8E4DC', borderRadius: '6px', padding: '6px 14px', cursor: 'pointer' }}>
-                {lang === 'fr' ? 'Voir tout →' : 'View all →'}
-              </button>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
-              {selectionLots.map((lot: any) => (
-                <LotCard key={lot.id} lot={lot} lang={lang} onClick={() => navigate(`/app/lot/${lot.id}`)} />
-              ))}
-            </div>
+            ))}
           </div>
         )}
 
-        {/* BLOC 2 — Signaux forts */}
-        {discoveryLots.length > 0 && (
-          <div style={{ marginBottom: '56px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
-              <div>
-                <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '20px', fontWeight: 600, color: '#1A2A44', margin: '0 0 4px' }}>
-                  {lang === 'fr' ? 'Signaux forts' : 'Strong signals'}
-                </h2>
-                <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'var(--font-mono)' }}>
-                  {lang === 'fr' ? 'Meilleures opportunités du moment' : 'Top opportunities right now'}
-                </div>
-              </div>
-              <button onClick={() => navigate('/app/explore?profile=1')}
-                style={{ fontSize: '12px', color: '#1A2A44', fontWeight: 600, background: 'none', border: '1px solid #E8E4DC', borderRadius: '6px', padding: '6px 14px', cursor: 'pointer' }}>
-                {lang === 'fr' ? 'Voir tout →' : 'View all →'}
-              </button>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
-              {discoveryLots.map((lot: any) => (
-                <LotCard key={lot.id} lot={lot} lang={lang} onClick={() => navigate(`/app/lot/${lot.id}`)} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* BLOC 3 — En direct des artistes */}
-        {directLots.length > 0 && (
-          <div style={{ marginBottom: '56px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
-              <div>
-                <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '20px', fontWeight: 600, color: '#1A2A44', margin: '0 0 4px' }}>
-                  {lang === 'fr' ? 'En direct des artistes' : 'Direct from artists'}
-                </h2>
-                <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'var(--font-mono)' }}>
-                  {lang === 'fr' ? 'Sans commission galerie' : 'No gallery commission'}
-                </div>
-              </div>
-              <button onClick={() => navigate('/app/explore?tab=primary')}
-                style={{ fontSize: '12px', color: '#1A2A44', fontWeight: 600, background: 'none', border: '1px solid #E8E4DC', borderRadius: '6px', padding: '6px 14px', cursor: 'pointer' }}>
-                {lang === 'fr' ? 'Voir tout →' : 'View all →'}
-              </button>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
-              {directLots.map((lot: any) => (
-                <LotCard key={lot.id} lot={lot} lang={lang} onClick={() => navigate(`/app/lot/${lot.id}`)} />
-              ))}
-            </div>
+        {/* Lots grid */}
+        {!loading && lots.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+            {lots.map((lot: any) => (
+              <LotCard key={lot.id} lot={lot} lang={lang} onClick={() => navigate(`/app/lot/${lot.id}`)} />
+            ))}
           </div>
         )}
 
         {/* Empty state */}
-        {selectionLots.length === 0 && discoveryLots.length === 0 && directLots.length === 0 && (
+        {!loading && lots.length === 0 && (
           <div style={{ textAlign: 'center', padding: '80px 40px' }}>
             <div style={{ fontFamily: 'Georgia, serif', fontSize: '20px', color: '#1A2A44', marginBottom: '8px' }}>
-              {lang === 'fr' ? 'Chargement de votre sélection…' : 'Loading your selection…'}
+              {lang === 'fr' ? 'Aucune opportunité trouvée' : 'No opportunities found'}
             </div>
+            <div style={{ fontSize: '13px', color: '#9CA3AF', marginBottom: '24px' }}>
+              {lang === 'fr' ? 'Essayez de modifier vos préférences' : 'Try adjusting your preferences'}
+            </div>
+            <button onClick={() => navigate('/app/profile/preferences')}
+              style={{ padding: '10px 20px', background: '#1A2A44', color: '#C6A85A', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+              {lang === 'fr' ? 'Modifier mes préférences' : 'Edit preferences'}
+            </button>
+          </div>
+        )}
+
+        {/* Load more */}
+        {!loading && hasMore && lots.length > 0 && (
+          <div style={{ textAlign: 'center', marginTop: '40px' }}>
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              style={{ padding: '12px 32px', background: 'white', color: '#1A2A44', border: '1px solid #E8E4DC', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: loadingMore ? 'default' : 'pointer', opacity: loadingMore ? 0.6 : 1 }}
+            >
+              {loadingMore
+                ? (lang === 'fr' ? 'Chargement…' : 'Loading…')
+                : (lang === 'fr' ? 'Voir plus d\'opportunités' : 'Load more opportunities')}
+            </button>
           </div>
         )}
 
