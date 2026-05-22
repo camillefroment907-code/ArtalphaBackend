@@ -5,7 +5,7 @@ import { getUser, getUserPlan } from "../../lib/auth";
 import { WelcomeTour } from '../components/WelcomeTour';
 
 
-type ExploreTab = "best" | "auctions" | "primary" | "convictions" | "for-you";
+type ExploreTab = "best" | "auctions" | "primary" | "convictions";
 type ViewMode = "grid-large" | "grid" | "list";
 
 // ── Source metadata ──────────────────────────────────────────
@@ -703,12 +703,10 @@ export default function Explore() {
         {/* LEFT: Tab pills — desktop */}
         <div className="explore-tabs-desktop" style={{ display: 'flex', gap: '4px', flex: 1 }}>
           {([
-            { key: 'best', label: t('explorer.tabBestLots') },
-            { key: 'auctions', label: t('explorer.tabAllAuctions') },
-            { key: 'primary', label: t('explorer.tabPrimary') },
-            { key: 'convictions', label: t('explorer.tabConvictions') },
-            { key: 'for-you', label: t('explorer.tabForYou') },
-          ] as { key: ExploreTab; label: string }[]).map(({ key, label }) => (
+            { key: 'best' as ExploreTab, label: lang === 'fr' ? 'Meilleures Opportunités' : 'Best Opportunities' },
+            { key: 'auctions' as ExploreTab, label: lang === 'fr' ? 'Toutes les Enchères' : 'All Auctions' },
+            { key: 'primary' as ExploreTab, label: lang === 'fr' ? 'En direct des artistes' : 'Direct from Artists' },
+          ]).map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('tab', key); return p; })}
@@ -733,11 +731,9 @@ export default function Explore() {
           onChange={e => setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('tab', e.target.value); return p; })}
           style={{ display: 'none' }}
         >
-          <option value="best">{t('explorer.tabBestLots')}</option>
-          <option value="auctions">{t('explorer.tabAllAuctions')}</option>
-          <option value="primary">{t('explorer.tabPrimary')}</option>
-          <option value="convictions">{t('explorer.tabConvictions')}</option>
-          <option value="for-you">{t('explorer.tabForYou')}</option>
+          <option value="best">{lang === 'fr' ? 'Meilleures Opportunités' : 'Best Opportunities'}</option>
+          <option value="auctions">{lang === 'fr' ? 'Toutes les Enchères' : 'All Auctions'}</option>
+          <option value="primary">{lang === 'fr' ? 'En direct des artistes' : 'Direct from Artists'}</option>
         </select>
 
         {/* RIGHT: Filters + View mode + LIVE */}
