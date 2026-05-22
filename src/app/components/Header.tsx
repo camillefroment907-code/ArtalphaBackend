@@ -18,7 +18,7 @@ const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-produc
 
 const NAV_ITEMS = [
   { tKey: 'nav.maSelection', label: '', to: '/app/dashboard', dropdown: null },
-  { tKey: 'nav.leMarche',    label: '', to: '/app/explore',   dropdown: 'explorer' },
+  { tKey: 'nav.leMarche',    label: '', to: '/app/explore',   dropdown: null },
   { tKey: 'nav.artists',     label: '', to: '/app/artists',   dropdown: null },
   { tKey: 'nav.alerts',      label: '', to: '/app/agent',     dropdown: null },
   { tKey: 'nav.calendar',    label: '', to: '/app/calendar',  dropdown: null },
