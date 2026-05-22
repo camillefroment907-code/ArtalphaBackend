@@ -168,8 +168,15 @@ function mapLot(lot: any) {
   const score = lot.deal_score ? Math.min(Math.round((lot.deal_score / 100) * 5), 5) : 0;
   const upside = Math.round(lot.pct_below_low_estimate || 0);
   const currency = lot.currency || "EUR";
+  const FX_TO_EUR: Record<string, number> = {
+    EUR: 1.0, USD: 0.92, GBP: 1.17, SEK: 0.087,
+    CHF: 1.05, DKK: 0.134, NOK: 0.087, JPY: 0.006,
+    HKD: 0.118, AUD: 0.59, CAD: 0.68,
+  };
+  const rate = FX_TO_EUR[currency.toUpperCase()] ?? 1.0;
+  const toEur = (v: number) => Math.round(v * rate);
   const fmt = (v: number) =>
-    new Intl.NumberFormat("fr-FR", { style: "currency", currency, maximumFractionDigits: 0 }).format(v);
+    new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(toEur(v));
   return {
     id: String(lot.id), artistName: lot.artist_name_raw?.trim() || "Unknown Artist",
     title: lot.title || "Untitled", price: price ? fmt(price) : "Prix sur demande",
