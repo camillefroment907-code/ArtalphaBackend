@@ -5,6 +5,19 @@ import { getToken } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
+const FX_TO_EUR: Record<string, number> = {
+  EUR: 1.0, USD: 0.92, GBP: 1.17, SEK: 0.087,
+  CHF: 1.05, DKK: 0.134, NOK: 0.087, JPY: 0.006,
+  HKD: 0.118, AUD: 0.59, CAD: 0.68,
+};
+
+function fmtPriceEur(amount: number | null | undefined, currency: string | null | undefined): string {
+  if (!amount) return '—';
+  const rate = FX_TO_EUR[currency?.toUpperCase() || 'EUR'] ?? 1;
+  const eur = Math.round(amount * rate);
+  return fmtPrice(eur);
+}
+
 function fmtPrice(n: number | null | undefined, currency = '€'): string {
   if (n == null) return '—';
   if (n >= 1_000_000) return `${currency}${(n / 1_000_000).toFixed(1)}M`;
@@ -84,11 +97,7 @@ function LotCard({ lot, lang, onClick }: { lot: any; lang: string; onClick: () =
         )}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '8px' }}>
           <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-            {lot.estimate_low_eur
-              ? fmtPrice(lot.estimate_low_eur)
-              : lot.estimate_low
-                ? fmtPrice(lot.estimate_low)
-                : '—'}
+            {fmtPriceEur(lot.estimate_low, lot.currency)}
           </span>
           <span style={{ padding: '3px 8px', borderRadius: '4px', background: badge.bg, border: `1px solid ${badge.border}`, fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: badge.color }}>
             {Math.round(score)}
