@@ -705,7 +705,7 @@ export default function Explore() {
           {([
             { key: 'best' as ExploreTab, label: 'Meilleures Opportunités' },
             { key: 'auctions' as ExploreTab, label: 'Toutes les Enchères' },
-            { key: 'primary' as ExploreTab, label: 'En direct des artistes' },
+            { key: 'primary' as ExploreTab, label: 'Sélection Galerie' },
           ]).map(({ key, label }) => (
             <button
               key={key}
@@ -733,7 +733,7 @@ export default function Explore() {
         >
           <option value="best">Meilleures Opportunités</option>
           <option value="auctions">Toutes les Enchères</option>
-          <option value="primary">En direct des artistes</option>
+          <option value="primary">Sélection Galerie</option>
         </select>
 
         {/* RIGHT: Filters + View mode + LIVE */}
