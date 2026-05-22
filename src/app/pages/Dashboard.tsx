@@ -26,7 +26,7 @@ function fmtPrice(n: number | null | undefined, currency = '€'): string {
 }
 
 const _cache: Record<string, { data: any; ts: number }> = {};
-const CACHE_TTL = 5 * 60 * 1000;
+const CACHE_TTL = 0;
 
 async function cachedFetch(url: string, options?: RequestInit): Promise<any> {
   const now = Date.now();
