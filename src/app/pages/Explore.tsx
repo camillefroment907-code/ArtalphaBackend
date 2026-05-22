@@ -703,9 +703,9 @@ export default function Explore() {
         {/* LEFT: Tab pills — desktop */}
         <div className="explore-tabs-desktop" style={{ display: 'flex', gap: '4px', flex: 1 }}>
           {([
-            { key: 'best' as ExploreTab, label: lang === 'fr' ? 'Meilleures Opportunités' : 'Best Opportunities' },
-            { key: 'auctions' as ExploreTab, label: lang === 'fr' ? 'Toutes les Enchères' : 'All Auctions' },
-            { key: 'primary' as ExploreTab, label: lang === 'fr' ? 'En direct des artistes' : 'Direct from Artists' },
+            { key: 'best' as ExploreTab, label: 'Meilleures Opportunités' },
+            { key: 'auctions' as ExploreTab, label: 'Toutes les Enchères' },
+            { key: 'primary' as ExploreTab, label: 'En direct des artistes' },
           ]).map(({ key, label }) => (
             <button
               key={key}
@@ -731,9 +731,9 @@ export default function Explore() {
           onChange={e => setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('tab', e.target.value); return p; })}
           style={{ display: 'none' }}
         >
-          <option value="best">{lang === 'fr' ? 'Meilleures Opportunités' : 'Best Opportunities'}</option>
-          <option value="auctions">{lang === 'fr' ? 'Toutes les Enchères' : 'All Auctions'}</option>
-          <option value="primary">{lang === 'fr' ? 'En direct des artistes' : 'Direct from Artists'}</option>
+          <option value="best">Meilleures Opportunités</option>
+          <option value="auctions">Toutes les Enchères</option>
+          <option value="primary">En direct des artistes</option>
         </select>
 
         {/* RIGHT: Filters + View mode + LIVE */}
