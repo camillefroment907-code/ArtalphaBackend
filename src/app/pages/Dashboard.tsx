@@ -304,6 +304,16 @@ export default function Dashboard() {
   const hasProfile = (userProfile?.preferred_categories?.length ?? 0) > 0;
   const profileCats = userProfile?.preferred_categories || [];
 
+  // Client-side budget safety filter — belt-and-suspenders in case API cache serves stale results
+  const budgetCap = userProfile?.investment_budget ? BUDGET_MAX[userProfile.investment_budget] ?? 999999 : 999999;
+  const displayLots = budgetCap < 999999
+    ? lots.filter((lot: any) => {
+        if (!lot.estimate_low) return true;
+        const rate = FX_TO_EUR[lot.currency?.toUpperCase() || 'EUR'] ?? 1;
+        return Math.round(lot.estimate_low * rate) <= budgetCap;
+      })
+    : lots;
+
   const SORT_OPTIONS = [
     { key: 'deal_score' as const,   label: 'Meilleur score' },
     { key: 'auction_date' as const, label: 'Date de vente' },
@@ -466,9 +476,9 @@ export default function Dashboard() {
         )}
 
         {/* Lots grid */}
-        {!loading && lots.length > 0 && (
+        {!loading && displayLots.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
-            {lots.map((lot: any) => (
+            {displayLots.map((lot: any) => (
               <LotCard
                 key={lot.id}
                 lot={lot}
@@ -482,7 +492,7 @@ export default function Dashboard() {
         )}
 
         {/* Empty state */}
-        {!loading && lots.length === 0 && (
+        {!loading && displayLots.length === 0 && (
           <div style={{ textAlign: 'center', padding: '80px 40px' }}>
             <div style={{ fontFamily: 'Georgia, serif', fontSize: '20px', color: '#1A2A44', marginBottom: '8px' }}>
               {search
@@ -504,7 +514,7 @@ export default function Dashboard() {
         )}
 
         {/* Load more */}
-        {!loading && hasMore && lots.length > 0 && (
+        {!loading && hasMore && displayLots.length > 0 && (
           <div style={{ textAlign: 'center', marginTop: '40px' }}>
             <button
               onClick={loadMore}
