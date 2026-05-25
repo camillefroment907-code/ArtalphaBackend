@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router";
 import { getPlanLimits, getUser } from "../../lib/auth";
+import { useSEO } from "../../lib/useSEO";
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 import { FilterSidebar } from "../components/FilterSidebar";
@@ -648,6 +649,7 @@ const DEFAULT_FILTERS: Filters = {
 
 // ── Main component ───────────────────────────────────────────
 export default function Opportunities() {
+  useSEO({ title: "Meilleures Opportunités — Nautilus", description: "Lots sous-évalués sélectionnés par Nautilus Intelligence." });
   const navigate = useNavigate();
   const [lots, setLots] = useState<MappedLot[]>([]);
   const [total, setTotal] = useState(0);

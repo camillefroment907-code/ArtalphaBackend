@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router';
 import { getPlanLimits, getUser } from '../../lib/auth';
+import { useSEO } from '../../lib/useSEO';
 
 const PLAN_LABELS: Record<string, string> = {
   free: 'Free', starter: 'Collector', investor: 'Investor',
@@ -7,6 +8,7 @@ const PLAN_LABELS: Record<string, string> = {
 };
 
 export default function Market() {
+  useSEO({ title: "Le Marché — Nautilus", description: "Toutes les enchères mondiales analysées par Nautilus." });
   const navigate = useNavigate();
   const limits = getPlanLimits();
   const user = getUser();

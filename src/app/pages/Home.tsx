@@ -1,9 +1,11 @@
 import { Link } from 'react-router';
+import { useSEO } from '../../lib/useSEO';
 import { useState } from 'react';
 import { OpportunityCard } from '../components/OpportunityCard';
 import { mockArtworks, mockArtists } from '../data/mockData';
 
 export default function Home() {
+  useSEO({ title: "Nautilus — Intelligence Marché de l'Art", description: "1,5M lots analysés, scores IA, alertes en temps réel." });
   const [heroIndex] = useState(0);
   const heroArtwork = mockArtworks[heroIndex];
   const topOpportunities = mockArtworks.slice(0, 4);

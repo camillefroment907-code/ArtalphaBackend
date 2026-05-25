@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { getToken, getUserPlan } from '../../lib/auth';
+import { useSEO } from '../../lib/useSEO';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 const PAGE_SIZE = 12;
@@ -24,6 +25,7 @@ interface ApiResponse {
 }
 
 export default function Emerging() {
+  useSEO({ title: "Artistes Émergents — Nautilus", description: "Artistes en progression détectés par Nautilus Intelligence." });
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [artists, setArtists] = useState<EmergingArtist[]>([]);

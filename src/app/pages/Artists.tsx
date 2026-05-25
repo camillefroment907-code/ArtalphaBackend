@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { getPlanLimits } from '../../lib/auth';
+import { useSEO } from '../../lib/useSEO';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 export default function Artists() {
+  useSEO({ title: "Artistes — Nautilus", description: "Cotes et signaux institutionnels pour les artistes suivis." });
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   const isFr = i18n.language?.startsWith('fr');

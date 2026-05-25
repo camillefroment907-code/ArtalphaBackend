@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { getToken, getUserPlan } from '../../lib/auth';
+import { useSEO } from '../../lib/useSEO';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -230,6 +231,7 @@ function DateRow({ entry, onLotClick }: { entry: DateEntry; onLotClick: (id: str
 }
 
 export default function AuctionCalendar() {
+  useSEO({ title: "Calendrier des Enchères — Nautilus", description: "Ventes à venir chez Christie's, Sotheby's, Drouot et 50+ maisons." });
   const { t } = useTranslation();
   const nav = useNavigate();
   const [days, setDays] = useState(30);
