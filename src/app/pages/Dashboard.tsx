@@ -123,11 +123,19 @@ function HeartButton({ lotId, wishlisted, onToggle }: { lotId: string; wishliste
   );
 }
 
+const BADGE_TOOLTIPS: Record<string, string> = {
+  'Exceptionnel': "Ce lot est proposé à un prix rarement observé pour cet artiste. Nautilus détecte une opportunité très inhabituelle à ce niveau de prix.",
+  'Très fort':    "Le prix semble inférieur à ce que des œuvres similaires ont atteint récemment. Un signal très intéressant selon les données du marché.",
+  'Opportunité':  "Ce lot présente plusieurs signaux positifs : prix, estimation ou contexte de vente. Une œuvre qui mérite votre attention.",
+  'À surveiller': "Ce lot peut être intéressant, mais les signaux restent limités ou moins clairs. Prenez le temps de vérifier avant d'acheter.",
+};
+
 function LotCard({ lot, lang, onClick, wishlisted, onWishlistToggle }: {
   lot: any; lang: string; onClick: () => void; wishlisted: boolean; onWishlistToggle: (id: string) => void;
 }) {
   const score = lot.deal_score ?? 0;
   const insight = getMicroInsight(lot, lang);
+  const [showTooltip, setShowTooltip] = useState(false);
   const badge = {
     color: score >= 80 ? '#1A6B3C' : score >= 65 ? '#B8922A' : '#6B7280',
     bg: score >= 80 ? 'rgba(26,107,60,0.08)' : score >= 65 ? 'rgba(184,146,42,0.08)' : 'rgba(107,114,128,0.08)',
@@ -160,9 +168,20 @@ function LotCard({ lot, lang, onClick, wishlisted, onWishlistToggle }: {
           <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
             {fmtPriceEur(lot.estimate_low, lot.currency)}
           </span>
-          <span style={{ padding: '3px 8px', borderRadius: '4px', background: badge.bg, border: `1px solid ${badge.border}`, fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: badge.color }}>
-            {label}
-          </span>
+          <div
+            style={{ position: 'relative' }}
+            onMouseEnter={e => { e.stopPropagation(); setShowTooltip(true); }}
+            onMouseLeave={() => setShowTooltip(false)}
+          >
+            {showTooltip && (
+              <div style={{ position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)', background: 'white', border: '1px solid #E8E4DC', borderRadius: '6px', padding: '10px 12px', fontSize: '11px', color: '#374151', lineHeight: 1.6, width: '220px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', zIndex: 10, pointerEvents: 'none' }}>
+                {BADGE_TOOLTIPS[label]}
+              </div>
+            )}
+            <span style={{ padding: '3px 8px', borderRadius: '4px', background: badge.bg, border: `1px solid ${badge.border}`, fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: badge.color, cursor: 'default' }}>
+              {label}
+            </span>
+          </div>
         </div>
       </div>
     </div>
