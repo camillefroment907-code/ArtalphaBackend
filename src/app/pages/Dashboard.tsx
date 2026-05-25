@@ -44,13 +44,13 @@ async function cachedFetch(url: string, options?: RequestInit): Promise<any> {
 
 function buildFetchUrl(
   profile: any, pageNum: number,
-  searchTerm: string, sort: string, scoreMin: number, cat: string,
+  searchTerm: string, sort: string, cat: string,
 ): string {
   const url = new URL(`${BACKEND}/api/lots`);
   url.searchParams.set('sort_by', sort);
   url.searchParams.set('page_size', '12');
   url.searchParams.set('page', String(pageNum));
-  url.searchParams.set('min_score', String(scoreMin));
+  url.searchParams.set('min_score', '50');
   if (searchTerm.trim()) url.searchParams.set('search', searchTerm.trim());
   const cats = cat ? [cat] : (profile?.preferred_categories || []);
   if (cats.length === 1) url.searchParams.set('category', cats[0]);
@@ -210,7 +210,6 @@ export default function Dashboard() {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'deal_score' | 'auction_date' | 'created_at'>('deal_score');
-  const [minScore, setMinScore] = useState(50);
   const [activeCategory, setActiveCategory] = useState('');
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -243,7 +242,7 @@ export default function Dashboard() {
     if (userProfile === null) return;
     setLoading(true);
     const token = getToken();
-    const url = buildFetchUrl(userProfile, 1, search, sortBy, minScore, activeCategory);
+    const url = buildFetchUrl(userProfile, 1, search, sortBy, activeCategory);
     cachedFetch(url, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
       .then((d: any) => {
         setLots(d?.items || []);
@@ -253,7 +252,7 @@ export default function Dashboard() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [userProfile, search, sortBy, minScore, activeCategory]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [userProfile, search, sortBy, activeCategory]); // eslint-disable-line react-hooks/exhaustive-deps // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Load more ─────────────────────────────────────────────────────────────
   const loadMore = async () => {
@@ -262,7 +261,7 @@ export default function Dashboard() {
     const token = getToken();
     const nextPage = page + 1;
     try {
-      const url = buildFetchUrl(userProfile, nextPage, search, sortBy, minScore, activeCategory);
+      const url = buildFetchUrl(userProfile, nextPage, search, sortBy, activeCategory);
       const d = await cachedFetch(url, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
       const newItems = d?.items || [];
       setLots(prev => [...prev, ...newItems]);
@@ -316,14 +315,9 @@ export default function Dashboard() {
     : lots;
 
   const SORT_OPTIONS = [
-    { key: 'deal_score' as const,   label: 'Meilleur score' },
+    { key: 'deal_score' as const,   label: 'Meilleures opportunités' },
     { key: 'auction_date' as const, label: 'Date de vente' },
     { key: 'created_at' as const,   label: 'Récents' },
-  ];
-  const SCORE_OPTIONS = [
-    { value: 50, label: 'Tous' },
-    { value: 65, label: '65+' },
-    { value: 80, label: '80+' },
   ];
 
   return (
@@ -408,13 +402,6 @@ export default function Dashboard() {
 
         {/* Filter pills */}
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-
-          {/* Score threshold */}
-          <div style={{ display: 'flex', gap: '4px', paddingRight: '12px', borderRight: '1px solid #E8E4DC' }}>
-            {SCORE_OPTIONS.map(opt => (
-              <Pill key={opt.value} label={opt.label} active={minScore === opt.value} onClick={() => setMinScore(opt.value)} />
-            ))}
-          </div>
 
           {/* Sort */}
           <div style={{ display: 'flex', gap: '4px', paddingRight: '12px', borderRight: profileCats.length > 1 ? '1px solid #E8E4DC' : 'none' }}>
