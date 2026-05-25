@@ -144,8 +144,14 @@ function mapLot(lot: any) {
   const score = lot.deal_score ? Math.min(Math.round((lot.deal_score / 100) * 5), 5) : 0;
   const upside = Math.round(lot.pct_below_low_estimate || 0);
   const currency = lot.currency || "EUR";
+  const _FX_EUR: Record<string, number> = {
+    EUR: 1.0, USD: 0.92, GBP: 1.17, SEK: 0.087,
+    CHF: 1.05, DKK: 0.134, NOK: 0.087, JPY: 0.006,
+    HKD: 0.118, AUD: 0.59, CAD: 0.68,
+  };
+  const _fxRate = _FX_EUR[currency.toUpperCase()] ?? 1;
   const fmt = (v: number) =>
-    new Intl.NumberFormat("fr-FR", { style: "currency", currency, maximumFractionDigits: 0 }).format(v);
+    new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(Math.round(v * _fxRate));
 
   return {
     id: String(lot.id),
@@ -158,6 +164,9 @@ function mapLot(lot: any) {
     estimateLowFmt: estimateLow ? fmt(estimateLow) : "",
     estimateHighFmt: estimateHigh ? fmt(estimateHigh) : "",
     upside: upside > 0 ? `${upside}%` : "0%",
+    potentialEur: (estimateLow > 0 && price > 0 && estimateLow > price)
+      ? Math.round((estimateLow - price) * _fxRate)
+      : 0,
     score,
     dealScore: lot.deal_score || 0,
     imageUrl: lot.image_url || "",
@@ -328,10 +337,10 @@ function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => vo
               </div>
             )}
           </div>
-          {lot.upsidePercent > 5 && (
+          {lot.potentialEur > 0 && (
             <div style={{ padding: "3px 8px", background: "rgba(26,42,68,0.08)", border: "1px solid rgba(26,42,68,0.15)", borderRadius: "4px" }}>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 700, color: "var(--navy)" }}>
-                +{lot.upsidePercent}% upside
+                +{lot.potentialEur.toLocaleString('fr-FR')} € de potentiel
               </span>
             </div>
           )}
@@ -1218,8 +1227,8 @@ export default function Opportunities() {
                             ))}
                           </div>
                           <div>
-                            {lot.upsidePercent > 0
-                              ? <span className="upside-badge">+{lot.upsidePercent}%</span>
+                            {lot.potentialEur > 0
+                              ? <span className="upside-badge">+{lot.potentialEur.toLocaleString('fr-FR')} €</span>
                               : <span style={{ color: "var(--text-3)" }}>—</span>}
                           </div>
                           <div style={{ fontSize: "11px", color: "var(--text-3)" }}>
