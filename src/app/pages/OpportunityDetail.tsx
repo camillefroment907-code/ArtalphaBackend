@@ -139,7 +139,7 @@ export default function OpportunityDetail() {
 
   const limits         = getPlanLimits();
   const plan           = getUserPlan();
-  const paidPlans      = ["investor", "pro", "elite", "institutional"];
+  const paidPlans      = ["investor", "pro", "institutional"];
   const isPaid         = paidPlans.includes(plan);
   const hasAccess      = isPaid;
   const isInvestor     = ['investor', 'pro', 'institutional'].includes(plan);

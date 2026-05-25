@@ -15,7 +15,7 @@ interface Alert {
 const STORAGE_KEY = 'artalpha-alerts';
 
 const ALERT_LIMITS: Record<string, number> = {
-  free: 1, starter: 5, investor: 20, pro: 9999, elite: 9999,
+  free: 1, starter: 5, investor: 20, pro: 9999, elite: 9999, institutional: 9999,
 };
 
 const TYPE_CONFIGS = [
@@ -27,7 +27,7 @@ const TYPE_CONFIGS = [
 
 const PLAN_LABELS: Record<string, string> = {
   free: 'Free', starter: 'Collector', investor: 'Investor',
-  pro: 'Family Office', elite: 'Institutional',
+  pro: 'Family Office', elite: 'Institutional', institutional: 'Institutional',
 };
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -46,7 +46,7 @@ function saveAlerts(alerts: Alert[]): void {
 export function AlertsContent() {
   const navigate = useNavigate();
   const user = getUser();
-  const plan = user?.email === 'camillefroment907@gmail.com' ? 'elite' : getUserPlan();
+  const plan = user?.email === 'camillefroment907@gmail.com' ? 'institutional' : getUserPlan();
   const maxAlerts = ALERT_LIMITS[plan] ?? 1;
   const planLabel = PLAN_LABELS[plan] ?? plan;
 

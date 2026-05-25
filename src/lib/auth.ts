@@ -4,7 +4,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name?: string;
-  plan: 'free' | 'starter' | 'investor' | 'pro' | 'elite' | 'institutional';
+  plan: 'free' | 'starter' | 'investor' | 'pro' | 'institutional';
   token: string;
   is_verified?: boolean;
   trial_end?: string | null;
@@ -99,7 +99,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     hasFullArtistProfile: true,
     projectionYears: [5, 10, 20, 50],
   },
-  elite: {
+  elite: { // legacy — maps to institutional
     name: 'Institutional',
     maxOpportunities: 9999,
     maxWatchlist: 9999,

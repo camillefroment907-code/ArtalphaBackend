@@ -33,7 +33,7 @@ const EXPLORER_ITEMS = [
 
 const PLAN_LABELS: Record<string, string> = {
   free: 'Free', starter: 'Collector', investor: 'Investor',
-  pro: 'Pro', elite: 'Elite', institutional: 'Institutional',
+  pro: 'Pro', elite: 'Institutional', institutional: 'Institutional',
 };
 
 const ADMIN_EMAIL = 'camillefroment907@gmail.com';

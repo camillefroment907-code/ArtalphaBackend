@@ -371,10 +371,10 @@ export default function Portfolio() {
 
   const PLAN_LABELS: Record<string, string> = {
     free: 'Free', starter: 'Collector', investor: 'Investor',
-    pro: 'Pro', elite: 'Elite', institutional: 'Institutional',
+    pro: 'Pro', elite: 'Institutional', institutional: 'Institutional',
   };
   const planLabel = PLAN_LABELS[plan] ?? plan;
-  const hasAccess = ["investor", "pro", "elite", "institutional"].includes(plan);
+  const hasAccess = ["investor", "pro", "institutional"].includes(plan);
   const isFreePlan = !hasAccess || plan === 'starter';
   const billingInterval = sub?.billing_interval || 'monthly';
   const totalInvested = portfolioStats?.total_invested ?? 0;

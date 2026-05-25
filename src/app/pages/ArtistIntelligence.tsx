@@ -322,7 +322,7 @@ export default function ArtistIntelligence() {
   const [oracle, setOracle] = useState(null);
   const [plan, setPlan] = useState(getUserPlan());
   useEffect(() => { setPlan(getUserPlan()); }, []);
-  const hasAccess = ["investor", "pro", "elite", "institutional"].includes(plan);
+  const hasAccess = ["investor", "pro", "institutional"].includes(plan);
 
   // Must be before any early return — Rules of Hooks
   const auctionHouseStats = useMemo(() => {

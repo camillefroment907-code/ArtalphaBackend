@@ -536,7 +536,7 @@ export default function Explore() {
 
 
   const PLAN_LIMITS: Record<string, number> = {
-    free: 6, starter: 10, investor: 99999, pro: 99999, institutional: 99999, elite: 99999,
+    free: 6, starter: 10, investor: 99999, pro: 99999, institutional: 99999, elite: 99999, // elite: legacy
   };
   const visibleLimit = isAdmin ? 99999 : (PLAN_LIMITS[userPlan] ?? 3);
   const maxVisible = visibleLimit;
@@ -1066,7 +1066,7 @@ export default function Explore() {
               {/* ─── FOR YOU TAB ────────────────────────────── */}
               {exploreTab === 'for-you' && (
                 <div style={{ padding: '8px 0' }}>
-                  {!isAdmin && !["investor", "pro", "elite", "institutional"].includes(userPlan) ? (
+                  {!isAdmin && !["investor", "pro", "institutional"].includes(userPlan) ? (
                     <div style={{textAlign:'center',padding:'64px 24px',background:'#f8f8f6',borderRadius:8,marginTop:32,border:'1px solid #e8e4dc'}}>
                       <div style={{fontSize:11,letterSpacing:'0.2em',color:'#C6A85A',marginBottom:12,fontWeight:700}}>{t('explorer.forYouPaywallTitle')}</div>
                       <div style={{fontSize:22,fontFamily:'Georgia,serif',color:'#1A2A44',marginBottom:12}}>{t('explorer.forYouPaywallSub')}</div>

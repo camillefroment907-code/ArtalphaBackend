@@ -218,7 +218,7 @@ export default function ArtistDetail() {
     title: data ? `${data.name} — Cote & Analyse — Nautilus` : 'Artiste — Nautilus',
     description: data ? `${data.name}${data.nationality ? ' · ' + data.nationality : ''} · Cote, momentum et signaux institutionnels` : 'Analyse artiste Nautilus',
   });
-  const hasFullAccess = ["investor", "pro", "elite", "institutional"].includes(plan);
+  const hasFullAccess = ["investor", "pro", "institutional"].includes(plan);
 
   useEffect(() => {
     if (!name) return;

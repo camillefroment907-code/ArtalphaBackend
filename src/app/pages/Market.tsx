@@ -4,7 +4,7 @@ import { useSEO } from '../../lib/useSEO';
 
 const PLAN_LABELS: Record<string, string> = {
   free: 'Free', starter: 'Collector', investor: 'Investor',
-  pro: 'Family Office', elite: 'Institutional',
+  pro: 'Family Office', elite: 'Institutional', institutional: 'Institutional',
 };
 
 export default function Market() {
@@ -12,7 +12,7 @@ export default function Market() {
   const navigate = useNavigate();
   const limits = getPlanLimits();
   const user = getUser();
-  const plan = user?.email === 'camillefroment907@gmail.com' ? 'elite' : (user?.plan ?? 'free');
+  const plan = user?.email === 'camillefroment907@gmail.com' ? 'institutional' : (user?.plan ?? 'free');
   const planLabel = PLAN_LABELS[plan] ?? plan;
 
   // ── LOCKED STATE ─────────────────────────────────────────────

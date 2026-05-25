@@ -72,7 +72,7 @@ export function LarryChat({ lotId: existingLotId }: LarryChatProps) {
   const limits = getPlanLimits();
   const isLocked = !limits.hasAIVerdict;
   const userPlan = getUserPlan();
-  const canLiveMode = ['investor', 'pro', 'elite', 'institutional'].includes(userPlan);
+  const canLiveMode = ['investor', 'pro', 'institutional'].includes(userPlan);
   const ALL_SUGGESTIONS = t('larry.suggestions', { returnObjects: true }) as string[];
 
   const [open, setOpen] = useState(false);

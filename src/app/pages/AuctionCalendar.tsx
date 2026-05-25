@@ -239,7 +239,7 @@ export default function AuctionCalendar() {
   const [data, setData] = useState<CalendarData | null>(null);
   const [loading, setLoading] = useState(true);
   const plan = getUserPlan();
-  const hasAccess = ["investor", "pro", "elite", "institutional"].includes(plan);
+  const hasAccess = ["investor", "pro", "institutional"].includes(plan);
 
   useEffect(() => {
     setLoading(true);

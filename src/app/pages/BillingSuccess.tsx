@@ -8,7 +8,8 @@ const PLAN_LABELS: Record<string, string> = {
   starter: "Collector",
   investor: "Investor",
   pro: "Family Office",
-  elite: "Institutional",
+  elite: "Institutional", // legacy
+  institutional: "Institutional",
 };
 
 export default function BillingSuccess() {

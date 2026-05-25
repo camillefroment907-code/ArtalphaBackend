@@ -199,7 +199,7 @@ export default function Primary() {
   }, []);
 
   const PLAN_LIMITS: Record<string, number> = {
-    free: 3, starter: 10, investor: 99999, pro: 99999, institutional: 99999, elite: 99999,
+    free: 3, starter: 10, investor: 99999, pro: 99999, institutional: 99999, elite: 99999, // elite: legacy
   };
   const visibleLimit = isAdmin ? 99999 : (PLAN_LIMITS[userPlan] ?? 3);
 

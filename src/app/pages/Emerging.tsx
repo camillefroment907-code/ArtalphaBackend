@@ -37,7 +37,7 @@ export default function Emerging() {
   const [totalAvailable, setTotalAvailable] = useState(0);
   const [plan] = useState(getUserPlan());
 
-  const hasAccess = ['investor', 'pro', 'elite', 'institutional'].includes(plan);
+  const hasAccess = ['investor', 'pro', 'institutional'].includes(plan);
 
   const fetchPage = useCallback(async (p: number, append: boolean) => {
     const token = getToken();

@@ -16,7 +16,7 @@ export const PLAN_LIMITS: Record<string, number> = {
   starter:  0,
   investor:      20,
   pro:           100,
-  elite:         999,
+  elite:         999, // legacy — maps to institutional
   institutional: 999,
 };
 

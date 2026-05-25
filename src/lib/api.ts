@@ -20,7 +20,7 @@ export interface LoginResponse {
   user_id: string;
   email: string;
   name?: string;
-  plan?: "free" | "starter" | "investor" | "pro" | "elite";
+  plan?: "free" | "starter" | "investor" | "pro" | "institutional";
   is_verified?: boolean;
 }
 
