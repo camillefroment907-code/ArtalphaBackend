@@ -335,9 +335,11 @@ function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => vo
                 </span>
               </div>
             )}
-            <div style={{ fontSize: "11px", color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>
-              Top {Math.round((1 - ds / 100) * 100)}% des opportunités
-            </div>
+            {lot.potentialEur > 0 && (
+              <div style={{ fontSize: "11px", color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>
+                Top {Math.round((1 - ds / 100) * 100)}% des opportunités
+              </div>
+            )}
           </div>
         </div>
         {lot.real_cost && (
