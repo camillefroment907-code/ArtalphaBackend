@@ -391,6 +391,131 @@ async def google_auth(request: Request, body: GoogleAuthRequest, db: AsyncSessio
     )
 
 
+@router.post("/google/mobile", include_in_schema=False)
+async def google_auth_mobile(request: Request, db: AsyncSession = Depends(get_db)):
+    """Receive Google credential via form POST (redirect flow for iOS Safari).
+    Validates the credential and redirects to the SPA callback with a Nautilus token."""
+    from fastapi import Form
+    from urllib.parse import urlencode
+
+    form = await request.form()
+    credential = form.get("credential")
+
+    if not credential:
+        return RedirectResponse(
+            url=f"{settings.frontend_url}/app/login?error=google_failed",
+            status_code=302,
+        )
+
+    if not settings.google_client_id:
+        return RedirectResponse(
+            url=f"{settings.frontend_url}/app/login?error=google_not_configured",
+            status_code=302,
+        )
+
+    try:
+        from google.oauth2 import id_token
+        from google.auth.transport import requests as google_requests
+        _client_ids = [
+            settings.google_client_id,
+            "641757535865-3mgk4b4a7lc1ajcbphu40jip5d1rbe84.apps.googleusercontent.com",
+        ]
+        id_info = None
+        last_exc: Exception | None = None
+        for _cid in _client_ids:
+            if not _cid:
+                continue
+            try:
+                id_info = id_token.verify_oauth2_token(
+                    credential,
+                    google_requests.Request(),
+                    _cid,
+                    clock_skew_in_seconds=10,
+                )
+                break
+            except Exception as e:
+                last_exc = e
+        if id_info is None:
+            raise last_exc or ValueError("No valid client_id")
+    except Exception as exc:
+        logger.error("Google mobile token verification failed: %s", exc, exc_info=True)
+        return RedirectResponse(
+            url=f"{settings.frontend_url}/app/login?error=google_failed",
+            status_code=302,
+        )
+
+    email = id_info.get("email")
+    name = id_info.get("name")
+    if not email:
+        return RedirectResponse(
+            url=f"{settings.frontend_url}/app/login?error=google_failed",
+            status_code=302,
+        )
+
+    result = await db.execute(
+        select(User).where(User.email == email).options(selectinload(User.subscription))
+    )
+    user = result.scalar_one_or_none()
+    is_new = user is None
+
+    if is_new:
+        try:
+            user = User(
+                email=email,
+                hashed_password=hash_password(secrets.token_urlsafe(32)),
+                full_name=name,
+                is_active=True,
+                is_verified=True,
+            )
+            db.add(user)
+            await db.flush()
+            prefs = UserPreference(
+                user_id=user.id,
+                favorite_artists=[],
+                categories=[],
+                min_deal_score=75,
+                alert_channel=AlertChannel.EMAIL,
+                alert_email=email,
+                auction_houses=[],
+                is_alerts_enabled=True,
+                language="fr",
+            )
+            db.add(prefs)
+            await db.commit()
+            await db.refresh(user)
+        except Exception as e:
+            await db.rollback()
+            return RedirectResponse(
+                url=f"{settings.frontend_url}/app/login?error=google_failed",
+                status_code=302,
+            )
+
+        try:
+            asyncio.create_task(send_welcome_email(
+                to_email=user.email,
+                name=user.full_name or user.email,
+                plan="free",
+                lang=user.language,
+            ))
+        except Exception:
+            pass
+
+    plan = "free" if is_new else user.active_plan.value.lower()
+    token = create_access_token({"sub": str(user.id), "email": user.email, "plan": plan})
+
+    params = urlencode({
+        "token": token,
+        "user_id": str(user.id),
+        "email": email,
+        "plan": plan,
+        "is_new_user": "1" if is_new else "0",
+    })
+    return RedirectResponse(
+        url=f"{settings.frontend_url}/auth/google/callback?{params}",
+        status_code=302,
+    )
+
+
 @router.get("/oauth/google")
 async def oauth_google_redirect():
     """Legacy GET endpoint — redirect to login."""

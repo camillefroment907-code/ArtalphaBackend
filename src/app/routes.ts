@@ -50,6 +50,7 @@ const VerifyEmailRequired      = lazy(() => import('./pages/VerifyEmailRequired'
 const VerifyEmail              = lazy(() => import('./pages/VerifyEmail'));
 const Partners                 = lazy(() => import('./pages/Partners'));
 const Preferences              = lazy(() => import('./pages/Preferences'));
+const GoogleCallback           = lazy(() => import('./pages/GoogleCallback'));
 
 export const router = createBrowserRouter([
   {
@@ -123,6 +124,10 @@ export const router = createBrowserRouter([
   {
     path: '/billing/cancel',
     Component: Pricing,
+  },
+  {
+    path: '/auth/google/callback',
+    Component: GoogleCallback,
   },
   {
     path: '/app',
