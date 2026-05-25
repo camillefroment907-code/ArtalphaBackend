@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { getToken, getUserPlan } from '../../lib/auth';
+import { useSEO } from '../../lib/useSEO';
 
 const BACKEND = 'https://artalpha-backend-production.up.railway.app';
 
@@ -212,6 +213,11 @@ export default function ArtistDetail() {
   const [oracle, setOracle] = useState(null);
   const [plan, setPlan] = useState(getUserPlan());
   useEffect(() => { setPlan(getUserPlan()); }, []);
+
+  useSEO({
+    title: data ? `${data.name} — Cote & Analyse — Nautilus` : 'Artiste — Nautilus',
+    description: data ? `${data.name}${data.nationality ? ' · ' + data.nationality : ''} · Cote, momentum et signaux institutionnels` : 'Analyse artiste Nautilus',
+  });
   const hasFullAccess = ["investor", "pro", "elite", "institutional"].includes(plan);
 
   useEffect(() => {

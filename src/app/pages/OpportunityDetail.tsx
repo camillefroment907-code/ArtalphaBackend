@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { getPlanLimits, getToken, getUserPlan } from '../../lib/auth';
+import { useSEO } from '../../lib/useSEO';
 import { AIAnalyst } from '../components/AIAnalyst';
 import { UpgradeModal } from '../components/UpgradeModal';
 import {
@@ -111,6 +112,11 @@ export default function OpportunityDetail() {
   const [upgradeModal, setUpgradeModal]   = useState<'wishlist' | 'source' | 'provenance' | null>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const isFr = i18n.language?.startsWith('fr');
+
+  useSEO({
+    title: lot ? `${lot.artist_name_raw || 'Lot'} — ${lot.title?.slice(0, 50) || 'Analyse'} — Nautilus` : 'Analyse de lot — Nautilus',
+    description: lot ? `${lot.artist_name_raw || ''} · ${lot.auction_house_name || ''} · Analyse Nautilus Intelligence` : "Analyse d'investissement Nautilus",
+  });
 
   const translateDueDiligence = (text: string) => {
     if (!isFr) return text;
