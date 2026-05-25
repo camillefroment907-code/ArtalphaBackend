@@ -132,10 +132,11 @@ function LotCard({ lot, lang, onClick, wishlisted, onWishlistToggle }: {
   const score = lot.deal_score ?? 0;
   const insight = getMicroInsight(lot, lang);
   const badge = {
-    color: score >= 80 ? '#C0392B' : score >= 65 ? '#B8922A' : '#6B7280',
-    bg: score >= 80 ? 'rgba(192,57,43,0.08)' : score >= 65 ? 'rgba(184,146,42,0.08)' : 'rgba(107,114,128,0.08)',
-    border: score >= 80 ? 'rgba(192,57,43,0.2)' : score >= 65 ? 'rgba(184,146,42,0.2)' : 'rgba(107,114,128,0.15)',
+    color: score >= 80 ? '#1A6B3C' : score >= 65 ? '#B8922A' : '#6B7280',
+    bg: score >= 80 ? 'rgba(26,107,60,0.08)' : score >= 65 ? 'rgba(184,146,42,0.08)' : 'rgba(107,114,128,0.08)',
+    border: score >= 80 ? 'rgba(26,107,60,0.2)' : score >= 65 ? 'rgba(184,146,42,0.2)' : 'rgba(107,114,128,0.15)',
   };
+  const label = score >= 90 ? 'Exceptionnel' : score >= 80 ? 'Très fort' : score >= 65 ? 'Opportunité' : 'À surveiller';
   return (
     <div onClick={onClick}
       style={{ background: 'white', border: '1px solid #E8E4DC', borderRadius: '10px', overflow: 'hidden', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', flexDirection: 'column' }}
@@ -150,20 +151,20 @@ function LotCard({ lot, lang, onClick, wishlisted, onWishlistToggle }: {
         <div style={{ fontSize: '10px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           {lot.artist_name_raw || lot.artist?.name || '—'}
         </div>
-        <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A2A44', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {lot.title || '—'}
-        </div>
         {insight && (
           <div style={{ fontSize: '11px', color: '#2563EB', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
             ◆ {insight}
           </div>
         )}
+        <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A2A44', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {lot.title || '—'}
+        </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '8px' }}>
           <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
             {fmtPriceEur(lot.estimate_low, lot.currency)}
           </span>
           <span style={{ padding: '3px 8px', borderRadius: '4px', background: badge.bg, border: `1px solid ${badge.border}`, fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: badge.color }}>
-            {Math.round(score)}
+            {label}
           </span>
         </div>
       </div>
