@@ -1127,6 +1127,23 @@ class ClickEvent(Base):
     )
 
 
+class UserEvent(Base):
+    """User behavior events — lot views, wishlist adds/removes."""
+    __tablename__ = "user_events"
+
+    id         = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id    = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    lot_id     = Column(UUID(as_uuid=True), ForeignKey("lots.id", ondelete="SET NULL"), nullable=True)
+    event_type = Column(String(50), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        Index("ix_user_events_user_id",    "user_id"),
+        Index("ix_user_events_lot_id",     "lot_id"),
+        Index("ix_user_events_created_at", "created_at"),
+    )
+
+
 class EmergingArtist(Base):
     """Emerging artists sourced from Artsy gallery listings."""
     __tablename__ = "emerging_artists"

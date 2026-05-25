@@ -7,7 +7,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 from app.database import get_db
-from app.models.db_models import Wishlist, Lot, User, LotStatus, MarketType
+from app.models.db_models import Wishlist, Lot, User, LotStatus, MarketType, UserEvent
 from app.models.schemas import LotOut
 from app.api.auth_utils import get_current_user
 from app.config import get_settings
@@ -208,6 +208,11 @@ async def add_to_wishlist(
 
     db.add(Wishlist(user_id=current_user.id, lot_id=lot_id))
     await db.commit()
+    try:
+        db.add(UserEvent(user_id=current_user.id, lot_id=lot_id, event_type="wishlist_add"))
+        await db.commit()
+    except Exception:
+        pass
     return {"ok": True}
 
 
@@ -223,4 +228,9 @@ async def remove_from_wishlist(
     )
     await db.execute(stmt)
     await db.commit()
+    try:
+        db.add(UserEvent(user_id=current_user.id, lot_id=lot_id, event_type="wishlist_remove"))
+        await db.commit()
+    except Exception:
+        pass
     return {"ok": True}

@@ -99,7 +99,7 @@ def parse_dimensions(dimensions_str: str) -> dict:
 from app.database import get_db, AsyncSessionLocal
 from app.models.db_models import (
     Lot, Artist, LotStatus, AuctionHouse, MarketType,
-    ArtistSignal, ArtistProfile, HammerPrice,
+    ArtistSignal, ArtistProfile, HammerPrice, UserEvent,
 )
 from app.models.schemas import LotOut, LotListResponse, TopDeal, DashboardStats
 from app.api.auth_utils import get_current_user_optional, get_current_user
@@ -1675,6 +1675,16 @@ async def get_lot(
         lot_dict["fair_value_nautilus"] = None
         lot_dict["fair_value_confidence"] = None
         lot_dict["price_history"] = None
+
+    try:
+        db.add(UserEvent(
+            user_id=current_user.id if current_user else None,
+            lot_id=lot.id,
+            event_type="lot_view",
+        ))
+        await db.commit()
+    except Exception:
+        pass
 
     return lot_dict
 
