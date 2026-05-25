@@ -276,16 +276,6 @@ function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => vo
           <span style={{ fontSize: "10px", fontWeight: 800, color: tierColor, letterSpacing: "0.1em" }}>{tier}</span>
         </div>
 
-        {/* Score badge top-right */}
-        <div style={{
-          position: "absolute", top: "10px", right: "10px",
-          padding: "4px 8px",
-          background: "rgba(250,250,248,0.92)", backdropFilter: "blur(4px)",
-          borderRadius: "4px", border: "1px solid var(--border)",
-        }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 700, color: "var(--navy)" }}>{Math.round(ds)}</span>
-          <span style={{ fontSize: "9px", color: "var(--text-3)" }}>/100</span>
-        </div>
 
         {/* Low supply badge */}
         {lot.isLowSupply && (
@@ -337,13 +327,18 @@ function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => vo
               </div>
             )}
           </div>
-          {lot.potentialEur > 0 && (
-            <div style={{ padding: "3px 8px", background: "rgba(26,42,68,0.08)", border: "1px solid rgba(26,42,68,0.15)", borderRadius: "4px" }}>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 700, color: "var(--navy)" }}>
-                +{lot.potentialEur.toLocaleString('fr-FR')} € de potentiel
-              </span>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
+            {lot.potentialEur > 0 && (
+              <div style={{ padding: "3px 8px", background: "rgba(26,42,68,0.08)", border: "1px solid rgba(26,42,68,0.15)", borderRadius: "4px" }}>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 700, color: "var(--navy)" }}>
+                  +{lot.potentialEur.toLocaleString('fr-FR')} € de potentiel
+                </span>
+              </div>
+            )}
+            <div style={{ fontSize: "11px", color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>
+              Top {Math.round((1 - ds / 100) * 100)}% des opportunités
             </div>
-          )}
+          </div>
         </div>
         {lot.real_cost && (
           <div style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "rgba(184,152,90,0.7)", marginTop: "-4px", marginBottom: "6px", letterSpacing: "0.05em" }}>
