@@ -91,11 +91,8 @@ function LotImage({ src, alt }: { src: string; alt: string }) {
 
 function getMicroInsight(lot: any, lang: string): string | null {
   const pct = lot.pct_below_low_estimate;
-  const score = lot.deal_score ?? 0;
   if (pct && pct >= 30) return lang === 'fr' ? `${Math.round(pct)}% sous estimation` : `${Math.round(pct)}% below estimate`;
   if (pct && pct >= 15) return lang === 'fr' ? `Prix attractif · ${Math.round(pct)}% sous marché` : `Attractive price · ${Math.round(pct)}% below market`;
-  if (score >= 85) return lang === 'fr' ? 'Conviction exceptionnelle' : 'Exceptional conviction';
-  if (score >= 75) return lang === 'fr' ? 'Fort signal Nautilus' : 'Strong Nautilus signal';
   return null;
 }
 
