@@ -1849,21 +1849,36 @@ export default function OpportunityDetail() {
                   <div style={{ marginBottom: '16px' }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#EFF6FF', border: '1px solid #BFDBFE', color: BL, padding: '3px 8px', borderRadius: '3px' }}>INVESTOR+</span>
                   </div>
-                  <div
-                    onClick={memo ? () => setShowMemo(true) : generateMemo}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: memoLoading ? 'rgba(198,168,90,0.4)' : GOLD, cursor: memoLoading ? 'not-allowed' : 'pointer', letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', marginTop: '12px' }}
-                  >
-                    {memoLoading ? (isFr ? '◆ GÉNÉRATION…' : '◆ GENERATING…') : memo ? (isFr ? '◆ VOIR LE MÉMO →' : '◆ VIEW MEMO →') : (isFr ? '◆ GÉNÉRER LE MÉMO →' : '◆ GENERATE MEMO →')}
-                  </div>
-                  {memo && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
-                      <span style={{ padding: '3px 10px', background: memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.08)' : 'rgba(217,119,6,0.08)', border: `1px solid ${memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.25)' : 'rgba(217,119,6,0.25)'}`, fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: memo.recommendation === 'BUY' ? GL : AMB, borderRadius: '4px' }}>{memo.recommendation}</span>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>Conviction {memo.conviction}/100</span>
+                  {isInvestor ? (
+                    <>
+                      <div
+                        onClick={memo ? () => setShowMemo(true) : generateMemo}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: memoLoading ? 'rgba(198,168,90,0.4)' : GOLD, cursor: memoLoading ? 'not-allowed' : 'pointer', letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', marginTop: '12px' }}
+                      >
+                        {memoLoading ? (isFr ? '◆ GÉNÉRATION…' : '◆ GENERATING…') : memo ? (isFr ? '◆ VOIR LE MÉMO →' : '◆ VIEW MEMO →') : (isFr ? '◆ GÉNÉRER LE MÉMO →' : '◆ GENERATE MEMO →')}
+                      </div>
+                      {memo && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
+                          <span style={{ padding: '3px 10px', background: memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.08)' : 'rgba(217,119,6,0.08)', border: `1px solid ${memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.25)' : 'rgba(217,119,6,0.25)'}`, fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: memo.recommendation === 'BUY' ? GL : AMB, borderRadius: '4px' }}>{memo.recommendation}</span>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>Conviction {memo.conviction}/100</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ marginTop: '4px' }}>
+                      <LockedBlock
+                        title={isFr ? "Mémo d'investissement" : 'Investment Memo'}
+                        teaser=""
+                        ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
+                        ctaPrice="Investor"
+                        planId="investor"
+                        preview={<div style={{ height: '40px', background: LT, borderRadius: '6px' }} />}
+                      />
                     </div>
                   )}
                 </div>
 
-                {/* Dossier d'investissement card */}
+                {/* Dossier d'investissement card — coming soon */}
                 <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
@@ -1880,25 +1895,9 @@ export default function OpportunityDetail() {
                   <div style={{ marginBottom: '16px' }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#F0F0FF', border: '1px solid #C7C7F0', color: '#5B5BD6', padding: '3px 8px', borderRadius: '3px' }}>FAMILY OFFICE+</span>
                   </div>
-                  {isPro ? (
-                    <div
-                      onClick={() => navigate('/app/pricing?plan=pro')}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: GOLD, cursor: 'pointer', letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', marginTop: '12px' }}
-                    >
-                      {isFr ? '◆ ANALYSER →' : '◆ ANALYZE →'}
-                    </div>
-                  ) : (
-                    <div style={{ marginTop: '12px' }}>
-                      <LockedBlock
-                        title={isFr ? "Dossier d'investissement" : 'Investment Dossier'}
-                        teaser=""
-                        ctaText={isFr ? 'Passer Pro pour débloquer →' : 'UPGRADE TO PRO →'}
-                        ctaPrice="Pro"
-                        planId="pro"
-                        preview={<div style={{ height: '40px', background: LT, borderRadius: '6px' }} />}
-                      />
-                    </div>
-                  )}
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: GOLD, opacity: 0.4, letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', marginTop: '12px', cursor: 'default' }}>
+                    ◆ BIENTÔT DISPONIBLE
+                  </div>
                 </div>
 
               </div>

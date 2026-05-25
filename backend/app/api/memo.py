@@ -75,31 +75,56 @@ async def generate_investment_memo(
         if v >= 1_000: return f"€{v/1_000:.0f}K"
         return f"€{v:,.0f}"
 
-    prompt = f"""Tu es un analyste senior en investissement art pour un family office institutionnel.
-Génère un mémo d'investissement professionnel et concis pour ce lot aux enchères.
+    prompt = f"""Tu es un conseiller en art senior — pas un banquier,
+un vrai advisor qui protège son client et réduit l'incertitude.
+Tu génères un mémo d'investissement clair, honnête et premium
+pour un collectionneur intelligent non-expert.
+
+Ton style : éditorial, nuancé, jamais "to the moon".
+Tu donnes un jugement humain, pas une analyse machine.
+Tu dis aussi pourquoi NE PAS acheter. Tout en français.
 
 DONNÉES DU LOT:
 - Artiste: {artist}
 - Titre: {title}
 - Maison de vente: {house}
-- Catégorie: {category}
 - Médium: {medium}
-- Prix actuel / mise de départ: {fmt(price)}
+- Mise à prix: {fmt(price)}
 - Estimation basse: {fmt(est_low)}
 - Estimation haute: {fmt(est_high)}
 - Décote vs estimation: {upside:.0f}%
-- Deal Score Nautilus: {score:.0f}/100
+- Score Nautilus: {score:.0f}/100
 
-FORMAT DE RÉPONSE (JSON strict, pas de markdown):
+RÈGLES STRICTES:
+- target_price.low et target_price.high différents (écart min 20%)
+- Pas de CAGR, IRR, projections sur 10+ ans
+- Pas de pourcentages de revalorisation > 100%
+- conviction max 70 si upside > 80%
+- recommendation "ACHETER" seulement si conviction >= 65
+- hook : phrase éditoriale, pas analytique.
+  Exemples corrects :
+  "Rare à ce niveau de prix pour cet artiste."
+  "Point d'entrée inhabituellement attractif sur ce format."
+  Exemples incorrects :
+  "Prix inférieur de 34% à la moyenne."
+  "Décote de 62% observée."
+- Tous les textes en français
+
+FORMAT JSON strict, aucun markdown:
 {{
-  "thesis": "2-3 phrases sur pourquoi cette œuvre présente un intérêt d'investissement",
-  "artist_context": "1-2 phrases sur le positionnement marché de l'artiste",
-  "pricing_analysis": "1-2 phrases sur l'analyse du prix vs marché",
-  "risks": ["risque 1", "risque 2", "risque 3"],
-  "target_price": {{"low": number_euros, "high": number_euros, "rationale": "1 phrase"}},
-  "recommendation": "BUY" | "WATCH" | "PASS",
+  "hook": "1 phrase éditoriale — pourquoi CE lot mérite attention",
+  "prix_justifie": "1-2 phrases — prix justifié par le marché ?",
+  "liquidite": "1-2 phrases — pourra-t-on revendre ?",
+  "timing": "1 phrase — est-ce le bon moment ?",
+  "prudence": ["vigilance 1", "vigilance 2", "vigilance 3"],
+  "advisor_verdict": {{
+    "action": "Acheter si prix final ≤ X€ / Passer au-dessus de Y€",
+    "horizon": "X-Y ans",
+    "rationale": "1 phrase de conclusion"
+  }},
+  "recommendation": "ACHETER" | "INTÉRESSANT" | "PASSER",
   "conviction": number_0_to_100,
-  "time_horizon": "court terme (< 2 ans)" | "moyen terme (2-5 ans)" | "long terme (5 ans+)"
+  "target_price": {{"low": number_euros, "high": number_euros}}
 }}
 
 Réponds UNIQUEMENT avec le JSON, aucun texte avant ou après."""
@@ -134,7 +159,13 @@ Réponds UNIQUEMENT avec le JSON, aucun texte avant ou après."""
             "estimate_high": est_high,
             "deal_score": score,
             "generated_at": datetime.utcnow().isoformat(),
-            "generated_by": "Nautilus AI · Claude Sonnet",
+            "generated_by": "Nautilus Intelligence",
+            "hook":           memo_data.get("hook"),
+            "prix_justifie":  memo_data.get("prix_justifie"),
+            "liquidite":      memo_data.get("liquidite"),
+            "timing":         memo_data.get("timing"),
+            "prudence":       memo_data.get("prudence"),
+            "advisor_verdict": memo_data.get("advisor_verdict"),
             **memo_data,
         }
 
