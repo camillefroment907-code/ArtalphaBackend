@@ -2028,7 +2028,7 @@ export default function OpportunityDetail() {
                   { label: 'CURRENT PRICE', value: memo.current_price >= 1000 ? `€${(memo.current_price / 1000).toFixed(0)}K` : `€${memo.current_price}` },
                   { label: 'TARGET LOW',    value: memo.target_price?.low  ? `€${(memo.target_price.low  / 1000).toFixed(0)}K` : 'N/A' },
                   { label: 'TARGET HIGH',   value: memo.target_price?.high ? `€${(memo.target_price.high / 1000).toFixed(0)}K` : 'N/A' },
-                  { label: 'CONVICTION',    value: `${memo.conviction}/100` },
+                  { label: 'CONVICTION',    value: memo.conviction >= 75 ? 'Conviction forte' : memo.conviction >= 55 ? 'Conviction modérée' : 'Conviction faible' },
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', marginBottom: '4px' }}>{label}</div>
@@ -2038,33 +2038,62 @@ export default function OpportunityDetail() {
               </div>
             </div>
             <div style={{ padding: '28px 32px' }}>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', padding: '14px 16px', background: memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.06)' : memo.recommendation === 'WATCH' ? 'rgba(217,119,6,0.06)' : LT, borderRadius: '8px', border: `1px solid ${memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.2)' : memo.recommendation === 'WATCH' ? 'rgba(217,119,6,0.2)' : LTB}` }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: memo.recommendation === 'BUY' ? GL : memo.recommendation === 'WATCH' ? AMB : LTT3 }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', padding: '14px 16px', background: memo.recommendation === 'ACHETER' ? 'rgba(26,127,75,0.06)' : memo.recommendation === 'INTÉRESSANT' ? 'rgba(217,119,6,0.06)' : LT, borderRadius: '8px', border: `1px solid ${memo.recommendation === 'ACHETER' ? 'rgba(26,127,75,0.2)' : memo.recommendation === 'INTÉRESSANT' ? 'rgba(217,119,6,0.2)' : LTB}` }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: memo.recommendation === 'ACHETER' ? GL : memo.recommendation === 'INTÉRESSANT' ? AMB : LTT3 }}>
                   {memo.recommendation}
                 </div>
-                <div style={{ fontSize: '13px', color: LTT2 }}>
-                  {memo.time_horizon}{memo.target_price?.rationale ? ` · ${memo.target_price.rationale}` : ''}
-                </div>
               </div>
-              {[
-                { title: 'Investment Thesis', content: memo.thesis },
-                { title: 'Artist Context',    content: memo.artist_context },
-                { title: 'Pricing Analysis',  content: memo.pricing_analysis },
-              ].filter(s => s.content).map(({ title, content }) => (
-                <div key={title} style={{ marginBottom: '20px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '8px' }}>{title}</div>
-                  <p style={{ fontSize: '14px', color: LTT1, lineHeight: 1.8, margin: 0 }}>{content}</p>
-                </div>
-              ))}
-              {memo.risks && memo.risks.length > 0 && (
+
+              {memo.hook && (
                 <div style={{ marginBottom: '20px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '8px' }}>Key Risks</div>
-                  {memo.risks.map((risk: string, i: number) => (
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>◆ POURQUOI CE LOT</div>
+                  <p style={{ fontSize: '14px', color: LTT1, lineHeight: 1.8, margin: 0, fontStyle: 'italic' }}>{memo.hook}</p>
+                </div>
+              )}
+
+              {memo.prix_justifie && (
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>① LE PRIX EST-IL JUSTIFIÉ ?</div>
+                  <p style={{ fontSize: '14px', color: LTT1, lineHeight: 1.8, margin: 0 }}>{memo.prix_justifie}</p>
+                </div>
+              )}
+
+              {memo.liquidite && (
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>② POURREZ-VOUS REVENDRE ?</div>
+                  <p style={{ fontSize: '14px', color: LTT1, lineHeight: 1.8, margin: 0 }}>{memo.liquidite}</p>
+                </div>
+              )}
+
+              {memo.timing && (
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>③ EST-CE LE BON MOMENT ?</div>
+                  <p style={{ fontSize: '14px', color: LTT1, lineHeight: 1.8, margin: 0 }}>{memo.timing}</p>
+                </div>
+              )}
+
+              {memo.prudence && memo.prudence.length > 0 && (
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>◆ CE QUI NOUS REND PRUDENTS</div>
+                  {memo.prudence.map((item: string, i: number) => (
                     <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '6px' }}>
                       <span style={{ color: RED, fontSize: '12px', marginTop: '2px', flexShrink: 0 }}>▲</span>
-                      <span style={{ fontSize: '13px', color: LTT2, lineHeight: 1.6 }}>{risk}</span>
+                      <span style={{ fontSize: '13px', color: LTT2, lineHeight: 1.6 }}>{item}</span>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {memo.advisor_verdict && (
+                <div style={{ marginBottom: '20px', padding: '16px', background: LT, borderRadius: '8px', border: `1px solid ${LTB}` }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ CE QU'UN ADVISOR FERAIT</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: LTT1, marginBottom: '6px' }}>{memo.advisor_verdict.action}</div>
+                  {memo.advisor_verdict.horizon && (
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, marginBottom: '8px' }}>Horizon · {memo.advisor_verdict.horizon}</div>
+                  )}
+                  {memo.advisor_verdict.rationale && (
+                    <p style={{ fontSize: '13px', color: LTT2, lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>{memo.advisor_verdict.rationale}</p>
+                  )}
                 </div>
               )}
               <div style={{ borderTop: `1px solid ${LTB}`, paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
