@@ -144,7 +144,7 @@ function LotCard({ lot, lang, onClick, wishlisted, onWishlistToggle }: {
   const label = score >= 90 ? 'Exceptionnel' : score >= 80 ? 'Très fort' : score >= 65 ? 'Opportunité' : 'À surveiller';
   return (
     <div onClick={onClick}
-      style={{ background: 'white', border: '1px solid #E8E4DC', borderRadius: '10px', overflow: 'hidden', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', flexDirection: 'column' }}
+      style={{ background: 'white', border: '1px solid #E8E4DC', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', flexDirection: 'column' }}
       onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = '#1A2A44'; el.style.transform = 'translateY(-2px)'; el.style.boxShadow = '0 4px 16px rgba(26,42,68,0.08)'; }}
       onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = '#E8E4DC'; el.style.transform = 'none'; el.style.boxShadow = 'none'; }}
     >
@@ -169,12 +169,12 @@ function LotCard({ lot, lang, onClick, wishlisted, onWishlistToggle }: {
             {fmtPriceEur(lot.estimate_low, lot.currency)}
           </span>
           <div
-            style={{ position: 'relative' }}
+            style={{ position: 'relative', overflow: 'visible' }}
             onMouseEnter={e => { e.stopPropagation(); setShowTooltip(true); }}
             onMouseLeave={() => setShowTooltip(false)}
           >
             {showTooltip && (
-              <div style={{ position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)', background: 'white', border: '1px solid #E8E4DC', borderRadius: '6px', padding: '10px 12px', fontSize: '11px', color: '#374151', lineHeight: 1.6, width: '220px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', zIndex: 10, pointerEvents: 'none' }}>
+              <div style={{ position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)', background: 'white', border: '1px solid #E8E4DC', borderRadius: '6px', padding: '10px 12px', fontSize: '11px', color: '#374151', lineHeight: 1.6, width: '220px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', zIndex: 9999, pointerEvents: 'none' }}>
                 {BADGE_TOOLTIPS[label]}
               </div>
             )}
