@@ -16,6 +16,13 @@ export default function BillingSuccess() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [plan, setPlan] = useState("");
+  const [countdown, setCountdown] = useState(4);
+
+  useEffect(() => {
+    if (status !== "success") return;
+    const id = setInterval(() => setCountdown(c => Math.max(c - 1, 0)), 1000);
+    return () => clearInterval(id);
+  }, [status]);
 
   useSEO({ title: 'Subscription Confirmed · Nautilus', noindex: true });
 
@@ -94,7 +101,7 @@ export default function BillingSuccess() {
               Your subscription is active. You now have access to the world's most undervalued artworks.
             </p>
             <p style={{ fontSize: "13px", color: "#9A9A9A", marginBottom: "32px" }}>
-              Redirecting to your opportunities in a few seconds…
+              Redirecting to your opportunities in {countdown > 0 ? countdown : 1}s…
             </p>
             <button
               onClick={() => navigate("/app/opportunities")}

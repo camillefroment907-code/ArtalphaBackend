@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { getToken } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 export default function SignalFeed() {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
   const [urgentLots, setUrgentLots] = useState<any[]>([]);
   const [topLots, setTopLots] = useState<any[]>([]);
   const [sentiment, setSentiment] = useState<any>(null);
@@ -210,7 +213,7 @@ export default function SignalFeed() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>
-                  TOP VENTES DU MOIS
+                  {isFr ? 'TOP VENTES DU MOIS' : 'TOP SALES THIS MONTH'}
                 </span>
               </div>
               <button onClick={() => navigate('/app/explore?tab=best')}
@@ -284,7 +287,7 @@ export default function SignalFeed() {
           {/* Market stats */}
           <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border)' }}>
             <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '14px' }}>
-              Activité du marché
+              {isFr ? 'Activité du marché' : 'Market Activity'}
             </div>
             {[
               { label: 'Lots aux enchères', value: lotCount > 0 ? lotCount.toLocaleString() : '—', sub: 'Suivi en temps réel' },
@@ -306,7 +309,7 @@ export default function SignalFeed() {
             <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>
-                  Sentiment marché
+                  {isFr ? 'Sentiment marché' : 'Market Sentiment'}
                 </div>
                 <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', padding: '2px 8px', borderRadius: '3px', background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
                   {sentiment.overall}
