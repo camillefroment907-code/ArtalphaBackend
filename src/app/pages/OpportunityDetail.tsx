@@ -169,7 +169,9 @@ export default function OpportunityDetail() {
 
   useEffect(() => {
     if (!id) return;
-    fetch(`${BACKEND}/api/lots/${id}`)
+    fetch(`${BACKEND}/api/lots/${id}`, {
+      headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
+    })
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(data => { setLot(data); setLoading(false); })
       .catch(() => setLoading(false));
