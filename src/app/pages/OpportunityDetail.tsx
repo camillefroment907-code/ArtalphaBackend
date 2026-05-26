@@ -153,7 +153,7 @@ export default function OpportunityDetail() {
     setMemoLoading(true);
     try {
       const resp = await fetch(
-        `https://artalpha-backend-production.up.railway.app/api/memo/${lot.id}`,
+        `${BACKEND}/api/memo/${lot.id}`,
         { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } }
       );
       if (!resp.ok) throw new Error('Failed');

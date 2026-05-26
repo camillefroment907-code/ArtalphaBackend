@@ -232,7 +232,7 @@ export default function Pricing() {
 
     try {
       const resp = await fetch(
-        'https://artalpha-backend-production.up.railway.app/api/billing/create-checkout-session',
+        `${BACKEND}/api/billing/create-checkout-session`,
         {
           method: 'POST',
           headers: {
