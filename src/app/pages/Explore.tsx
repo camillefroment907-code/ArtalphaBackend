@@ -413,7 +413,7 @@ export default function Explore() {
   const [category, setCategory]       = useState(searchParams.get('category') || '');
   const [provenance, setProvenance]   = useState('');
   const [sources, setSources]         = useState<string[]>([]);
-  const [sortBy, setSortBy]           = useState(searchParams.get('sort_by') || 'created_at');
+  const [sortBy, setSortBy]           = useState(searchParams.get('sort_by') || 'deal_score');
   const [sortDir, setSortDir]         = useState(searchParams.get('sort_dir') || 'desc');
   const [artist, setArtist]           = useState(searchParams.get('artist') || '');
   const [auctionHouse, setAuctionHouse] = useState(searchParams.get('auction_house') || '');
