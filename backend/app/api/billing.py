@@ -459,7 +459,9 @@ async def create_checkout_session(
     sub = result.scalar_one_or_none()
 
     # ── SERVER-SIDE PLAN ENFORCEMENT ──────────────────────────────
-    if sub and sub.plan.value.lower() != "free" and sub.status.value.lower() in ("active", "trialing"):
+    # Only enforce same_plan/downgrade rules for real Stripe subscriptions.
+    # DB-only trials (stripe_subscription_id=NULL) must be allowed through to checkout.
+    if sub and sub.plan.value.lower() != "free" and sub.status.value.lower() in ("active", "trialing") and sub.stripe_subscription_id:
         current_plan_id = _plan_id(sub)
         target_plan = _plan_from_price_id(price_id)
         target_plan_id = _PLAN_VALUE_TO_ID.get(target_plan.value, "free")
