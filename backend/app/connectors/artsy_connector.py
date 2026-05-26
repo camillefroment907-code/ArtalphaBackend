@@ -188,7 +188,14 @@ query FetchLots($cursor: String) {
 def _parse_display_price(display: Optional[str]) -> Optional[float]:
     if not display:
         return None
-    clean = "".join(c for c in str(display) if c.isdigit() or c == ".")
+    s = str(display)
+    # If it's a price range (e.g. "€25,000 – €29,000"), take the lower bound only.
+    # Without this, "€25,000 – €29,000" → strip non-digits → "2500029000" (bug).
+    for sep in ["–", "—", " - ", " to "]:
+        if sep in s:
+            s = s.split(sep)[0]
+            break
+    clean = "".join(c for c in s if c.isdigit() or c == ".")
     try:
         return float(clean) if clean else None
     except ValueError:
