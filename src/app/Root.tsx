@@ -18,6 +18,7 @@ const VERIFY_EXEMPT = [
   '/app/verify-pending',
   '/app/pricing',
   '/app/contact',
+  '/app/verify-email',
 ];
 
 export default function Root() {
