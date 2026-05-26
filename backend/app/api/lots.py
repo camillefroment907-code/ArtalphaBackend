@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, Request, Header, Response
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_, desc, String
+from sqlalchemy import select, func, and_, or_, desc, String, case
 from sqlalchemy.orm import selectinload
 from typing import Optional, List
 from datetime import datetime, timedelta
@@ -298,6 +298,23 @@ async def list_lots(
     # Free-tier delay: only show lots ingested >5 min ago (prevents API racing)
     if plan == "free":
         filters.append(Lot.created_at <= datetime.utcnow() - timedelta(minutes=5))
+    # Minimum €50 EUR — exclut les lots trivialement cheap (ex: 26 SEK)
+    # Lots sans aucun prix (NULL/NULL) sont conservés
+    _eur_val = case(
+        (Lot.currency == 'SEK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.087),
+        (Lot.currency == 'USD', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.92),
+        (Lot.currency == 'GBP', func.coalesce(Lot.current_price, Lot.estimate_low) * 1.17),
+        (Lot.currency == 'DKK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.134),
+        (Lot.currency == 'NOK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.087),
+        (Lot.currency == 'CHF', func.coalesce(Lot.current_price, Lot.estimate_low) * 1.05),
+        else_=func.coalesce(Lot.current_price, Lot.estimate_low),
+    )
+    filters.append(
+        or_(
+            and_(Lot.current_price.is_(None), Lot.estimate_low.is_(None)),
+            _eur_val >= 50,
+        )
+    )
     if min_score is not None:
         filters.append(Lot.deal_score >= min_score)
     if max_score is not None:
@@ -995,7 +1012,20 @@ async def get_primary_lots(
             Lot.market_type == MarketType.PRIMARY,
             Lot.market_type == MarketType.GALLERY,
             Lot.auction_house_name.in_(["Artsper", "Saatchi Art", "Singulart"]),
-        )
+        ),
+        # Minimum €50 EUR — exclut les lots trivialement cheap
+        or_(
+            and_(Lot.current_price.is_(None), Lot.estimate_low.is_(None)),
+            case(
+                (Lot.currency == 'SEK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.087),
+                (Lot.currency == 'USD', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.92),
+                (Lot.currency == 'GBP', func.coalesce(Lot.current_price, Lot.estimate_low) * 1.17),
+                (Lot.currency == 'DKK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.134),
+                (Lot.currency == 'NOK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.087),
+                (Lot.currency == 'CHF', func.coalesce(Lot.current_price, Lot.estimate_low) * 1.05),
+                else_=func.coalesce(Lot.current_price, Lot.estimate_low),
+            ) >= 50,
+        ),
     ]
     if min_price is not None:
         pmin_conds = []
@@ -1075,6 +1105,19 @@ async def get_lots_for_investor(
         or_(
             Lot.confidence_score >= 50,
             Lot.confidence_score.is_(None),
+        ),
+        # Minimum €50 EUR — exclut les lots trivialement cheap
+        or_(
+            and_(Lot.current_price.is_(None), Lot.estimate_low.is_(None)),
+            case(
+                (Lot.currency == 'SEK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.087),
+                (Lot.currency == 'USD', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.92),
+                (Lot.currency == 'GBP', func.coalesce(Lot.current_price, Lot.estimate_low) * 1.17),
+                (Lot.currency == 'DKK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.134),
+                (Lot.currency == 'NOK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.087),
+                (Lot.currency == 'CHF', func.coalesce(Lot.current_price, Lot.estimate_low) * 1.05),
+                else_=func.coalesce(Lot.current_price, Lot.estimate_low),
+            ) >= 50,
         ),
     ]
 
