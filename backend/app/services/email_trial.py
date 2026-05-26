@@ -56,18 +56,3 @@ async def send_trial_ending_email(to_email: str, name: str, trial_end_date: str,
 """
     return await send_email(to_email, f"Your trial ends in 48 hours, {first}.",
                             html_email(content, "Trial ending soon"), TRANSAC_FROM)
-
-
-async def send_trial_expired_email(to_email: str, name: str, days_since_trial_end: int = 1, new_exceptional_count: int = 3, plan: str = "investor") -> bool:
-    """Email 10 — trial expired, not converted"""
-    first = _first_name(name, to_email)
-    content = f"""
-{label("A FINAL NOTE")}
-<h1>The market kept moving.</h1>
-<p>Your trial ended {days_since_trial_end} day(s) ago. Since then, Nautilus has identified <strong>{new_exceptional_count} exceptional opportunities</strong> — including lots by artists you explored during your trial.</p>
-<p>Reactivate today and get your first month at 20% off. Code: <strong style="color:#C6A85A;font-size:18px;">COMEBACK20</strong></p>
-{cta("Reactivate at -20%", "https://www.get-nautilus.com/app/pricing?coupon=COMEBACK20", gold=True)}
-<p style="color:#888888;font-size:13px;">Offer valid for 7 days. After that, standard pricing applies.</p>
-"""
-    return await send_email(to_email, "Your trial is over — but your edge doesn't have to be.",
-                            html_email(content, "Your trial is over"), TRANSAC_FROM)
