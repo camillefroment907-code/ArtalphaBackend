@@ -26,7 +26,6 @@ from app.services.email_auth import (
 from app.services.email_trial import (
     send_trial_started_email,
     send_trial_ending_email,
-    send_trial_expired_email,
 )
 
 # ── Category 3: Billing (emails 11–18) ────────────────────────────────────────
@@ -109,7 +108,7 @@ __all__ = [
     "send_verification_email", "send_welcome_email",
     "send_password_reset_email", "send_email_changed_email",
     # trial
-    "send_trial_started_email", "send_trial_ending_email", "send_trial_expired_email",
+    "send_trial_started_email", "send_trial_ending_email",
     # billing
     "send_payment_success_email", "send_payment_failed_email", "send_payment_retry_email",
     "send_subscription_cancelled_email", "send_subscription_canceled_email",

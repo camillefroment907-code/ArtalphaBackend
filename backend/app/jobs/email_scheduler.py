@@ -279,7 +279,6 @@ def run_daily_email_checks():
     _check_anniversaries()
     _check_artwork_anniversaries()
     _check_trial_ending()
-    _check_trial_expired()
     _check_annual_expiring()
     _check_winback()
     _check_payment_retry()
@@ -484,62 +483,6 @@ def _check_trial_ending():
                 db2.close()
         except Exception as e:
             logger.error("trial_ending_failed user=%s error=%s", user.email, e)
-
-
-def _check_trial_expired():
-    from app.services.email_trial import send_trial_expired_email
-    from app.models.db_models import User, Subscription, Alert, AlertChannel
-    from sqlalchemy import select, cast, Date
-
-    now = datetime.now(timezone.utc)
-    today = now.date()
-    dedup_cutoff = now - timedelta(hours=36)
-
-    db = _get_sync_db()
-    try:
-        # Users whose trial ends today and haven't converted to a paid plan
-        stmt = (
-            select(User, Subscription)
-            .join(User.subscription)
-            .where(
-                Subscription.status == "trialing",
-                cast(Subscription.current_period_end, Date) == today,
-            )
-        )
-        results = db.execute(stmt).all()
-
-        # Dedup: skip users already sent this email in the last 36h
-        dedup_stmt = select(Alert.user_id).where(
-            Alert.message.like("TRIAL_EXPIRED_%"),
-            Alert.sent_at >= dedup_cutoff,
-        )
-        already_sent = {str(uid) for uid in db.execute(dedup_stmt).scalars().all()}
-    finally:
-        db.close()
-
-    for user, sub in results:
-        if str(user.id) in already_sent:
-            continue
-        try:
-            days_since = 0  # Trial ends today
-            _run(send_trial_expired_email(user.email, user.full_name or "", days_since))
-            db2 = _get_sync_db()
-            try:
-                db2.add(Alert(
-                    user_id=user.id,
-                    lot_id=None,
-                    channel=AlertChannel.EMAIL,
-                    recipient=user.email,
-                    message=f"TRIAL_EXPIRED_{user.id}",
-                    deal_score_at_send=None,
-                    sent_at=now,
-                    is_delivered=True,
-                ))
-                db2.commit()
-            finally:
-                db2.close()
-        except Exception as e:
-            logger.error("trial_expired_failed user=%s error=%s", user.email, e)
 
 
 def _check_annual_expiring():
