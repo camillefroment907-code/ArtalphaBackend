@@ -73,6 +73,31 @@ AUCTION_HOUSE_BLACKLIST = {
 TITLE_BLACKLIST_KEYWORDS = [
     "gold coin", "silver coin", "postage stamp", "first day cover",
     "numismatic", "prix sur demande", "price on request", "price upon request",
+    # Attribution & copy exclusions
+    "copy of", "attributed to", "attribué à", "attribué",
+    "school of", "circle of", "follower of", "manner of",
+    "workshop of", "studio of", "d'après", "d'apres",
+    "umkreis", "kreis des", "cerchia", "suiveur de",
+    "entourage de", "kopia", "copie de", "efterföljare",
+]
+
+# Artist-level copy patterns — checked via regex on artist_name_raw
+ARTIST_COPY_PATTERNS = [
+    r" efter ",       # "PICASSO EFTER MONET"
+    r" efter$",       # "ANDY WARHOL EFTER"
+    r"^efter ",       # "EFTER PICASSO"
+    r" after ",       # "Follower After Matisse"
+    r" after$",       # "Andy Warhol After"
+    r"attrib",        # "attrib.", "attributed"
+    r"school of",
+    r"circle of",
+    r"follower",
+    r"manner of",
+    r"workshop",
+    r"studio of",
+    r"suiveur",
+    r"entourage",
+    r"efterföljare",
 ]
 
 
@@ -129,7 +154,7 @@ def normalize_title(title: str) -> str:
 
 
 def _is_blacklisted(lot: LotNormalized) -> bool:
-    """Return True if lot should be rejected based on house or title keywords."""
+    """Return True if lot should be rejected based on house, title keywords, or artist copy patterns."""
     auction_house = (lot.auction_house_name or "").lower()
     for blocked_house in AUCTION_HOUSE_BLACKLIST:
         if blocked_house in auction_house:
@@ -139,6 +164,12 @@ def _is_blacklisted(lot: LotNormalized) -> bool:
     for keyword in TITLE_BLACKLIST_KEYWORDS:
         if keyword in title_lower:
             return True
+
+    artist_lower = (lot.artist_name_raw or "").lower()
+    if artist_lower:
+        for pattern in ARTIST_COPY_PATTERNS:
+            if re.search(pattern, artist_lower, re.IGNORECASE):
+                return True
 
     return False
 
