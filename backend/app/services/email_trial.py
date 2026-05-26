@@ -50,7 +50,7 @@ async def send_trial_ending_email(to_email: str, name: str, trial_end_date: str,
 <p>Your 7-day trial ends on <strong>{trial_end_date}</strong>. After that, your access will be limited to the free plan — 3 lots per day, no Larry, no Investment Memos.</p>
 {comparison}
 {divider()}
-<p>Keep everything from €9/month. Your first acquisition pays for years of subscription.</p>
+<p>Keep everything from €19/month. Your first acquisition pays for years of subscription.</p>
 {cta("Keep my access", "https://www.get-nautilus.com/app/pricing", gold=True)}
 <p style="color:#888888;font-size:13px;">30-day money-back guarantee. Cancel anytime.</p>
 """

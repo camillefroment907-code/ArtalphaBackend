@@ -110,6 +110,26 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
     except Exception:
         pass
 
+    # Fire-and-forget welcome email
+    try:
+        async def _send_welcome():
+            try:
+                from app.services.email_auth import send_welcome_email
+                await send_welcome_email(
+                    to_email=user.email,
+                    name=user.first_name or "",
+                    plan="free",
+                    lots_tracked=0,
+                    avg_conviction=0,
+                    artists_tracked=0,
+                    lang=_lang,
+                )
+            except Exception:
+                pass
+        asyncio.create_task(_send_welcome())
+    except Exception:
+        pass
+
     plan = user.active_plan.value.lower()
     trial_end_iso = user.trial_end.isoformat() if user.trial_end else None
     token = create_access_token({
