@@ -17,6 +17,9 @@ export function CookieBanner() {
       // Small delay so page renders first
       const t = setTimeout(() => setVisible(true), 1200);
       return () => clearTimeout(t);
+    } else if (existing === 'all') {
+      // Returning user who already gave consent — load analytics immediately
+      _loadAnalytics();
     }
   }, []);
 
@@ -139,8 +142,10 @@ export function CookieBanner() {
 }
 
 function _loadAnalytics() {
+  if (typeof window === 'undefined') return;
+
   // Microsoft Clarity — inject dynamically after consent
-  if (typeof window !== 'undefined' && !(window as any).__clarityLoaded) {
+  if (!(window as any).__clarityLoaded) {
     const clarityId = (import.meta as any).env?.VITE_CLARITY_ID;
     if (clarityId) {
       (window as any).__clarityLoaded = true;
@@ -148,6 +153,22 @@ function _loadAnalytics() {
       s.type = 'text/javascript';
       s.async = true;
       s.text = `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window, document, "clarity", "script", "${clarityId}");`;
+      document.head.appendChild(s);
+    }
+  }
+
+  // Google Analytics 4 — inject dynamically after consent
+  if (!(window as any).__ga4Loaded) {
+    const ga4Id = (import.meta as any).env?.VITE_GA4_ID;
+    if (ga4Id) {
+      (window as any).__ga4Loaded = true;
+      (window as any).dataLayer = (window as any).dataLayer || [];
+      (window as any).gtag = function () { (window as any).dataLayer.push(arguments); };
+      (window as any).gtag('js', new Date());
+      (window as any).gtag('config', ga4Id, { send_page_view: false });
+      const s = document.createElement('script');
+      s.async = true;
+      s.src = `https://www.googletagmanager.com/gtag/js?id=${ga4Id}`;
       document.head.appendChild(s);
     }
   }

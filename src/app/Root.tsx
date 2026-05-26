@@ -56,6 +56,15 @@ export default function Root() {
     }
   }, [location.pathname]);
 
+  // GA4 page view on route change
+  useEffect(() => {
+    if (typeof (window as any).gtag === 'function') {
+      (window as any).gtag('event', 'page_view', {
+        page_path: location.pathname + location.search,
+      });
+    }
+  }, [location.pathname]);
+
   const isOnboarding = location.pathname.startsWith('/app/onboarding');
 
   return (
