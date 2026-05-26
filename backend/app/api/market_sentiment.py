@@ -5,7 +5,8 @@ from sqlalchemy import select, func, and_, or_
 from datetime import datetime, timedelta
 
 from app.database import get_db
-from app.models.db_models import Lot
+from app.models.db_models import Lot, User
+from app.api.auth_utils import get_current_user
 
 router = APIRouter(prefix="/market", tags=["market"])
 
@@ -13,7 +14,10 @@ _sentiment_cache: dict = {"data": None, "generated_at": None}
 CACHE_MINUTES = 30
 
 @router.get("/sentiment")
-async def get_market_sentiment(db: AsyncSession = Depends(get_db)):
+async def get_market_sentiment(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Market sentiment by category — cached 30 min."""
 
     now = datetime.utcnow()
@@ -123,7 +127,10 @@ async def get_market_sentiment(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/index")
-async def get_market_index(db: AsyncSession = Depends(get_db)):
+async def get_market_index(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
     The Nautilus Art Market Index — weekly publication.
     A single number 0-100 representing overall art market health.
@@ -260,7 +267,10 @@ async def get_market_index(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/beta")
-async def get_market_beta(db: AsyncSession = Depends(get_db)):
+async def get_market_beta(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Macro Art Market Beta — volatility and market correlation by art segment."""
     from app.utils.cache import get_cached, set_cached
 

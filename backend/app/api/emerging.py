@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
 from app.database import get_db
-from app.models.db_models import ArtistProfile, EmergingArtist
-from app.api.auth_utils import decode_token
+from app.models.db_models import ArtistProfile, EmergingArtist, User
+from app.api.auth_utils import decode_token, get_current_user
 
 router = APIRouter(prefix="/emerging", tags=["emerging"])
 emerging_artists_router = APIRouter(prefix="/emerging-artists", tags=["emerging"])
@@ -36,10 +36,10 @@ def _momentum_signal(score: Optional[float]) -> Optional[str]:
 async def get_emerging_artists(
     page: int = Query(1, ge=1),
     page_size: int = Query(12, ge=1, le=50),
-    creds: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    plan = _plan_from_credentials(creds)
+    plan = getattr(current_user, "plan", "free") or "free"
     is_free = plan not in ("investor", "pro", "elite", "institutional")
 
     result = await db.execute(
