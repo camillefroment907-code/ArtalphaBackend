@@ -179,7 +179,15 @@ function mapLot(lot: any) {
     new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(toEur(v));
   return {
     id: String(lot.id), artistName: lot.artist_name_raw?.trim() || "Unknown Artist",
-    title: lot.title || "Untitled", price: price ? fmt(price) : "Prix sur demande",
+    title: (() => {
+      const t = lot.title || "Untitled";
+      const a = lot.artist_name_raw?.trim();
+      if (a && t.toLowerCase().startsWith(a.toLowerCase())) {
+        return t.slice(a.length).replace(/^[\s\-–—,]+/, '').trim() || "Untitled";
+      }
+      return t;
+    })(),
+    price: price ? fmt(price) : "Prix sur demande",
     estimatedValue: estimate ? fmt(estimate) : "",
     estimateLow, estimateHigh,
     estimateLowFmt: estimateLow ? fmt(estimateLow) : "",
