@@ -99,6 +99,51 @@ async def get_pre_auction_artists(
     return [_serialize_artist(a) for a in artists]
 
 
+@router.get("/search")
+async def list_top_artists(
+    limit: int = Query(20, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    """Top artists by lot count — used for initial Artists page load."""
+    from collections import defaultdict
+    result = await db.execute(
+        select(
+            Lot.artist_name_raw,
+            func.count(Lot.id).label("lot_count"),
+            func.avg(Lot.deal_score).label("avg_score"),
+            func.avg(Lot.current_price).label("avg_price"),
+        )
+        .where(Lot.artist_name_raw.isnot(None))
+        .group_by(Lot.artist_name_raw)
+        .order_by(func.count(Lot.id).desc())
+        .limit(limit)
+    )
+    artists = result.all()
+    raw = [
+        {
+            "name": a.artist_name_raw,
+            "lot_count": a.lot_count,
+            "avg_score": round(float(a.avg_score or 0), 1),
+            "avg_price": round(float(a.avg_price or 0)),
+        }
+        for a in artists
+        if a.artist_name_raw and not _is_attribution(a.artist_name_raw)
+    ]
+    groups: dict[str, list] = defaultdict(list)
+    for entry in raw:
+        groups[_canonical_name(entry["name"])].append(entry)
+    grouped = []
+    for variants in groups.values():
+        if len(variants) == 1:
+            grouped.append(variants[0])
+        else:
+            best = max(variants, key=lambda v: v["lot_count"])
+            total_lots = sum(v["lot_count"] for v in variants)
+            grouped.append({**best, "lot_count": total_lots})
+    grouped.sort(key=lambda x: x["lot_count"], reverse=True)
+    return {"artists": grouped[:limit]}
+
+
 @router.get("/search/{query}")
 async def search_artists(
     query: str,

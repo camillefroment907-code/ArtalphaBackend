@@ -19,7 +19,7 @@ export default function Artists() {
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
 
   useEffect(() => {
-    fetch(`${BACKEND}/api/artist-profiles/search?sort_by=lots_count&sort_dir=desc`)
+    fetch(`${BACKEND}/api/artist-profiles/search`)
       .then(r => r.json())
       .then(d => { setTopArtists(d.artists || []); setLoadingArtists(false); })
       .catch(() => setLoadingArtists(false));
