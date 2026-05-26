@@ -16,6 +16,8 @@ from slowapi.util import get_remote_address
 
 from app.utils.cache import get_cached, set_cached
 
+from app.models.db_models import User
+
 limiter = Limiter(key_func=get_remote_address)
 
 # Approximate EUR conversion rates — used for currency-aware price filters
@@ -208,6 +210,7 @@ async def _lot_stream_generator(request: Request, min_score: float = 0):
 async def stream_lots(
     request: Request,
     min_score: float = Query(0, ge=0, le=100),
+    current_user: User = Depends(get_current_user),
 ):
     """SSE — streams new scored lots every 8s."""
     return StreamingResponse(
@@ -224,7 +227,9 @@ async def stream_lots(
 # ── REST ──────────────────────────────────────────────────────────────────────
 
 @router.get("")
+@limiter.limit("30/minute")
 async def list_lots(
+    request: Request,
     response: Response,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -258,9 +263,9 @@ async def list_lots(
     sort_by: str = Query("deal_score", pattern="^(deal_score|auction_date|created_at|current_price)$"),
     sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
-    # Block authenticated but unverified users (bypass for pro/admin)
+    # Block unverified free users (bypass for pro/admin)
     ADMIN_EMAIL = "camillefroment907@gmail.com"
     if current_user and not current_user.is_verified:
         if current_user.email != ADMIN_EMAIL and (current_user.plan or "free") == "free":
@@ -586,6 +591,7 @@ async def get_hot_deals(
     limit: int = Query(20, ge=1, le=200),
     min_score: float = Query(30.0, ge=0, le=100),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Returns the best deals right now — lots significantly below market value."""
     now = datetime.utcnow()
@@ -668,6 +674,7 @@ async def get_hot_deals(
 async def get_top_deals(
     limit: int = Query(10, ge=1, le=50),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     today = datetime.utcnow()
     month_ahead = today + timedelta(days=30)
@@ -717,7 +724,10 @@ async def get_lot_count(request: Request, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/stats", response_model=DashboardStats)
-async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
+async def get_dashboard_stats(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
     total = await db.execute(select(func.count(Lot.id)))
@@ -756,6 +766,7 @@ async def get_trending_lots(
     page: int = Query(1, ge=1),
     page_size: int = Query(24, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Lots by blue-chip or trending artists."""
     from app.engines.artist_trends import BLUE_CHIP_ARTISTS, TRENDING_ARTISTS
@@ -810,6 +821,7 @@ async def get_missed_deals(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Past lots — all sales whose auction date has passed."""
     now = datetime.utcnow()
@@ -834,7 +846,10 @@ async def get_missed_deals(
 
 
 @router.get("/sources")
-async def get_source_stats(db: AsyncSession = Depends(get_db)):
+async def get_source_stats(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
     Per-source stats for the World Auctions source health monitor.
     Returns lot count, last_added datetime, and freshness status per source.
@@ -926,7 +941,10 @@ async def get_source_stats(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/coverage")
-async def get_market_coverage(db: AsyncSession = Depends(get_db)):
+async def get_market_coverage(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
     Global market coverage metrics for the dashboard status bar.
     Returns coverage score, total lots, fresh sources count, avg confidence.
@@ -1000,7 +1018,7 @@ async def get_primary_lots(
     category: Optional[str] = None,
     search: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
     """Primary market feed — galleries, emerging artists, direct sales."""
     plan = await get_user_plan(current_user, db)
@@ -1086,7 +1104,7 @@ async def get_lots_for_investor(
     profile: Optional[str] = Query(None, pattern="^(first_time|collector|investor)$"),
     limit: int = Query(12, ge=1, le=24),
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Investor-first endpoint. Returns top N lots curated for a specific budget + profile.
@@ -1373,6 +1391,7 @@ async def ingest_hammer_prices(
 async def get_auction_calendar(
     days: int = Query(30, ge=1, le=90),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Upcoming auctions grouped by house and date."""
     cache_key = f"calendar:{days}"
@@ -1476,8 +1495,9 @@ async def get_public_lots(
     limit: int = Query(default=8, le=12),
     sort: str = "deal_score",
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    """Public endpoint — no auth required. Returns top lots for landing page."""
+    """Returns top lots — requires authentication."""
     from sqlalchemy import desc
 
     order_col = Lot.deal_score if sort == "deal_score" else Lot.created_at
@@ -1504,6 +1524,7 @@ async def get_closing_today(
     limit: int = 50,
     min_score: float = 0,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Lots closing within N days, ordered by auction_date asc."""
     from sqlalchemy import asc
@@ -1534,7 +1555,7 @@ async def get_closing_today(
 async def get_lot(
     lot_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
     result = await db.execute(
         select(Lot)
@@ -1780,6 +1801,7 @@ async def get_lot(
 async def get_comparables(
     lot_id: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Find comparable lots.
@@ -1970,6 +1992,7 @@ async def get_similar(
     lot_id: str,
     limit: int = Query(6, ge=1, le=20),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Similar lots by category and price range."""
     lot = (await db.execute(
@@ -2017,7 +2040,7 @@ async def get_lot_projection(
     lot_id: str,
     purchase_price: Optional[float] = Query(None, description="Override price for projection (EUR)"),
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
     """Value projection for a lot over 5/10/20/30/50 years."""
     result = await db.execute(

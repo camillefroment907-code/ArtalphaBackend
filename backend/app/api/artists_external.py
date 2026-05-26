@@ -4,8 +4,9 @@ from sqlalchemy import select, func, desc
 from typing import List, Optional
 
 from app.database import get_db
-from app.models.db_models import Artist, Lot
+from app.models.db_models import Artist, Lot, User
 from app.models.schemas import ArtistOut
+from app.api.auth_utils import get_current_user
 
 artists_router = APIRouter(prefix="/artists", tags=["artists"])
 external_router = APIRouter(prefix="/v1", tags=["external-api"])
@@ -20,6 +21,7 @@ async def list_artists(
     trend: Optional[str] = None,
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     stmt = select(Artist)
     filters = []
@@ -41,7 +43,11 @@ async def list_artists(
 
 
 @artists_router.get("/{artist_id}", response_model=ArtistOut)
-async def get_artist(artist_id: str, db: AsyncSession = Depends(get_db)):
+async def get_artist(
+    artist_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     result = await db.execute(select(Artist).where(Artist.id == artist_id))
     artist = result.scalar_one_or_none()
     if not artist:
@@ -50,7 +56,11 @@ async def get_artist(artist_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @artists_router.get("/{artist_id}/oracle")
-async def get_artist_oracle(artist_id: str, db: AsyncSession = Depends(get_db)):
+async def get_artist_oracle(
+    artist_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Nautilus Oracle — latest predictive signals for this artist. 404 if not yet computed."""
     from app.models.db_models import ArtistSignal
     result = await db.execute(
@@ -79,7 +89,11 @@ async def get_artist_oracle(artist_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @artists_router.get("/by-name/{name}/oracle")
-async def get_artist_oracle_by_name(name: str, db: AsyncSession = Depends(get_db)):
+async def get_artist_oracle_by_name(
+    name: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Nautilus Oracle by artist name — case-insensitive, strips spaces."""
     from app.models.db_models import ArtistSignal
     normalized = name.strip().lower().replace("  ", " ")
@@ -88,7 +102,6 @@ async def get_artist_oracle_by_name(name: str, db: AsyncSession = Depends(get_db
     )
     artist = artist_result.scalars().first()
     if not artist:
-        # fallback: try against lower(name)
         artist_result = await db.execute(
             select(Artist).where(func.lower(Artist.name) == normalized)
         )
@@ -125,6 +138,7 @@ async def get_artist_lots(
     artist_id: str,
     limit: int = Query(10, ge=1, le=50),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     from sqlalchemy.orm import selectinload
     result = await db.execute(
@@ -148,12 +162,12 @@ async def external_get_deals(
     """
     External integration endpoint.
     Returns current top deals in a simplified format for third-party apps.
+    Requires a valid API key (future: validated against api_keys table).
     """
-    # In production: validate api_key against a keys table
     if not api_key:
         raise HTTPException(
             status_code=401,
-            detail="API key required. Get yours at hono.art/developers",
+            detail="API key required. Get yours at get-nautilus.com/developers",
         )
 
     from sqlalchemy import and_

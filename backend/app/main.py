@@ -70,8 +70,77 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
-# ── Rate limiter (in-memory; swap storage= to Redis in prod if desired) ────────
-limiter = Limiter(key_func=get_remote_address, default_limits=["300/minute"])
+# Scrapers / bots known to be used for data harvesting
+_BOT_UA_FRAGMENTS = [
+    "python-requests", "python-httpx", "python-urllib",
+    "scrapy", "aiohttp",
+    "curl/", "wget/",
+    "go-http-client",
+    "libwww-perl",
+    "java/", "apache-httpclient",
+    "scraperapi", "dataforseo",
+    "headlesschrome", "phantomjs",
+    "okhttp",
+    "postmanruntime",
+]
+
+# Data paths that must be protected from bots (not marketing/auth/health)
+_PROTECTED_PREFIXES = (
+    "/api/lots",
+    "/api/artist",
+    "/api/v1/",
+    "/api/emerging",
+    "/api/collector",
+    "/api/recommendations",
+    "/api/market-sentiment",
+    "/api/portfolio",
+    "/api/chat",
+    "/api/agent",
+)
+
+
+class BotProtectionMiddleware(BaseHTTPMiddleware):
+    """Block known scraper User-Agents on protected data routes."""
+    async def dispatch(self, request: StarletteRequest, call_next):
+        path = request.url.path
+        if any(path.startswith(p) for p in _PROTECTED_PREFIXES):
+            ua = request.headers.get("user-agent", "").lower()
+            if any(frag in ua for frag in _BOT_UA_FRAGMENTS):
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "Automated access is not permitted."},
+                )
+            # Require at least one browser-style header (Accept or Accept-Language)
+            has_accept = bool(request.headers.get("accept"))
+            has_lang = bool(request.headers.get("accept-language"))
+            if not ua or (not has_accept and not has_lang):
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "Automated access is not permitted."},
+                )
+        return await call_next(request)
+
+
+# ── Rate limiter — keyed by authenticated user ID when JWT present, else IP ───
+def _user_or_ip_key(request: StarletteRequest) -> str:
+    """Use JWT sub as rate-limit key so VPN/proxy rotation doesn't help."""
+    auth = request.headers.get("authorization", "")
+    if auth.startswith("Bearer "):
+        token = auth[7:]
+        try:
+            from jose import jwt as _jwt
+            from app.config import get_settings as _gs
+            _s = _gs()
+            payload = _jwt.decode(token, _s.jwt_secret, algorithms=[_s.jwt_algorithm])
+            uid = payload.get("sub")
+            if uid:
+                return f"user:{uid}"
+        except Exception:
+            pass
+    return get_remote_address(request)
+
+
+limiter = Limiter(key_func=_user_or_ip_key, default_limits=["60/minute"])
 
 structlog.configure(
     wrapper_class=structlog.make_filtering_bound_logger(
@@ -152,6 +221,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 # ── CORS — allow frontend on 3000 ─────────────────────────────────────────────
+app.add_middleware(BotProtectionMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(

@@ -102,12 +102,3 @@ async def get_waitlist_count(db: AsyncSession = Depends(get_db)):
     return {"count": result.scalar() or 0}
 
 
-@router.get("/position/{email}")
-async def get_waitlist_position(email: str, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(WaitlistEntry).where(WaitlistEntry.email == email.strip().lower())
-    )
-    entry = result.scalar_one_or_none()
-    if not entry:
-        raise HTTPException(status_code=404, detail="Email not found on waitlist")
-    return {"position": entry.position, "referral_code": entry.referral_code}

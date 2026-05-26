@@ -5,7 +5,8 @@ from sqlalchemy import select, func, desc, or_, text
 from typing import Optional
 
 from app.database import get_db
-from app.models.db_models import ArtistProfile, Lot
+from app.models.db_models import ArtistProfile, Lot, User
+from app.api.auth_utils import get_current_user
 
 router = APIRouter(prefix="/artist-profiles", tags=["artist-profiles"])
 
@@ -35,6 +36,7 @@ async def list_artists(
     search: Optional[str] = Query(None),
     limit: int = Query(20, le=100),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """List artists with investment intelligence scores."""
     filters = []
@@ -71,6 +73,7 @@ async def list_artists(
 async def get_momentum_artists(
     limit: int = Query(10, le=50),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Top artists by momentum score."""
     result = await db.execute(
@@ -87,6 +90,7 @@ async def get_momentum_artists(
 async def get_pre_auction_artists(
     limit: int = Query(10, le=50),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Artists in galleries but not yet at auction."""
     result = await db.execute(
@@ -103,6 +107,7 @@ async def get_pre_auction_artists(
 async def list_top_artists(
     limit: int = Query(20, le=100),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Top artists by lot count — used for initial Artists page load."""
     from collections import defaultdict
@@ -148,6 +153,7 @@ async def list_top_artists(
 async def search_artists(
     query: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Search artists by name — returns list with basic stats from lot data."""
     use_trgm = len(query) >= 4
@@ -219,6 +225,7 @@ async def search_artists(
 async def get_format_matrix(
     artist_name: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Format Performance Matrix — normalized medium categories with price metrics."""
     from app.utils.cache import get_cached, set_cached
@@ -321,6 +328,7 @@ async def get_format_matrix(
 async def get_geo_arbitrage(
     artist_name: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Geographic Arbitrage Detector — avg prices by market region using currency + house signals."""
     from app.utils.cache import get_cached, set_cached
@@ -489,6 +497,7 @@ async def get_geo_arbitrage(
 async def get_timing_optimizer(
     artist_name: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Auction House Timing Optimizer — best house × month combos from historical data."""
     from app.utils.cache import get_cached, set_cached
@@ -579,6 +588,7 @@ async def get_timing_optimizer(
 async def get_liquidity_map(
     artist_name: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Liquidity Depth Map — 5 price bands × 3 time periods heatmap."""
     from app.utils.cache import get_cached, set_cached
@@ -659,6 +669,7 @@ async def get_liquidity_map(
 async def get_calendar_overlay(
     artist_name: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Institutional Calendar Overlay — major sale events per year+month for PriceChart markers."""
     from app.utils.cache import get_cached, set_cached
@@ -740,6 +751,7 @@ async def get_calendar_overlay(
 async def get_artist_price_history(
     artist_name: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Full price history for an artist — hammer prices over time."""
     from app.utils.cache import get_cached, set_cached
@@ -862,6 +874,7 @@ async def get_artist_price_history(
 async def get_investment_grade(
     artist_name: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Investment Grade Score 0-100 — aggregates liquidity, cycle, sell-through, trend, supply."""
     from app.utils.cache import get_cached, set_cached
@@ -976,6 +989,7 @@ async def get_investment_grade(
 async def get_correlation_matrix(
     artists: str = Query(..., description="Comma-separated artist names"),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Pearson correlation matrix of annual price returns for a list of artists."""
     artist_list = [a.strip() for a in artists.split(",") if a.strip()][:10]
@@ -1041,6 +1055,7 @@ async def get_correlation_matrix(
 async def get_artist_intelligence(
     artist_name: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Full artist intelligence — all market data Nautilus has on this artist."""
     from app.utils.cache import get_cached, set_cached
