@@ -37,7 +37,7 @@ async def generate_investment_memo(
     if plan in BLOCKED_PLANS:
         raise HTTPException(
             403,
-            "Investment memos are available from the Investor plan (€29/month)."
+            "Investment memos are available from the Investor plan (€19/month)."
         )
 
     if not settings.anthropic_api_key:

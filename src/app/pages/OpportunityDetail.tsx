@@ -1899,7 +1899,7 @@ export default function OpportunityDetail() {
                     <span style={{ color: LTT3, marginLeft: '4px' }}>· PDF · Analyse complète</span>
                   </div>
                   <div style={{ marginBottom: '16px' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#F0F0FF', border: '1px solid #C7C7F0', color: '#5B5BD6', padding: '3px 8px', borderRadius: '3px' }}>FAMILY OFFICE+</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#F0F0FF', border: '1px solid #C7C7F0', color: '#5B5BD6', padding: '3px 8px', borderRadius: '3px' }}>PRO+</span>
                   </div>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: GOLD, opacity: 0.4, letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', marginTop: '12px', cursor: 'default' }}>
                     ◆ BIENTÔT DISPONIBLE
