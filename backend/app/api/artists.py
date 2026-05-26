@@ -105,18 +105,37 @@ async def search_artists(
     db: AsyncSession = Depends(get_db),
 ):
     """Search artists by name — returns list with basic stats from lot data."""
-    result = await db.execute(
-        select(
-            Lot.artist_name_raw,
-            func.count(Lot.id).label("lot_count"),
-            func.avg(Lot.deal_score).label("avg_score"),
-            func.avg(Lot.current_price).label("avg_price"),
+    use_trgm = len(query) >= 4
+
+    if use_trgm:
+        stmt = (
+            select(
+                Lot.artist_name_raw,
+                func.count(Lot.id).label("lot_count"),
+                func.avg(Lot.deal_score).label("avg_score"),
+                func.avg(Lot.current_price).label("avg_price"),
+                func.max(func.similarity(Lot.artist_name_raw, query)).label("sim"),
+            )
+            .where(func.similarity(Lot.artist_name_raw, query) > 0.15)
+            .group_by(Lot.artist_name_raw)
+            .order_by(func.max(func.similarity(Lot.artist_name_raw, query)).desc())
+            .limit(10)
         )
-        .where(Lot.artist_name_raw.ilike(f"%{query}%"))
-        .group_by(Lot.artist_name_raw)
-        .order_by(func.count(Lot.id).desc())
-        .limit(10)
-    )
+    else:
+        stmt = (
+            select(
+                Lot.artist_name_raw,
+                func.count(Lot.id).label("lot_count"),
+                func.avg(Lot.deal_score).label("avg_score"),
+                func.avg(Lot.current_price).label("avg_price"),
+            )
+            .where(Lot.artist_name_raw.ilike(f"%{query}%"))
+            .group_by(Lot.artist_name_raw)
+            .order_by(func.count(Lot.id).desc())
+            .limit(10)
+        )
+
+    result = await db.execute(stmt)
     artists = result.all()
     from collections import defaultdict
     raw = [
