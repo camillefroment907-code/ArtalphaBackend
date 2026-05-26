@@ -231,8 +231,12 @@ function DateRow({ entry, onLotClick }: { entry: DateEntry; onLotClick: (id: str
 }
 
 export default function AuctionCalendar() {
-  useSEO({ title: "Calendrier des Enchères — Nautilus", description: "Ventes à venir chez Christie's, Sotheby's, Drouot et 50+ maisons." });
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
+  useSEO({
+    title: isFr ? "Calendrier des Enchères — Nautilus" : "Auction Calendar — Nautilus",
+    description: isFr ? "Ventes à venir chez Christie's, Sotheby's, Drouot et 50+ maisons." : "Upcoming sales at Christie's, Sotheby's, Drouot and 50+ houses.",
+  });
   const nav = useNavigate();
   const [days, setDays] = useState(30);
   const [view, setView] = useState<'houses' | 'dates'>('houses');

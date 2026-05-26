@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { getPlanLimits, getUser } from '../../lib/auth';
 import { useSEO } from '../../lib/useSEO';
 
@@ -8,7 +9,12 @@ const PLAN_LABELS: Record<string, string> = {
 };
 
 export default function Market() {
-  useSEO({ title: "Le Marché — Nautilus", description: "Toutes les enchères mondiales analysées par Nautilus." });
+  const { i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
+  useSEO({
+    title: isFr ? "Le Marché — Nautilus" : "Market Intelligence — Nautilus",
+    description: isFr ? "Toutes les enchères mondiales analysées par Nautilus." : "All global auctions analyzed by Nautilus.",
+  });
   const navigate = useNavigate();
   const limits = getPlanLimits();
   const user = getUser();

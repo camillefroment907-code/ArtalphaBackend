@@ -25,8 +25,12 @@ interface ApiResponse {
 }
 
 export default function Emerging() {
-  useSEO({ title: "Artistes Émergents — Nautilus", description: "Artistes en progression détectés par Nautilus Intelligence." });
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
+  useSEO({
+    title: isFr ? "Artistes Émergents — Nautilus" : "Emerging Artists — Nautilus",
+    description: isFr ? "Artistes en progression détectés par Nautilus Intelligence." : "Rising artists detected by Nautilus Intelligence.",
+  });
   const navigate = useNavigate();
   const [artists, setArtists] = useState<EmergingArtist[]>([]);
   const [loading, setLoading] = useState(true);

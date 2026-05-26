@@ -1,11 +1,17 @@
 import { Link } from 'react-router';
 import { useSEO } from '../../lib/useSEO';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { OpportunityCard } from '../components/OpportunityCard';
 import { mockArtworks, mockArtists } from '../data/mockData';
 
 export default function Home() {
-  useSEO({ title: "Nautilus — Intelligence Marché de l'Art", description: "1,5M lots analysés, scores IA, alertes en temps réel." });
+  const { i18n } = useTranslation();
+  const isFr = i18n.language?.startsWith('fr');
+  useSEO({
+    title: isFr ? "Nautilus — Intelligence Marché de l'Art" : "Nautilus — Art Market Intelligence",
+    description: isFr ? "1,5M lots analysés, scores IA, alertes en temps réel." : "1.5M lots analyzed, AI scores, real-time alerts.",
+  });
   const [heroIndex] = useState(0);
   const heroArtwork = mockArtworks[heroIndex];
   const topOpportunities = mockArtworks.slice(0, 4);
