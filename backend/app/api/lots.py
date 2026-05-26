@@ -17,6 +17,15 @@ from slowapi.util import get_remote_address
 from app.utils.cache import get_cached, set_cached
 
 limiter = Limiter(key_func=get_remote_address)
+
+# Approximate EUR conversion rates — used for currency-aware price filters
+_FX_TO_EUR: dict[str, float] = {
+    'EUR': 1.0, 'USD': 0.92, 'GBP': 1.17,
+    'SEK': 0.087, 'CHF': 1.05, 'DKK': 0.134,
+    'NOK': 0.087, 'JPY': 0.006, 'HKD': 0.118,
+    'AUD': 0.59, 'CAD': 0.68,
+}
+
 from app.utils.real_cost import compute_real_cost
 from app.utils.estimation_bias import get_estimation_bias
 from app.utils.cycle_stage import get_cycle_stage
@@ -368,24 +377,47 @@ async def list_lots(
             )
         )
     if min_price is not None and min_price > 0:
-        filters.append(
-            or_(Lot.current_price >= min_price, Lot.estimate_low >= min_price)
+        # Convert EUR min_price to each native currency before comparing
+        price_min_conds = []
+        for curr, rate in _FX_TO_EUR.items():
+            if rate > 0:
+                threshold = min_price / rate
+                price_min_conds.append(
+                    and_(
+                        Lot.currency == curr,
+                        or_(Lot.current_price >= threshold, Lot.estimate_low >= threshold),
+                    )
+                )
+        price_min_conds.append(
+            and_(
+                Lot.currency.is_(None),
+                or_(Lot.current_price >= min_price, Lot.estimate_low >= min_price),
+            )
         )
+        filters.append(or_(*price_min_conds))
     if max_price is not None and max_price > 0:
-        filters.append(
-            or_(Lot.current_price <= max_price, Lot.estimate_low <= max_price)
+        # Convert EUR max_price to each native currency before comparing
+        price_max_conds = []
+        for curr, rate in _FX_TO_EUR.items():
+            if rate > 0:
+                threshold = max_price / rate
+                price_max_conds.append(
+                    and_(
+                        Lot.currency == curr,
+                        or_(Lot.current_price <= threshold, Lot.estimate_low <= threshold),
+                    )
+                )
+        price_max_conds.append(
+            and_(
+                Lot.currency.is_(None),
+                or_(Lot.current_price <= max_price, Lot.estimate_low <= max_price),
+            )
         )
+        filters.append(or_(*price_max_conds))
     if estimate_max is not None and estimate_max > 0:
-        # Approximate currency conversion rates to EUR
-        _FX = {
-            'EUR': 1.0, 'USD': 0.92, 'GBP': 1.17,
-            'SEK': 0.087, 'CHF': 1.05, 'DKK': 0.134,
-            'NOK': 0.087, 'JPY': 0.006, 'HKD': 0.118,
-            'AUD': 0.59, 'CAD': 0.68,
-        }
         # Build OR conditions: for each currency, compute threshold in that currency
         currency_conds = []
-        for curr, rate in _FX.items():
+        for curr, rate in _FX_TO_EUR.items():
             if rate > 0:
                 threshold = estimate_max / rate
                 currency_conds.append(
@@ -966,9 +998,19 @@ async def get_primary_lots(
         )
     ]
     if min_price is not None:
-        filters.append(Lot.current_price >= min_price)
+        pmin_conds = []
+        for curr, rate in _FX_TO_EUR.items():
+            if rate > 0:
+                pmin_conds.append(and_(Lot.currency == curr, Lot.current_price >= min_price / rate))
+        pmin_conds.append(and_(Lot.currency.is_(None), Lot.current_price >= min_price))
+        filters.append(or_(*pmin_conds))
     if max_price is not None:
-        filters.append(Lot.current_price <= max_price)
+        pmax_conds = []
+        for curr, rate in _FX_TO_EUR.items():
+            if rate > 0:
+                pmax_conds.append(and_(Lot.currency == curr, Lot.current_price <= max_price / rate))
+        pmax_conds.append(and_(Lot.currency.is_(None), Lot.current_price <= max_price))
+        filters.append(or_(*pmax_conds))
     if category:
         filters.append(Lot.category.ilike(f"%{category}%"))
     if search:
@@ -1036,21 +1078,23 @@ async def get_lots_for_investor(
         ),
     ]
 
-    # Budget filter
+    # Budget filter — currency-aware (budget values are in EUR)
     if budget_min is not None:
-        filters.append(
-            or_(
-                Lot.current_price >= budget_min,
-                and_(Lot.current_price.is_(None), Lot.estimate_low >= budget_min),
-            )
-        )
+        bmin_conds = []
+        for curr, rate in _FX_TO_EUR.items():
+            if rate > 0:
+                t = budget_min / rate
+                bmin_conds.append(and_(Lot.currency == curr, or_(Lot.current_price >= t, Lot.estimate_low >= t)))
+        bmin_conds.append(and_(Lot.currency.is_(None), or_(Lot.current_price >= budget_min, Lot.estimate_low >= budget_min)))
+        filters.append(or_(*bmin_conds))
     if budget_max is not None:
-        filters.append(
-            or_(
-                Lot.current_price <= budget_max,
-                and_(Lot.current_price.is_(None), Lot.estimate_low <= budget_max),
-            )
-        )
+        bmax_conds = []
+        for curr, rate in _FX_TO_EUR.items():
+            if rate > 0:
+                t = budget_max / rate
+                bmax_conds.append(and_(Lot.currency == curr, or_(Lot.current_price <= t, Lot.estimate_low <= t)))
+        bmax_conds.append(and_(Lot.currency.is_(None), or_(Lot.current_price <= budget_max, Lot.estimate_low <= budget_max)))
+        filters.append(or_(*bmax_conds))
 
     # Horizon → liquidity proxy via artist join
     # short = high liquidity artists (liquidity_score >= 70)
