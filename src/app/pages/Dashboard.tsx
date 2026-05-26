@@ -487,7 +487,7 @@ export default function Dashboard() {
                 key={lot.id}
                 lot={lot}
                 lang={lang}
-                onClick={() => navigate(`/app/lot/${lot.id}`)}
+                onClick={() => navigate(`/app/opportunities/${lot.id}`)}
                 wishlisted={wishlistIds.has(lot.id)}
                 onWishlistToggle={toggleWishlist}
               />
