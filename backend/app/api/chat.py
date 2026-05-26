@@ -29,7 +29,6 @@ _settings = get_settings()
 
 CHAT_LIMITS: dict[str, int] = {
     "free":          3,        # 3 lifetime messages (trial)
-    "starter":       10,       # Collector €9 — 10/month
     "investor":      20,       # €19 — 20/month
     "pro":           99999,    # Family Office — unlimited
     "institutional": 99999,    # unlimited
