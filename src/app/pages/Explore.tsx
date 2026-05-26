@@ -1015,7 +1015,7 @@ export default function Explore() {
                   )}
                   {dateFilter !== 'all' && (
                     <button onClick={() => setDateFilter('all')} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px 3px 10px', fontSize: '11px', borderRadius: '20px', border: '1px solid var(--navy)', background: 'rgba(26,42,68,0.07)', color: 'var(--navy)', cursor: 'pointer', fontWeight: 600 }}>
-                      {dateFilter === 'today' ? 'Today' : dateFilter === 'week' ? 'This week' : 'This month'} <span style={{ opacity: 0.6, fontSize: '12px' }}>×</span>
+                      {dateFilter === 'today' ? t('explorer.dateToday') : dateFilter === 'week' ? t('explorer.dateThisWeek') : t('explorer.dateThisMonth')} <span style={{ opacity: 0.6, fontSize: '12px' }}>×</span>
                     </button>
                   )}
                   <button onClick={resetFilters} style={{ fontSize: '11px', color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: '3px 4px' }}>
