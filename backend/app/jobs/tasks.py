@@ -259,6 +259,25 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                             artist_data["confidence"] = min(
                                 (artist_data.get("confidence") or 0.5) + 0.10, 1.0
                             )
+
+                    # ── Phase 1: hammer price stats — fallback when no Artsper avg ──
+                    if not artist_data.get("avg_price"):
+                        from app.models.db_models import HammerArtistStats
+                        from app.jobs.quality_filter import normalize_artist_name as _norm_name
+                        _hn = _norm_name(artist_name)
+                        if _hn:
+                            _hs_res = await session.execute(
+                                select(HammerArtistStats)
+                                .where(HammerArtistStats.artist_name_normalized == _hn)
+                            )
+                            _hs = _hs_res.scalar_one_or_none()
+                            if _hs and _hs.sale_count >= 5 and _hs.avg_eur:
+                                artist_data["avg_price"] = _hs.avg_eur
+                                artist_data["median_price"] = _hs.median_eur
+                                artist_data["confidence"] = min(
+                                    (artist_data.get("confidence") or 0.5) + 0.15, 1.0
+                                )
+
                     sig_res = await session.execute(
                         select(ArtistSignal)
                         .where(ArtistSignal.artist_id == db_artist.id)
@@ -602,6 +621,24 @@ async def _rescore_live_async():
                             artist_data["confidence"] = min(
                                 (artist_data.get("confidence") or 0.5) + 0.10, 1.0
                             )
+
+                    # ── Phase 1: hammer price stats — fallback when no Artsper avg ──
+                    if not artist_data.get("avg_price"):
+                        from app.models.db_models import HammerArtistStats
+                        from app.jobs.quality_filter import normalize_artist_name as _norm_name
+                        _hn = _norm_name(artist_name_raw)
+                        if _hn:
+                            _hs_res = await session.execute(
+                                select(HammerArtistStats)
+                                .where(HammerArtistStats.artist_name_normalized == _hn)
+                            )
+                            _hs = _hs_res.scalar_one_or_none()
+                            if _hs and _hs.sale_count >= 5 and _hs.avg_eur:
+                                artist_data["avg_price"] = _hs.avg_eur
+                                artist_data["median_price"] = _hs.median_eur
+                                artist_data["confidence"] = min(
+                                    (artist_data.get("confidence") or 0.5) + 0.15, 1.0
+                                )
 
                 # ── Sprint C: pull ArtistSignal oracle data ───────────────────
                 if lot.artist_id:

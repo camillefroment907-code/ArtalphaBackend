@@ -729,6 +729,17 @@ class HammerPrice(Base):
     )
 
 
+class HammerArtistStats(Base):
+    """Pre-aggregated hammer price stats per normalized artist (≥5 sales)."""
+    __tablename__ = "hammer_artist_stats"
+
+    artist_name_normalized = Column(String(500), primary_key=True)
+    avg_eur                = Column(Float, nullable=True)
+    median_eur             = Column(Float, nullable=True)
+    sale_count             = Column(Integer, default=0)
+    last_updated           = Column(DateTime, default=datetime.utcnow)
+
+
 class ScorePerformance(Base):
     """Nautilus score performance tracking — proves our edge over time."""
     __tablename__ = "score_performance"
