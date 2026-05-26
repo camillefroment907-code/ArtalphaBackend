@@ -22,7 +22,7 @@ interface LarryChatProps {
   lotId?: string;
 }
 
-const API = 'https://artalpha-backend-production.up.railway.app';
+const API = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 function renderWithLinks(text: string) {
   const urlRegex = /(https:\/\/(?:www\.)?get-nautilus\.com\S*)/g;

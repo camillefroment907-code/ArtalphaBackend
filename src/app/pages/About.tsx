@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { dailyLots } from '../../lib/dailyStats';
 import { useSEO } from '../../lib/useSEO';
 
+const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
+
 export default function About() {
   const [lotCount, setLotCount] = useState<number>(dailyLots());
 
   useEffect(() => {
-    fetch('https://artalpha-backend-production.up.railway.app/api/n8n/health-check', {
+    fetch(`${BACKEND}/api/n8n/health-check`, {
       headers: { 'x-api-key': 'eee50ac99b4fca0ff5c5c205fe3ed79a' },
     })
       .then(r => r.json())

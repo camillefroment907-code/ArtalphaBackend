@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { getToken, getUserPlan } from '../../lib/auth';
 import { useSEO } from '../../lib/useSEO';
 
-const BACKEND = 'https://artalpha-backend-production.up.railway.app';
+const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 interface Signal {
   type: string;
