@@ -217,9 +217,9 @@ function LiveSkeleton() {
 // ── AlphaCard ────────────────────────────────────────────────
 function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => void; locked: boolean }) {
   const ds = lot.dealScore;
-  const tier      = ds >= 80 ? "EXCEPTIONAL" : ds >= 65 ? "STRONG" : "INTERESTING";
-  const tierColor = tier === "EXCEPTIONAL" ? "#C0392B" : tier === "STRONG" ? "var(--navy)" : "var(--gold-dim)";
-  const tierBg    = tier === "EXCEPTIONAL" ? "rgba(192,57,43,0.08)" : tier === "STRONG" ? "rgba(26,42,68,0.08)" : "rgba(198,168,90,0.06)";
+  const tier      = ds >= 80 ? "EXCEPTIONNEL" : ds >= 65 ? "FORT" : "INTÉRESSANT";
+  const tierColor = tier === "EXCEPTIONNEL" ? "#C0392B" : tier === "FORT" ? "var(--navy)" : "var(--gold-dim)";
+  const tierBg    = tier === "EXCEPTIONNEL" ? "rgba(192,57,43,0.08)" : tier === "FORT" ? "rgba(26,42,68,0.08)" : "rgba(198,168,90,0.06)";
 
   return (
     <div
@@ -379,10 +379,10 @@ function LiveCard({ lot, onClick }: { lot: MappedLot; onClick: () => void }) {
   const src  = (lot.source || "").toLowerCase();
   const flag = SOURCE_FLAG[src] || "🌐";
   const ds = lot.dealScore;
-  const tier      = ds >= 80 ? "EXCEPTIONAL" : ds >= 65 ? "STRONG" : ds >= 45 ? "INTERESTING" : null;
-  const tierColor = tier === "EXCEPTIONAL" ? "#92400E" : tier === "STRONG" ? "#065F46" : "#1E40AF";
-  const tierBg    = tier === "EXCEPTIONAL" ? "rgba(217,119,6,0.12)" : tier === "STRONG" ? "rgba(6,95,70,0.10)" : "rgba(30,64,175,0.10)";
-  const tierBorder= tier === "EXCEPTIONAL" ? "rgba(217,119,6,0.4)" : tier === "STRONG" ? "rgba(6,95,70,0.3)" : "rgba(30,64,175,0.3)";
+  const tier      = ds >= 80 ? "EXCEPTIONNEL" : ds >= 65 ? "FORT" : ds >= 45 ? "INTÉRESSANT" : null;
+  const tierColor = tier === "EXCEPTIONNEL" ? "#92400E" : tier === "FORT" ? "#065F46" : "#1E40AF";
+  const tierBg    = tier === "EXCEPTIONNEL" ? "rgba(217,119,6,0.12)" : tier === "FORT" ? "rgba(6,95,70,0.10)" : "rgba(30,64,175,0.10)";
+  const tierBorder= tier === "EXCEPTIONNEL" ? "rgba(217,119,6,0.4)" : tier === "FORT" ? "rgba(6,95,70,0.3)" : "rgba(30,64,175,0.3)";
 
   return (
     <div
@@ -1107,9 +1107,9 @@ export default function Opportunities() {
               flexWrap: "wrap", alignItems: "center",
             }}>
               {[
-                { label: "Exceptional", value: EXCEPTIONAL.length, color: "#C0392B" },
-                { label: "Strong",      value: STRONG.length,      color: "var(--navy)" },
-                { label: "Interesting", value: INTERESTING.length,  color: "var(--gold-dim)" },
+                { label: "Exceptionnel", value: EXCEPTIONAL.length, color: "#C0392B" },
+                { label: "Fort",         value: STRONG.length,      color: "var(--navy)" },
+                { label: "Intéressant",  value: INTERESTING.length,  color: "var(--gold-dim)" },
                 { label: "Avg score",   value: `${avgScore.toFixed(0)}/100`, color: "var(--text-2)" },
               ].map(({ label, value, color }) => (
                 <div key={label}>

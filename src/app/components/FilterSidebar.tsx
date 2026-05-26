@@ -94,9 +94,9 @@ const MARKET_COUNTRIES = [
 
 const ARTIST_RATINGS = [
   { value: 'all',         label: 'All artists'  },
-  { value: 'emerging',    label: 'Emerging'     },
-  { value: 'established', label: 'Established'  },
-  { value: 'blue_chip',   label: 'Blue Chip'    },
+  { value: 'emerging',    label: 'Émergent'    },
+  { value: 'established', label: 'Confirmé'    },
+  { value: 'blue_chip',   label: 'Valeur sûre' },
 ];
 
 const AUCTION_TIMING = [
