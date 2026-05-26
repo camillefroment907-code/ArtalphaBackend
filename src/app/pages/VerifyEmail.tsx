@@ -10,7 +10,7 @@ export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') ?? '';
 
-  const [status, setStatus]   = useState<'loading' | 'success' | 'error'>('loading');
+  const [status, setStatus]   = useState<'loading' | 'success' | 'success_no_session' | 'error'>('loading');
   const [resent, setResent]   = useState(false);
   const [resending, setResending] = useState(false);
   const [resendError, setResendError] = useState('');
@@ -23,11 +23,16 @@ export default function VerifyEmail() {
     fetch(`${API}/api/auth/verify-email?token=${encodeURIComponent(token)}`, { redirect: 'manual' })
       .then(res => {
         if (res.status === 200 || res.status === 302 || res.type === 'opaqueredirect') {
-          const user = JSON.parse(localStorage.getItem('artalpha_auth') || '{}');
-          user.is_verified = true;
-          localStorage.setItem('artalpha_auth', JSON.stringify(user));
-          setStatus('success');
-          setTimeout(() => navigate('/app/onboarding'), 2000);
+          const stored = JSON.parse(localStorage.getItem('artalpha_auth') || '{}');
+          const hasSession = !!stored?.token;
+          stored.is_verified = true;
+          localStorage.setItem('artalpha_auth', JSON.stringify(stored));
+          if (hasSession) {
+            setStatus('success');
+            setTimeout(() => navigate('/app/onboarding'), 2000);
+          } else {
+            setStatus('success_no_session');
+          }
         } else {
           setStatus('error');
         }
@@ -103,6 +108,28 @@ export default function VerifyEmail() {
                 <span style={{ fontSize: 16 }}>✓</span>
                 Taking you to your deal feed now.
               </div>
+            </>
+          )}
+
+          {status === 'success_no_session' && (
+            <>
+              <div style={{ width: 56, height: 56, borderRadius: 14, background: '#F0FDF4', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </div>
+              <h1 style={{ fontFamily: 'Georgia,serif', fontSize: 26, fontWeight: 'normal', color: '#1A2A44', margin: '0 0 10px' }}>
+                Compte vérifié ✓
+              </h1>
+              <p style={{ fontSize: 14, color: '#6B6560', lineHeight: 1.65, margin: '0 0 28px' }}>
+                Connecte-toi sur l'appareil où tu t'es inscrit(e) pour accéder à Nautilus.
+              </p>
+              <Link
+                to="/app/login"
+                style={{ display: 'block', width: '100%', boxSizing: 'border-box', padding: '13px', background: '#1A2A44', color: '#fff', borderRadius: 6, fontSize: 14, fontWeight: 600, textAlign: 'center', textDecoration: 'none', letterSpacing: '0.02em' }}
+              >
+                Se connecter →
+              </Link>
             </>
           )}
 
