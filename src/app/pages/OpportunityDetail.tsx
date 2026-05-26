@@ -139,11 +139,11 @@ export default function OpportunityDetail() {
 
   const limits         = getPlanLimits();
   const plan           = getUserPlan();
-  const paidPlans      = ["investor", "pro", "institutional"];
+  const paidPlans      = ["investor", "pro", "institutional", "elite"];
   const isPaid         = paidPlans.includes(plan);
   const hasAccess      = isPaid;
-  const isInvestor     = ['investor', 'pro', 'institutional'].includes(plan);
-  const isPro          = ['pro', 'institutional'].includes(plan);
+  const isInvestor     = ['investor', 'pro', 'institutional', 'elite'].includes(plan);
+  const isPro          = ['pro', 'institutional', 'elite'].includes(plan);
   const canSeeAnalysis = isPaid && (limits.hasProjections || limits.hasArtistCotation);
   const canSeeAI       = isPaid && limits.hasAIVerdict;
   const visibleYears   = isPaid ? (limits.projectionYears || []) : [];

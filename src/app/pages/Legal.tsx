@@ -314,7 +314,7 @@ export default function Legal() {
 
             <ArtNum>ARTICLE 4 — DATA RECIPIENTS</ArtNum>
             <H3>Article 4 — Data Recipients</H3>
-            <P>Nautilus does not sell personal data. Recipients: Stripe (payments), Vercel (frontend hosting, SCC transfers), Railway (backend hosting), Neon (database), OpenAI (anonymised prompts only — no personal data), and legal/regulatory authorities where required by law.</P>
+            <P>Nautilus does not sell personal data. Recipients: Stripe (payments), Vercel (frontend hosting, SCC transfers), Railway (backend hosting), Neon (database), Anthropic (anonymised prompts only — no personal data), and legal/regulatory authorities where required by law.</P>
 
             <ArtNum>ARTICLE 5-6 — TRANSFERS & RETENTION</ArtNum>
             <H3>Articles 5–6 — International Transfers and Retention</H3>
