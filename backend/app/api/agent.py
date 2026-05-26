@@ -43,7 +43,7 @@ async def _require_agent_plan(user: User, db: AsyncSession) -> str:
     if plan not in AGENT_PLANS:
         raise HTTPException(
             status_code=403,
-            detail="L'Agent IA est disponible à partir du plan Investor (€29/mois).",
+            detail="L'Agent IA est disponible à partir du plan Investor (€19/mois).",
         )
     return plan
 

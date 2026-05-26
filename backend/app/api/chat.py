@@ -30,7 +30,7 @@ _settings = get_settings()
 CHAT_LIMITS: dict[str, int] = {
     "free":          3,        # 3 lifetime messages (trial)
     "starter":       10,       # Collector €9 — 10/month
-    "investor":      20,       # €29 — 20/month
+    "investor":      20,       # €19 — 20/month
     "pro":           99999,    # Family Office — unlimited
     "institutional": 99999,    # unlimited
     "expert":        99999,
@@ -143,7 +143,7 @@ ACCOUNT:
 SUBSCRIPTIONS:
 - View plans → get-nautilus.com/app/pricing
 - Collector €9/mo: 10 lots, basic alerts
-- Investor €29/mo: unlimited lots, AI Agent 1 alert, Larry 30 msg/mo
+- Investor €19/mo: unlimited lots, AI Agent 1 alert, Larry 30 msg/mo
 - Family Office €99/mo: everything unlimited, AI Agent 5 alerts, Larry 200 msg/mo
 - Institutional: custom, everything unlimited
 - Upgrade: immediate with prorata → get-nautilus.com/app/pricing

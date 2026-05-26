@@ -1,6 +1,6 @@
 """
 Nautilus Billing API — Complete Stripe Integration
-Plans: Free | Starter €9 | Investor €29 | Pro €99 | Institutional (Contact Sales)
+Plans: Free | Investor €19 | Pro €99 | Institutional (Contact Sales)
 """
 import asyncio
 import stripe
