@@ -1805,4 +1805,49 @@ async def test_email(
     else:
         raise HTTPException(status_code=400, detail=f"Unknown type: {email_type}. Valid: welcome, verification, password_reset, payment_success, upgrade_confirmed, subscription_cancelled, watchlist_closing, weekly_brief")
 
+
+@router.get("/users-trial-expiring", dependencies=[Depends(verify_admin)])
+async def users_trial_expiring(
+    db: AsyncSession = Depends(get_db),
+):
+    """Users whose trial ends in ~3 days or ~1 day (±12h). Admin only."""
+    now = datetime.utcnow()
+    windows = [
+        (now + timedelta(days=3) - timedelta(hours=12), now + timedelta(days=3) + timedelta(hours=12), 3),
+        (now + timedelta(days=1) - timedelta(hours=12), now + timedelta(days=1) + timedelta(hours=12), 1),
+    ]
+
+    result = await db.execute(
+        select(User, Subscription)
+        .join(Subscription, Subscription.user_id == User.id, isouter=True)
+        .where(
+            and_(
+                User.trial_end.isnot(None),
+                Subscription.status == SubscriptionStatus.TRIALING,
+            )
+        )
+    )
+    rows = result.all()
+
+    users_out = []
+    for user, sub in rows:
+        if not user.trial_end:
+            continue
+        days_left = None
+        for window_start, window_end, days in windows:
+            if window_start <= user.trial_end <= window_end:
+                days_left = days
+                break
+        if days_left is None:
+            continue
+        users_out.append({
+            "email": user.email,
+            "first_name": user.first_name,
+            "plan": sub.plan.value.lower() if sub else "free",
+            "trial_end": user.trial_end.isoformat(),
+            "days_left": days_left,
+        })
+
+    return {"users": users_out}
+
     return {"sent": ok, "type": email_type, "to": to_email}
