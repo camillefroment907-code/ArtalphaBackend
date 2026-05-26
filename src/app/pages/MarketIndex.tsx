@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { getToken } from '../../lib/auth';
 import { useSEO } from '../../lib/useSEO';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
@@ -27,13 +28,16 @@ export default function MarketIndex() {
   }, []);
 
   useEffect(() => {
-    fetch(`${BACKEND}/api/market/index`)
+    const token = getToken();
+    const h = token ? { Authorization: `Bearer ${token}` } : {};
+
+    fetch(`${BACKEND}/api/market/index`, { headers: h })
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
 
     // Real lot counts from sentiment endpoint
-    fetch(`${BACKEND}/api/market/sentiment`)
+    fetch(`${BACKEND}/api/market/sentiment`, { headers: h })
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (!d?.segments?.length) return;
@@ -45,12 +49,12 @@ export default function MarketIndex() {
       .catch(() => {});
 
     // Exceptional count: lots with deal_score >= 80
-    fetch(`${BACKEND}/api/lots?sort_by=deal_score&sort_dir=desc&min_score=80&page_size=1`)
+    fetch(`${BACKEND}/api/lots?sort_by=deal_score&sort_dir=desc&min_score=80&page_size=1`, { headers: h })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.total != null) setExceptionalCount(d.total); })
       .catch(() => {});
 
-    fetch(`${BACKEND}/api/market/beta`)
+    fetch(`${BACKEND}/api/market/beta`, { headers: h })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.segments?.length > 0) setBeta(d); })
       .catch(() => {});

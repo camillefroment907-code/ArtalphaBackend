@@ -216,22 +216,19 @@ export default function Landing() {
       .then(d => setWeeklyStats(d))
       .catch(() => {});
 
-    // Closing soon count for FR sticky banner
-    fetch(`${BACKEND}/api/lots/closing-today?days=1&limit=50&min_score=0`)
+    // Bottom bar real stats — uses public endpoints only
+    fetch(`${BACKEND}/api/lots/stats`)
       .then(r => r.ok ? r.json() : null)
-      .then((d: any) => { if (d?.total) setClosingSoonCount(d.total); })
+      .then(stats => {
+        if (!stats) return;
+        setBottomStats(prev => ({
+          ...prev,
+          total:       stats.total_lots_tracked   || prev.total,
+          exceptional: stats.deals_detected_today ?? prev.exceptional,
+        }));
+        setClosingSoonCount(stats.deals_detected_today || 0);
+      })
       .catch(() => {});
-
-    // Bottom bar real stats
-    Promise.all([
-      fetch(`${BACKEND}/api/lots/stats`).then(r => r.ok ? r.json() : null),
-      fetch(`${BACKEND}/api/lots/closing-today?days=1&limit=50&min_score=0`).then(r => r.ok ? r.json() : null),
-      fetch(`${BACKEND}/api/lots/closing-today?days=30&min_score=80&limit=100`).then(r => r.ok ? r.json() : null),
-    ]).then(([stats, closing24h, exceptional]) => {
-      if (stats)      setBottomStats(prev => ({ ...prev, total:       stats.total_lots_tracked || prev.total       }));
-      if (closing24h) setBottomStats(prev => ({ ...prev, closing:     closing24h.total       || prev.closing     }));
-      if (exceptional) setBottomStats(prev => ({ ...prev, exceptional: exceptional.total     || prev.exceptional }));
-    }).catch(() => {});
 
     // Sticky CTA — show after 50% scroll
     const onScroll = () => {

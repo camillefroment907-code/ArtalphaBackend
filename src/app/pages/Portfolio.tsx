@@ -480,7 +480,9 @@ export default function Portfolio() {
       .catch(err => { setLotsError(err.message || 'Failed to load'); setLotsLoading(false); });
 
     // Market sentiment
-    fetch(`${BACKEND}/api/market/sentiment`)
+    fetch(`${BACKEND}/api/market/sentiment`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.segments) setMarketSentiment(d); })
       .catch(() => {});

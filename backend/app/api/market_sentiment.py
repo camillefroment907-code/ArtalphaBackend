@@ -5,8 +5,7 @@ from sqlalchemy import select, func, and_, or_
 from datetime import datetime, timedelta
 
 from app.database import get_db
-from app.models.db_models import Lot, User
-from app.api.auth_utils import get_current_user
+from app.models.db_models import Lot
 
 router = APIRouter(prefix="/market", tags=["market"])
 
@@ -16,7 +15,6 @@ CACHE_MINUTES = 30
 @router.get("/sentiment")
 async def get_market_sentiment(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     """Market sentiment by category — cached 30 min."""
 

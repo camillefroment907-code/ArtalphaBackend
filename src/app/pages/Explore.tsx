@@ -145,7 +145,9 @@ async function fetchInvestorLots(budgetMin?: number, budgetMax?: number | null, 
 
 async function loadSourceStats(): Promise<SourceStat[]> {
   try {
-    return await cachedFetch(`${BACKEND}/api/lots/sources`);
+    const token = getToken();
+    const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+    return await cachedFetch(`${BACKEND}/api/lots/sources`, { headers });
   } catch { return []; }
 }
 
@@ -665,7 +667,10 @@ export default function Explore() {
         if (sortBy) pp.set('sort_by', sortBy);
         if (sortDir) pp.set('sort_dir', sortDir);
         if (provenance) pp.set('provenance', PROVENANCE_KEYWORD_MAP[provenance] || provenance);
-        const res = await fetch(`${BACKEND}/api/lots/primary?${pp.toString()}`);
+        const _t = getToken();
+        const res = await fetch(`${BACKEND}/api/lots/primary?${pp.toString()}`, {
+          headers: _t ? { Authorization: `Bearer ${_t}` } : {},
+        });
         const data = await res.json();
         setLots(prev => [...prev, ...data.items.map(mapLot)]);
         setCurrentPage(nextPage);

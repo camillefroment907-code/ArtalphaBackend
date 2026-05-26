@@ -726,7 +726,6 @@ async def get_lot_count(request: Request, db: AsyncSession = Depends(get_db)):
 @router.get("/stats", response_model=DashboardStats)
 async def get_dashboard_stats(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -848,7 +847,6 @@ async def get_missed_deals(
 @router.get("/sources")
 async def get_source_stats(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     """
     Per-source stats for the World Auctions source health monitor.
@@ -1495,9 +1493,8 @@ async def get_public_lots(
     limit: int = Query(default=8, le=12),
     sort: str = "deal_score",
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
-    """Returns top lots — requires authentication."""
+    """Returns top lots for landing page preview — public, max 12."""
     from sqlalchemy import desc
 
     order_col = Lot.deal_score if sort == "deal_score" else Lot.created_at

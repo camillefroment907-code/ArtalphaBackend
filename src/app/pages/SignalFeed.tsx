@@ -35,7 +35,7 @@ export default function SignalFeed() {
     const h: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
 
     // Dashboard stats — total lots, avg score, deals today, real source count
-    fetch(`${BACKEND}/api/lots/stats`)
+    fetch(`${BACKEND}/api/lots/stats`, { headers: h })
       .then(r => r.json())
       .then((d: any) => {
         setLotCount(d.total_lots_tracked || 0);
@@ -48,19 +48,19 @@ export default function SignalFeed() {
       .catch(() => {});
 
     // Lots closing today (within 24h) — "Ventes à ne pas manquer"
-    fetch(`${BACKEND}/api/lots/closing-today?days=1&limit=5&min_score=55`)
+    fetch(`${BACKEND}/api/lots/closing-today?days=1&limit=5&min_score=55`, { headers: h })
       .then(r => r.json())
       .then(d => setUrgentLots(d.items || []))
       .catch(() => {});
 
     // Top deals coming up in next 30 days — "Top Ventes du Mois"
-    fetch(`${BACKEND}/api/lots/closing-today?days=30&limit=8&min_score=65`)
+    fetch(`${BACKEND}/api/lots/closing-today?days=30&limit=8&min_score=65`, { headers: h })
       .then(r => r.json())
       .then(d => setTopLots(d.items || []))
       .catch(() => {});
 
     // Market sentiment
-    fetch(`${BACKEND}/api/market/sentiment`)
+    fetch(`${BACKEND}/api/market/sentiment`, { headers: h })
       .then(r => r.json())
       .then(setSentiment)
       .catch(() => {});

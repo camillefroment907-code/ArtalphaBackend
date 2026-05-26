@@ -130,7 +130,10 @@ async function fetchInvestorLots(budgetMin?: number, budgetMax?: number | null, 
 
 async function loadSourceStats(): Promise<SourceStat[]> {
   try {
-    const res = await fetch(`${BACKEND}/api/lots/sources`);
+    const token = getToken();
+    const res = await fetch(`${BACKEND}/api/lots/sources`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     if (!res.ok) return [];
     return await res.json();
   } catch { return []; }

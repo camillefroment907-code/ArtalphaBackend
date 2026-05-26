@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { getPlanLimits } from '../../lib/auth';
+import { getToken, getPlanLimits } from '../../lib/auth';
 import { useSEO } from '../../lib/useSEO';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
@@ -19,7 +19,10 @@ export default function Artists() {
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
 
   useEffect(() => {
-    fetch(`${BACKEND}/api/artist-profiles/search`)
+    const token = getToken();
+    fetch(`${BACKEND}/api/artist-profiles/search`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then(r => r.json())
       .then(d => { setTopArtists(d.artists || []); setLoadingArtists(false); })
       .catch(() => setLoadingArtists(false));
@@ -35,7 +38,10 @@ export default function Artists() {
     setSearching(true);
     setSearchResults(null);
     try {
-      const res = await fetch(`${BACKEND}/api/artist-profiles/search/${encodeURIComponent(q)}`);
+      const token = getToken();
+      const res = await fetch(`${BACKEND}/api/artist-profiles/search/${encodeURIComponent(q)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       const data = await res.json();
       setSearchResults(data.artists || []);
     } catch {

@@ -435,7 +435,10 @@ export default function ArtistIntelligence() {
     if (query.length < 2) { setSearchResults([]); return; }
     setSearching(true);
     try {
-      const r = await fetch(`${BACKEND}/api/artist-profiles/search/${encodeURIComponent(query)}`);
+      const token = getToken();
+      const r = await fetch(`${BACKEND}/api/artist-profiles/search/${encodeURIComponent(query)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       const d = await r.json();
       setSearchResults(d.artists || []);
     } catch { /* silent */ }
