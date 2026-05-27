@@ -13,7 +13,6 @@ import logging
 import uuid as _uuid
 from datetime import datetime, timedelta
 from typing import Optional
-from sqlalchemy import String
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +123,7 @@ async def send_exceptional_opportunity_alerts(lot_ids: list) -> int:
                     and_(
                         Lot.id.in_(lot_ids),
                         Lot.deal_score >= 80,
-                        Lot.status.cast(String) == 'upcoming',
+                        Lot.status == LotStatus.upcoming,
                     )
                 )
             )
@@ -314,7 +313,7 @@ async def send_auction_closing_alerts() -> int:
             lots_result = await db.execute(
                 select(Lot).where(
                     and_(
-                        Lot.status.cast(String) == 'upcoming',
+                        Lot.status == LotStatus.upcoming,
                         Lot.auction_date >= window_start,
                         Lot.auction_date <= window_end,
                     )
