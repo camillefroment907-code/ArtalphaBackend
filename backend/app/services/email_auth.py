@@ -73,6 +73,13 @@ async def send_welcome_email(to_email: str, name: str, plan: str = "free", lots_
         if is_fr else
         "Full analyst report on any lot in 30 seconds — price targets, comparable sales, risk factors, buy/hold/pass verdict."
     )
+    _trial_badge = "ESSAI GRATUIT · 7 JOURS" if is_fr else "FREE TRIAL · 7 DAYS"
+    _trial_title = "7 jours d'accès Investor offerts" if is_fr else "7 days of Investor access, on us"
+    _trial_body = (
+        "Votre compte inclut 7 jours d'accès complet au plan Investor — mémos d'investissement IA, alertes temps réel, analyse artiste complète. Aucune carte bancaire requise pour commencer."
+        if is_fr else
+        "Your account includes 7 days of full Investor access — AI investment memos, real-time alerts, complete artist analysis. No credit card required to get started."
+    )
     _cta = "Ouvrir l'Explorer →" if is_fr else "Open the Explorer →"
     _footer_note = "Une question ? Répondez à cet email — nous lisons tout." if is_fr else "Questions? Reply to this email — we read everything."
     _footer_disclaimer = "Pas un conseil en investissement. L'art comporte un risque de perte." if is_fr else "Not financial advice. Art investment carries risk of loss."
@@ -147,6 +154,14 @@ async def send_welcome_email(to_email: str, name: str, plan: str = "free", lots_
                     </td>
                   </tr>
                 </table>
+              </td>
+            </tr>
+            <!-- TRIAL BANNER -->
+            <tr>
+              <td style="background-color:#0C1622;padding:28px 24px;">
+                <p style="color:#C6A85A;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;margin:0 0 10px 0;font-family:'Inter',Arial,Helvetica,sans-serif;font-weight:600;">{_trial_badge}</p>
+                <p style="color:#FFFFFF;font-family:'Playfair Display',Georgia,serif;font-size:20px;font-weight:700;margin:0 0 12px 0;line-height:1.3;">{_trial_title}</p>
+                <p style="color:rgba(255,255,255,0.65);font-family:'Inter',Arial,Helvetica,sans-serif;font-size:13px;line-height:1.7;margin:0;">{_trial_body}</p>
               </td>
             </tr>
             <!-- DIVIDER -->
