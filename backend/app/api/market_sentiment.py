@@ -5,7 +5,7 @@ from sqlalchemy import select, func, and_, or_
 from datetime import datetime, timedelta
 
 from app.database import get_db
-from app.models.db_models import Lot
+from app.models.db_models import Lot, User
 from app.api.auth_utils import get_current_user
 
 router = APIRouter(prefix="/market", tags=["market"])
