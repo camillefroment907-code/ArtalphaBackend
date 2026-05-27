@@ -28,6 +28,42 @@ async def send_trial_started_email(to_email: str, name: str, trial_end_date: str
                             html_email(content, "Your trial has started"), TRANSAC_FROM)
 
 
+async def send_trial_expired_email(
+    to_email: str, name: str, lots_missed: int = 0, deals_today: int = 0
+) -> bool:
+    """Email 7 — trial expired, hard push to upgrade"""
+    first = _first_name(name, to_email)
+    comparison = """<table width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;">
+<tr>
+<td width="48%" style="background:#F5F4F0;padding:20px;vertical-align:top;">
+<div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:#888;margin-bottom:12px;">Free Plan</div>
+<div style="font-size:13px;color:#666;line-height:2;">3 lots/day<br>No Larry<br>No memos<br>No alerts</div>
+</td>
+<td width="4%"></td>
+<td width="48%" style="background:#1A2A44;padding:20px;vertical-align:top;">
+<div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:#C6A85A;margin-bottom:12px;">Investor — €19/mo</div>
+<div style="font-size:13px;color:#FFFFFF;line-height:2;">Unlimited lots<br>Larry AI Analyst<br>Investment Memos<br>Real-time alerts</div>
+</td>
+</tr>
+</table>"""
+    content = f"""
+{label("TRIAL EXPIRED")}
+<h1>Your free trial has ended.</h1>
+<p>Your 7-day Investor access has expired. You're now on the free plan — limited to 3 lots per day, no Larry, no Investment Memos, no real-time alerts.</p>
+{comparison}
+{divider()}
+<p>Upgrade now to keep everything you had during your trial. At €19/month, one well-timed acquisition covers years of subscription.</p>
+{cta("Upgrade to Investor — €19/mo", "https://get-nautilus.com/pricing", gold=True)}
+<p style="color:#888888;font-size:13px;">30-day money-back guarantee. Cancel anytime.</p>
+"""
+    return await send_email(
+        to_email,
+        f"Your Nautilus trial has expired, {first}.",
+        html_email(content, "Trial expired"),
+        TRANSAC_FROM,
+    )
+
+
 async def send_trial_ending_email(to_email: str, name: str, trial_end_date: str, plan: str = "investor") -> bool:
     """Email 9 — trial ending 48h"""
     first = _first_name(name, to_email)

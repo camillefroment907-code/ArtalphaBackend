@@ -357,8 +357,13 @@ async def _get_user_plan(user: User, db: AsyncSession) -> str:
         select(Subscription).where(Subscription.user_id == user.id)
     )
     sub = result.scalar_one_or_none()
-    if sub and sub.status.value.lower() in ("active", "trialing"):
-        return _PLAN_VALUE_TO_ID.get(sub.plan.value, "free")
+    if sub:
+        status = sub.status.value.lower()
+        if status == "active":
+            return _PLAN_VALUE_TO_ID.get(sub.plan.value, "free")
+        if status == "trialing":
+            if user.trial_end and user.trial_end > datetime.utcnow():
+                return _PLAN_VALUE_TO_ID.get(sub.plan.value, "free")
     return "free"
 
 

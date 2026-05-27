@@ -279,6 +279,7 @@ def run_daily_email_checks():
     _check_anniversaries()
     _check_artwork_anniversaries()
     _check_trial_ending()
+    _check_trial_expired()
     _check_annual_expiring()
     _check_winback()
     _check_payment_retry()
@@ -440,13 +441,14 @@ def _check_trial_ending():
 
     db = _get_sync_db()
     try:
-        # Users whose trial ends exactly tomorrow and haven't converted
+        # Users whose trial ends tomorrow — use User.trial_end (non-Stripe trials
+        # don't have current_period_end set on Subscription)
         stmt = (
             select(User, Subscription)
             .join(User.subscription)
             .where(
                 Subscription.status == "trialing",
-                cast(Subscription.current_period_end, Date) == tomorrow,
+                cast(User.trial_end, Date) == tomorrow,
             )
         )
         results = db.execute(stmt).all()
@@ -464,7 +466,7 @@ def _check_trial_ending():
         if str(user.id) in already_sent:
             continue
         try:
-            end_str = sub.current_period_end.strftime("%B %d, %Y") if sub.current_period_end else ""
+            end_str = user.trial_end.strftime("%B %d, %Y") if user.trial_end else ""
             _run(send_trial_ending_email(user.email, user.full_name or "", end_str, sub.plan or "investor"))
             db2 = _get_sync_db()
             try:
@@ -483,6 +485,70 @@ def _check_trial_ending():
                 db2.close()
         except Exception as e:
             logger.error("trial_ending_failed user=%s error=%s", user.email, e)
+
+
+def _check_trial_expired():
+    """Daily — downgrade TRIALING→FREE/CANCELED in DB and send the expired email
+    for users whose trial_end has passed and who never converted to a paid plan."""
+    from app.services.email_trial import send_trial_expired_email
+    from app.models.db_models import (
+        User, Subscription, SubscriptionPlan, SubscriptionStatus, Alert, AlertChannel,
+    )
+    from sqlalchemy import select
+
+    now = datetime.now(timezone.utc)
+    dedup_cutoff = now - timedelta(hours=36)
+
+    db = _get_sync_db()
+    try:
+        stmt = (
+            select(User, Subscription)
+            .join(User.subscription)
+            .where(
+                Subscription.status == "trialing",
+                User.trial_end != None,
+                User.trial_end <= now,
+            )
+        )
+        results = db.execute(stmt).all()
+
+        dedup_stmt = select(Alert.user_id).where(
+            Alert.message.like("TRIAL_EXPIRED_%"),
+            Alert.sent_at >= dedup_cutoff,
+        )
+        already_sent = {str(uid) for uid in db.execute(dedup_stmt).scalars().all()}
+    finally:
+        db.close()
+
+    for user, sub in results:
+        db2 = _get_sync_db()
+        try:
+            # Downgrade subscription in DB
+            sub_row = db2.get(Subscription, sub.id)
+            if sub_row:
+                sub_row.plan = SubscriptionPlan.FREE
+                sub_row.status = SubscriptionStatus.CANCELED
+                db2.commit()
+                logger.info("trial_expired_downgraded user=%s", user.email)
+
+            # Send expired email once (deduped per 36h)
+            if str(user.id) not in already_sent:
+                _run(send_trial_expired_email(user.email, user.full_name or ""))
+                db2.add(Alert(
+                    user_id=user.id,
+                    lot_id=None,
+                    channel=AlertChannel.EMAIL,
+                    recipient=user.email,
+                    message=f"TRIAL_EXPIRED_{user.id}",
+                    deal_score_at_send=None,
+                    sent_at=now,
+                    is_delivered=True,
+                ))
+                db2.commit()
+        except Exception as e:
+            logger.error("trial_expired_failed user=%s error=%s", user.email, e)
+        finally:
+            db2.close()
 
 
 def _check_annual_expiring():
