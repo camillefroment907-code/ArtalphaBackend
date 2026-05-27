@@ -17,17 +17,14 @@ export function GoogleSignInButton({ onError }: Props) {
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) return;
 
-    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
     const initGoogle = () => {
       if (!window.google?.accounts?.id) return;
 
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
-        ux_mode: isMobile ? 'redirect' : 'popup',
-        login_uri: isMobile ? `${BACKEND}/api/auth/google/mobile` : undefined,
+        ux_mode: 'popup',
         auto_select: false,
-        callback: isMobile ? undefined : async (response: { credential: string }) => {
+        callback: async (response: { credential: string }) => {
           try {
             const resp = await fetch(`${BACKEND}/api/auth/google`, {
               method: 'POST',
