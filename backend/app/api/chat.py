@@ -141,9 +141,9 @@ ACCOUNT:
 
 SUBSCRIPTIONS:
 - View plans → get-nautilus.com/app/pricing
-- Collector €9/mo: 10 lots, basic alerts
-- Investor €19/mo: unlimited lots, AI Agent 1 alert, Larry 30 msg/mo
-- Family Office €99/mo: everything unlimited, AI Agent 5 alerts, Larry 200 msg/mo
+- Free: limited access, 3 lots visible
+- Investor €19/mo: unlimited lots, AI memos, real-time alerts, Larry 20 msg/mo
+- Family Office €99/mo: everything unlimited, AI Agent 5 alerts, Larry unlimited
 - Institutional: custom, everything unlimited
 - Upgrade: immediate with prorata → get-nautilus.com/app/pricing
 - Downgrade: takes effect at next billing cycle
