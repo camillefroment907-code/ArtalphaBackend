@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 from app.database import get_db
 from app.models.db_models import Lot
+from app.api.auth_utils import get_current_user
 
 router = APIRouter(prefix="/market", tags=["market"])
 
