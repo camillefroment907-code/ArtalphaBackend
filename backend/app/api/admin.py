@@ -1728,7 +1728,7 @@ async def test_alert_email(
         location="",
         estimate_range=estimate_range,
         upside_pct=int(lot.pct_below_low_estimate or 0),
-        lot_url=f"https://www.get-nautilus.com/app/opportunities/{lot.id}",
+        lot_url=f"https://get-nautilus.com/opportunities/{lot.id}",
         days_until_close=3,
         lot_image_url=lot.image_url,
         estimate_low_eur=est_low,
@@ -1780,7 +1780,7 @@ async def test_email(
             estimate="€10,000 – €15,000",
             score=91,
             closing_time="2026-05-15 18:00",
-            lot_url="https://www.get-nautilus.com/app/opportunities/21d3e5e7-54e9-4972-8b03-b418d20f615c",
+            lot_url="https://get-nautilus.com/opportunities/21d3e5e7-54e9-4972-8b03-b418d20f615c",
         )
 
     elif email_type == "weekly_brief":
@@ -1789,8 +1789,8 @@ async def test_email(
             to_email=to_email,
             week_date="12 mai 2026",
             top_lots=[
-                {"title": "The Sound of the Fire Alarm", "artist": "David Shrigley", "score": 91, "estimate": "€10,000", "url": "https://get-nautilus.com/app/opportunities/21d3e5e7-54e9-4972-8b03-b418d20f615c"},
-                {"title": "Marilyn Monroe", "artist": "Andy Warhol", "score": 88, "estimate": "€1,500", "url": "https://get-nautilus.com/app/opportunities/7f0bb1de-7b57-4ee1-862d-a9e995888831"},
+                {"title": "The Sound of the Fire Alarm", "artist": "David Shrigley", "score": 91, "estimate": "€10,000", "url": "https://get-nautilus.com/opportunities/21d3e5e7-54e9-4972-8b03-b418d20f615c"},
+                {"title": "Marilyn Monroe", "artist": "Andy Warhol", "score": 88, "estimate": "€1,500", "url": "https://get-nautilus.com/opportunities/7f0bb1de-7b57-4ee1-862d-a9e995888831"},
             ],
             artists_to_watch=[
                 {"name": "David Shrigley", "momentum": "+22%"},
@@ -1798,7 +1798,7 @@ async def test_email(
             ],
             market_insight="Le marché art contemporain montre une forte activité cette semaine avec plusieurs lots sous-évalués détectés.",
             closing_lots=[
-                {"title": "The Sound of the Fire Alarm", "artist": "David Shrigley", "closing_in": "24h", "url": "https://get-nautilus.com/app/opportunities/21d3e5e7-54e9-4972-8b03-b418d20f615c"},
+                {"title": "The Sound of the Fire Alarm", "artist": "David Shrigley", "closing_in": "24h", "url": "https://get-nautilus.com/opportunities/21d3e5e7-54e9-4972-8b03-b418d20f615c"},
             ],
         )
 

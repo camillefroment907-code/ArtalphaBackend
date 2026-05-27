@@ -989,7 +989,7 @@ async def _run_ai_agents_async():
                         max(0, (lot.auction_date - datetime.utcnow()).days)
                         if lot.auction_date else 0
                     )
-                    lot_url = f"https://www.get-nautilus.com/app/opportunities/{lot.id}"
+                    lot_url = f"https://get-nautilus.com/opportunities/{lot.id}"
                     lang = "fr"
                     if user.preferences and user.preferences.language:
                         lang = user.preferences.language

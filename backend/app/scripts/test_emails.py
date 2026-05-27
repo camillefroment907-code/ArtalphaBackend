@@ -122,7 +122,7 @@ async def run_all():
         send_portfolio_artist_sale_email,
         send_collection_completion_email,
     )
-    LOT_URL = "https://www.get-nautilus.com/app/opportunities/test-id"
+    LOT_URL = "https://get-nautilus.com/opportunities/test-id"
     ARTIST_URL = "https://www.get-nautilus.com/app/artists/zao-wou-ki"
     results["19_alert_exceptional"] = await send_alert_exceptional_email(
         ADMIN, "Zao Wou-Ki", 87, "Christie's Paris", "Lithographie originale, 1972",
