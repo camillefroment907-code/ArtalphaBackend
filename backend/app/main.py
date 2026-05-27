@@ -84,6 +84,12 @@ _BOT_UA_FRAGMENTS = [
     "postmanruntime",
 ]
 
+# Paths that must never be blocked regardless of headers (OAuth redirects, etc.)
+_BOT_EXEMPT_PREFIXES = (
+    "/api/auth/google",
+    "/app/auth/callback",
+)
+
 # Data paths that must be protected from bots (not marketing/auth/health)
 _PROTECTED_PREFIXES = (
     "/api/lots",
@@ -103,6 +109,8 @@ class BotProtectionMiddleware(BaseHTTPMiddleware):
     """Block known scraper User-Agents on protected data routes."""
     async def dispatch(self, request: StarletteRequest, call_next):
         path = request.url.path
+        if any(path.startswith(p) for p in _BOT_EXEMPT_PREFIXES):
+            return await call_next(request)
         if any(path.startswith(p) for p in _PROTECTED_PREFIXES):
             ua = request.headers.get("user-agent", "").lower()
             if any(frag in ua for frag in _BOT_UA_FRAGMENTS):
