@@ -533,7 +533,10 @@ def _check_trial_expired():
 
             # Send expired email once (deduped per 36h)
             if str(user.id) not in already_sent:
-                _run(send_trial_expired_email(user.email, user.full_name or ""))
+                _run(send_trial_expired_email(
+                    user.email, user.full_name or "",
+                    lang=getattr(user, "language", "fr") or "fr",
+                ))
                 db2.add(Alert(
                     user_id=user.id,
                     lot_id=None,
