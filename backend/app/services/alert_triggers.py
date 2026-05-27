@@ -92,6 +92,39 @@ async def _record_alert(db, user_id, lot_id, prefix: str, score: float, recipien
     ))
 
 
+# ── Daily rate-limit (1 alert email per user per calendar day UTC) ────────────
+
+async def _daily_limit_ok(db, user_id) -> bool:
+    """Return True if this user has NOT received an alert email today (UTC)."""
+    from sqlalchemy import select
+    from app.models.db_models import UserAlertPreferences
+    result = await db.execute(
+        select(UserAlertPreferences.last_alert_sent_at)
+        .where(UserAlertPreferences.user_id == user_id)
+    )
+    last = result.scalar_one_or_none()
+    if last is None:
+        return True
+    return last.date() < datetime.utcnow().date()
+
+
+async def _mark_daily_limit(db, user_id) -> None:
+    """Upsert last_alert_sent_at = now.
+    INSERT if no UserAlertPreferences row exists yet, UPDATE otherwise.
+    """
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+    from app.models.db_models import UserAlertPreferences
+    now = datetime.utcnow()
+    await db.execute(
+        pg_insert(UserAlertPreferences)
+        .values(id=_uuid.uuid4(), user_id=user_id, last_alert_sent_at=now)
+        .on_conflict_do_update(
+            index_elements=["user_id"],
+            set_={"last_alert_sent_at": now},
+        )
+    )
+
+
 # ── Trigger 1: Exceptional opportunity (deal_score >= 80) ─────────────────────
 
 async def send_exceptional_opportunity_alerts(lot_ids: list) -> int:
@@ -172,6 +205,9 @@ async def send_exceptional_opportunity_alerts(lot_ids: list) -> int:
                     try:
                         if await _already_sent(db, user.id, lot.id, "EXCEPTIONAL"):
                             continue
+                        if not await _daily_limit_ok(db, user.id):
+                            logger.debug("daily_limit_hit user=%s", user.email)
+                            continue
                         lot_image_url = await _resolve_lot_image(lot.image_url, lot.url)
                         ok = await send_alert_exceptional_email(
                             to_email=user.email,
@@ -189,6 +225,7 @@ async def send_exceptional_opportunity_alerts(lot_ids: list) -> int:
                         )
                         if ok:
                             await _record_alert(db, user.id, lot.id, "EXCEPTIONAL", lot.deal_score, user.email)
+                            await _mark_daily_limit(db, user.id)
                             sent += 1
                     except Exception as e:
                         logger.warning("exceptional_alert_failed user=%s lot=%s error=%s", user.email, lot.id, e)
@@ -266,6 +303,9 @@ async def send_artist_momentum_alerts(
                 try:
                     if await _already_sent_artist(db, user.id, artist_id, dedup_cutoff):
                         continue
+                    if not await _daily_limit_ok(db, user.id):
+                        logger.debug("daily_limit_hit user=%s", user.email)
+                        continue
                     ok = await send_weekly_momentum_email(
                         to_email=user.email,
                         momentum_artists=[{"name": artist_name, "momentum_pct": score_pct}],
@@ -273,6 +313,7 @@ async def send_artist_momentum_alerts(
                     )
                     if ok:
                         await _record_alert(db, user.id, None, f"MOMENTUM_{artist_id}", 0.0, user.email)
+                        await _mark_daily_limit(db, user.id)
                         sent += 1
                 except Exception as e:
                     logger.warning("momentum_alert_failed user=%s artist=%s error=%s", user.email, artist_name, e)
@@ -350,6 +391,9 @@ async def send_auction_closing_alerts() -> int:
                 try:
                     if await _already_sent(db, user.id, lot.id, "CLOSING"):
                         continue
+                    if not await _daily_limit_ok(db, user.id):
+                        logger.debug("daily_limit_hit user=%s", user.email)
+                        continue
                     closing_time = (
                         lot.auction_date.strftime("%-d %b %Y %H:%M UTC")
                         if lot.auction_date else "soon"
@@ -366,6 +410,7 @@ async def send_auction_closing_alerts() -> int:
                     )
                     if ok:
                         await _record_alert(db, user.id, lot.id, "CLOSING", lot.deal_score or 0, user.email)
+                        await _mark_daily_limit(db, user.id)
                         sent += 1
                 except Exception as e:
                     logger.warning("closing_alert_failed user=%s lot=%s error=%s", user.email, lot.id, e)

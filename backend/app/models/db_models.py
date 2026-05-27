@@ -1021,6 +1021,7 @@ class UserAlertPreferences(Base):
     weekly_brief = Column(Boolean, default=True)
     monthly_report = Column(Boolean, default=True)
     email_notifications = Column(Boolean, default=True)
+    last_alert_sent_at  = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

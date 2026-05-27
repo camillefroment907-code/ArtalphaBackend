@@ -891,6 +891,7 @@ async def _run_ai_agents_async():
     )
     from app.engines.agent import run_agent_for_alert
     from app.services.email_service import send_deal_alert_email
+    from app.services.alert_triggers import _daily_limit_ok, _mark_daily_limit
     from sqlalchemy import select, and_, desc as sa_desc
     from sqlalchemy.orm import selectinload
 
@@ -958,6 +959,9 @@ async def _run_ai_agents_async():
             total_recs += created
 
             if created > 0 and alert.notify_email:
+                if not await _daily_limit_ok(session, user.id):
+                    logger.debug("agent_daily_limit_hit user_id=%s", user.id)
+                    continue
                 top_rec_result = await session.execute(
                     select(AgentRecommendation)
                     .options(selectinload(AgentRecommendation.lot))
@@ -993,6 +997,7 @@ async def _run_ai_agents_async():
                     lang = "fr"
                     if user.preferences and user.preferences.language:
                         lang = user.preferences.language
+                    email_sent = False
                     for attempt in range(3):
                         try:
                             await send_deal_alert_email(
@@ -1019,6 +1024,7 @@ async def _run_ai_agents_async():
                                 lot_id=str(lot.id),
                                 score=int(lot.deal_score or 0),
                             )
+                            email_sent = True
                             break
                         except Exception as email_err:
                             if attempt == 2:
@@ -1031,6 +1037,8 @@ async def _run_ai_agents_async():
                                 )
                             else:
                                 await asyncio.sleep(5)
+                    if email_sent:
+                        await _mark_daily_limit(session, user.id)
 
         await session.commit()
         logger.info("AI agents complete", total_recommendations=total_recs)
