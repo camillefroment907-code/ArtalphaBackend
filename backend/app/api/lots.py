@@ -735,6 +735,7 @@ async def get_dashboard_stats(
             and_(
                 Lot.deal_score >= 80,
                 Lot.hammer_price.is_(None),
+                Lot.auction_date >= datetime.utcnow(),
             )
         )
     )
@@ -1872,6 +1873,7 @@ async def get_comparables(
                         Lot.artist_name_raw.ilike(f"%{lot.artist_name_raw}%"),
                         Lot.id != lot.id,
                         Lot.estimate_low.isnot(None),
+                        or_(Lot.auction_date.is_(None), Lot.auction_date >= datetime.utcnow()),
                     )
                 )
                 .order_by(Lot.deal_score.desc().nullslast())
@@ -1894,6 +1896,7 @@ async def get_comparables(
                             and_(Lot.estimate_low >= price_min, Lot.estimate_low <= price_max),
                         ),
                         Lot.deal_score.isnot(None),
+                        or_(Lot.auction_date.is_(None), Lot.auction_date >= datetime.utcnow()),
                     )
                 )
                 .order_by(Lot.deal_score.desc())
@@ -1998,7 +2001,11 @@ async def get_similar(
     if not lot:
         raise HTTPException(status_code=404, detail="Lot not found")
 
-    filters = [Lot.id != lot_id, Lot.is_deal == True]
+    filters = [
+        Lot.id != lot_id,
+        Lot.is_deal == True,
+        or_(Lot.auction_date.is_(None), Lot.auction_date >= datetime.utcnow()),
+    ]
     if lot.category:
         filters.append(Lot.category.ilike(f"%{lot.category}%"))
     if lot.current_price:
@@ -2023,6 +2030,7 @@ async def get_similar(
             .where(and_(
                 Lot.id != lot_id,
                 Lot.category.ilike(f"%{lot.category}%"),
+                or_(Lot.auction_date.is_(None), Lot.auction_date >= datetime.utcnow()),
             ))
             .order_by(desc(Lot.deal_score).nullslast())
             .limit(limit)
