@@ -521,42 +521,101 @@ export default function OpportunityDetail() {
 
           {/* WHY block */}
           {(() => {
-            const reasons: string[] = [];
-            if ((lot.pct_below_low_estimate || 0) > 30)
-              reasons.push(isFr ? `${Math.round(lot.pct_below_low_estimate)}% sous estimation — entrée à ${fmt(price)} vs estimation marché ${fmt(lot.estimate_high)}` : `${Math.round(lot.pct_below_low_estimate)}% below estimate — entry at ${fmt(price)} vs market estimate ${fmt(lot.estimate_high)}`);
-            if ((lot.pct_below_low_estimate || 0) < -5)
-              reasons.push(isFr ? "Prix au-dessus de l'estimation marché — potentiel limité" : "Priced above market estimate — limited upside");
-            if ((lot.deal_score || 0) >= 80)
-              reasons.push(isFr ? "Top 5% des scores de conviction ce mois" : "Top 5% conviction score this month");
-            if ((lot.deal_score || 0) < 45)
-              reasons.push(isFr ? "Faible conviction — les frais peuvent dépasser le potentiel" : "Low conviction — fees may exceed upside");
-            if ((provRisk?.flags?.length || 0) > 0)
-              reasons.push(isFr ? "Signaux de due diligence détectés — vérifiez avant d'enchérir" : "Due diligence flags detected — verify before bidding");
-            if (lot.oracle?.signal === 'BUY_NOW')
-              reasons.push(`Oracle signal: BUY NOW — ${lot.oracle.narrative || (isFr ? 'forte conviction' : 'strong conviction')}`);
-            if (lot.oracle?.signal === 'AVOID')
-              reasons.push(`Oracle signal: AVOID — ${lot.oracle.narrative || (isFr ? 'sous le seuil de conviction' : 'below conviction threshold')}`);
-            if ((lot.real_cost?.breakeven_pct || 0) > 60)
-              reasons.push(isFr ? `Seuil de rentabilité à €${lot.real_cost?.breakeven_hammer} — nécessite seulement ${Math.round(lot.real_cost?.breakeven_pct)}% d'appréciation` : `Break-even at €${lot.real_cost?.breakeven_hammer} — needs only ${Math.round(lot.real_cost?.breakeven_pct)}% appreciation`);
-            const currencySymbol = (lot.currency === 'USD') ? '$' : (lot.currency === 'GBP') ? '£' : '€';
-            const compsAvg = comparables.length > 0
-              ? Math.round(comparables.reduce((s: number, c: any) => s + (c.current_price || 0), 0) / comparables.length)
-              : null;
-            if (compsAvg && compsAvg > lot.current_price)
-              reasons.push(isFr ? `Les œuvres comparables s'élèvent en moyenne à ${currencySymbol}${compsAvg.toLocaleString()} — ${Math.round((compsAvg / lot.current_price - 1) * 100)}% au-dessus de ce prix d'entrée` : `Comparable works average ${currencySymbol}${compsAvg.toLocaleString()} — ${Math.round((compsAvg / lot.current_price - 1) * 100)}% above this entry price`);
+            const reasons: { icon: string; color: string; bg: string; main: string; sub: string; badge?: string | null; badgeColor?: string; badgeBg?: string }[] = [];
+
+            if ((lot.pct_below_low_estimate || 0) > 10)
+              reasons.push({
+                icon: '↓', color: GD, bg: 'rgba(82,201,127,0.12)',
+                main: isFr ? `${Math.round(lot.pct_below_low_estimate)}% sous estimation basse` : `${Math.round(lot.pct_below_low_estimate)}% below low estimate`,
+                sub: isFr ? `Entrée à ${fmt(price)} · estimation ${fmt(lot.estimate_low)}–${fmt(lot.estimate_high || lot.estimate_low)}` : `Entry at ${fmt(price)} · estimate ${fmt(lot.estimate_low)}–${fmt(lot.estimate_high || lot.estimate_low)}`,
+                badge: `-${Math.round(lot.pct_below_low_estimate)}%`, badgeColor: GD, badgeBg: 'rgba(82,201,127,0.12)',
+              });
+
+            if (lot.auction_date) {
+              const daysLeft = Math.ceil((new Date(lot.auction_date).getTime() - Date.now()) / 86400000);
+              if (daysLeft > 0 && daysLeft <= 14)
+                reasons.push({
+                  icon: '◷', color: GOLD, bg: 'rgba(198,168,90,0.12)',
+                  main: isFr ? `Se clôture dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}` : `Closes in ${daysLeft} day${daysLeft > 1 ? 's' : ''}`,
+                  sub: `${lot.auction_house_name || ''} · ${new Date(lot.auction_date).toLocaleDateString(isFr ? 'fr-FR' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+                  badge: daysLeft <= 3 ? (isFr ? 'Urgent' : 'Urgent') : null, badgeColor: GOLD, badgeBg: 'rgba(198,168,90,0.12)',
+                });
+            }
+
+            if (lot.artist?.trend === 'up')
+              reasons.push({
+                icon: '↑', color: GD, bg: 'rgba(82,201,127,0.15)',
+                main: isFr ? 'Artiste en hausse' : 'Rising artist',
+                sub: `${lot.artist_name_raw || ''} · ${isFr ? 'Liquidité' : 'Liquidity'} ${Math.round(lot.artist?.liquidity_score || 0)}/100 · ${isFr ? 'Taux de vente' : 'Sell-through'} ${lot.artist?.sell_through_rate ? Math.round(lot.artist.sell_through_rate * 100) + '%' : '—'}`,
+                badge: null,
+              });
+            else if ((lot.deal_score || 0) >= 80)
+              reasons.push({
+                icon: '◎', color: BLD, bg: 'rgba(96,165,250,0.12)',
+                main: isFr ? `Top des opportunités · ${Math.round(lot.deal_score)}/100` : `Top opportunity · ${Math.round(lot.deal_score)}/100`,
+                sub: isFr ? 'Parmi les scores les plus élevés cette semaine' : 'Among the highest scores this week',
+                badge: null,
+              });
+            else if ((lot.deal_score || 0) >= 65)
+              reasons.push({
+                icon: '◎', color: BLD, bg: 'rgba(96,165,250,0.12)',
+                main: isFr ? `Signal positif de conviction · ${Math.round(lot.deal_score)}/100` : `Positive conviction signal · ${Math.round(lot.deal_score)}/100`,
+                sub: isFr ? 'Au-dessus du seuil de conviction' : 'Above conviction threshold',
+                badge: null,
+              });
+
+            if (reasons.length < 3 && (lot.artist?.liquidity_score || 0) >= 70 && lot.artist?.trend !== 'up')
+              reasons.push({
+                icon: '~', color: '#2DD4BF', bg: 'rgba(45,212,191,0.10)',
+                main: isFr ? `Liquidité artiste élevée (${Math.round(lot.artist.liquidity_score)}/100)` : `High artist liquidity (${Math.round(lot.artist.liquidity_score)}/100)`,
+                sub: isFr ? `${lot.artist_name_raw || ''} · Taux de vente ${lot.artist?.sell_through_rate ? Math.round(lot.artist.sell_through_rate * 100) + '%' : 'élevé'}` : `${lot.artist_name_raw || ''} · ${lot.artist?.sell_through_rate ? Math.round(lot.artist.sell_through_rate * 100) + '% sell-through' : 'High sell-through'}`,
+                badge: null,
+              });
+
+            const topReasons = reasons.slice(0, 3);
+
             const isBuy = (lot.deal_score || 0) >= 65;
-            const whyLabel = isBuy ? (isFr ? "POURQUOI ACHETER" : "WHY BUY") : (isFr ? "POURQUOI PASSER" : "WHY PASS");
-            const whyColor = isBuy ? "#C6A85A" : "#F87171";
-            const filteredReasons = reasons.filter(r => !r.includes('null') && !r.includes('undefined') && !r.includes('+3617%'));
-            if (filteredReasons.length === 0) return null;
-            return (
-              <div style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '12px 16px' }}>
-                <div style={{ fontFamily: 'monospace', fontSize: 9, letterSpacing: '0.15em', color: whyColor, marginBottom: 8, textTransform: 'uppercase' as const }}>
-                  {whyLabel}
+            const whyLabel = isBuy ? (isFr ? 'POURQUOI ACHETER' : 'WHY BUY') : (isFr ? 'POURQUOI PASSER' : 'WHY PASS');
+            const whyColor = isBuy ? GOLD : '#F87171';
+
+            if (topReasons.length === 0) {
+              if ((lot.deal_score || 0) < 45) return (
+                <div style={{ background: 'rgba(248,113,113,0.06)', border: '0.5px solid rgba(248,113,113,0.15)', borderRadius: 10, padding: '11px 16px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.15em', color: '#F87171', textTransform: 'uppercase' as const, marginBottom: 8 }}>
+                    {isFr ? 'POURQUOI PASSER' : 'WHY PASS'}
+                  </div>
+                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
+                    {isFr ? `Score insuffisant (${Math.round(lot.deal_score || 0)}/100) — de meilleures opportunités sont disponibles cette semaine.` : `Insufficient score (${Math.round(lot.deal_score || 0)}/100) — better opportunities available this week.`}
+                  </div>
                 </div>
-                {filteredReasons.map((r, i) => (
-                  <div key={i} style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 4 }}>
-                    → {r}
+              );
+              return null;
+            }
+
+            return (
+              <div style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.08)', borderRadius: 10, overflow: 'hidden' }}>
+                <div style={{ padding: '10px 16px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.15em', color: whyColor, textTransform: 'uppercase' as const }}>
+                    {whyLabel}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>
+                    {topReasons.length} signal{topReasons.length > 1 ? 's' : ''}
+                  </div>
+                </div>
+                {topReasons.map((r, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '11px 16px', borderBottom: i < topReasons.length - 1 ? '0.5px solid rgba(255,255,255,0.05)' : 'none' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 6, background: r.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1, fontSize: 14, color: r.color }}>
+                      {r.icon}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.88)', fontWeight: 500, lineHeight: 1.4 }}>{r.main}</div>
+                      {r.sub && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', marginTop: 2, fontFamily: 'var(--font-mono)', letterSpacing: '0.03em' }}>{r.sub}</div>}
+                    </div>
+                    {r.badge && (
+                      <div style={{ marginLeft: 'auto', flexShrink: 0, background: r.badgeBg, color: r.badgeColor, fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4, fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' as const }}>
+                        {r.badge}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -564,15 +623,44 @@ export default function OpportunityDetail() {
           })()}
 
           {/* Market narrative */}
-          <p style={{ fontSize: 13, fontStyle: 'italic', color: '#6B7280', margin: 0 }}>
-            {(lot.deal_score || 0) >= 80
-              ? isFr ? `Fort signal d'achat chez ${lot.auction_house_name || 'cette maison de ventes'} — conviction maximale.` : `Strong buy signal at ${lot.auction_house_name || 'this auction house'} — top conviction tier.`
-              : (lot.deal_score || 0) >= 65
-              ? isFr ? `Bonne opportunité chez ${lot.auction_house_name || 'cette maison de ventes'} — au-dessus de la moyenne pour cette catégorie.` : `Solid opportunity at ${lot.auction_house_name || 'this auction house'} — above average for this category.`
-              : (lot.deal_score || 0) >= 45
-              ? isFr ? `Signal modéré — à surveiller avant la date de vente.` : `Moderate signal — monitor as auction date approaches.`
-              : isFr ? `Sous le seuil — de meilleures opportunités sont disponibles.` : `Below threshold — better opportunities currently available.`}
-          </p>
+          {(() => {
+            const buildNarrative = () => {
+              const house = lot.auction_house_name || '';
+              const bigHouses = ['christie', 'sotheby', 'phillips', 'bonhams', 'artcurial', 'drouot'];
+              const isSmallHouse = !bigHouses.some(h => house.toLowerCase().includes(h));
+              const avgPrice = lot.artist?.avg_auction_price;
+              const daysLeft = lot.auction_date
+                ? Math.ceil((new Date(lot.auction_date).getTime() - Date.now()) / 86400000)
+                : null;
+              const daysStr = daysLeft && daysLeft > 0 && daysLeft <= 14
+                ? (isFr ? ` Dans ${daysLeft} jours.` : ` ${daysLeft} days left.`)
+                : '';
+
+              if (isSmallHouse && avgPrice && avgPrice > price * 3) {
+                const avgFmt = avgPrice >= 1000 ? `€${(avgPrice / 1000).toFixed(0)}K` : `€${Math.round(avgPrice)}`;
+                return isFr
+                  ? `${lot.artist_name_raw} part chez ${house} — une maison peu visible. Moyenne historique de l'artiste : ${avgFmt}. Ce lot est à ${fmt(price)}.${daysStr}`
+                  : `${lot.artist_name_raw} selling at ${house} — a less visible house. Artist historical average: ${avgFmt}. This lot: ${fmt(price)}.${daysStr}`;
+              }
+              if (lot.artist?.trend === 'up' && (lot.pct_below_low_estimate || 0) > 15) {
+                return isFr
+                  ? `Momentum positif sur 6 mois. Prix actuel ${Math.round(lot.pct_below_low_estimate)}% sous l'estimation basse.${daysStr}`
+                  : `Positive momentum over 6 months. Current price ${Math.round(lot.pct_below_low_estimate)}% below low estimate.${daysStr}`;
+              }
+              if ((lot.deal_score || 0) >= 80 && realCost) {
+                return isFr
+                  ? `Score de conviction fort. Coût réel avec frais : ${fmt(realCost.cost_basis)}. Seuil de rentabilité : +${Math.round(realCost.needed_gain_pct)}%.`
+                  : `Strong conviction score. Real cost with fees: ${fmt(realCost.cost_basis)}. Break-even: +${Math.round(realCost.needed_gain_pct)}%.`;
+              }
+              return null;
+            };
+            const narrative = buildNarrative();
+            return narrative ? (
+              <p style={{ fontSize: 13, fontStyle: 'italic', color: 'rgba(255,255,255,0.45)', margin: '8px 0 0', lineHeight: 1.65 }}>
+                {narrative}
+              </p>
+            ) : null;
+          })()}
 
           {/* External link */}
           <div>
