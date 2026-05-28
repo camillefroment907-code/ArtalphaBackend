@@ -688,8 +688,8 @@ export default function Opportunities() {
     ? alphaLots.reduce((a, l) => a + l.dealScore, 0) / alphaLots.length
     : 0;
 
-  const visibleLots = tab === "alpha" ? alphaLots.slice(0, maxVisible) : lots;
-  const lockedLots  = tab === "alpha" ? alphaLots.slice(maxVisible, maxVisible + 3) : [];
+  const visibleLots = tab === "alpha" ? alphaLots.slice(0, maxVisible) : lots.slice(0, maxVisible);
+  const lockedLots  = tab === "alpha" ? alphaLots.slice(maxVisible, maxVisible + 3) : lots.slice(maxVisible, maxVisible + 3);
 
   // ── Build fetch params ───────────────────────────────────
   const buildFetchParams = useCallback((page = 1): Record<string, any> => {
@@ -1274,10 +1274,13 @@ export default function Opportunities() {
                   </div>
                 ))}
 
-                {/* Locked alpha cards */}
-                {tab === "alpha" && lockedLots.map(lot => (
+                {/* Locked cards (both tabs) */}
+                {lockedLots.map(lot => (
                   <div key={lot.id} style={{ position: "relative", minWidth: 0 }}>
-                    <AlphaCard lot={lot} onClick={() => {}} locked={true} />
+                    {tab === "live"
+                      ? <LiveCard lot={lot} onClick={() => {}} />
+                      : <AlphaCard lot={lot} onClick={() => {}} locked={true} />
+                    }
                     <div
                       onClick={() => navigate("/app/pricing")}
                       style={{
@@ -1296,15 +1299,15 @@ export default function Opportunities() {
                 ))}
               </div>
 
-              {/* Upgrade banner — alpha tab */}
-              {tab === "alpha" && !isAdmin && alphaLots.length > maxVisible && (
+              {/* Upgrade banner — both tabs */}
+              {!isAdmin && (tab === "alpha" ? alphaLots.length : lots.length) > maxVisible && (
                 <div style={{
                   marginTop: "32px", padding: "32px 40px",
                   background: "white", border: "1px solid var(--border)",
                   borderRadius: "12px", textAlign: "center", boxShadow: "var(--shadow-sm)",
                 }}>
                   <div style={{ fontFamily: "var(--font-serif)", fontSize: "22px", color: "var(--navy)", marginBottom: "8px" }}>
-                    {alphaLots.length - maxVisible} more opportunities available
+                    {(tab === "alpha" ? alphaLots.length : lots.length) - maxVisible} more opportunities available
                   </div>
                   <p style={{ fontSize: "14px", color: "var(--text-2)", margin: "0 auto 24px", maxWidth: "420px", lineHeight: 1.7 }}>
                     Upgrade to Investor to unlock all AI-screened opportunities, full analysis, and real-time alerts.
