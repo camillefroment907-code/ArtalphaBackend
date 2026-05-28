@@ -810,263 +810,238 @@ export default function OpportunityDetail() {
       </div>
 
       {/* ═══ LIGHT ZONE ═══ */}
-      <div className="lot-light-zone" style={{ background: LT }}>
+      <div className="lot-light-zone" style={{ background: '#F5F4F0' }}>
 
-        {/* ── SCORE PILLARS STRIP ──────────────────────────────────────────── */}
-        {scorePillars.length > 0 && (
-          <div style={{ display: 'flex', gap: '32px', padding: '12px 40px', background: 'rgba(10,15,30,0.04)', borderBottom: '1px solid rgba(0,0,0,0.06)', borderRadius: '8px', flexWrap: 'wrap' as const }}>
-            {scorePillars.map(({ label, value }) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>{label.toUpperCase()}</span>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: LTT1, fontFamily: 'var(--font-mono)' }}>{value}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── DÉCISION ─────────────────────────────────────────────────────── */}
-        <div style={{ padding: '24px 40px 24px' }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>
-            {isFr ? '◆ DÉCISION' : '◆ DECISION'}
-          </div>
-          <div className="lot-decision-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-
-            {/* Card 1 — VOUS PAYEZ */}
-            <div style={{ background: LTC, border: `1px solid ${LTB}`, borderTop: `3px solid ${GD}`, borderRadius: '10px', padding: '18px 20px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase', marginBottom: '10px' }}>
-                {isFr ? 'VOUS PAYEZ' : 'YOU PAY'}
-              </div>
-              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 600, color: LTT1, lineHeight: 1 }}>
-                {fmtExact(price)}
-              </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: GD, marginTop: '6px', fontWeight: 600 }}>
-                {isFr ? 'Bonne entrée' : 'Good entry'}
-              </div>
-              <div style={{ fontSize: '11px', color: LTT3, marginTop: '3px' }}>
-                {isFr ? 'Sous les comparables récents' : 'Below recent comparables'}
-              </div>
-            </div>
-
-            {/* Card 2 — NE PAS DÉPASSER */}
-            {(avoidAbove ?? maxBid) ? (
-              <div style={{ background: DK, border: `1px solid ${DKB}`, borderTop: `3px solid ${GOLD}`, borderRadius: '10px', padding: '18px 20px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', color: '#6B7280', textTransform: 'uppercase', marginBottom: '10px' }}>
-                  {isFr ? 'NE PAS DÉPASSER' : 'MAX BID'}
-                </div>
-                <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 600, color: GOLD, lineHeight: 1 }}>
-                  {fmtExact(avoidAbove ?? maxBid ?? estHigh)}
-                </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#6B7280', marginTop: '6px' }}>
-                  {isFr ? 'Seuil de rentabilité max' : 'Max breakeven threshold'}
-                </div>
-              </div>
-            ) : (
-              <div style={{ background: LTC, border: `1px solid ${LTB}`, borderTop: `3px solid ${GOLD}`, borderRadius: '10px', padding: '18px 20px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase', marginBottom: '10px' }}>
-                  {isFr ? 'NE PAS DÉPASSER' : 'MAX BID'}
-                </div>
-                <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 600, color: GOLD, lineHeight: 1 }}>—</div>
-              </div>
+        {/* ── BANDE DÉCISION ───────────────────────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', background: '#fff', borderBottom: '0.5px solid #E8E4DC' }}>
+          {/* Col 1 — VOUS PAYEZ */}
+          <div style={{ padding: '28px 24px 28px 40px', borderRight: '0.5px solid #E8E4DC' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '8px' }}>VOUS PAYEZ</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '34px', fontWeight: 700, color: GL, lineHeight: 1 }}>{fmtExact(price)}</div>
+            {(upsidePct >= 5 || dealScore >= 65) && (
+              <div style={{ marginTop: '10px', display: 'inline-flex', alignItems: 'center', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '3px', padding: '3px 8px', fontFamily: 'var(--font-mono)', fontSize: '9px', color: GL, fontWeight: 700 }}>BONNE ENTRÉE</div>
             )}
-
-            {/* Card 3 — RÉFÉRENCE MARCHÉ */}
-            {lot.fair_value_nautilus ? (
-              <div style={{ background: LT, border: `1px solid ${LTB}`, borderRadius: '10px', padding: '18px 20px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase', marginBottom: '10px' }}>
-                  {isFr ? 'RÉFÉRENCE MARCHÉ' : 'MARKET REFERENCE'}
-                </div>
-                <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 600, color: LTT1, lineHeight: 1 }}>
-                  {fmtExact(lot.fair_value_nautilus as number)}
-                </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, marginTop: '6px' }}>
-                  {isFr ? 'Valeur médiane Nautilus' : 'Nautilus median value'}
-                </div>
-              </div>
-            ) : (
-              <div style={{ background: LT, border: `1px solid ${LTB}`, borderRadius: '10px', padding: '18px 20px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', color: LTT3, textTransform: 'uppercase', marginBottom: '10px' }}>
-                  SIGNAL NAUTILUS
-                </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 800, color: verdict.gl, letterSpacing: '0.04em', lineHeight: 1 }}>
-                  {verdict.icon} {verdict.label}
-                </div>
-                <div style={{ fontSize: '11px', color: LTT2, marginTop: '6px', lineHeight: 1.4 }}>
-                  {verdict.sub}
-                </div>
-              </div>
-            )}
-
-
           </div>
-          <div style={{ marginTop: '12px', display: 'flex', gap: '24px', padding: '12px 16px', background: 'rgba(10,15,30,0.04)', borderRadius: '6px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-            <div><div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>{isFr ? 'ENTRÉE CIBLE' : 'TARGET ENTRY'}</div><div style={{ fontSize: '13px', fontWeight: 600, color: LTT1 }}>{fmtExact(price)}</div></div>
-            <div><div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>{isFr ? 'BID MAX' : 'MAX BID'}</div><div style={{ fontSize: '13px', fontWeight: 600, color: GOLD }}>{fmtExact(avoidAbove ?? maxBid)}</div></div>
-            <div><div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', marginBottom: '3px' }}>TIMING</div><div style={{ fontSize: '13px', fontWeight: 600, color: LTT1 }}>{isFr ? 'Fin de session' : 'End of session'}</div></div>
+          {/* Col 2 — COÛT RÉEL */}
+          <div style={{ padding: '28px 24px', borderRight: '0.5px solid #E8E4DC' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '8px' }}>COÛT RÉEL</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '34px', fontWeight: 700, color: LTT1, lineHeight: 1 }}>{fmtExact(realCost?.cost_basis || Math.round(price * premiumMultiplier))}</div>
+            <div style={{ marginTop: '8px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>+{buyerPremiumPct}% frais{realCost?.holding_cost_3y ? ` · +${fmt(realCost.holding_cost_3y)} détention` : ''}</div>
+          </div>
+          {/* Col 3 — NE PAS DÉPASSER */}
+          <div style={{ padding: '28px 40px 28px 24px' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '8px' }}>NE PAS DÉPASSER</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '34px', fontWeight: 700, color: AMB, lineHeight: 1 }}>{(avoidAbove ?? maxBid) ? fmtExact(avoidAbove ?? maxBid) : '—'}</div>
+            {realCost?.breakeven_hammer && (
+              <div style={{ marginTop: '8px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>Seuil rentabilité : {fmtExact(Math.round(realCost.breakeven_hammer))}</div>
+            )}
+            {(avoidAbove ?? maxBid) && (
+              <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '3px', padding: '3px 8px', fontFamily: 'var(--font-mono)', fontSize: '9px', color: AMB, fontWeight: 700 }}>BID MAX ABSOLU</div>
+            )}
           </div>
         </div>
 
-        {/* ── MOBILE FREE: POURQUOI NAUTILUS SURVEILLE + COÛT RÉEL ─────────── */}
-        {!hasAccess && (() => {
-          const compsAvgMob = comparables.length > 0
-            ? Math.round(comparables.reduce((s: number, c: any) => s + (c.current_price || 0), 0) / comparables.length)
-            : null;
-
-          const whyBullets: string[] = [];
-          if (upsidePct >= 5) whyBullets.push(isFr ? `Prix ${Math.round(upsidePct)}% inférieur aux ventes comparables récentes` : `Price ${Math.round(upsidePct)}% below recent comparable sales`);
-          if ((lot.artist?.sell_through_rate || 0) >= 0.6) whyBullets.push(isFr ? 'Marché actif pour cet artiste' : 'Active market for this artist');
-          if ((lot.deal_score || 0) >= 65 && upsidePct < 5) whyBullets.push(isFr ? 'Bonne entrée pour cette catégorie' : 'Good entry point for this category');
-          const ratStr = typeof lot.score_rationale === 'string' ? lot.score_rationale : (typeof (lot as any).rationale === 'string' ? (lot as any).rationale : '');
-          const firstSent = ratStr ? (ratStr.match(/^[^.!?]+[.!?]/)?.[0] ?? null) : null;
-          if (firstSent && whyBullets.length < 3) whyBullets.push(firstSent);
-          if (compsAvgMob && compsAvgMob > price * 1.05 && whyBullets.length < 3) whyBullets.push(isFr ? 'Entrée favorable par rapport aux œuvres similaires récentes' : 'Favorable entry vs. similar works sold recently');
-
-          if (whyBullets.length === 0 && price === 0) return null;
-          return (
-            <div className="lot-mobile-only" style={{ padding: '0 16px' }}>
-
-              {/* Pourquoi Nautilus surveille */}
-              {whyBullets.length > 0 && (
-                <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '16px 18px', marginBottom: '12px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>
-                    ◆ {isFr ? 'POURQUOI NAUTILUS SURVEILLE CE LOT' : 'WHY NAUTILUS IS WATCHING'}
-                  </div>
-                  {whyBullets.slice(0, 3).map((b, i) => (
-                    <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: i < whyBullets.slice(0, 3).length - 1 ? '8px' : 0 }}>
-                      <span style={{ color: GOLD, fontSize: '11px', flexShrink: 0, marginTop: '2px' }}>◆</span>
-                      <span style={{ fontSize: '13px', color: LTT2, lineHeight: 1.55 }}>{b}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Coût réel */}
-              {price > 0 && (
-                <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '16px 18px', marginBottom: '12px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>
-                    ◆ {isFr ? 'COÛT RÉEL' : 'REAL COST'}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column' as const }}>
-                    <div style={dRow}>
-                      <span style={{ fontSize: '13px', color: LTT2 }}>{isFr ? 'Coût estimé après frais' : 'Estimated cost after fees'}</span>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>{fmtExact(Math.round(price * premiumMultiplier))}</span>
-                    </div>
-                    {compsAvgMob && compsAvgMob > 0 && (
-                      <div style={dRow}>
-                        <span style={{ fontSize: '13px', color: LTT2 }}>{isFr ? 'Revente moyenne historique' : 'Historical resale avg.'}</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>{fmtExact(compsAvgMob)}</span>
-                      </div>
-                    )}
-                    <div style={{ ...dRow, borderBottom: 'none' }}>
-                      <span style={{ fontSize: '13px', color: LTT2 }}>{isFr ? 'Seuil de rentabilité' : 'Break-even price'}</span>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: AMB }}>
-                        {fmtExact(realCost?.breakeven_hammer ? Math.round(realCost.breakeven_hammer) : Math.round(price * premiumMultiplier * (1 + breakEvenGain / 100)))}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
+        {/* ── BANDE PREUVE ─────────────────────────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', background: '#F5F4F0', borderBottom: '0.5px solid #E8E4DC' }}>
+          {/* Col 1 — ARTISTE */}
+          <div style={{ padding: '22px 24px 22px 40px', borderRight: '0.5px solid #E8E4DC' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '8px' }}>ARTISTE</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: lot.artist?.trend === 'up' ? GL : lot.artist?.trend === 'down' ? RED : LTT2, marginBottom: '6px' }}>
+              {lot.artist?.trend === 'up' ? '↑ EN HAUSSE' : lot.artist?.trend === 'down' ? '↓ EN BAISSE' : '→ STABLE'}
             </div>
-          );
-        })()}
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, marginBottom: '8px' }}>
+              Liquidité {Math.round(lot.artist?.liquidity_score ?? 0)}/100{lot.artist?.sell_through_rate != null ? ` · ${Math.round(lot.artist.sell_through_rate * 100)}% sell-thru` : ''}
+            </div>
+            <div style={{ height: '2px', background: '#E8E4DC', borderRadius: '1px' }}>
+              <div style={{ height: '100%', width: `${Math.min(100, Math.round(lot.artist?.liquidity_score ?? 0))}%`, background: '#34D399', borderRadius: '1px' }} />
+            </div>
+          </div>
+          {/* Col 2 — CONVICTION */}
+          <div style={{ padding: '22px 24px', borderRight: '0.5px solid #E8E4DC' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '8px' }}>CONVICTION</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: dealScore >= 80 ? GL : dealScore >= 60 ? AMB : RED, marginBottom: '6px' }}>
+              {dealScore.toFixed(0)}/100
+            </div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, marginBottom: '8px' }}>
+              {dealScore >= 80 ? 'Top des opportunités' : dealScore >= 60 ? 'Opportunité intéressante' : 'Signal modéré'}
+            </div>
+            <div style={{ height: '2px', background: '#E8E4DC', borderRadius: '1px' }}>
+              <div style={{ height: '100%', width: `${Math.min(100, dealScore)}%`, background: '#C6A85A', borderRadius: '1px' }} />
+            </div>
+          </div>
+          {/* Col 3 — DÉCOTE */}
+          <div style={{ padding: '22px 40px 22px 24px' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '8px' }}>DÉCOTE</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: upside > 0 ? GL : LTT3, marginBottom: '6px' }}>
+              {upside > 0 ? `−${Math.round(upside)}%` : '—'}
+            </div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, marginBottom: '8px' }}>
+              {estLow > 0 ? `vs estimation basse ${fmtExact(estLow)}` : 'vs estimation basse'}
+            </div>
+            <div style={{ height: '2px', background: '#E8E4DC', borderRadius: '1px' }}>
+              <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, Math.round(upside)))}%`, background: '#34D399', borderRadius: '1px' }} />
+            </div>
+          </div>
+        </div>
 
-        {/* ── INTELLIGENCE NAUTILUS ─────────────────────────────────────────── */}
-        {!hasAccess ? (
-          (() => {
-            const aiText = typeof lot.score_rationale === 'string' && lot.score_rationale.trim() ? lot.score_rationale.trim() : null;
-            if (!aiText) return null;
-            const sentences = aiText.match(/[^.!?]+[.!?]+/g) || [];
-            const excerpt = sentences.slice(0, 3).join(' ').trim() || aiText.slice(0, 300);
-            if (!excerpt) return null;
-            return (
-              <div className="lot-desktop-only" style={{ padding: '0 40px 24px' }}>
-                <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '16px 22px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
-                    ◆ {isFr ? 'LECTURE NAUTILUS' : 'NAUTILUS READ'}
+        {/* ── DÉTAILS + COÛT RÉEL ───────────────────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#fff', borderBottom: '0.5px solid #E8E4DC' }}>
+          {/* Col gauche — DÉTAILS DU LOT */}
+          <div style={{ padding: '28px 24px 28px 40px', borderRight: '0.5px solid #E8E4DC' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '16px' }}>DÉTAILS DU LOT</div>
+            {([
+              { label: 'Artiste', value: lot.artist_name_raw, nav: `/app/artists/${encodeURIComponent(lot.artist_name_raw || '')}` },
+              { label: 'Technique', value: lot.medium },
+              { label: 'Estimation', value: (estLow || estHigh) ? `${fmt(estLow)} – ${fmt(estHigh)}` : null },
+              { label: 'Maison', value: lot.auction_house_name },
+              { label: 'Clôture', value: auctionDateFmt, urgent: daysUntilClose != null && daysUntilClose < 14 },
+            ] as { label: string; value?: string | null; nav?: string; urgent?: boolean }[]).filter(r => r.value).map(r => (
+              <div key={r.label} style={dRow}>
+                <span style={{ fontSize: '13px', color: LTT3, minWidth: '80px', flexShrink: 0 }}>{r.label}</span>
+                {r.nav ? (
+                  <span onClick={() => navigate(r.nav!)} style={{ fontSize: '13px', color: BL, cursor: 'pointer', textDecoration: 'underline', textAlign: 'right' as const, flex: 1 }}>{r.value}</span>
+                ) : (
+                  <span style={{ fontSize: '13px', color: r.urgent ? AMB : LTT1, fontWeight: r.urgent ? 600 : 500, textAlign: 'right' as const, flex: 1 }}>{r.value}</span>
+                )}
+              </div>
+            ))}
+          </div>
+          {/* Col droite — COÛT RÉEL DÉTAILLÉ */}
+          <div style={{ padding: '28px 40px 28px 24px' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '16px' }}>COÛT RÉEL DÉTAILLÉ</div>
+            <div style={{ background: '#F5F4F0', borderRadius: '10px', padding: '16px 18px' }}>
+              {([
+                { k: 'Prix adjugé', v: price },
+                { k: `Frais acheteur (${buyerPremiumPct}%)`, v: Math.round(price * premiumMultiplier) - price },
+                { k: 'Coût de détention (3 ans)', v: realCost?.holding_cost_3y || 0 },
+              ] as { k: string; v: number }[]).filter(r => r.v > 0).map((r, i, arr) => (
+                <div key={r.k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: i < arr.length - 1 ? '0.5px solid #E8E4DC' : 'none' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: LTT2 }}>{r.k}</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: LTT1 }}>{fmt(r.v)}</span>
+                </div>
+              ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', paddingTop: '10px', borderTop: '0.5px solid #E8E4DC' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT2, fontWeight: 600 }}>COÛT TOTAL</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', color: GOLD, fontWeight: 700 }}>{fmt(totalCost)}</span>
+              </div>
+              {realCost && (
+                <>
+                  <div style={{ marginTop: '12px', borderTop: '0.5px solid #E8E4DC', paddingTop: '10px' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, marginBottom: '4px' }}>Nécessite +{breakEvenGain.toFixed(1)}% pour rentabiliser</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: GOLD, fontWeight: 600 }}>Seuil : {fmt(realCost.breakeven_hammer)}</div>
                   </div>
-                  <p style={{ fontSize: '13px', color: LTT2, lineHeight: 1.7, margin: 0 }}>{excerpt}</p>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── VENTES COMPARABLES ───────────────────────────────────────────── */}
+        <div style={{ padding: '24px 40px', background: '#F5F4F0', borderBottom: '0.5px solid #E8E4DC' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ VENTES COMPARABLES</div>
+          {!hasAccess ? (
+            <LockedBlock
+              title="Ventes comparables"
+              teaser=""
+              ctaText="INVESTOR+ · UNLOCK →"
+              ctaPrice="Investor"
+              planId="investor"
+              preview={<div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px' }}>{[1,2,3].map(i => <div key={i} style={{ height: '44px', background: LT, borderRadius: '6px' }} />)}</div>}
+            />
+          ) : comparables.length === 0 ? (
+            <div style={{ background: '#fff', borderRadius: '12px', padding: '48px 24px', textAlign: 'center' as const }}>
+              <div style={{ fontSize: '28px', opacity: 0.12, marginBottom: '12px' }}>◎</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, letterSpacing: '0.1em' }}>Aucune vente comparable trouvée pour ce lot.</div>
+            </div>
+          ) : (() => {
+            const compPrices = comparables.map((c: any) => c.current_price || 0).filter((v: number) => v > 0);
+            const minComp = compPrices.length > 0 ? Math.min(...compPrices) : 0;
+            const maxComp = compPrices.length > 0 ? Math.max(...compPrices) : 0;
+            const fmtK = (v: number) => v >= 1000 ? `€${(v / 1000).toFixed(0)}k` : `€${v}`;
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '20px' }}>
+                {/* Story card */}
+                <div style={{ background: '#0F3828', borderRadius: '12px', padding: '22px 20px', display: 'flex', flexDirection: 'column' as const, justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontFamily: 'Georgia, serif', fontSize: '28px', fontWeight: 700, color: '#4ADE80', lineHeight: 1.1, marginBottom: '14px' }}>
+                      {fmtK(minComp)} – {fmtK(maxComp)}
+                    </div>
+                    <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.6, margin: 0 }}>
+                      Des œuvres de <strong>{lot.artist_name_raw}</strong> ont vendu entre {fmtK(minComp)} et {fmtK(maxComp)} sur les {comparables.length} ventes comparables récentes.
+                    </p>
+                  </div>
+                  <div style={{ marginTop: '16px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>
+                    {comparables.length} ventes analysées
+                  </div>
+                </div>
+                {/* Table card */}
+                <div style={{ background: '#fff', borderRadius: '12px', padding: '16px 20px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
+                    <thead>
+                      <tr>
+                        {['Artiste', 'Titre', '', 'Prix', 'Score', 'Date'].map((col, ci) => (
+                          <th key={ci} style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: LTT3, textAlign: 'left' as const, padding: '8px 10px 8px 0', borderBottom: '0.5px solid #E8E4DC' }}>{col}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {comparables.map((comp: any) => {
+                        const compPrice = comp.current_price || comp.estimate_low || 0;
+                        const compDate = comp.auction_date
+                          ? new Date(comp.auction_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                          : '—';
+                        return (
+                          <tr key={comp.id} onClick={() => navigate(`/app/opportunities/${comp.id}`)} style={{ cursor: 'pointer' }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = '#F5F4F0'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
+                          >
+                            <td style={{ padding: '9px 10px 9px 0', borderBottom: '0.5px solid #E8E4DC', fontSize: '12px', color: LTT2, maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{comp.artist_name_raw || '—'}</td>
+                            <td style={{ padding: '9px 10px 9px 0', borderBottom: '0.5px solid #E8E4DC', fontSize: '12px', color: LTT1, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{comp.title || 'Untitled'}</td>
+                            <td style={{ width: '100px', padding: '0 8px', borderBottom: '0.5px solid #E8E4DC' }}>
+                              <div style={{ height: '2px', background: '#E8E4DC', borderRadius: '1px' }}>
+                                <div style={{ height: '100%', width: `${maxCompPrice > 0 ? (compPrice / maxCompPrice) * 100 : 0}%`, background: GOLD, borderRadius: '1px' }} />
+                              </div>
+                            </td>
+                            <td style={{ padding: '9px 10px 9px 0', borderBottom: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600, color: GOLD, whiteSpace: 'nowrap' as const }}>{fmt(compPrice)}</td>
+                            <td style={{ padding: '9px 10px 9px 0', borderBottom: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, whiteSpace: 'nowrap' as const }}>{comp.deal_score ? `${comp.deal_score.toFixed(0)}/100` : '—'}</td>
+                            <td style={{ padding: '9px 0', borderBottom: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, whiteSpace: 'nowrap' as const }}>{compDate}</td>
+                          </tr>
+                        );
+                      })}
+                      {/* Votre lot row */}
+                      <tr style={{ background: 'rgba(52,211,153,0.04)' }}>
+                        <td style={{ padding: '9px 10px 9px 0', borderTop: '0.5px solid #E8E4DC', fontSize: '12px', color: '#16A34A', fontWeight: 600 }}>Votre lot</td>
+                        <td style={{ padding: '9px 10px 9px 0', borderTop: '0.5px solid #E8E4DC', fontSize: '12px', color: LTT1 }}>{lot.auction_house_name || '—'}</td>
+                        <td style={{ width: '100px', padding: '0 8px', borderTop: '0.5px solid #E8E4DC' }}>
+                          <div style={{ height: '2px', background: 'rgba(52,211,153,0.2)', borderRadius: '1px' }}>
+                            <div style={{ height: '100%', width: `${maxCompPrice > 0 ? (price / maxCompPrice) * 100 : 0}%`, background: '#34D399', borderRadius: '1px' }} />
+                          </div>
+                        </td>
+                        <td style={{ padding: '9px 10px 9px 0', borderTop: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: '#34D399', whiteSpace: 'nowrap' as const }}>{fmt(price)}</td>
+                        <td style={{ padding: '9px 10px 9px 0', borderTop: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>—</td>
+                        <td style={{ padding: '9px 0', borderTop: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>—</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div style={{ marginTop: '10px', padding: '7px 10px', background: '#FFFBEB', border: '0.5px solid #FDE68A', borderRadius: '5px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: AMB }}>
+                    ⚠ Ces comparables peuvent inclure différents médiums. Vérifiez la technique avant d'enchérir.
+                  </div>
                 </div>
               </div>
             );
-          })()
-        ) : canSeeAnalysis && (() => {
-          const nautVal = lot.fair_value_nautilus as number | null;
-          const gapPct = nautVal && price > 0 ? Math.round((1 - price / nautVal) * 100) : null;
-          const aiRationale = null;
-          return (
-            <div style={{ padding: '20px 40px 24px' }}>
-              <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden' }}>
-                {/* Header */}
-                <div style={{ padding: '16px 24px 12px', borderBottom: `1px solid ${LTB}` }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const }}>
-                    ◆ {isFr ? 'INTELLIGENCE NAUTILUS' : 'NAUTILUS INTELLIGENCE'}
-                  </div>
-                </div>
-                <div style={{ padding: '16px 20px' }}>
+          })()}
+        </div>
 
-                  {/* ROW A — Gap percentage + Price bar */}
-                  {nautVal && gapPct !== null && (
-                    <div className="lot-reference-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>
-                          {isFr ? 'DÉCOTE ENTRÉE' : 'ENTRY DISCOUNT'}
-                        </div>
-                        <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '32px', fontWeight: 600, color: gapPct > 0 ? GD : RED, lineHeight: 1 }}>
-                          {gapPct > 0 ? '+' : ''}{gapPct}%
-                        </div>
-                        <div style={{ fontSize: '11px', color: LTT3, marginTop: '4px' }}>
-                          {isFr ? `vs valeur reconstituée ${fmt(nautVal)}` : `vs reconstructed value ${fmt(nautVal)}`}
-                        </div>
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        {(() => {
-                          const maxScale = (lot.fair_value_nautilus as number) * 1.1;
-                          const entryPct = Math.min((price / maxScale) * 100, 98);
-                          const maxBidPct = Math.min(((avoidAbove ?? maxBid ?? price) / maxScale) * 100, 98);
-                          return (
-                            <>
-                              <div style={{ position: 'relative', height: '6px', background: 'rgba(0,0,0,0.08)', borderRadius: '3px', marginBottom: '12px' }}>
-                                <div style={{ position: 'absolute', left: 0, width: entryPct + '%', height: '100%', background: '#34D399', borderRadius: '3px', opacity: 0.7 }} />
-                                <div style={{ position: 'absolute', left: entryPct + '%', transform: 'translateX(-50%)', top: '-5px', width: '2px', height: '16px', background: '#34D399', borderRadius: '1px' }} />
-                                <div style={{ position: 'absolute', left: maxBidPct + '%', transform: 'translateX(-50%)', top: '-5px', width: '2px', height: '16px', background: '#C6A85A', borderRadius: '1px' }} />
-                                <div style={{ position: 'absolute', left: '99%', transform: 'translateX(-50%)', top: '-5px', width: '2px', height: '16px', background: '#9CA3AF', borderRadius: '1px' }} />
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontFamily: 'var(--font-mono)' }}>
-                                <div><div style={{ fontWeight: 700, color: '#34D399' }}>{fmtExact(price)}</div><div style={{ color: LTT3 }}>{isFr ? 'Entrée' : 'Entry'}</div></div>
-                                <div style={{ textAlign: 'center' }}><div style={{ fontWeight: 700, color: '#C6A85A' }}>{fmtExact(avoidAbove ?? maxBid)}</div><div style={{ color: LTT3 }}>Max bid</div></div>
-                                <div style={{ textAlign: 'right' }}><div style={{ fontWeight: 700, color: LTT2 }}>{fmtExact(lot.fair_value_nautilus)}</div><div style={{ color: LTT3 }}>{isFr ? 'Médiane' : 'Median'}</div></div>
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ROW B — 3 ◆ bullets POURQUOI CETTE INEFFICIENCE */}
-                  <div style={{ marginBottom: '20px' }}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
-                      ◆ {isFr ? 'POURQUOI CETTE INEFFICIENCE PEUT EXISTER' : 'WHY THIS INEFFICIENCY MAY EXIST'}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '7px' }}>
-                      {([
-                        isFr ? 'Artiste hors des circuits institutionnels majeurs — moins de visibilité acheteurs.' : 'Artist outside major institutional circuits — lower buyer visibility.',
-                        isFr ? 'Vente dans une maison régionale ou spécialisée — audience plus restreinte.' : 'Sale at regional or specialist house — narrower audience.',
-                        isFr ? 'Opportunité de timing : la reconnaissance suit souvent avec délai les performances réelles.' : 'Timing opportunity: recognition often lags actual performance.',
-                      ] as string[]).map((b, i) => (
-                        <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                          <span style={{ color: GOLD, fontSize: '10px', marginTop: '2px', flexShrink: 0 }}>◆</span>
-                          <span style={{ fontSize: '12px', color: LTT2, lineHeight: 1.55 }}>{b}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                </div>
-              </div>
+        {/* ── ANALYSE NAUTILUS ─────────────────────────────────────────────── */}
+        {hasAccess && analysisText && (
+          <div style={{ padding: '24px 40px', background: '#fff', borderBottom: '0.5px solid #E8E4DC' }}>
+            <div style={{ borderLeft: '3px solid rgba(198,168,90,0.5)', paddingLeft: '16px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '10px' }}>LECTURE NAUTILUS</div>
+              <p style={{ fontSize: '13px', color: LTT2, lineHeight: 1.75, fontStyle: 'italic', margin: 0 }}>{analysisText}</p>
             </div>
-          );
-        })()}
+          </div>
+        )}
+
 
         {/* ── MINI ARTIST CARD ────────────────────────────────────────────── */}
             {lot.artist_name_raw && (
@@ -1134,299 +1109,6 @@ export default function OpportunityDetail() {
               </div>
             )}
 
-            {/* ── DATA GRID 50/50 ─────────────────────────────────────────────── */}
-            <div style={{ padding: '16px 40px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'ANALYSE' : 'ANALYSIS'}</div>
-              <div className="lot-analysis-grid" style={{ border: `0.5px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden', marginBottom: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
-
-              {/* LEFT COLUMN — Real Cost Breakdown + Investment Analysis */}
-              <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '20px', borderRight: `0.5px solid ${LTB}` }}>
-
-                {hasAccess && realCost && (
-                  <div>
-                    <div style={sl}>{t('lot.realCostBreakdown')}</div>
-                    {([
-                      { k: isFr ? 'Prix adjugé' : 'Hammer price',                                         v: price,                            bold: false },
-                      { k: isFr ? `Frais acheteur (${realCost.buyers_premium_pct}%)` : `Buyer's premium (${realCost.buyers_premium_pct}%)`,    v: Math.round(realCost.cost_basis - price), bold: false },
-                      { k: isFr ? 'Coût de détention (3 ans)' : 'Holding cost (3yr)',                                   v: realCost.holding_cost_3y,         bold: false },
-                    ] as { k: string; v: number; bold: boolean }[]).filter(r => r.v > 0).map(r => (
-                      <div key={r.k} style={dRow}>
-                        <span style={{ fontSize: '13px', color: LTT2 }}>{r.k}</span>
-                        <span style={{ fontSize: '13px', color: LTT1, fontWeight: 500 }}>{fmt(r.v)}</span>
-                      </div>
-                    ))}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0' }}>
-                      <span style={{ fontSize: '13px', color: LTT1, fontWeight: 700 }}>{isFr ? 'Coût total' : 'All-in cost'}</span>
-                      <span style={{ fontSize: '16px', color: GOLD, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{fmt(totalCost)}</span>
-                    </div>
-                    <div style={{ background: '#FAFAF7', border: `1px solid ${LTB}`, borderRadius: '8px', padding: '6px 10px', marginTop: '14px' }}>
-                      <div style={{ fontSize: '12px', color: LTT2 }}>{isFr ? `Nécessite +${breakEvenGain.toFixed(1)}% pour atteindre le seuil de rentabilité` : `Needs +${breakEvenGain.toFixed(1)}% to break even`}</div>
-                      <div style={{ fontSize: '12px', color: GOLD, fontWeight: 600, marginTop: '3px' }}>{isFr ? 'Prix adjugé seuil :' : 'Break-even hammer:'} {fmt(realCost.breakeven_hammer)}</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Investment Analysis */}
-                <div>
-                  <div style={sl}>{t('lot.investmentAnalysis')}</div>
-                  {canSeeAnalysis ? (
-                    <div className="lot-investment-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                      <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 14px', textAlign: 'center' }}>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', color: LTT3, marginBottom: '10px' }}>{t('lot.currentPrice')}</div>
-                        <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', fontWeight: 600, color: LTT1, lineHeight: 1 }}>{fmt(price)}</div>
-                        <div style={{ fontSize: '11px', color: LTT3, marginTop: '6px' }}>{t('lot.whatYouPay')}</div>
-                      </div>
-                      <div style={{ background: DK, border: `1px solid ${DKB}`, borderRadius: '12px', padding: '20px 14px', textAlign: 'center' }}>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6B7280', marginBottom: '10px' }}>{t('lot.fairValue')}</div>
-                        <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', fontWeight: 600, color: '#F0EDE6', lineHeight: 1 }}>{fmt(fairVal)}</div>
-                        <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '6px' }}>{t('lot.marketEstimate')}</div>
-                      </div>
-                      <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '20px 14px', textAlign: 'center' }}>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', color: LTT3, marginBottom: '10px' }}>{t('lot.upside')}</div>
-                        <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', fontWeight: 600, color: GL, lineHeight: 1 }}>
-                          {upsidePct > 0 ? `+${upsidePct.toFixed(0)}%` : 'At market'}
-                        </div>
-                        <div style={{ fontSize: '11px', color: LTT3, marginTop: '6px' }}>{t('lot.vsEstimate')}</div>
-                      </div>
-                    </div>
-                  ) : !hasAccess ? null : (
-                    <LockedBlock
-                      title="Is this artwork truly worth buying?"
-                      teaser="Unlock fair value analysis, upside potential, and 5-year price projections before you decide."
-                      ctaText="Unlock Investment Analysis"
-                      ctaPrice="Founding price — €19/mo"
-                      planId="starter"
-                      preview={
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
-                          {['Current Price', 'Fair Value', 'Upside %'].map(l => (
-                            <div key={l} style={{ padding: '16px', background: LT, borderRadius: '8px', textAlign: 'center' }}>
-                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: LTT3, marginBottom: '8px' }}>{l}</div>
-                              <div style={{ height: '18px', background: LTB, borderRadius: '3px' }} />
-                            </div>
-                          ))}
-                        </div>
-                      }
-                    />
-                  )}
-                </div>
-
-              </div>
-
-              {/* RIGHT COLUMN — Lot Details */}
-              <div style={{ padding: '16px 18px' }}>
-                <div style={sl}>{t('lot.lotDetails')}</div>
-                {([
-                  { label: t('common.artist'),    value: lot.artist_name_raw, nav: `/app/artists/${encodeURIComponent(lot.artist_name_raw || '')}`, link: true },
-                  { label: t('lot.medium'),        value: lot.medium },
-                  { label: t('common.category'),   value: lot.category },
-                  { label: t('lot.estimate'),      value: (estLow || estHigh) ? `${fmt(estLow)} – ${fmt(estHigh)}` : null },
-                  { label: t('lot.house'),         value: lot.auction_house_name },
-                  { label: t('common.closes'),     value: auctionDateFmt },
-                  { label: 'Lot #',                value: lot.lot_number },
-                ] as { label: string; value?: string | null; nav?: string; link?: boolean; href?: string }[]).filter(r => r.value).map(r => (
-                  <div key={r.label} style={dRow}>
-                    <span style={{ fontSize: '13px', color: LTT2, minWidth: '80px', flexShrink: 0 }}>{r.label}</span>
-                    {r.nav ? (
-                      <span onClick={() => navigate(r.nav!)} style={{ fontSize: '13px', color: BL, cursor: 'pointer', textDecoration: 'underline', textAlign: 'right', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.value}</span>
-                    ) : r.href ? (
-                      <a href={r.href} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: BL, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                        {r.value} ↗
-                      </a>
-                    ) : (
-                      <span style={{ fontSize: '13px', color: LTT1, fontWeight: 500, textAlign: 'right', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.value}</span>
-                    )}
-                  </div>
-                ))}
-                {!hasAccess && (
-                  <div style={dRow}>
-                    <span style={{ fontSize: '13px', color: LTT2, minWidth: '80px', flexShrink: 0 }}>{t('common.source')}</span>
-                    <span
-                      onClick={() => setUpgradeModal('source')}
-                      style={{ fontSize: '13px', color: '#C6A85A', cursor: 'pointer', fontStyle: 'italic', opacity: 0.8 }}
-                    >
-                      {isFr ? '🔒 Source masquée' : '🔒 Source hidden'}
-                    </span>
-                  </div>
-                )}
-
-                {/* Due diligence / provenance alert */}
-                {provRisk && (
-                  <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px', padding: '12px 16px', marginTop: '14px' }}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.13em', color: AMB, textTransform: 'uppercase', marginBottom: '8px' }}>
-                      {isFr ? "Points à vérifier avant d'enchérir" : 'Check these before bidding'}
-                    </div>
-                    {(provRisk.flags as { code: string; severity: string; label: string; detail: string }[]).map((f, i) => (
-                      <div key={f.code}>
-                        <div style={{ fontSize: '13px', fontWeight: 600, color: f.severity === 'HIGH' ? AMB : f.severity === 'MEDIUM' ? AMB : LTT2, marginBottom: '3px' }}>
-                          ● {translateDueDiligence(f.label)}
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#92400E', lineHeight: 1.5, marginBottom: i < provRisk.flags.length - 1 ? '8px' : 0 }}>{translateDueDiligence(f.detail)}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* COL 3 — Stratégie de sortie */}
-              <div style={{ padding: '16px 18px', background: LT }}>
-                <div style={{ fontSize: '10px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '14px' }}>
-                  {isFr ? 'STRATÉGIE DE SORTIE' : 'EXIT STRATEGY'}
-                </div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: LTT1, marginBottom: '4px' }}>
-                  {isFr ? 'Horizon optimal : 3–5 ans' : 'Optimal horizon: 3–5 years'}
-                </div>
-                {lot.cagr && (
-                  <div style={{ fontSize: '11px', color: LTT3, marginBottom: '14px' }}>CAGR : {lot.cagr}%</div>
-                )}
-                <div style={{ fontSize: '10px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>
-                  {isFr ? 'CATALYSEURS' : 'CATALYSTS'}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '7px' }}>
-                  {priceHistory?.statistics?.trend_pct != null && (
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <span style={{ color: GOLD, fontSize: '9px', marginTop: '3px' }}>◆</span>
-                      <span style={{ fontSize: '12px', color: LTT2 }}>
-                        {isFr ? `Momentum artiste ↑ ${priceHistory.statistics.trend_pct}% YoY` : `Artist momentum ↑ ${priceHistory.statistics.trend_pct}% YoY`}
-                      </span>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <span style={{ color: GOLD, fontSize: '9px', marginTop: '3px' }}>◆</span>
-                    <span style={{ fontSize: '12px', color: LTT2 }}>
-                      {isFr ? "Faible prix d'entrée — asymétrie favorable" : 'Low entry price — favorable asymmetry'}
-                    </span>
-                  </div>
-                  {priceHistory?.statistics?.sell_above_estimate_pct != null && (
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <span style={{ color: GOLD, fontSize: '9px', marginTop: '3px' }}>◆</span>
-                      <span style={{ fontSize: '12px', color: LTT2 }}>
-                        {isFr ? `Liquidité catégorie — ${priceHistory.statistics.sell_above_estimate_pct}% sell-through` : `Category liquidity — ${priceHistory.statistics.sell_above_estimate_pct}% sell-through`}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              </div>
-            </div>
-
-            {canSeeAnalysis && (() => {
-              const content = (
-                <div style={{ padding: '24px' }}>
-                  {/* ── Price Position Bar ── */}
-                  {lot.fair_value_nautilus != null && price > 0 && (() => {
-                    const nautVal = lot.fair_value_nautilus as number;
-                    const bidRef = avoidAbove ?? maxBid;
-                    const maxScale = nautVal * 1.1;
-                    const pctOf = (v: number) => `${Math.min(100, (v / maxScale) * 100).toFixed(1)}%`;
-                    return (
-                      <div style={{ marginBottom: '16px' }}>
-                        <div style={{ position: 'relative', height: '6px', background: LTB, borderRadius: '3px', marginBottom: '26px' }}>
-                          <div style={{ position: 'absolute', left: pctOf(price), top: '-4px', width: '2px', height: '14px', background: '#34D399', borderRadius: '1px' }} />
-                          {bidRef && <div style={{ position: 'absolute', left: pctOf(bidRef), top: '-4px', width: '2px', height: '14px', background: GOLD, borderRadius: '1px' }} />}
-                          <div style={{ position: 'absolute', left: pctOf(nautVal), top: '-4px', width: '2px', height: '14px', background: LTT3, borderRadius: '1px' }} />
-                          <div style={{ position: 'absolute', left: pctOf(price), top: '18px', transform: 'translateX(-50%)', fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#34D399', letterSpacing: '0.08em', whiteSpace: 'nowrap' as const }}>
-                            {isFr ? 'ENTRÉE CIBLE' : 'ENTRY'}
-                          </div>
-                          {bidRef && (
-                            <div style={{ position: 'absolute', left: pctOf(bidRef), top: '18px', transform: 'translateX(-50%)', fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.08em', whiteSpace: 'nowrap' as const }}>
-                              MAX
-                            </div>
-                          )}
-                          <div style={{ position: 'absolute', left: pctOf(nautVal), top: '18px', transform: 'translateX(-50%)', fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.08em', whiteSpace: 'nowrap' as const }}>
-                            {isFr ? 'VALEUR' : 'VALUE'}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* ── POURQUOI LE MARCHÉ SE TROMPE ── */}
-                  {lot.fair_value_nautilus != null && (() => {
-                    const nautVal = lot.fair_value_nautilus as number;
-                    const gapPct = price > 0 ? Math.round((1 - price / nautVal) * 100) : 0;
-                    const marketBullets = [
-                      isFr
-                        ? 'Le marché secondaire sous-pondère souvent les artistes hors grandes maisons.'
-                        : 'Secondary market often underweights artists outside major houses.',
-                      timingSignal
-                        ? isFr ? `Signal Nautilus : ${timingSignal}` : `Nautilus signal: ${timingSignal}`
-                        : null,
-                    ].filter(Boolean) as string[];
-                    if (marketBullets.length === 0) return null;
-                    return (
-                      <div style={{ marginBottom: '18px' }}>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
-                          ◆ {isFr ? 'POURQUOI LE MARCHÉ SE TROMPE' : 'WHY THE MARKET IS WRONG'}
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '7px' }}>
-                          {marketBullets.map((b, i) => (
-                            <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                              <span style={{ color: GOLD, fontSize: '10px', marginTop: '2px', flexShrink: 0 }}>◆</span>
-                              <span style={{ fontSize: '12px', color: LTT2, lineHeight: 1.55 }}>{b}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* ── LECTURE NAUTILUS ── */}
-                  {(() => {
-                    const rationaleText = typeof lot.score_rationale === 'string' && lot.score_rationale.trim() ? lot.score_rationale.trim() : null;
-                    if (!rationaleText) return null;
-                    return (
-                      <div style={{ borderLeft: '2px solid rgba(198,168,90,0.4)', paddingLeft: '14px', marginBottom: '18px' }}>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>
-                          {isFr ? 'LECTURE NAUTILUS' : 'NAUTILUS READ'}
-                        </div>
-                        <p style={{ fontSize: '12px', color: LTT2, lineHeight: 1.65, margin: 0 }}>{rationaleText}</p>
-                      </div>
-                    );
-                  })()}
-                  {comparables.length > 0 && (
-                    <div style={{ marginBottom: '16px', borderTop: `1px solid ${LTB}`, paddingTop: '14px' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, letterSpacing: '0.12em', marginBottom: '8px' }}>{isFr ? 'COMPARABLES RÉCENTS' : 'RECENT COMPARABLES'}</div>
-                      {comparables.slice(0, 2).map((c: any, i: number) => (
-                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: i === 0 && comparables.length > 1 ? `1px solid ${LTB}` : 'none' }}>
-                          <div style={{ fontSize: '11px', color: LTT2 }}>
-                            {c.auction_house_name || 'Unknown'}{c.auction_date ? ` · ${new Date(c.auction_date).getFullYear()}` : ''}
-                          </div>
-                          <div style={{ fontSize: '12px', fontWeight: 700, color: LTT1, fontFamily: 'var(--font-mono)' }}>
-                            {c.currency === 'USD' ? '$' : c.currency === 'GBP' ? '£' : '€'}{Math.round(c.current_price || 0).toLocaleString()}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px' }}>
-                    {bullets.map((b, i) => (
-                      <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                        <span style={{ color: GOLD, fontSize: '10px', marginTop: '2px', flexShrink: 0 }}>◆</span>
-                        <span style={{ fontSize: '12px', color: LTT2, lineHeight: 1.5 }}>{b}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-              return (
-                <div style={{ padding: '0 40px 24px' }}>
-                  <div style={{ position: 'relative', background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden' }}>
-                    {canSeeAnalysis ? content : !hasAccess ? null : (
-                      <>
-                        <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none' as const }}>{content}</div>
-                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
-                          <span onClick={() => window.location.href = '/app/pricing'} style={{ cursor: 'pointer', background: '#1A2A44', color: '#C6A85A', fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', padding: '8px 18px', borderRadius: 3 }}>
-                            INVESTOR+ · UNLOCK →
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-
             {/* ── SCÉNARIOS DE VALORISATION ───────────────────────────────────── */}
             {!hasAccess ? null : !hasAccess ? (
               <div style={{ padding: '0 40px 24px' }}>
@@ -1473,108 +1155,6 @@ export default function OpportunityDetail() {
                   <p style={{ fontSize: '11px', fontStyle: 'italic', color: LTT3, marginTop: '10px', lineHeight: 1.6 }}>
                     {isFr ? "Projections basées sur les données historiques des enchères et la modélisation statistique. Les performances passées ne garantissent pas les résultats futurs. Nautilus n'est pas un conseiller financier." : "Projections based on historical auction data and statistical modeling, capped at 15% to reflect long-term market realism. Past performance does not guarantee future returns. Nautilus is not a financial advisor — this is not financial advice."}
                   </p>
-                </div>
-              </div>
-            )}
-
-            {/* ── COMPARABLE SALES CARDS ────────────────────────────────────────── */}
-            {!hasAccess ? (
-              comparables.length > 0 && (
-                <div className="lot-mobile-only" style={{ padding: '0 16px 8px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
-                    ◆ {isFr ? 'PREUVES MARCHÉ' : 'MARKET PROOF'}
-                  </div>
-                  {comparables.slice(0, 3).map((c: any, i: number) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: i < Math.min(2, comparables.length - 1) ? `1px solid ${LTB}` : 'none' }}>
-                      <span style={{ fontSize: '13px', color: LTT2 }}>
-                        {c.auction_house_name || (isFr ? 'Maison inconnue' : 'Unknown')}{c.auction_date ? ` — ${new Date(c.auction_date).getFullYear()}` : ''}
-                      </span>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: LTT1 }}>
-                        €{Math.round(c.current_price || 0).toLocaleString('fr-FR')}
-                      </span>
-                    </div>
-                  ))}
-                  {comparables.length > 3 && (
-                    <div
-                      onClick={() => navigate('/app/pricing')}
-                      style={{ marginTop: '12px', fontSize: '12px', color: GOLD, cursor: 'pointer', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}
-                    >
-                      + {comparables.length - 3} {isFr ? 'ventes comparables supplémentaires avec Investor →' : 'more comparable sales with Investor →'}
-                    </div>
-                  )}
-                </div>
-              )
-            ) : displayComps.length > 0 && (
-              <div style={{ padding: '0 40px 16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'LOTS SIMILAIRES' : 'SIMILAR LOTS'}</div>
-                  {(comparables as any)?.market_analysis && (
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: LTT2 }}>
-                      Comps avg: {fmt((comparables as any).market_analysis.market_avg_price)} ·{' '}
-                      <span style={{ color: (comparables as any).market_analysis.price_gap_pct > 0 ? GL : RED, fontWeight: 700 }}>
-                        {(comparables as any).market_analysis.price_gap_pct > 0 ? '+' : ''}{(comparables as any).market_analysis.price_gap_pct}% vs this lot
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="lot-comparables-grid" style={{ display: 'grid', gridTemplateColumns: displayComps.length === 1 ? '1fr' : displayComps.length === 2 ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '16px' }}>
-                  {displayComps.map((comp: any) => {
-                    const compPrice = comp.current_price || comp.estimate_low || 0;
-                    const daysAgo = comp.days_since_sale;
-                    const daysLabel = daysAgo != null
-                      ? daysAgo < 30 ? (isFr ? `il y a ${daysAgo}j` : `${daysAgo}d ago`)
-                      : daysAgo < 365 ? (isFr ? `il y a ${Math.round(daysAgo / 30)} mois` : `${Math.round(daysAgo / 30)}mo ago`)
-                      : (isFr ? `il y a ${Math.round(daysAgo / 365)} an${Math.round(daysAgo / 365) > 1 ? 's' : ''}` : `${Math.round(daysAgo / 365)}yr ago`)
-                      : null;
-                    const premRatio = comp.premium_ratio;
-                    return (
-                      <div key={comp.id}
-                        className="comp-card-light"
-                        onClick={() => comp.is_historical ? null : navigate(`/app/opportunities/${comp.id}`)}
-                        style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '10px', overflow: 'hidden', cursor: comp.is_historical ? 'default' : 'pointer' }}
-                      >
-                        {comp.image_url ? (
-                          <div style={{ height: '100px', overflow: 'hidden', position: 'relative' }}>
-                            <img src={comp.image_url} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            {daysLabel && (
-                              <span style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.65)', color: '#fff', fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>
-                                {daysLabel}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <div style={{ height: '100px', background: LT, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                            <span style={{ fontSize: '28px', opacity: 0.12 }}>◎</span>
-                            {daysLabel && (
-                              <span style={{ position: 'absolute', top: '8px', right: '8px', background: LTB, color: LTT3, fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>
-                                {daysLabel}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        <div style={{ padding: '10px 12px' }}>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: LTT3, textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                            {comp.auction_house_name || comp.artist_name_raw || 'Unknown'}
-                          </div>
-                          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '12px', color: LTT1, marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                            {comp.title || 'Untitled'}
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: GOLD }}>€{compPrice.toLocaleString('en-GB')}</span>
-                            {premRatio && premRatio > 1 ? (
-                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GL, fontWeight: 600 }}>
-                                {Math.round(premRatio * 100)}% of est.
-                              </span>
-                            ) : comp.deal_score ? (
-                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>
-                                {comp.deal_score.toFixed(0)}/100
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
                 </div>
               </div>
             )}
@@ -1705,95 +1285,6 @@ export default function OpportunityDetail() {
                 </div>
               );
             })()}
-
-            {/* ──────────────── COMPARABLE SALES ──────────────── */}
-        <div style={{ padding: '16px 40px 24px' }}>
-            {!hasAccess ? null : !hasAccess ? (
-              <LockedBlock
-                title="Ventes comparables"
-                teaser=""
-                ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
-                ctaPrice="Investor"
-                planId="investor"
-                preview={<div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>{[1,2,3].map(i=><div key={i} style={{ height:'44px', background:LT, borderRadius:'6px' }}/>)}</div>}
-              />
-            ) : comparables.length === 0 ? (
-              <div style={{ ...wCard, textAlign: 'center', padding: '60px 24px' }}>
-                <div style={{ fontSize: '32px', opacity: 0.15, marginBottom: '16px' }}>◎</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, letterSpacing: '0.1em' }}>No comparable sales found for this lot.</div>
-              </div>
-            ) : (
-              <>
-                {/* Full comparables table */}
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ {isFr ? 'VENTES COMPARABLES' : 'COMPARABLE SALES'}</div>
-                <div style={wCard}>
-                  <table className="lot-comp-table" style={{ width: '100%', borderCollapse: 'collapse' as const }}>
-                    <thead>
-                      <tr>
-                        {(isFr ? ['Artiste', 'Titre', 'Prix', 'Score', 'Date'] : ['Artist', 'Title', 'Price', 'Score', 'Date']).flatMap((col, ci) => {
-                          const thStyle: React.CSSProperties = { fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', color: LTT3, textAlign: 'left', padding: '10px 12px 10px 0', borderBottom: `1px solid ${LTB}` };
-                          return ci === 2 ? [
-                            <th key="bar-h" style={{ width: '120px', padding: '10px 8px 10px 0', borderBottom: `1px solid ${LTB}` }}></th>,
-                            <th key={col} style={thStyle}>{col}</th>,
-                          ] : [<th key={col} style={thStyle}>{col}</th>];
-                        })}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {comparables.map((comp: any) => {
-                        const compPrice = comp.current_price || comp.estimate_low || 0;
-                        const compDate = comp.auction_date
-                          ? new Date(comp.auction_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-                          : '—';
-                        return (
-                          <tr
-                            key={comp.id}
-                            onClick={() => navigate(`/app/opportunities/${comp.id}`)}
-                            style={{ cursor: 'pointer', transition: 'background 0.1s' }}
-                            onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = LT; }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
-                          >
-                            <td style={{ padding: '11px 12px 11px 0', borderBottom: `1px solid #F0EDE6`, fontSize: '12px', color: LTT2, maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                              {comp.artist_name_raw || '—'}
-                            </td>
-                            <td style={{ padding: '11px 12px 11px 0', borderBottom: `1px solid #F0EDE6`, fontSize: '13px', color: LTT1, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                              {comp.title || 'Untitled'}
-                            </td>
-                            <td style={{ width: '120px', padding: '0 8px', borderBottom: `1px solid #F0EDE6` }}>
-                              <div style={{ height: '3px', background: LTB, borderRadius: '2px' }}>
-                                <div style={{ height: '100%', width: ((compPrice / maxCompPrice) * 100) + '%', background: GOLD, borderRadius: '2px' }} />
-                              </div>
-                            </td>
-                            <td style={{ padding: '11px 12px 11px 0', borderBottom: `1px solid #F0EDE6`, fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600, color: GOLD, whiteSpace: 'nowrap' as const }}>
-                              {fmt(compPrice)}
-                            </td>
-                            <td style={{ padding: '11px 12px 11px 0', borderBottom: `1px solid #F0EDE6`, fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, whiteSpace: 'nowrap' as const }}>
-                              {comp.deal_score ? `${comp.deal_score.toFixed(0)}/100` : '—'}
-                            </td>
-                            <td style={{ padding: '11px 0 11px 0', borderBottom: `1px solid #F0EDE6`, fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, whiteSpace: 'nowrap' as const }}>
-                              {compDate}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      <tr style={{ background: 'rgba(52,211,153,0.04)' }}>
-                        <td style={{ padding: '11px 12px 11px 0', borderTop: `1px solid ${LTB}`, fontSize: '12px', color: '#16A34A', fontWeight: 600 }}>{isFr ? 'Votre lot' : 'This lot'}</td>
-                        <td style={{ padding: '11px 12px 11px 0', borderTop: `1px solid ${LTB}`, fontSize: '13px', color: LTT1 }}>{lot.auction_house_name || '—'}</td>
-                        <td style={{ width: '120px', padding: '0 8px', borderTop: `1px solid ${LTB}` }}>
-                          <div style={{ height: '3px', background: 'rgba(52,211,153,0.2)', borderRadius: '2px' }}>
-                            <div style={{ height: '100%', width: (price / maxCompPrice * 100) + '%', background: '#34D399', borderRadius: '2px' }} />
-                          </div>
-                        </td>
-                        <td style={{ padding: '11px 12px 11px 0', borderTop: `1px solid ${LTB}`, fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: '#34D399', whiteSpace: 'nowrap' as const }}>{fmt(price)}</td>
-                        <td style={{ padding: '11px 12px 11px 0', borderTop: `1px solid ${LTB}`, fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, whiteSpace: 'nowrap' as const }}>—</td>
-                        <td style={{ padding: '11px 0 11px 0', borderTop: `1px solid ${LTB}`, fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, whiteSpace: 'nowrap' as const }}>—</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-          </div>
 
         {/* ──────────────── ANALYSIS ──────────────── */}
         <div style={{ padding: '16px 40px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
