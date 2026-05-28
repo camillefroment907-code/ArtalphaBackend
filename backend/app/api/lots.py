@@ -294,11 +294,20 @@ async def list_lots(
     resolved_to   = auction_date_to   or auction_to
 
     filters = [
-        # Only show upcoming/live lots in main feed — past lots go to /missed
+        # Only show upcoming/live lots in main feed — past lots go to /missed.
+        # NULL auction_date is only allowed for primary/gallery lots (no auction date by nature).
+        # Auction lots must have a future date. Sold lots (hammer_price set) are excluded.
         or_(
-            Lot.auction_date.is_(None),
+            and_(
+                Lot.auction_date.is_(None),
+                or_(
+                    Lot.market_type == MarketType.PRIMARY,
+                    Lot.market_type == MarketType.GALLERY,
+                ),
+            ),
             Lot.auction_date >= datetime.utcnow(),
-        )
+        ),
+        Lot.hammer_price.is_(None),
     ]
     # Free-tier delay: only show lots ingested >5 min ago (prevents API racing)
     if plan == "free":
@@ -555,7 +564,8 @@ async def list_lots(
 @router.get("/daily-unlock")
 async def daily_unlock(db: AsyncSession = Depends(get_db)):
     """Returns the single best-scored lot from the last 24h (free to access — teaser)."""
-    cutoff = datetime.utcnow() - timedelta(days=1)
+    now = datetime.utcnow()
+    cutoff = now - timedelta(days=1)
     stmt = (
         select(Lot)
         .where(
@@ -563,6 +573,8 @@ async def daily_unlock(db: AsyncSession = Depends(get_db)):
                 Lot.created_at >= cutoff,
                 Lot.image_url.isnot(None),
                 Lot.deal_score.isnot(None),
+                Lot.auction_date >= now,
+                Lot.hammer_price.is_(None),
             )
         )
         .order_by(desc(Lot.deal_score))
@@ -573,7 +585,13 @@ async def daily_unlock(db: AsyncSession = Depends(get_db)):
     if not lot:
         stmt2 = (
             select(Lot)
-            .where(Lot.image_url.isnot(None))
+            .where(
+                and_(
+                    Lot.image_url.isnot(None),
+                    Lot.auction_date >= now,
+                    Lot.hammer_price.is_(None),
+                )
+            )
             .order_by(desc(Lot.deal_score))
             .limit(1)
         )
@@ -1507,6 +1525,7 @@ async def get_public_lots(
                 Lot.deal_score >= 75,
                 Lot.image_url.isnot(None),
                 Lot.hammer_price.is_(None),
+                Lot.auction_date >= datetime.utcnow(),
             )
         )
         .order_by(desc(order_col))
