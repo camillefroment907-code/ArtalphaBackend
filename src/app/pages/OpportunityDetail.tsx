@@ -398,7 +398,7 @@ export default function OpportunityDetail() {
   const scorePillars = [
     { label: isFr ? 'VALORISATION' : 'PRICING',    value: Math.round(sb.below_estimate_score ?? 0) },
     { label: isFr ? 'LIQUIDITÉ' : 'LIQUIDITY',      value: Math.round(sb.liquidity_score ?? lot.artist?.liquidity_score ?? 0) },
-    { label: 'MOMENTUM',                             value: lot.artist?.trend === 'rising' ? 75 : lot.artist?.trend === 'stable' ? 50 : 25 },
+    { label: 'MOMENTUM',                             value: lot.artist?.trend === 'up' ? 75 : lot.artist?.trend === 'stable' ? 50 : lot.artist?.trend === 'down' ? 25 : 0 },
     { label: isFr ? 'TAUX DE VENTE' : 'SELL-THR',  value: Math.round(lot.artist?.sell_through_rate ?? 0) },
   ].filter(p => p.value > 0);
 
@@ -628,21 +628,23 @@ export default function OpportunityDetail() {
               const house = lot.auction_house_name || '';
               const bigHouses = ['christie', 'sotheby', 'phillips', 'bonhams', 'artcurial', 'drouot'];
               const isSmallHouse = !bigHouses.some(h => house.toLowerCase().includes(h));
-              const avgPrice = lot.artist?.avg_auction_price;
               const daysLeft = lot.auction_date
                 ? Math.ceil((new Date(lot.auction_date).getTime() - Date.now()) / 86400000)
                 : null;
-              const daysStr = daysLeft && daysLeft > 0 && daysLeft <= 14
-                ? (isFr ? ` Dans ${daysLeft} jours.` : ` ${daysLeft} days left.`)
-                : '';
 
-              if (isSmallHouse && avgPrice && avgPrice > price * 3) {
-                const avgFmt = avgPrice >= 1000 ? `€${(avgPrice / 1000).toFixed(0)}K` : `€${Math.round(avgPrice)}`;
+              if (isSmallHouse && (lot.pct_below_low_estimate || 0) > 20) {
+                const daysStr = daysLeft && daysLeft > 0 && daysLeft <= 14
+                  ? (isFr ? ` Dans ${daysLeft} jours.` : ` ${daysLeft} days left.`)
+                  : '';
+                const houseName = house.split(':')[0].trim();
                 return isFr
-                  ? `${lot.artist_name_raw} part chez ${house} — une maison peu visible. Moyenne historique de l'artiste : ${avgFmt}. Ce lot est à ${fmt(price)}.${daysStr}`
-                  : `${lot.artist_name_raw} selling at ${house} — a less visible house. Artist historical average: ${avgFmt}. This lot: ${fmt(price)}.${daysStr}`;
+                  ? `${lot.artist_name_raw} chez ${houseName} — maison peu visible. ${Math.round(lot.pct_below_low_estimate)}% sous estimation.${daysStr}`
+                  : `${lot.artist_name_raw} at ${houseName} — less visible house. ${Math.round(lot.pct_below_low_estimate)}% below estimate.${daysStr}`;
               }
               if (lot.artist?.trend === 'up' && (lot.pct_below_low_estimate || 0) > 15) {
+                const daysStr = daysLeft && daysLeft > 0 && daysLeft <= 14
+                  ? (isFr ? ` Dans ${daysLeft} jours.` : ` ${daysLeft} days left.`)
+                  : '';
                 return isFr
                   ? `Momentum positif sur 6 mois. Prix actuel ${Math.round(lot.pct_below_low_estimate)}% sous l'estimation basse.${daysStr}`
                   : `Positive momentum over 6 months. Current price ${Math.round(lot.pct_below_low_estimate)}% below low estimate.${daysStr}`;
