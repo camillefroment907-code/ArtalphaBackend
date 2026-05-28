@@ -309,14 +309,8 @@ export default function OpportunityDetail() {
   const provRisk     = lot.provenance_risk   || null;
   const priceHistory = (lot.price_history)    || null;
 
-  const hasProvHighRisk = provRisk?.level === 'HIGH RISK';
-  const hasConsignHigh  = consignAlert?.level === 'HIGH VOLUME';
-  const hasCycleRisk    = cycleStage?.stage === 'PEAK';
-
   const verdict = (() => {
-    if (hasProvHighRisk)
-      return { label: isFr ? 'RISQUE ÉLEVÉ' : 'HIGH RISK', dk: '#EF4444', gl: RED,  icon: '⚠', sub: isFr ? 'Problème de provenance détecté' : 'Provenance issue detected' };
-    if ((lot.deal_score || 0) >= 80 && upsidePct >= 20 && !hasCycleRisk)
+    if ((lot.deal_score || 0) >= 80 && upsidePct >= 20)
       return { label: isFr ? 'ACHETER' : 'BUY',  dk: GD,        gl: GL,   icon: '↑', sub: isFr ? 'Signal fort de conviction' : 'Strong conviction signal' };
     if ((lot.deal_score || 0) >= 65 && upsidePct >= 10)
       return { label: isFr ? 'SURVEILLER' : 'WATCH',     dk: '#FBBF24',  gl: AMB,  icon: '◎', sub: isFr ? 'À surveiller de près' : 'Monitor closely' };
@@ -324,10 +318,6 @@ export default function OpportunityDetail() {
       return { label: isFr ? 'PASSER' : 'PASS', dk: '#EF4444',  gl: RED,  icon: '↓', sub: isFr ? 'Sous le seuil de conviction' : 'Below conviction threshold' };
     return   { label: isFr ? 'SURVEILLER' : 'WATCH',     dk: '#FBBF24',  gl: AMB,  icon: '◎', sub: isFr ? 'Signal insuffisant' : 'Insufficient signal' };
   })();
-
-  const riskFlagCount = ([hasProvHighRisk, hasConsignHigh, !!(estBias && Math.abs(estBias.pct_above_low_estimate || 0) > 50)] as boolean[]).filter(Boolean).length;
-  const riskColor = riskFlagCount >= 2 ? GD : riskFlagCount === 1 ? '#FBBF24' : GD;
-  const riskLabel = riskFlagCount >= 2 ? (isFr ? 'RISQUE ÉLEVÉ' : 'HIGH RISK') : riskFlagCount === 1 ? (isFr ? 'MODÉRÉ' : 'MODERATE') : (isFr ? 'FAIBLE RISQUE' : 'LOW RISK');
 
   const dealScore     = lot.deal_score || 0;
   const stickyTier    = dealScore >= 80 ? (isFr ? 'EXCEPTIONNEL' : 'EXCEPTIONAL') : dealScore >= 65 ? (isFr ? 'FORT' : 'STRONG') : (isFr ? 'INTÉRESSANT' : 'INTERESTING');
@@ -1350,107 +1340,6 @@ export default function OpportunityDetail() {
                           </span>
                         </div>
                       </>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* ── CONTEXTE MARCHÉ & VIGILANCE ──────────────────────────────────── */}
-            {!hasAccess ? null : !hasAccess ? (
-              <div style={{ padding: '0 40px 24px' }}>
-                <LockedBlock
-                  title="Contexte marché"
-                  teaser=""
-                  ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
-                  ctaPrice="Investor"
-                  planId="investor"
-                  preview={<div style={{ display: 'flex', gap: '12px' }}>{[1,2,3].map(i=><div key={i} style={{ flex:1, height:'72px', background:LT, borderRadius:'8px' }}/>)}</div>}
-                />
-              </div>
-            ) : canSeeAnalysis && (() => {
-              const marketTrend = priceHistory?.statistics?.trend_pct;
-              const sellThrough = lot.artist?.sell_through_rate;
-              const exhibitions = lot.artist_profile?.shows_last_12m;
-              const hasMarketTrend = marketTrend != null;
-              const hasSellThrough = sellThrough != null;
-              const hasExhibitions = exhibitions != null && exhibitions !== '' && exhibitions !== 0;
-              const metricCount = [hasMarketTrend, hasSellThrough, hasExhibitions].filter(Boolean).length;
-              const hasMarket = metricCount > 0;
-
-              const risks: string[] = [];
-              if (hasProvHighRisk)
-                risks.push(isFr ? 'Provenance à vérifier' : 'Verify provenance');
-              if (hasCycleRisk)
-                risks.push(isFr ? 'Marché au pic du cycle' : 'Market at peak cycle');
-              if (hasConsignHigh)
-                risks.push(isFr ? 'Suroffre consignation possible' : 'Possible consignment oversupply');
-              if (estBias && Math.abs(estBias.pct_above_low_estimate || 0) > 50)
-                risks.push(isFr ? 'Estimation possiblement optimiste' : 'Estimate may be optimistic');
-              if (lot.artist?.trend === 'down')
-                risks.push(isFr ? 'Momentum artiste en déclin' : 'Artist momentum declining');
-              if ((lot.artist?.liquidity_score ?? 60) < 40)
-                risks.push(isFr ? 'Faible liquidité artiste' : 'Low artist liquidity');
-              if (lot.oracle?.signal === 'AVOID')
-                risks.push(isFr ? 'Signal Oracle : ÉVITER' : 'Oracle signal: AVOID');
-              if (risks.length === 0) {
-                risks.push(isFr ? 'Illiquidité standard marché art' : 'Standard art illiquidity');
-                risks.push(isFr ? 'Frais acheteur à intégrer' : "Include buyer's premium");
-              }
-
-              if (!hasMarket && risks.length === 0) return null;
-
-              return (
-                <div style={{ padding: '0 40px 24px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>
-                    ◆ {isFr ? 'CONTEXTE MARCHÉ & VIGILANCE' : 'MARKET CONTEXT & WATCH POINTS'}
-                  </div>
-                  <div style={{ ...wCard, padding: '16px 20px' }}>
-                    {hasMarket && (
-                      <div className="lot-context-grid" style={{ display: 'grid', gridTemplateColumns: `repeat(${metricCount}, 1fr)`, gap: '1px', background: LTB, borderRadius: '8px', overflow: 'hidden' }}>
-                        {hasMarketTrend && (
-                          <div style={{ background: LTC, padding: '16px 18px' }}>
-                            <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>MARCHÉ</div>
-                            <div style={{ fontSize: '14px', fontWeight: 700, color: '#34D399', marginBottom: '4px' }}>
-                              {`↑ +${marketTrend}% YoY`}
-                            </div>
-                            <div style={{ fontSize: '11px', color: LTT3 }}>{isFr ? 'Prix catégorie' : 'Category prices'}</div>
-                          </div>
-                        )}
-                        {hasSellThrough && (
-                          <div style={{ background: LTC, padding: '16px 18px' }}>
-                            <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>LIQUIDITÉ</div>
-                            <div style={{ fontSize: '14px', fontWeight: 700, color: LTT1, marginBottom: '4px' }}>
-                              {`${Math.round(sellThrough! * 100)}%`}
-                            </div>
-                            <div style={{ fontSize: '11px', color: LTT3 }}>sell-through</div>
-                          </div>
-                        )}
-                        {hasExhibitions && (
-                          <div style={{ background: LTC, padding: '16px 18px' }}>
-                            <div style={{ fontSize: '9px', color: LTT3, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '8px' }}>INSTITUTIONNEL</div>
-                            <div style={{ fontSize: '14px', fontWeight: 700, color: LTT1, marginBottom: '4px' }}>
-                              {exhibitions}
-                            </div>
-                            <div style={{ fontSize: '11px', color: LTT3 }}>{isFr ? 'expositions 12 mois' : 'exhibitions 12m'}</div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {hasMarket && risks.length > 0 && (
-                      <hr style={{ border: 'none', borderTop: '1px solid var(--border-color, #E5E7EB)', margin: '12px 0' }} />
-                    )}
-                    {risks.length > 0 && (
-                      <div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>
-                          {isFr ? 'POINTS DE VIGILANCE' : 'WATCH POINTS'}
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '6px' }}>
-                          {risks.map((text, i) => (
-                            <div key={i} style={{ fontSize: '12px', color: LTT2, lineHeight: 1.5 }}>• {text}</div>
-                          ))}
-                        </div>
-                      </div>
                     )}
                   </div>
                 </div>
