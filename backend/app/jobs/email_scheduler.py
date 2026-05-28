@@ -436,19 +436,19 @@ def _check_trial_ending():
     from sqlalchemy import select, cast, Date
 
     now = datetime.now(timezone.utc)
-    tomorrow = (now + timedelta(days=1)).date()
+    in_2_days = (now + timedelta(days=2)).date()
     dedup_cutoff = now - timedelta(hours=36)
 
     db = _get_sync_db()
     try:
-        # Users whose trial ends tomorrow — use User.trial_end (non-Stripe trials
+        # Users whose trial ends in ~48h — use User.trial_end (non-Stripe trials
         # don't have current_period_end set on Subscription)
         stmt = (
             select(User, Subscription)
             .join(User.subscription)
             .where(
                 Subscription.status == "trialing",
-                cast(User.trial_end, Date) == tomorrow,
+                cast(User.trial_end, Date) == in_2_days,
             )
         )
         results = db.execute(stmt).all()

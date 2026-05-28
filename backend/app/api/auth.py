@@ -130,6 +130,24 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
     except Exception:
         pass
 
+    # Fire-and-forget trial started email (J0)
+    try:
+        _trial_end_str = user.trial_end.strftime("%d %B %Y") if user.trial_end else "7 days"
+        async def _send_trial_started():
+            try:
+                from app.services.email_trial import send_trial_started_email
+                await send_trial_started_email(
+                    to_email=user.email,
+                    name=user.full_name or "",
+                    trial_end_date=_trial_end_str,
+                    plan="investor",
+                )
+            except Exception:
+                pass
+        asyncio.create_task(_send_trial_started())
+    except Exception:
+        pass
+
     plan = user.active_plan.value.lower()
     trial_end_iso = user.trial_end.isoformat() if user.trial_end else None
     token = create_access_token({
