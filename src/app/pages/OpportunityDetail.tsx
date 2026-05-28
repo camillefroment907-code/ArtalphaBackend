@@ -356,11 +356,8 @@ export default function OpportunityDetail() {
   ].filter(Boolean) as string[];
 
   // Analysis text
-  const rawAnalysis = lot.score_rationale || lot.nautilus_analysis || '';
-  const analysisText = rawAnalysis && !isFrench(rawAnalysis)
-    ? rawAnalysis
-    : upside > 0
-    ? `${Math.round(upside)}% below market estimate — undervalued acquisition with strong artist liquidity signal. ${lot.auction_house_name ? lot.auction_house_name.split('—')[0].trim() + ' auction history suggests consistent sell-through for this category.' : ''}`
+  const analysisText = typeof lot.score_rationale === 'string' && lot.score_rationale.trim()
+    ? lot.score_rationale.trim()
     : null;
 
   // Comparables
@@ -976,7 +973,7 @@ export default function OpportunityDetail() {
         {/* ── INTELLIGENCE NAUTILUS ─────────────────────────────────────────── */}
         {!hasAccess ? (
           (() => {
-            const aiText = [lot.score_rationale, lot.ai_insight, Array.isArray((lot as any).rationale) ? (lot as any).rationale.join(' ') : (lot as any).rationale].filter(Boolean).join(' ').trim();
+            const aiText = typeof lot.score_rationale === 'string' && lot.score_rationale.trim() ? lot.score_rationale.trim() : null;
             if (!aiText) return null;
             const sentences = aiText.match(/[^.!?]+[.!?]+/g) || [];
             const excerpt = sentences.slice(0, 3).join(' ').trim() || aiText.slice(0, 300);
@@ -995,7 +992,7 @@ export default function OpportunityDetail() {
         ) : canSeeAnalysis && (() => {
           const nautVal = lot.fair_value_nautilus as number | null;
           const gapPct = nautVal && price > 0 ? Math.round((1 - price / nautVal) * 100) : null;
-          const aiRationale = lot.ai_insight || (Array.isArray((lot as any).rationale) ? (lot as any).rationale.join(' ') : (lot as any).rationale);
+          const aiRationale = null;
           return (
             <div style={{ padding: '20px 40px 24px' }}>
               <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', overflow: 'hidden' }}>
@@ -1376,13 +1373,7 @@ export default function OpportunityDetail() {
 
                   {/* ── LECTURE NAUTILUS ── */}
                   {(() => {
-                    const rationaleText = [
-                      lot.score_rationale,
-                      lot.ai_insight,
-                      Array.isArray((lot as any).rationale)
-                        ? (lot as any).rationale.join(' ')
-                        : (lot as any).rationale,
-                    ].filter(Boolean).join(' ');
+                    const rationaleText = typeof lot.score_rationale === 'string' && lot.score_rationale.trim() ? lot.score_rationale.trim() : null;
                     if (!rationaleText) return null;
                     return (
                       <div style={{ borderLeft: '2px solid rgba(198,168,90,0.4)', paddingLeft: '14px', marginBottom: '18px' }}>
@@ -1652,7 +1643,7 @@ export default function OpportunityDetail() {
 
             {/* ── MOBILE FREE: LECTURE NAUTILUS + PAYWALL ── */}
             {!hasAccess && (() => {
-              const aiText = [lot.score_rationale, lot.ai_insight, Array.isArray((lot as any).rationale) ? (lot as any).rationale.join(' ') : (lot as any).rationale].filter(Boolean).join(' ').trim();
+              const aiText = typeof lot.score_rationale === 'string' && lot.score_rationale.trim() ? lot.score_rationale.trim() : null;
               const sentences = aiText ? (aiText.match(/[^.!?]+[.!?]+/g) || []) : [];
               const excerpt = sentences.slice(0, 3).join(' ').trim() || (aiText ? aiText.slice(0, 300) : null);
               return (
