@@ -28,7 +28,8 @@ logger = structlog.get_logger(__name__)
 _settings = get_settings()
 
 CHAT_LIMITS: dict[str, int] = {
-    "free":          3,        # 3 lifetime messages (trial)
+    "free":          0,        # No Larry on free plan
+    "starter":       10,       # Collector — 10/month
     "investor":      20,       # €19 — 20/month
     "pro":           99999,    # Family Office — unlimited
     "institutional": 99999,    # unlimited
@@ -376,7 +377,7 @@ async def get_history(
     db: AsyncSession = Depends(get_db),
 ):
     plan = await get_user_plan(current_user, db)
-    if CHAT_LIMITS.get(plan, 3) == 0:
+    if CHAT_LIMITS.get(plan, 0) == 0:
         raise HTTPException(403, "Larry is not available on your current plan.")
 
     result = await db.execute(
@@ -404,7 +405,7 @@ async def send_message(
     db: AsyncSession = Depends(get_db),
 ):
     plan = await get_user_plan(current_user, db)
-    limit = CHAT_LIMITS.get(plan, 3)
+    limit = CHAT_LIMITS.get(plan, 0)
 
     used = await _get_monthly_usage(current_user.id, db)
     if used >= limit:

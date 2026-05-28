@@ -33,8 +33,8 @@ export interface PlanLimits {
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
   free: {
     name: 'Free',
-    maxOpportunities: 3,
-    maxWatchlist: 0,
+    maxOpportunities: 6,
+    maxWatchlist: 3,
     hasFullAnalysis: false,
     hasAlerts: false,
     hasPortfolio: false,

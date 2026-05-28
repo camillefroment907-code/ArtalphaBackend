@@ -141,10 +141,13 @@ async def send_exceptional_opportunity_alerts(lot_ids: list) -> int:
     from sqlalchemy import select, and_
     from sqlalchemy.orm import selectinload
     from app.models.db_models import (
-        Lot, User, UserAlertPreferences, LotStatus,
+        Lot, User, UserAlertPreferences, LotStatus, Subscription,
     )
     from app.services.email_alerts import send_alert_exceptional_email
     from app.database import BgSessionLocal
+
+    # Per-plan score thresholds: pro ≥ 60, investor ≥ 70, others ≥ 80
+    _PLAN_THRESHOLD = {"pro": 60, "institutional": 60, "investor": 70, "starter": 80}
 
     sent = 0
     try:
@@ -155,7 +158,7 @@ async def send_exceptional_opportunity_alerts(lot_ids: list) -> int:
                 .where(
                     and_(
                         Lot.id.in_(lot_ids),
-                        Lot.deal_score >= 80,
+                        Lot.deal_score >= 60,   # lowest threshold — per-user check below
                         Lot.status == LotStatus.upcoming,
                     )
                 )
@@ -164,10 +167,11 @@ async def send_exceptional_opportunity_alerts(lot_ids: list) -> int:
             if not lots:
                 return 0
 
-            # Users who opted into exceptional_opportunity alerts
+            # Users who opted into exceptional_opportunity alerts — load subscription for plan check
             users_result = await db.execute(
                 select(User, UserAlertPreferences)
                 .join(UserAlertPreferences, User.id == UserAlertPreferences.user_id)
+                .options(selectinload(User.subscription))
                 .where(
                     and_(
                         User.is_active == True,
@@ -203,6 +207,11 @@ async def send_exceptional_opportunity_alerts(lot_ids: list) -> int:
 
                 for user, _prefs in user_rows:
                     try:
+                        # Check per-plan score threshold
+                        user_plan = user.plan  # uses active_plan property
+                        threshold = _PLAN_THRESHOLD.get(user_plan, 80)
+                        if score < threshold:
+                            continue
                         if await _already_sent(db, user.id, lot.id, "EXCEPTIONAL"):
                             continue
                         if not await _daily_limit_ok(db, user.id):
