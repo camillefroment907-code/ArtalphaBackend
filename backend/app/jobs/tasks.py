@@ -993,7 +993,7 @@ async def _run_ai_agents_async():
                         max(0, (lot.auction_date - datetime.utcnow()).days)
                         if lot.auction_date else 0
                     )
-                    lot_url = f"https://get-nautilus.com/opportunities/{lot.id}"
+                    lot_url = f"https://www.get-nautilus.com/app/opportunities/{lot.id}"
                     lang = "fr"
                     if user.preferences and user.preferences.language:
                         lang = user.preferences.language
@@ -1353,7 +1353,7 @@ async def _check_auction_reminders_async():
                         estimate_range = _build_estimate(lot)
                         image_url    = lot.image_url
                 lot_url = (
-                    f"https://www.get-nautilus.com/app/lot/{sub.lot_id}"
+                    f"https://www.get-nautilus.com/app/opportunities/{sub.lot_id}"
                     if sub.lot_id else "https://www.get-nautilus.com/app/explore"
                 )
                 await send_auction_reminder_1h(
@@ -1395,7 +1395,7 @@ async def _check_auction_reminders_async():
                         estimate_range = _build_estimate(lot)
                         image_url    = lot.image_url
                 lot_url = (
-                    f"https://www.get-nautilus.com/app/lot/{sub.lot_id}"
+                    f"https://www.get-nautilus.com/app/opportunities/{sub.lot_id}"
                     if sub.lot_id else "https://www.get-nautilus.com/app/explore"
                 )
                 await send_auction_reminder_30min(

@@ -199,7 +199,7 @@ async def send_exceptional_opportunity_alerts(lot_ids: list) -> int:
                     max(0, (lot.auction_date - datetime.utcnow()).days)
                     if lot.auction_date else 0
                 )
-                lot_url = f"https://get-nautilus.com/opportunities/{lot.id}"
+                lot_url = f"https://www.get-nautilus.com/app/opportunities/{lot.id}"
 
                 for user, _prefs in user_rows:
                     try:
@@ -406,7 +406,7 @@ async def send_auction_closing_alerts() -> int:
                         estimate=f"€{lot.estimate_low:,.0f}" if lot.estimate_low else "N/A",
                         score=int(lot.deal_score or 0),
                         closing_time=closing_time,
-                        lot_url=f"https://get-nautilus.com/opportunities/{lot.id}",
+                        lot_url=f"https://www.get-nautilus.com/app/opportunities/{lot.id}",
                     )
                     if ok:
                         await _record_alert(db, user.id, lot.id, "CLOSING", lot.deal_score or 0, user.email)
