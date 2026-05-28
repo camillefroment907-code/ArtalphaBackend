@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { getPlanLimits, getUser } from "../../lib/auth";
 import { useSEO } from "../../lib/useSEO";
@@ -669,8 +669,15 @@ export default function Opportunities() {
   const [sourceStats, setSourceStats] = useState<SourceStat[]>([]);
   const [lowSupply, setLowSupply] = useState(false);
 
-  // Plan gating
-  const limits     = getPlanLimits();
+  // Plan gating — reactive to auth-change (Root.tsx syncs plan from /api/auth/me on load)
+  const [planKey, setPlanKey] = useState(0);
+  useEffect(() => {
+    const handler = () => setPlanKey(k => k + 1);
+    window.addEventListener('auth-change', handler);
+    return () => window.removeEventListener('auth-change', handler);
+  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const limits     = useMemo(() => getPlanLimits(), [planKey]);
   const user       = getUser();
   const isAdmin    = user?.email === "camillefroment907@gmail.com";
   const maxVisible = isAdmin ? 9999 : (limits.maxOpportunities || 3);
@@ -1182,12 +1189,32 @@ export default function Opportunities() {
                       <div key={h} className="label-caps">{h}</div>
                     ))}
                   </div>
-                  {lots.map(lot => (
+                  {visibleLots.map(lot => (
                     <LiveListRow
                       key={lot.id}
                       lot={lot}
                       onClick={() => navigate(`/app/opportunities/${lot.id}`)}
                     />
+                  ))}
+                  {lockedLots.map(lot => (
+                    <div key={lot.id} style={{ position: "relative" }}>
+                      <div style={{ filter: "blur(3px)", userSelect: "none", pointerEvents: "none" }}>
+                        <LiveListRow lot={lot} onClick={() => {}} />
+                      </div>
+                      <div
+                        onClick={() => navigate("/app/pricing")}
+                        style={{
+                          position: "absolute", inset: 0,
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                          background: "rgba(250,250,248,0.88)", backdropFilter: "blur(2px)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <span style={{ fontSize: "14px" }}>🔒</span>
+                        <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text)" }}>Investor plan</span>
+                        <span style={{ fontSize: "11px", color: "var(--text-3)" }}>from €19/month</span>
+                      </div>
+                    </div>
                   ))}
                 </>
               ) : (
@@ -1323,8 +1350,8 @@ export default function Opportunities() {
                 </div>
               )}
 
-              {/* Load more — live tab */}
-              {tab === "live" && !loading && !hasError && lots.length > 0 && currentPage < totalPages && (
+              {/* Load more — live tab (hidden for limited plans) */}
+              {tab === "live" && !loading && !hasError && lots.length > 0 && currentPage < totalPages && !isAdmin && limits.maxOpportunities >= 9999 && (
                 <div style={{ display: "flex", justifyContent: "center", marginTop: "32px" }}>
                   <button
                     onClick={loadMore}

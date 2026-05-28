@@ -275,11 +275,16 @@ async def list_lots(
             )
 
     # ── Plan enforcement ─────────────────────────────────────────────────────
-    # Cap page_size to the caller's plan limit so API bypass is impossible.
+    # Cap page_size AND page to the caller's plan limit so API bypass is impossible.
     plan = await get_user_plan(current_user, db)
     max_per_page = _PLAN_PAGE_LIMIT.get(plan, 3)
+    is_limited = max_per_page < 9999
     if page_size > max_per_page:
         page_size = max_per_page
+    # Free/starter: only page 1 allowed — pagination would bypass the lot cap
+    if is_limited and page > 1:
+        from app.models.schemas import LotListResponse
+        return {"items": [], "total": max_per_page, "pages": 1, "page": page, "page_size": page_size}
 
     # ── Cache lookup ─────────────────────────────────────────────────────────
     cache_key = f"lots:{plan}:{sort_by}:{sort_dir}:{min_score}:{page}:{page_size}:{category or ''}:{categories or ''}:{search or ''}:{provenance or ''}:{source or ''}:{sources or ''}:{min_price or 0}:{max_price or 0}:{auction_date_from or ''}:{auction_date_to or ''}"
@@ -548,12 +553,16 @@ async def list_lots(
         d["is_low_supply"] = cnt <= 3
         return d
 
+    items = [_enrich(lot) for lot in lots]
+    # For limited plans: cap total/pages so frontend can't infer real count
+    # and "Load more" never appears.
+    effective_total = min(total, max_per_page) if is_limited else total
     result = {
-        "items": [_enrich(lot) for lot in lots],
-        "total": total,
+        "items": items,
+        "total": effective_total,
         "page": page,
         "page_size": page_size,
-        "pages": math.ceil(total / page_size) if total > 0 else 0,
+        "pages": 1 if is_limited else (math.ceil(total / page_size) if total > 0 else 0),
     }
     set_cached(cache_key, result)
     response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=120"
