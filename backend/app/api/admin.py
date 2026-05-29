@@ -540,6 +540,54 @@ async def trigger_portfolio_snapshot():
     return {"status": "ok", **result}
 
 
+@router.post("/portfolio-snapshot/seed-and-run", dependencies=[Depends(verify_admin)])
+async def seed_test_and_snapshot(
+    user_email: str = "camillefroment907@gmail.com",
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Insert a test portfolio item for the given user (if none exist), then run snapshot.
+    Safe to call multiple times — only seeds if the user has 0 items.
+    """
+    import uuid
+    from app.models.db_models import User, PortfolioItem
+    from app.jobs.portfolio_snapshot import run_portfolio_snapshots
+
+    # Find user
+    result = await db.execute(select(User).where(User.email == user_email))
+    user = result.scalar_one_or_none()
+    if not user:
+        return {"status": "error", "detail": f"User {user_email} not found"}
+
+    # Count existing items
+    count_res = await db.execute(
+        select(func.count()).select_from(PortfolioItem).where(PortfolioItem.user_id == user.id)
+    )
+    existing = count_res.scalar() or 0
+
+    seeded = False
+    if existing == 0:
+        test_item = PortfolioItem(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            title="Test — Composition abstraite",
+            artist_name="Marc Chagall",
+            medium="Huile sur toile",
+            dimensions="50 × 65 cm",
+            purchase_price_eur=12000.0,
+            estimated_current_value_eur=14500.0,
+            purchase_date=datetime(2023, 6, 15),
+            notes="Œuvre de test — à supprimer après validation",
+        )
+        db.add(test_item)
+        await db.commit()
+        seeded = True
+
+    # Run snapshot
+    result = await run_portfolio_snapshots()
+    return {"status": "ok", "seeded": seeded, "existing_items": existing, **result}
+
+
 @router.post("/artsper-enrichment/trigger", dependencies=[Depends(verify_admin)])
 async def trigger_artsper_enrichment(body: dict = None) -> Dict[str, Any]:
     """
