@@ -369,6 +369,7 @@ export default function Portfolio() {
   const [osHealth, setOsHealth] = useState<any>(null);
   const [osAdvisor, setOsAdvisor] = useState<any>(null);
   const [osMatch, setOsMatch] = useState<any>(null);
+  const [osTimeline, setOsTimeline] = useState<any>(null);
 
   // ── Computed ───────────────────────────────────────────────
   const subscription = sub;
@@ -495,13 +496,15 @@ export default function Portfolio() {
     // Collection OS — fire and forget
     if (token) {
       Promise.all([
-        fetch(`${BACKEND}/api/collection-os/health`,  { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null),
-        fetch(`${BACKEND}/api/collection-os/advisor`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null),
-        fetch(`${BACKEND}/api/collection-os/match`,   { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null),
-      ]).then(([health, advisor, match]) => {
-        if (health?.score != null) setOsHealth(health);
-        if (advisor?.primary)     setOsAdvisor(advisor);
-        if (match?.total_matches) setOsMatch(match);
+        fetch(`${BACKEND}/api/collection-os/health`,   { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`${BACKEND}/api/collection-os/advisor`,  { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`${BACKEND}/api/collection-os/match`,    { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`${BACKEND}/api/collection-os/timeline`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null),
+      ]).then(([health, advisor, match, timeline]) => {
+        if (health?.score != null)          setOsHealth(health);
+        if (advisor?.primary)               setOsAdvisor(advisor);
+        if (match?.total_matches)           setOsMatch(match);
+        if (timeline?.points?.length)       setOsTimeline(timeline);
       });
     }
 
@@ -1228,29 +1231,73 @@ export default function Portfolio() {
             {portfolioItems.length > 0 && (
               <div className="portfolio-mini-viz" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
 
-                {/* Sparkline valeur portfolio */}
+                {/* Sparkline valeur portfolio — Collection Timeline */}
                 <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '16px' }}>
-                  <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 10, paddingBottom: 8, borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
-                    {currentLang === 'fr' ? 'Évolution valeur' : 'Value evolution'}
+                  <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 10, paddingBottom: 8, borderBottom: '0.5px solid var(--color-border-tertiary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>{currentLang === 'fr' ? 'Collection Timeline' : 'Collection Timeline'}</span>
+                    {osTimeline?.is_limited && (
+                      <span style={{ fontSize: 8, color: '#B8922A', fontFamily: 'var(--font-mono)' }}>
+                        {currentLang === 'fr' ? '1 mois · Upgrade' : '1 month · Upgrade'}
+                      </span>
+                    )}
                   </div>
-                  <ResponsiveContainer width="100%" height={70}>
-                    <LineChart data={[
-                      { v: totalInvested * 0.88 },
-                      { v: totalInvested * 0.92 },
-                      { v: totalInvested * 0.97 },
-                      { v: totalInvested * 1.02 },
-                      { v: totalInvested * 1.05 },
-                      { v: totalInvested * 1.10 },
-                      { v: totalValue },
-                    ]}>
-                      <Line type="monotone" dataKey="v" stroke="#16A34A" strokeWidth={1.5} dot={false} />
-                      <Tooltip formatter={(v: number) => [`€${Math.round(v).toLocaleString('fr-FR')}`, '']} contentStyle={{ fontSize: 11, fontFamily: 'var(--font-mono)' }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-                    <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)' }}>{currentLang === 'fr' ? 'Acquisition' : 'Purchase'}</span>
-                    <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: returnPct >= 0 ? '#16A34A' : '#C0392B', fontWeight: 500 }}>{returnPct >= 0 ? '+' : ''}{returnPct.toFixed(1)}%</span>
-                  </div>
+                  {(() => {
+                    // Real data: use timeline snapshots
+                    const pts = osTimeline?.points;
+                    const chartData = pts?.length >= 2
+                      ? pts.map((p: any) => ({
+                          v: p.total_value_eur,
+                          c: p.purchase_cost_eur,
+                          d: p.snapshot_date?.slice(5), // "MM-DD"
+                        }))
+                      : [
+                          { v: totalInvested * 0.88, c: totalInvested },
+                          { v: totalInvested * 0.93, c: totalInvested },
+                          { v: totalInvested * 0.98, c: totalInvested },
+                          { v: totalInvested * 1.03, c: totalInvested },
+                          { v: totalInvested * 1.07, c: totalInvested },
+                          { v: totalInvested * 1.11, c: totalInvested },
+                          { v: totalValue,            c: totalInvested },
+                        ];
+                    const roiPct = osTimeline?.summary?.latest_roi_pct ?? returnPct;
+                    const isReal = pts?.length >= 2;
+                    const trendPct = osTimeline?.summary?.trend_pct;
+                    return (
+                      <>
+                        <ResponsiveContainer width="100%" height={70}>
+                          <LineChart data={chartData}>
+                            {isReal && (
+                              <Line type="monotone" dataKey="c" stroke="rgba(255,255,255,0.12)" strokeWidth={1} dot={false} strokeDasharray="3 3" />
+                            )}
+                            <Line type="monotone" dataKey="v" stroke={roiPct >= 0 ? '#16A34A' : '#C0392B'} strokeWidth={1.5} dot={false} />
+                            <Tooltip
+                              formatter={(val: number, name: string) => [
+                                `€${Math.round(val).toLocaleString('fr-FR')}`,
+                                name === 'v' ? (currentLang === 'fr' ? 'Valeur' : 'Value') : (currentLang === 'fr' ? 'Coût' : 'Cost'),
+                              ]}
+                              contentStyle={{ fontSize: 10, fontFamily: 'var(--font-mono)', background: '#0D1F35', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 4 }}
+                              labelStyle={{ color: 'rgba(255,255,255,0.4)', fontSize: 9 }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                          <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                            {isReal
+                              ? `${chartData.length} ${currentLang === 'fr' ? 'semaines' : 'weeks'}`
+                              : (currentLang === 'fr' ? 'Estimé' : 'Estimated')}
+                          </span>
+                          <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: roiPct >= 0 ? '#16A34A' : '#C0392B', fontWeight: 600 }}>
+                            {roiPct >= 0 ? '+' : ''}{roiPct?.toFixed(1)}%
+                            {isReal && trendPct != null && trendPct !== roiPct && (
+                              <span style={{ fontSize: 9, marginLeft: 5, opacity: 0.6 }}>
+                                ({trendPct >= 0 ? '+' : ''}{trendPct}% {currentLang === 'fr' ? 'période' : 'period'})
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Donut répartition artistes */}
