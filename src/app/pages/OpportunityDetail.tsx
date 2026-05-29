@@ -829,10 +829,10 @@ export default function OpportunityDetail() {
           </div>
 
           {/* Grille 160 | divider | 160 | divider | 1fr */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.5px 1fr 0.5px 1.5fr' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.5px 1fr 0.5px 2fr' }}>
 
             {/* Mise à prix */}
-            <div style={{ padding: '12px 14px 12px 20px', display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', gap: '4px' }}>
+            <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '2px', textTransform: 'uppercase' as const }}>
                 {isFr ? 'MISE À PRIX' : 'STARTING BID'}
               </div>
@@ -840,7 +840,7 @@ export default function OpportunityDetail() {
                 {fmtExact(price)}
               </div>
               {(upsidePct >= 5 || dealScore >= 65) && (
-                <div style={{ display: 'inline-block', fontSize: '8px', fontWeight: 700, color: '#166534', background: '#F0FDF4', border: '0.5px solid #BBF7D0', padding: '2px 6px', borderRadius: '2px', fontFamily: 'var(--font-mono)', letterSpacing: '0.5px', width: 'fit-content' }}>
+                <div style={{ display: 'inline-block', fontSize: '8px', fontWeight: 700, color: '#166534', background: '#F0FDF4', border: '0.5px solid #BBF7D0', padding: '2px 6px', borderRadius: '2px', fontFamily: 'var(--font-mono)', letterSpacing: '0.5px', width: 'auto' }}>
                   {isFr ? 'BONNE ENTRÉE' : 'GOOD ENTRY'}
                 </div>
               )}
@@ -852,7 +852,7 @@ export default function OpportunityDetail() {
             <div style={{ background: '#E8E4DC' }} />
 
             {/* À ne pas dépasser */}
-            <div style={{ padding: '12px 14px', background: '#FFFBEB', display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', gap: '4px' }}>
+            <div style={{ padding: '12px 14px', background: '#FFFBEB', display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#92400E', letterSpacing: '2px', textTransform: 'uppercase' as const }}>
                 {isFr ? 'À NE PAS DÉPASSER' : 'DO NOT EXCEED'}
               </div>
