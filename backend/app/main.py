@@ -47,6 +47,7 @@ from app.api.emerging import router as emerging_router, emerging_artists_router
 from app.api.admin_scoring import router as admin_scoring_router
 from app.api.tracking import router as tracking_router
 from app.api.collection import router as collection_router
+from app.api.collection_os import router as collection_os_router
 
 settings = get_settings()
 
@@ -100,6 +101,7 @@ _PROTECTED_PREFIXES = (
     "/api/recommendations",
     "/api/market-sentiment",
     "/api/portfolio",
+    "/api/collection-os",
     "/api/chat",
     "/api/agent",
 )
@@ -275,6 +277,7 @@ app.include_router(emerging_artists_router, prefix="/api")
 app.include_router(admin_scoring_router,    prefix="/api")
 app.include_router(tracking_router,         prefix="/api")
 app.include_router(collection_router,       prefix="/api")
+app.include_router(collection_os_router,    prefix="/api")
 
 
 @app.get("/")
