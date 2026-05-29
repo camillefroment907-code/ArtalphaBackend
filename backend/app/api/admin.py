@@ -1932,4 +1932,34 @@ async def users_trial_expiring(
 
     return {"users": users_out}
 
+
+# ── Collection OS admin preview ────────────────────────────────────────────────
+
+@router.get("/collection-os/preview", dependencies=[Depends(verify_admin)])
+async def collection_os_preview(
+    email: str = "camillefroment907@gmail.com",
+    db: AsyncSession = Depends(get_db),
+):
+    """Run all 4 Collection OS endpoints for a user without needing their JWT."""
+    from app.models.db_models import User
+    from app.api.collection_os import (
+        collection_match, collection_pulse, collection_health, collection_advisor,
+    )
+
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    if not user:
+        return {"error": f"User {email} not found"}
+
+    match   = await collection_match(current_user=user, db=db)
+    health  = await collection_health(current_user=user, db=db)
+    advisor = await collection_advisor(current_user=user, db=db)
+
+    return {
+        "user": email,
+        "health":  {"score": health.get("score"), "grade": health.get("grade"), "top_action": health.get("top_action")},
+        "advisor": {"primary": advisor.get("primary"), "total_actions": advisor.get("total_actions")},
+        "match":   {"total_matches": match.get("total_matches"), "shown": match.get("shown"), "lots": match.get("lots", [])[:5]},
+    }
+
     return {"sent": ok, "type": email_type, "to": to_email}
