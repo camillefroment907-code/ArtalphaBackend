@@ -829,7 +829,7 @@ export default function OpportunityDetail() {
           </div>
 
           {/* Grille 160 | divider | 160 | divider | 1fr */}
-          <div style={{ display: 'grid', gridTemplateColumns: '160px 0.5px 160px 0.5px 1fr' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.5px 1fr 0.5px 1.5fr' }}>
 
             {/* Mise à prix */}
             <div style={{ padding: '12px 14px 12px 20px', display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', gap: '4px' }}>
@@ -867,7 +867,7 @@ export default function OpportunityDetail() {
             <div style={{ background: '#E8E4DC' }} />
 
             {/* 3 métriques */}
-            <div style={{ padding: '10px 14px 10px 16px', display: 'flex', flexDirection: 'column' as const, justifyContent: 'space-between', gap: '7px' }}>
+            <div style={{ padding: '10px 14px 10px 16px', display: 'flex', flexDirection: 'column' as const, justifyContent: 'space-between', gap: '7px', minWidth: 0, overflow: 'hidden' }}>
               {[
                 {
                   lbl: isFr ? 'ARTISTE' : 'ARTIST',
@@ -895,12 +895,12 @@ export default function OpportunityDetail() {
                 },
               ].map((m, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '1px', textTransform: 'uppercase' as const, width: '68px', flexShrink: 0 }}>{m.lbl}</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: m.color, width: '80px', flexShrink: 0 }}>{m.val}</div>
-                  <div style={{ width: '160px', flexShrink: 0, height: '4px', background: '#E8E4DC', borderRadius: '2px', overflow: 'hidden' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '1px', textTransform: 'uppercase' as const, width: '60px', flexShrink: 0 }}>{m.lbl}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: m.color, width: '72px', flexShrink: 0 }}>{m.val}</div>
+                  <div style={{ flex: 1, minWidth: 0, height: '4px', background: '#E8E4DC', borderRadius: '2px', overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${m.pct}%`, background: m.barColor, borderRadius: '2px' }} />
                   </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: LTT1, width: '52px', flexShrink: 0 }}>{m.num}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: LTT1, flexShrink: 0, whiteSpace: 'nowrap' as const }}>{m.num}</div>
                 </div>
               ))}
             </div>
