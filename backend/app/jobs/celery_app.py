@@ -115,6 +115,12 @@ celery_app.conf.update(
             "schedule": crontab(minute="0", hour="9", day_of_month="15", month_of_year="1"),
             "options": {"queue": "default"},
         },
+        # Sunday 20:00 UTC: portfolio snapshots (Collection Timeline)
+        "portfolio-snapshot-weekly": {
+            "task": "app.jobs.portfolio_snapshot.run_portfolio_snapshots",
+            "schedule": crontab(minute="0", hour="20", day_of_week="0"),
+            "options": {"queue": "default"},
+        },
         # Sunday 2am UTC: Nautilus Oracle — predictive signals for all active artists
         "oracle-weekly-sunday-2am": {
             "task": "app.jobs.tasks.compute_oracle_weekly",

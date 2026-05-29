@@ -193,6 +193,25 @@ def _historical_loop():
         _run(_fetch_historical_for_top_artists, "fetch_historical_top_artists")
 
 
+def _portfolio_snapshot_loop():
+    """Weekly Sunday at 20:00 UTC — snapshot every user's portfolio value + health score."""
+    import datetime as _dt
+    from app.jobs.portfolio_snapshot import run_portfolio_snapshots
+    while True:
+        now = _utcnow()
+        # Next Sunday (weekday 6) at 20:00 UTC
+        days_until_sunday = (6 - now.weekday()) % 7
+        target = (now + _dt.timedelta(days=days_until_sunday)).replace(
+            hour=20, minute=0, second=0, microsecond=0
+        )
+        if target <= now:
+            target += _dt.timedelta(weeks=1)
+        wait = (target - now).total_seconds()
+        logger.info(f"[scheduler] portfolio_snapshot sleeping {wait/3600:.1f}h until Sunday 20:00 UTC")
+        time.sleep(wait)
+        _run(run_portfolio_snapshots, "portfolio_snapshot")
+
+
 def _auction_closing_loop():
     """Daily at 08:00 UTC — send closing alerts for watchlist lots closing in ~24h."""
     import datetime as _dt
@@ -232,6 +251,7 @@ def start_beat_in_background():
         threading.Thread(target=_score_validator_loop,   daemon=True, name="sched-score-validator"),
         threading.Thread(target=_historical_loop,         daemon=True, name="sched-historical"),
         threading.Thread(target=_auction_closing_loop,    daemon=True, name="sched-auction-closing"),
+        threading.Thread(target=_portfolio_snapshot_loop, daemon=True, name="sched-portfolio-snapshot"),
         threading.Thread(target=_keep_warm_loop,          daemon=True, name="sched-keep-warm"),
     ]
     for t in threads:
