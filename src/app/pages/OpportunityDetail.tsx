@@ -812,76 +812,115 @@ export default function OpportunityDetail() {
       {/* ═══ LIGHT ZONE ═══ */}
       <div className="lot-light-zone" style={{ background: '#F5F4F0' }}>
 
-        {/* ── BANDE DÉCISION ───────────────────────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', background: '#fff', borderBottom: '0.5px solid #E8E4DC' }}>
-          {/* Col 1 — VOUS PAYEZ */}
-          <div style={{ padding: '28px 24px 28px 40px', borderRight: '0.5px solid #E8E4DC' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '8px' }}>VOUS PAYEZ</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '34px', fontWeight: 700, color: GL, lineHeight: 1 }}>{fmtExact(price)}</div>
-            {(upsidePct >= 5 || dealScore >= 65) && (
-              <div style={{ marginTop: '10px', display: 'inline-flex', alignItems: 'center', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '3px', padding: '3px 8px', fontFamily: 'var(--font-mono)', fontSize: '9px', color: GL, fontWeight: 700 }}>BONNE ENTRÉE</div>
-            )}
-          </div>
-          {/* Col 2 — COÛT RÉEL */}
-          <div style={{ padding: '28px 24px', borderRight: '0.5px solid #E8E4DC' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '8px' }}>COÛT RÉEL</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '34px', fontWeight: 700, color: LTT1, lineHeight: 1 }}>{fmtExact(realCost?.cost_basis || Math.round(price * premiumMultiplier))}</div>
-            <div style={{ marginTop: '8px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>+{buyerPremiumPct}% frais{realCost?.holding_cost_3y ? ` · +${fmt(realCost.holding_cost_3y)} détention` : ''}</div>
-          </div>
-          {/* Col 3 — NE PAS DÉPASSER */}
-          <div style={{ padding: '28px 40px 28px 24px' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '8px' }}>NE PAS DÉPASSER</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '34px', fontWeight: 700, color: AMB, lineHeight: 1 }}>{(avoidAbove ?? maxBid) ? fmtExact(avoidAbove ?? maxBid) : '—'}</div>
-            {realCost?.breakeven_hammer && (
-              <div style={{ marginTop: '8px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>Seuil rentabilité : {fmtExact(Math.round(realCost.breakeven_hammer))}</div>
-            )}
-            {(avoidAbove ?? maxBid) && (
-              <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '3px', padding: '3px 8px', fontFamily: 'var(--font-mono)', fontSize: '9px', color: AMB, fontWeight: 700 }}>BID MAX ABSOLU</div>
-            )}
-          </div>
-        </div>
+        <div style={{ background: '#fff', borderBottom: '0.5px solid #E8E4DC', overflow: 'hidden' }}>
 
-        {/* ── BANDE PREUVE ─────────────────────────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', background: '#F5F4F0', borderBottom: '0.5px solid #E8E4DC' }}>
-          {/* Col 1 — ARTISTE */}
-          <div style={{ padding: '22px 24px 22px 40px', borderRight: '0.5px solid #E8E4DC' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '8px' }}>ARTISTE</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: lot.artist?.trend === 'up' ? GL : lot.artist?.trend === 'down' ? RED : LTT2, marginBottom: '6px' }}>
-              {lot.artist?.trend === 'up' ? '↑ EN HAUSSE' : lot.artist?.trend === 'down' ? '↓ EN BAISSE' : '→ STABLE'}
+          {/* Signal strip */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 20px', background: 'rgba(26,107,60,0.04)', borderBottom: '0.5px solid rgba(26,107,60,0.1)' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#1A6B3C', flexShrink: 0 }} />
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: '#1A6B3C', letterSpacing: '1.5px' }}>
+              {verdict.icon} {verdict.label}
             </div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, marginBottom: '8px' }}>
-              Liquidité {Math.round(lot.artist?.liquidity_score ?? 0)}/100{lot.artist?.sell_through_rate != null ? ` · ${Math.round(lot.artist.sell_through_rate * 100)}% sell-thru` : ''}
-            </div>
-            <div style={{ height: '2px', background: '#E8E4DC', borderRadius: '1px' }}>
-              <div style={{ height: '100%', width: `${Math.min(100, Math.round(lot.artist?.liquidity_score ?? 0))}%`, background: '#34D399', borderRadius: '1px' }} />
+            <div style={{ color: '#C6E8D0', margin: '0 4px' }}>|</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#6B7280' }}>
+              {isFr
+                ? `Mise à prix ${fmtExact(price)} · enchère${daysUntilClose != null ? ` · clôture dans ${daysUntilClose} jour${daysUntilClose > 1 ? 's' : ''}` : ''}`
+                : `Starting bid ${fmtExact(price)} · auction${daysUntilClose != null ? ` · closes in ${daysUntilClose} day${daysUntilClose > 1 ? 's' : ''}` : ''}`}
             </div>
           </div>
-          {/* Col 2 — CONVICTION */}
-          <div style={{ padding: '22px 24px', borderRight: '0.5px solid #E8E4DC' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '8px' }}>CONVICTION</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: dealScore >= 80 ? GL : dealScore >= 60 ? AMB : RED, marginBottom: '6px' }}>
-              {dealScore.toFixed(0)}/100
+
+          {/* Grille principale */}
+          <div style={{ display: 'grid', gridTemplateColumns: '160px 0.5px 160px 0.5px 1fr' }}>
+
+            {/* Mise à prix */}
+            <div style={{ padding: '12px 14px 12px 20px', display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', gap: '4px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '2px', textTransform: 'uppercase' as const }}>
+                {isFr ? 'MISE À PRIX' : 'STARTING BID'}
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '26px', fontWeight: 800, color: '#0D1F35', lineHeight: 1 }}>
+                {fmtExact(price)}
+              </div>
+              {(upsidePct >= 5 || dealScore >= 65) && (
+                <div style={{ display: 'inline-block', fontSize: '8px', fontWeight: 700, color: '#166534', background: '#F0FDF4', border: '0.5px solid #BBF7D0', padding: '2px 6px', borderRadius: '2px', fontFamily: 'var(--font-mono)', letterSpacing: '0.5px', width: 'fit-content' }}>
+                  {isFr ? 'BONNE ENTRÉE' : 'GOOD ENTRY'}
+                </div>
+              )}
+              <div style={{ fontSize: '10px', color: '#9CA3AF' }}>
+                {isFr ? 'Point de départ' : 'Starting point'}
+              </div>
             </div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, marginBottom: '8px' }}>
-              {dealScore >= 80 ? 'Top des opportunités' : dealScore >= 60 ? 'Opportunité intéressante' : 'Signal modéré'}
+
+            <div style={{ background: '#E8E4DC' }} />
+
+            {/* À ne pas dépasser */}
+            <div style={{ padding: '12px 14px', background: '#FFFBEB', display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', gap: '4px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#92400E', letterSpacing: '2px', textTransform: 'uppercase' as const }}>
+                {isFr ? 'À NE PAS DÉPASSER' : 'DO NOT EXCEED'}
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '26px', fontWeight: 800, color: AMB, lineHeight: 1 }}>
+                {avoidAbove ? fmtExact(avoidAbove) : '—'}
+              </div>
+              <div style={{ fontSize: '10px', color: '#B45309', fontWeight: 500 }}>
+                {isFr ? 'Perte garantie au-delà' : 'Loss guaranteed above'}
+              </div>
             </div>
-            <div style={{ height: '2px', background: '#E8E4DC', borderRadius: '1px' }}>
-              <div style={{ height: '100%', width: `${Math.min(100, dealScore)}%`, background: '#C6A85A', borderRadius: '1px' }} />
+
+            <div style={{ background: '#E8E4DC' }} />
+
+            {/* 3 métriques */}
+            <div style={{ padding: '10px 14px 10px 16px', display: 'flex', flexDirection: 'column' as const, justifyContent: 'space-between', gap: '7px' }}>
+              {[
+                {
+                  lbl: isFr ? 'ARTISTE' : 'ARTIST',
+                  val: lot.artist?.trend === 'up' ? '↑ EN HAUSSE' : lot.artist?.trend === 'down' ? '↓ EN BAISSE' : '→ STABLE',
+                  color: lot.artist?.trend === 'up' ? GL : lot.artist?.trend === 'down' ? RED : LTT2,
+                  pct: Math.min(100, Math.round(lot.artist?.liquidity_score ?? 0)),
+                  barColor: '#1A6B3C',
+                  num: `${Math.round(lot.artist?.liquidity_score ?? 0)}/100`,
+                },
+                {
+                  lbl: 'CONVICTION',
+                  val: `${dealScore.toFixed(0)}/100`,
+                  color: dealScore >= 80 ? AMB : dealScore >= 60 ? AMB : RED,
+                  pct: Math.min(100, dealScore),
+                  barColor: '#C6A85A',
+                  num: dealScore >= 80 ? 'top 5%' : dealScore >= 60 ? (isFr ? 'bon' : 'good') : (isFr ? 'modéré' : 'moderate'),
+                },
+                {
+                  lbl: isFr ? 'DÉCOTE' : 'DISCOUNT',
+                  val: upside > 0 ? `− ${Math.round(upside)}%` : '—',
+                  color: upside > 0 ? GL : LTT3,
+                  pct: Math.min(100, Math.max(0, Math.round(upside))),
+                  barColor: '#34D399',
+                  num: estLow > 0 ? `vs ${fmtExact(estLow)}` : '—',
+                },
+              ].map((m, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '1px', textTransform: 'uppercase' as const, width: '68px', flexShrink: 0 }}>{m.lbl}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: m.color, width: '80px', flexShrink: 0 }}>{m.val}</div>
+                  <div style={{ flex: 1, height: '4px', background: '#E8E4DC', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${m.pct}%`, background: m.barColor, borderRadius: '2px' }} />
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#9CA3AF', width: '44px', textAlign: 'right' as const, flexShrink: 0 }}>{m.num}</div>
+                </div>
+              ))}
             </div>
           </div>
-          {/* Col 3 — DÉCOTE */}
-          <div style={{ padding: '22px 40px 22px 24px' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '8px' }}>DÉCOTE</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: upside > 0 ? GL : LTT3, marginBottom: '6px' }}>
-              {upside > 0 ? `−${Math.round(upside)}%` : '—'}
-            </div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, marginBottom: '8px' }}>
-              {estLow > 0 ? `vs estimation basse ${fmtExact(estLow)}` : 'vs estimation basse'}
-            </div>
-            <div style={{ height: '2px', background: '#E8E4DC', borderRadius: '1px' }}>
-              <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, Math.round(upside)))}%`, background: '#34D399', borderRadius: '1px' }} />
-            </div>
+
+          {/* Coût réel strip */}
+          <div style={{ display: 'flex', alignItems: 'center', padding: '7px 20px', background: '#F5F4F0', borderTop: '0.5px solid #E8E4DC', flexWrap: 'wrap' as const, gap: '0' }}>
+            {[
+              { lbl: isFr ? 'COÛT RÉEL' : 'REAL COST', val: fmtExact(realCost?.cost_basis || Math.round(price * premiumMultiplier)), color: LTT1 },
+              { lbl: isFr ? 'FRAIS ACHETEUR' : 'BUYER FEES', val: `+${buyerPremiumPct}%`, color: LTT1 },
+              { lbl: isFr ? 'RENTABILITÉ DÈS' : 'BREAK-EVEN AT', val: realCost?.breakeven_hammer ? fmtExact(Math.round(realCost.breakeven_hammer)) : '—', color: AMB },
+              { lbl: isFr ? 'PROGRESSION NÉCESSAIRE' : 'NEEDED GAIN', val: `+${Math.round(breakEvenGain)}%`, color: LTT1 },
+            ].map((item, i, arr) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: '5px', paddingRight: i < arr.length - 1 ? '16px' : 0, borderRight: i < arr.length - 1 ? '0.5px solid #E0DDD8' : 'none', marginRight: i < arr.length - 1 ? '16px' : 0 }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '1.5px', textTransform: 'uppercase' as const }}>{item.lbl}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: item.color }}>{item.val}</div>
+              </div>
+            ))}
           </div>
+
         </div>
 
         {/* ── DÉTAILS + COÛT RÉEL ───────────────────────────────────────────── */}
