@@ -985,6 +985,56 @@ async def get_investment_grade(
     return response
 
 
+@router.get("/autocomplete")
+async def autocomplete_artists(
+    q: str = Query(..., min_length=2),
+    limit: int = Query(5, le=10),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Fuzzy artist autocomplete using pg_trgm similarity on canonical artist table."""
+    import unicodedata
+    from app.models.db_models import Artist
+
+    def _norm(name: str) -> str:
+        n = name.strip().lower()
+        n = unicodedata.normalize("NFD", n)
+        n = "".join(c for c in n if unicodedata.category(c) != "Mn")
+        return n
+
+    nq = _norm(q)
+    sim = func.similarity(Artist.name_normalized, nq)
+    stmt = (
+        select(Artist, sim.label("sim"))
+        .where(sim > 0.2)
+        .order_by(sim.desc())
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    suggestions = []
+    for artist, similarity_score in rows:
+        confidence = (
+            "confirmed" if similarity_score >= 0.80
+            else "suggested" if similarity_score >= 0.45
+            else "unresolved"
+        )
+        suggestions.append({
+            "id": str(artist.id),
+            "name": artist.name,
+            "nationality": artist.nationality,
+            "birth_year": artist.birth_year,
+            "death_year": artist.death_year,
+            "trend": artist.trend.value if artist.trend else None,
+            "liquidity_score": artist.liquidity_score,
+            "similarity": round(float(similarity_score), 3),
+            "confidence": confidence,
+        })
+
+    return {"suggestions": suggestions}
+
+
 @router.get("/correlation-matrix")
 async def get_correlation_matrix(
     artists: str = Query(..., description="Comma-separated artist names"),

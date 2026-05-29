@@ -446,7 +446,7 @@ class PortfolioItem(Base):
     lot_id = Column(UUID(as_uuid=True), ForeignKey("lots.id", ondelete="SET NULL"), nullable=True)
 
     # Artwork info
-    title = Column(Text, nullable=False)
+    title = Column(Text, nullable=True)
     artist_name = Column(String(500), nullable=True)
     medium = Column(String(300), nullable=True)
     dimensions = Column(String(300), nullable=True)
@@ -454,7 +454,7 @@ class PortfolioItem(Base):
     image_url = Column(Text, nullable=True)
 
     # Purchase info
-    purchase_price_eur = Column(Float, nullable=False)
+    purchase_price_eur = Column(Float, nullable=True)
     purchase_date = Column(DateTime, nullable=True)
     purchase_source = Column(String(300), nullable=True)
 
@@ -524,11 +524,54 @@ class PortfolioItem(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Artist resolution
+    artist_name_display = Column(Text, nullable=True)
+    artist_match_status = Column(String(20), nullable=True, server_default="unresolved")
+    match_metadata = Column(JSON, nullable=True, server_default=text("'{}'::json"))
+
     user = relationship("User", backref="portfolio_items")
     lot = relationship("Lot", foreign_keys=[lot_id], backref="portfolio_references")
 
     __table_args__ = (
         Index("ix_portfolio_user_id", "user_id"),
+        Index("ix_portfolio_items_artist_match_status", "artist_match_status"),
+    )
+
+
+class ArtistAlias(Base):
+    """Alternate names for canonical artists — powers fuzzy autocomplete."""
+    __tablename__ = "artist_aliases"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    artist_id = Column(UUID(as_uuid=True), ForeignKey("artists.id", ondelete="CASCADE"), nullable=False)
+    alias = Column(Text, nullable=False)
+    alias_normalized = Column(Text, nullable=False)
+    alias_type = Column(String(50), nullable=True)  # full_name/surname_only/first_initial/transliteration/pseudonym/birth_name/localized
+    created_at = Column(DateTime, server_default=text("NOW()"), nullable=False)
+
+    artist = relationship("Artist", backref="aliases")
+
+    __table_args__ = (
+        Index("ix_artist_aliases_artist_id", "artist_id"),
+    )
+
+
+class PortfolioItemPhoto(Base):
+    """Photos attached to a portfolio item — slot for future vision pipeline."""
+    __tablename__ = "portfolio_item_photos"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    portfolio_item_id = Column(UUID(as_uuid=True), ForeignKey("portfolio_items.id", ondelete="CASCADE"), nullable=False)
+    image_url = Column(Text, nullable=True)
+    analysis_status = Column(String(20), nullable=False, server_default="skipped")  # skipped/pending/processing/done
+    vision_results = Column(JSON, nullable=True)
+    suggestions_accepted = Column(JSON, nullable=True)
+    created_at = Column(DateTime, server_default=text("NOW()"), nullable=False)
+
+    portfolio_item = relationship("PortfolioItem", backref="photos")
+
+    __table_args__ = (
+        Index("ix_portfolio_item_photos_item_id", "portfolio_item_id"),
     )
 
 

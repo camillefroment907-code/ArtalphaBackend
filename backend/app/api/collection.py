@@ -7,7 +7,7 @@ from sqlalchemy import select, and_, func
 from sqlalchemy.orm import selectinload
 from typing import Optional, List
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from app.database import get_db
 from app.api.auth_utils import get_current_user
@@ -152,15 +152,20 @@ def _serialize_sale_request(r: SaleRequest) -> dict:
 # ── Pydantic schemas ──────────────────────────────────────────────────────────
 
 class PortfolioItemCreate(BaseModel):
-    title: str
-    artist_name: str
+    # Core identifiers — at least one required
+    title: Optional[str] = None
+    artist_name: Optional[str] = None
+    image_url: Optional[str] = None
+    # Artist resolution
+    artist_id: Optional[str] = None
+    artist_name_display: Optional[str] = None
+    artist_match_status: Optional[str] = None
+    # Acquisition
     purchase_price_eur: Optional[float] = None
     lot_id: Optional[str] = None
-    artist_id: Optional[str] = None
     medium: Optional[str] = None
     dimensions: Optional[str] = None
     year_created: Optional[int] = None
-    image_url: Optional[str] = None
     purchase_date: Optional[datetime] = None
     purchase_source: Optional[str] = None
     purchase_auction_house: Optional[str] = None
@@ -192,6 +197,12 @@ class PortfolioItemCreate(BaseModel):
     notes: Optional[str] = None
     is_for_sale: Optional[bool] = None
     asking_price_eur: Optional[float] = None
+
+    @model_validator(mode="after")
+    def at_least_one_identifier(self) -> "PortfolioItemCreate":
+        if not self.title and not self.artist_name and not self.image_url:
+            raise ValueError("At least one of title, artist_name, or image_url is required.")
+        return self
 
 
 class PortfolioItemUpdate(BaseModel):

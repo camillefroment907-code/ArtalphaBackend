@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, ResponsiveContainer, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import { useNavigate, Link, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
@@ -304,6 +304,12 @@ export default function Portfolio() {
   const [addError, setAddError] = useState('');
   const [newArtwork, setNewArtwork] = useState<Record<string, any>>({});
 
+  // ── Artist autocomplete ────────────────────────────────────
+  const [artistSuggestions, setArtistSuggestions] = useState<any[]>([]);
+  const [artistSearching, setArtistSearching] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const artistDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // ── Edit form ──────────────────────────────────────────────
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({ title: '', artist_name: '', purchase_price_eur: '', estimated_current_value_eur: '', medium: '', notes: '' });
@@ -594,7 +600,7 @@ export default function Portfolio() {
   }
 
   const handleAddArtwork = async () => {
-    if (!newArtwork.artist_name || !newArtwork.title || !newArtwork.purchase_price) return;
+    if (!newArtwork.artist_name && !newArtwork.title && !newArtwork.image_url) return;
     if (plan === 'free' && portfolioItems.length >= 1) {
       setShowAddModal(false);
       setUpgradeModal('collection');
@@ -605,12 +611,16 @@ export default function Portfolio() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({
-          artist_name: newArtwork.artist_name,
-          title: newArtwork.title,
+          artist_name: newArtwork.artist_name || null,
+          artist_id: newArtwork.artist_id || null,
+          artist_name_display: newArtwork.artist_name_display || null,
+          artist_match_status: newArtwork.artist_match_status || null,
+          title: newArtwork.title || null,
+          image_url: newArtwork.image_url || null,
           year_created: newArtwork.year_created || null,
           medium: newArtwork.medium || null,
-          purchase_price_eur: parseFloat(newArtwork.purchase_price),
-          current_estimated_value_eur: newArtwork.current_value ? parseFloat(newArtwork.current_value) : parseFloat(newArtwork.purchase_price),
+          purchase_price_eur: newArtwork.purchase_price ? parseFloat(newArtwork.purchase_price) : null,
+          current_estimated_value_eur: newArtwork.current_value ? parseFloat(newArtwork.current_value) : (newArtwork.purchase_price ? parseFloat(newArtwork.purchase_price) : null),
           purchase_date: newArtwork.purchase_date || null,
           purchase_source: newArtwork.purchase_source || null,
           purchase_auction_house: newArtwork.purchase_auction_house || null,
@@ -634,7 +644,9 @@ export default function Portfolio() {
         return;
       }
       if (resp.ok) {
-        setNewArtwork({ artist_name: '', title: '', year_created: '', medium: '', purchase_price: '', current_value: '', purchase_date: '', purchase_source: '', purchase_auction_house: '', purchase_location: '', country_of_origin: '', dimensions: '', condition: '', certificate_of_authenticity: 'false', authenticated_by: '', authentication_date: '', catalogue_raisonne_reference: '', storage_location: '', insured_value_eur: '', insurance_provider: '', notes: '' });
+        setNewArtwork({});
+        setArtistSuggestions([]);
+        setShowAdvanced(false);
         setShowAddModal(false);
         await loadPortfolio();
       }
@@ -1427,166 +1439,310 @@ export default function Portfolio() {
               </button>
             </div>
 
-            {showAddModal && (
-              <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '5vh', overflowY: 'auto' }}
-                onClick={e => { if (e.target === e.currentTarget) setShowAddModal(false); }}
-              >
-                <div style={{ background: 'white', borderRadius: 12, width: '520px', maxWidth: '92vw', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)', margin: '0 auto' }}>
-                  <div style={{ background: '#0A1628', padding: '22px 26px', borderRadius: '12px 12px 0 0' }}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.18em', color: 'rgba(198,168,90,0.7)', textTransform: 'uppercase', marginBottom: 8 }}>
-                      Nautilus · Collection
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 400, color: 'white', marginBottom: 4 }}>
-                      {currentLang === 'fr' ? 'Ajouter une œuvre' : 'Add artwork'}
-                    </div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
-                      {currentLang === 'fr'
-                        ? 'Suivez la valeur et les performances de votre collection'
-                        : 'Track value & performance of your collection'}
-                    </div>
-                  </div>
-                  <div style={{ padding: '20px 26px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+            {showAddModal && (() => {
+              const canSubmit = !!(newArtwork.artist_name || newArtwork.title || newArtwork.image_url);
+              const LABEL = { display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 5, letterSpacing: '0.06em', textTransform: 'uppercase' } as const;
+              const SECTION = { gridColumn: '1 / -1', fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 8, marginTop: 16, paddingBottom: 6, borderBottom: '0.5px solid var(--border)' } as const;
 
-                    {/* ── SECTION 1 — Identification ── */}
-                    <div style={{ gridColumn: '1 / -1', fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 8, marginTop: 16, paddingBottom: 6, borderBottom: '0.5px solid var(--border)' }}>Identification</div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Artiste *</label>
-                      <input className="input" placeholder="Jean-Michel Basquiat" value={newArtwork.artist_name || ''} onChange={e => setNewArtwork(f => ({ ...f, artist_name: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Titre *</label>
-                      <input className="input" placeholder="Untitled, 1982" value={newArtwork.title || ''} onChange={e => setNewArtwork(f => ({ ...f, title: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Année de création</label>
-                      <input className="input" placeholder="1982" value={newArtwork.year_created || ''} onChange={e => setNewArtwork(f => ({ ...f, year_created: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Médium</label>
-                      <select className="input" value={newArtwork.medium || ''} onChange={e => setNewArtwork(f => ({ ...f, medium: e.target.value }))}>
-                        <option value="">—</option>
-                        <option value="Peinture">Peinture</option>
-                        <option value="Sculpture">Sculpture</option>
-                        <option value="Photographie">Photographie</option>
-                        <option value="Dessin">Dessin</option>
-                        <option value="Estampe">Estampe</option>
-                        <option value="Textile">Textile</option>
-                        <option value="Céramique">Céramique</option>
-                        <option value="Installation">Installation</option>
-                        <option value="Autre">Autre</option>
-                      </select>
-                    </div>
+              const onArtistInput = (val: string) => {
+                setNewArtwork(f => ({ ...f, artist_name: val, artist_id: undefined, artist_match_status: undefined }));
+                if (artistDebounceRef.current) clearTimeout(artistDebounceRef.current);
+                if (val.length < 2) { setArtistSuggestions([]); return; }
+                artistDebounceRef.current = setTimeout(async () => {
+                  setArtistSearching(true);
+                  try {
+                    const r = await fetch(`${BACKEND}/api/artist-profiles/autocomplete?q=${encodeURIComponent(val)}&limit=5`, {
+                      headers: { Authorization: `Bearer ${getToken()}` },
+                    });
+                    if (r.ok) {
+                      const d = await r.json();
+                      setArtistSuggestions(d.suggestions || []);
+                    }
+                  } catch {}
+                  finally { setArtistSearching(false); }
+                }, 200);
+              };
 
-                    {/* ── SECTION 2 — Acquisition ── */}
-                    <div style={{ gridColumn: '1 / -1', fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 8, marginTop: 16, paddingBottom: 6, borderBottom: '0.5px solid var(--border)' }}>Acquisition</div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Prix d'achat (€) *</label>
-                      <input className="input" type="number" placeholder="18000" value={newArtwork.purchase_price || ''} onChange={e => setNewArtwork(f => ({ ...f, purchase_price: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Date d'achat</label>
-                      <input className="input" type="date" value={newArtwork.purchase_date || ''} onChange={e => setNewArtwork(f => ({ ...f, purchase_date: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Source</label>
-                      <select className="input" value={newArtwork.purchase_source || ''} onChange={e => setNewArtwork(f => ({ ...f, purchase_source: e.target.value }))}>
-                        <option value="">—</option>
-                        <option value="auction">Vente aux enchères</option>
-                        <option value="gallery">Galerie</option>
-                        <option value="private">Particulier</option>
-                        <option value="art_fair">Foire d'art</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Maison de vente</label>
-                      <input className="input" placeholder="Christie's Paris" value={newArtwork.purchase_auction_house || ''} onChange={e => setNewArtwork(f => ({ ...f, purchase_auction_house: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Lieu d'achat</label>
-                      <input className="input" placeholder="Paris, France" value={newArtwork.purchase_location || ''} onChange={e => setNewArtwork(f => ({ ...f, purchase_location: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Pays d'origine</label>
-                      <input className="input" placeholder="France" value={newArtwork.country_of_origin || ''} onChange={e => setNewArtwork(f => ({ ...f, country_of_origin: e.target.value }))} />
+              const pickArtist = (s: any) => {
+                setNewArtwork(f => ({
+                  ...f,
+                  artist_name: s.name,
+                  artist_name_display: s.name,
+                  artist_id: s.id,
+                  artist_match_status: s.confidence,
+                }));
+                setArtistSuggestions([]);
+              };
+
+              const BADGE: Record<string, React.CSSProperties> = {
+                confirmed: { background: '#dcfce7', color: '#166534', border: '0.5px solid #bbf7d0' },
+                suggested: { background: '#fef9c3', color: '#854d0e', border: '0.5px solid #fef08a' },
+                unresolved: { background: '#f3f4f6', color: '#6b7280', border: '0.5px solid #e5e7eb' },
+              };
+
+              return (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '5vh', overflowY: 'auto' }}
+                  onClick={e => { if (e.target === e.currentTarget) { setShowAddModal(false); setArtistSuggestions([]); setShowAdvanced(false); } }}
+                >
+                  <div style={{ background: 'white', borderRadius: 12, width: 520, maxWidth: '92vw', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)', margin: '0 auto' }}>
+
+                    {/* Header */}
+                    <div style={{ background: '#0A1628', padding: '22px 26px', borderRadius: '12px 12px 0 0' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.18em', color: 'rgba(198,168,90,0.7)', textTransform: 'uppercase', marginBottom: 8 }}>
+                        Nautilus · Collection
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 400, color: 'white', marginBottom: 4 }}>
+                        {currentLang === 'fr' ? 'Ajouter une œuvre' : 'Add artwork'}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                        {currentLang === 'fr' ? 'Commencez par la photo ou le nom de l\'artiste' : 'Start with a photo or the artist name'}
+                      </div>
                     </div>
 
-                    {/* ── SECTION 3 — Description physique ── */}
-                    <div style={{ gridColumn: '1 / -1', fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 8, marginTop: 16, paddingBottom: 6, borderBottom: '0.5px solid var(--border)' }}>Description physique</div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Dimensions</label>
-                      <input className="input" placeholder="120 × 90 cm" value={newArtwork.dimensions || ''} onChange={e => setNewArtwork(f => ({ ...f, dimensions: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>État</label>
-                      <select className="input" value={newArtwork.condition || ''} onChange={e => setNewArtwork(f => ({ ...f, condition: e.target.value }))}>
-                        <option value="">—</option>
-                        <option value="excellent">Excellent</option>
-                        <option value="good">Bon</option>
-                        <option value="fair">Correct</option>
-                        <option value="restore">À restaurer</option>
-                      </select>
+                    <div style={{ padding: '20px 26px' }}>
+
+                      {/* Photo zone */}
+                      <div
+                        style={{ background: '#f8f9fa', border: '1.5px dashed var(--border)', borderRadius: 8, padding: '20px 16px', textAlign: 'center', marginBottom: 6, cursor: 'text' }}
+                        onClick={() => (document.getElementById('naut-image-url') as HTMLInputElement)?.focus()}
+                      >
+                        {newArtwork.image_url ? (
+                          <div style={{ position: 'relative', display: 'inline-block' }}>
+                            <img src={newArtwork.image_url} alt="" style={{ maxHeight: 140, maxWidth: '100%', borderRadius: 4, objectFit: 'contain' }} onError={() => setNewArtwork(f => ({ ...f, image_url: '' }))} />
+                            <button onClick={e => { e.stopPropagation(); setNewArtwork(f => ({ ...f, image_url: '' })); }} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: 20, height: 20, cursor: 'pointer', fontSize: 11, lineHeight: '20px', padding: 0 }}>×</button>
+                          </div>
+                        ) : (
+                          <>
+                            <div style={{ fontSize: 28, marginBottom: 6, opacity: 0.3 }}>+</div>
+                            <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>
+                              {currentLang === 'fr' ? 'Collez l\'URL d\'une photo' : 'Paste a photo URL'}
+                            </div>
+                            <input
+                              id="naut-image-url"
+                              className="input"
+                              placeholder="https://..."
+                              value={newArtwork.image_url || ''}
+                              onChange={e => setNewArtwork(f => ({ ...f, image_url: e.target.value }))}
+                              style={{ maxWidth: 320, textAlign: 'center' }}
+                              onClick={e => e.stopPropagation()}
+                            />
+                          </>
+                        )}
+                      </div>
+                      {/* Promise */}
+                      <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 18, textAlign: 'center', lineHeight: 1.5 }}>
+                        {currentLang === 'fr'
+                          ? 'Nautilus analysera la photo pour identifier l\'artiste, le médium et la période'
+                          : 'Nautilus will analyse the photo to identify the artist, medium and period'}
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+
+                        {/* Artist autocomplete */}
+                        <div style={{ gridColumn: '1 / -1', position: 'relative' }}>
+                          <label style={LABEL}>
+                            {currentLang === 'fr' ? 'Artiste' : 'Artist'}
+                            {newArtwork.artist_match_status && (
+                              <span style={{ marginLeft: 8, fontSize: 10, padding: '2px 7px', borderRadius: 20, fontWeight: 500, ...BADGE[newArtwork.artist_match_status] }}>
+                                {newArtwork.artist_match_status === 'confirmed' ? (currentLang === 'fr' ? 'Identifié' : 'Identified')
+                                  : newArtwork.artist_match_status === 'suggested' ? (currentLang === 'fr' ? 'Suggestion' : 'Suggestion')
+                                  : (currentLang === 'fr' ? 'Non résolu' : 'Unresolved')}
+                              </span>
+                            )}
+                          </label>
+                          <input
+                            className="input"
+                            placeholder={currentLang === 'fr' ? 'Jean-Michel Basquiat, Chagall…' : 'Jean-Michel Basquiat, Chagall…'}
+                            value={newArtwork.artist_name || ''}
+                            onChange={e => onArtistInput(e.target.value)}
+                            autoComplete="off"
+                          />
+                          {artistSearching && (
+                            <div style={{ position: 'absolute', right: 10, top: 36, fontSize: 11, color: 'var(--text-3)' }}>…</div>
+                          )}
+                          {artistSuggestions.length > 0 && (
+                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '0.5px solid var(--border)', borderRadius: 6, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, marginTop: 2, overflow: 'hidden' }}>
+                              {artistSuggestions.map((s: any) => (
+                                <button
+                                  key={s.id}
+                                  onClick={() => pickArtist(s)}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', borderBottom: '0.5px solid var(--border)', transition: 'background 0.1s' }}
+                                  onMouseEnter={e => (e.currentTarget.style.background = '#f8f9fa')}
+                                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                                >
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>{s.name}</div>
+                                    {(s.birth_year || s.nationality) && (
+                                      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>
+                                        {[s.nationality, s.birth_year ? `b. ${s.birth_year}` : null].filter(Boolean).join(' · ')}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, flexShrink: 0, ...BADGE[s.confidence] }}>
+                                    {s.confidence === 'confirmed' ? (currentLang === 'fr' ? 'Identifié' : 'Match')
+                                      : s.confidence === 'suggested' ? (currentLang === 'fr' ? 'Proche' : 'Close')
+                                      : (currentLang === 'fr' ? 'Possible' : 'Possible')}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Title */}
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          <label style={LABEL}>{currentLang === 'fr' ? 'Titre' : 'Title'}</label>
+                          <input className="input" placeholder={currentLang === 'fr' ? 'Untitled, 1982' : 'Untitled, 1982'} value={newArtwork.title || ''} onChange={e => setNewArtwork(f => ({ ...f, title: e.target.value }))} />
+                        </div>
+
+                        {/* Advanced accordion toggle */}
+                        <div style={{ gridColumn: '1 / -1', marginTop: 8 }}>
+                          <button
+                            onClick={() => setShowAdvanced(v => !v)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--text-2)', fontFamily: 'var(--font-mono)', padding: '6px 0', display: 'flex', alignItems: 'center', gap: 6 }}
+                          >
+                            <span style={{ display: 'inline-block', transform: showAdvanced ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>›</span>
+                            {currentLang === 'fr' ? 'Détails avancés' : 'Advanced details'}
+                          </button>
+                        </div>
+
+                        {showAdvanced && (<>
+                          {/* Acquisition */}
+                          <div style={SECTION}>{currentLang === 'fr' ? 'Acquisition' : 'Acquisition'}</div>
+                          <div>
+                            <label style={LABEL}>{currentLang === 'fr' ? 'Prix d\'achat (€)' : 'Purchase price (€)'}</label>
+                            <input className="input" type="number" placeholder="18 000" value={newArtwork.purchase_price || ''} onChange={e => setNewArtwork(f => ({ ...f, purchase_price: e.target.value }))} />
+                          </div>
+                          <div>
+                            <label style={LABEL}>{currentLang === 'fr' ? 'Date d\'achat' : 'Purchase date'}</label>
+                            <input className="input" type="date" value={newArtwork.purchase_date || ''} onChange={e => setNewArtwork(f => ({ ...f, purchase_date: e.target.value }))} />
+                          </div>
+                          <div>
+                            <label style={LABEL}>{currentLang === 'fr' ? 'Source' : 'Source'}</label>
+                            <select className="input" value={newArtwork.purchase_source || ''} onChange={e => setNewArtwork(f => ({ ...f, purchase_source: e.target.value }))}>
+                              <option value="">—</option>
+                              <option value="auction">{currentLang === 'fr' ? 'Vente aux enchères' : 'Auction'}</option>
+                              <option value="gallery">{currentLang === 'fr' ? 'Galerie' : 'Gallery'}</option>
+                              <option value="private">{currentLang === 'fr' ? 'Particulier' : 'Private'}</option>
+                              <option value="art_fair">{currentLang === 'fr' ? 'Foire d\'art' : 'Art fair'}</option>
+                              <option value="inheritance">{currentLang === 'fr' ? 'Héritage / Don' : 'Inheritance / Gift'}</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={LABEL}>{currentLang === 'fr' ? 'Maison de vente' : 'Auction house'}</label>
+                            <input className="input" placeholder="Christie's Paris" value={newArtwork.purchase_auction_house || ''} onChange={e => setNewArtwork(f => ({ ...f, purchase_auction_house: e.target.value }))} />
+                          </div>
+                          <div>
+                            <label style={LABEL}>{currentLang === 'fr' ? 'Lieu d\'achat' : 'Purchase location'}</label>
+                            <input className="input" placeholder="Paris" value={newArtwork.purchase_location || ''} onChange={e => setNewArtwork(f => ({ ...f, purchase_location: e.target.value }))} />
+                          </div>
+                          <div>
+                            <label style={LABEL}>{currentLang === 'fr' ? 'Pays d\'origine' : 'Country of origin'}</label>
+                            <input className="input" placeholder="France" value={newArtwork.country_of_origin || ''} onChange={e => setNewArtwork(f => ({ ...f, country_of_origin: e.target.value }))} />
+                          </div>
+
+                          {/* Description */}
+                          <div style={SECTION}>{currentLang === 'fr' ? 'Description' : 'Description'}</div>
+                          <div>
+                            <label style={LABEL}>{currentLang === 'fr' ? 'Année de création' : 'Year created'}</label>
+                            <input className="input" placeholder="1982" value={newArtwork.year_created || ''} onChange={e => setNewArtwork(f => ({ ...f, year_created: e.target.value }))} />
+                          </div>
+                          <div>
+                            <label style={LABEL}>{currentLang === 'fr' ? 'Médium' : 'Medium'}</label>
+                            <select className="input" value={newArtwork.medium || ''} onChange={e => setNewArtwork(f => ({ ...f, medium: e.target.value }))}>
+                              <option value="">—</option>
+                              <option value="Peinture">{currentLang === 'fr' ? 'Peinture' : 'Painting'}</option>
+                              <option value="Sculpture">{currentLang === 'fr' ? 'Sculpture' : 'Sculpture'}</option>
+                              <option value="Photographie">{currentLang === 'fr' ? 'Photographie' : 'Photography'}</option>
+                              <option value="Dessin">{currentLang === 'fr' ? 'Dessin' : 'Drawing'}</option>
+                              <option value="Estampe">{currentLang === 'fr' ? 'Estampe' : 'Print'}</option>
+                              <option value="Textile">Textile</option>
+                              <option value="Céramique">{currentLang === 'fr' ? 'Céramique' : 'Ceramics'}</option>
+                              <option value="Installation">Installation</option>
+                              <option value="Autre">{currentLang === 'fr' ? 'Autre' : 'Other'}</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={LABEL}>{currentLang === 'fr' ? 'Dimensions' : 'Dimensions'}</label>
+                            <input className="input" placeholder="120 × 90 cm" value={newArtwork.dimensions || ''} onChange={e => setNewArtwork(f => ({ ...f, dimensions: e.target.value }))} />
+                          </div>
+                          <div>
+                            <label style={LABEL}>{currentLang === 'fr' ? 'État' : 'Condition'}</label>
+                            <select className="input" value={newArtwork.condition || ''} onChange={e => setNewArtwork(f => ({ ...f, condition: e.target.value }))}>
+                              <option value="">—</option>
+                              <option value="excellent">Excellent</option>
+                              <option value="good">{currentLang === 'fr' ? 'Bon' : 'Good'}</option>
+                              <option value="fair">{currentLang === 'fr' ? 'Correct' : 'Fair'}</option>
+                              <option value="restore">{currentLang === 'fr' ? 'À restaurer' : 'Needs restoration'}</option>
+                            </select>
+                          </div>
+
+                          {/* Authentication */}
+                          <div style={SECTION}>{currentLang === 'fr' ? 'Authentification' : 'Authentication'}</div>
+                          <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <input type="checkbox" id="coa" checked={newArtwork.certificate_of_authenticity === 'true'} onChange={e => setNewArtwork(f => ({ ...f, certificate_of_authenticity: e.target.checked ? 'true' : 'false' }))} />
+                            <label htmlFor="coa" style={{ fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>
+                              {currentLang === 'fr' ? 'Certificat d\'authenticité' : 'Certificate of authenticity'}
+                            </label>
+                          </div>
+                          <div>
+                            <label style={LABEL}>{currentLang === 'fr' ? 'Expertisé par' : 'Authenticated by'}</label>
+                            <input className="input" placeholder={currentLang === 'fr' ? 'Expert ou institution' : 'Expert or institution'} value={newArtwork.authenticated_by || ''} onChange={e => setNewArtwork(f => ({ ...f, authenticated_by: e.target.value }))} />
+                          </div>
+                          <div>
+                            <label style={LABEL}>{currentLang === 'fr' ? 'Date d\'expertise' : 'Authentication date'}</label>
+                            <input className="input" type="date" value={newArtwork.authentication_date || ''} onChange={e => setNewArtwork(f => ({ ...f, authentication_date: e.target.value }))} />
+                          </div>
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <label style={LABEL}>{currentLang === 'fr' ? 'Référence catalogue raisonné' : 'Catalogue raisonné ref.'}</label>
+                            <input className="input" placeholder="Cat. raisonné n°…" value={newArtwork.catalogue_raisonne_reference || ''} onChange={e => setNewArtwork(f => ({ ...f, catalogue_raisonne_reference: e.target.value }))} />
+                          </div>
+
+                          {/* Conservation */}
+                          <div style={SECTION}>{currentLang === 'fr' ? 'Conservation' : 'Storage & Insurance'}</div>
+                          <div>
+                            <label style={LABEL}>{currentLang === 'fr' ? 'Lieu de stockage' : 'Storage location'}</label>
+                            <select className="input" value={newArtwork.storage_location || ''} onChange={e => setNewArtwork(f => ({ ...f, storage_location: e.target.value }))}>
+                              <option value="">—</option>
+                              <option value="home">{currentLang === 'fr' ? 'Domicile' : 'Home'}</option>
+                              <option value="vault">{currentLang === 'fr' ? 'Coffre-fort' : 'Vault'}</option>
+                              <option value="gallery">{currentLang === 'fr' ? 'Galerie' : 'Gallery'}</option>
+                              <option value="loan">{currentLang === 'fr' ? 'Prêt' : 'On loan'}</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={LABEL}>{currentLang === 'fr' ? 'Valeur assurée (€)' : 'Insured value (€)'}</label>
+                            <input className="input" type="number" placeholder="25 000" value={newArtwork.insured_value_eur || ''} onChange={e => setNewArtwork(f => ({ ...f, insured_value_eur: e.target.value }))} />
+                          </div>
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <label style={LABEL}>{currentLang === 'fr' ? 'Assureur' : 'Insurance provider'}</label>
+                            <input className="input" placeholder="AXA Art" value={newArtwork.insurance_provider || ''} onChange={e => setNewArtwork(f => ({ ...f, insurance_provider: e.target.value }))} />
+                          </div>
+
+                          {/* Notes */}
+                          <div style={SECTION}>{currentLang === 'fr' ? 'Notes' : 'Notes'}</div>
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <textarea className="input" rows={3} placeholder={currentLang === 'fr' ? 'Provenance, expositions, historique…' : 'Provenance, exhibitions, history…'} value={newArtwork.notes || ''} onChange={e => setNewArtwork(f => ({ ...f, notes: e.target.value }))} style={{ resize: 'vertical' }} />
+                          </div>
+                        </>)}
+
+                      </div>
                     </div>
 
-                    {/* ── SECTION 4 — Authentification ── */}
-                    <div style={{ gridColumn: '1 / -1', fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 8, marginTop: 16, paddingBottom: 6, borderBottom: '0.5px solid var(--border)' }}>Authentification</div>
-                    <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <input type="checkbox" id="coa" checked={newArtwork.certificate_of_authenticity === 'true'} onChange={e => setNewArtwork(f => ({ ...f, certificate_of_authenticity: e.target.checked ? 'true' : 'false' }))} />
-                      <label htmlFor="coa" style={{ fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>Certificat d'authenticité</label>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Expertisé par</label>
-                      <input className="input" placeholder="Expert ou institution" value={newArtwork.authenticated_by || ''} onChange={e => setNewArtwork(f => ({ ...f, authenticated_by: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Date d'expertise</label>
-                      <input className="input" type="date" value={newArtwork.authentication_date || ''} onChange={e => setNewArtwork(f => ({ ...f, authentication_date: e.target.value }))} />
-                    </div>
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Référence catalogue raisonné</label>
-                      <input className="input" placeholder="Cat. raisonné n°..." value={newArtwork.catalogue_raisonne_reference || ''} onChange={e => setNewArtwork(f => ({ ...f, catalogue_raisonne_reference: e.target.value }))} />
+                    {/* Footer */}
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '16px 26px', borderTop: '0.5px solid var(--border)' }}>
+                      <button onClick={() => { setShowAddModal(false); setArtistSuggestions([]); setShowAdvanced(false); }} style={{ background: 'transparent', color: 'var(--text-2)', border: '0.5px solid var(--border)', borderRadius: 5, padding: '9px 16px', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer' }}>
+                        {currentLang === 'fr' ? 'Annuler' : 'Cancel'}
+                      </button>
+                      <button onClick={handleAddArtwork} disabled={!canSubmit} style={{ background: '#2563EB', color: 'white', border: 'none', borderRadius: 5, padding: '9px 20px', fontSize: 12, fontFamily: 'var(--font-mono)', letterSpacing: '0.07em', cursor: canSubmit ? 'pointer' : 'not-allowed', opacity: canSubmit ? 1 : 0.4 }}>
+                        {currentLang === 'fr' ? 'Ajouter à ma collection →' : 'Add to collection →'}
+                      </button>
                     </div>
 
-                    {/* ── SECTION 5 — Conservation ── */}
-                    <div style={{ gridColumn: '1 / -1', fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 8, marginTop: 16, paddingBottom: 6, borderBottom: '0.5px solid var(--border)' }}>Conservation</div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Lieu de stockage</label>
-                      <select className="input" value={newArtwork.storage_location || ''} onChange={e => setNewArtwork(f => ({ ...f, storage_location: e.target.value }))}>
-                        <option value="">—</option>
-                        <option value="home">Domicile</option>
-                        <option value="vault">Coffre-fort</option>
-                        <option value="gallery">Galerie</option>
-                        <option value="loan">Prêt</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Valeur assurée (€)</label>
-                      <input className="input" type="number" placeholder="Valeur assurée (€)" value={newArtwork.insured_value_eur || ''} onChange={e => setNewArtwork(f => ({ ...f, insured_value_eur: e.target.value }))} />
-                    </div>
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Assureur</label>
-                      <input className="input" placeholder="AXA Art" value={newArtwork.insurance_provider || ''} onChange={e => setNewArtwork(f => ({ ...f, insurance_provider: e.target.value }))} />
-                    </div>
-
-                    {/* ── SECTION 6 — Notes ── */}
-                    <div style={{ gridColumn: '1 / -1', fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 8, marginTop: 16, paddingBottom: 6, borderBottom: '0.5px solid var(--border)' }}>Notes</div>
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <textarea className="input" rows={3} placeholder="Provenance, expositions, historique..." value={newArtwork.notes || ''} onChange={e => setNewArtwork(f => ({ ...f, notes: e.target.value }))} style={{ resize: 'vertical' }} />
-                    </div>
-
-                  </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '16px 26px', borderTop: '0.5px solid var(--border)' }}>
-                    <button onClick={() => setShowAddModal(false)} style={{ background: 'transparent', color: 'var(--text-2)', border: '0.5px solid var(--border)', borderRadius: 5, padding: '9px 16px', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer' }}>
-                      {currentLang === 'fr' ? 'Annuler' : 'Cancel'}
-                    </button>
-                    <button onClick={handleAddArtwork} disabled={!newArtwork.artist_name || !newArtwork.title || !newArtwork.purchase_price} style={{ background: '#2563EB', color: 'white', border: 'none', borderRadius: 5, padding: '9px 20px', fontSize: 12, fontFamily: 'var(--font-mono)', letterSpacing: '0.07em', cursor: 'pointer', opacity: (!newArtwork.artist_name || !newArtwork.title || !newArtwork.purchase_price) ? 0.4 : 1 }}>
-                      {currentLang === 'fr' ? 'Ajouter à ma collection →' : 'Add to collection →'}
-                    </button>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Loading */}
             {portfolioLoading && (
