@@ -208,27 +208,53 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
 function CollectionOSWidget({ pulse, match, lang, onNavigate }: {
   pulse: any; match: any; lang: string; onNavigate: (path: string) => void;
 }) {
-  const events     = (pulse?.events  || []).slice(0, 3);
-  const matchLots  = (match?.lots    || []).slice(0, 3);
+  const events     = pulse?.events || [];
+  const matchLots  = (match?.lots  || []).slice(0, 3);
   const totalMatch = match?.total_matches || 0;
 
   if (!events.length && !matchLots.length) return null;
 
-  const impactDot = (impact: string) =>
-    ({ positive: '#1A6B3C', opportunity: '#B8922A', negative: '#DC2626' }[impact] ?? '#9CA3AF');
+  // Build editorial narrative from pulse events
+  const positive    = events.filter((e: any) => e.impact === 'positive');
+  const opportunity = events.filter((e: any) => e.impact === 'opportunity');
+  const lead = positive.length > 0 ? positive[0]
+             : opportunity.length > 0 ? opportunity[0]
+             : events[0] || null;
 
-  const impactColor = (impact: string) =>
-    ({ positive: '#1A6B3C', opportunity: '#B8922A', negative: '#DC2626' }[impact] ?? '#6B7280');
+  let narrative = '';
+  if (lead) {
+    const artists = positive.slice(0, 2).map((e: any) => e.artist).filter(Boolean);
+    if (positive.length > 0 && artists.length > 0) {
+      narrative = lang === 'fr'
+        ? `${artists.join(' et ')} ${artists.length > 1 ? 'progressent' : 'progresse'} bien ce mois-ci. Ta collection suit cette tendance.`
+        : `${artists.join(' and ')} ${artists.length > 1 ? 'are' : 'is'} performing well this month. Your collection follows.`;
+    } else {
+      narrative = lead.title || '';
+    }
+  }
+
+  // First urgent lot (closes within 7 days)
+  const urgentLot = matchLots.find((l: any) => l.days_until_close != null && l.days_until_close <= 7);
+
+  const urgencyLabel = (lot: any): string => {
+    const d = lot.days_until_close;
+    if (d === 0) return lang === 'fr' ? "Ferme aujourd'hui" : 'Closes today';
+    const target = new Date(); target.setDate(target.getDate() + d);
+    const daysFr = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+    return lang === 'fr'
+      ? `Ferme ${daysFr[target.getDay()]}`
+      : `Closes ${target.toLocaleDateString('en-GB', { weekday: 'long' })}`;
+  };
 
   return (
     <div style={{ background: 'white', border: '1px solid #E8E4DC', borderRadius: '12px', marginBottom: '32px', overflow: 'hidden' }}>
 
-      {/* Header strip */}
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 20px', background: 'rgba(26,42,68,0.025)', borderBottom: '1px solid #E8E4DC' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#1A6B3C' }} />
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: '#1A2A44', letterSpacing: '1.5px' }}>
-            NAUTILUS COLLECTION OS
+            {lang === 'fr' ? 'CETTE SEMAINE DANS TON UNIVERS' : 'THIS WEEK IN YOUR WORLD'}
           </span>
         </div>
         <button
@@ -239,64 +265,68 @@ function CollectionOSWidget({ pulse, match, lang, onNavigate }: {
         </button>
       </div>
 
-      {/* Body: Pulse | divider | Match */}
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1px 1fr' }}>
+      {/* Body */}
+      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-        {/* Left — Pulse */}
-        <div style={{ padding: '14px 20px' }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '10px' }}>
-            {lang === 'fr' ? 'SIGNAUX MARCHÉ' : 'MARKET SIGNALS'}
+        {/* Pulse narrative */}
+        {narrative ? (
+          <div style={{ fontSize: '13px', color: '#374151', lineHeight: 1.7 }}>
+            {narrative}
           </div>
-          {events.length === 0 ? (
-            <div style={{ fontSize: '12px', color: '#9CA3AF' }}>
-              {lang === 'fr' ? 'Aucune activité ce mois' : 'No activity this month'}
+        ) : events.length === 0 && (
+          <div style={{ fontSize: '13px', color: '#9CA3AF', lineHeight: 1.7 }}>
+            {lang === 'fr'
+              ? 'Marché calme cette semaine. On revient vers toi dès que quelque chose bouge.'
+              : "Quiet market this week. We'll be back when something moves."}
+          </div>
+        )}
+
+        {/* À ne pas manquer — urgent lot only */}
+        {urgentLot && (
+          <div style={{ borderTop: '1px solid #E8E4DC', paddingTop: '12px' }}>
+            <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: '#B8922A', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>
+              {lang === 'fr' ? 'À ne pas manquer' : "Don't miss"}
             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {events.map((e: any, i: number) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                  <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: impactDot(e.impact), flexShrink: 0, marginTop: '5px' }} />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#1A2A44', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {e.artist}
-                    </div>
-                    <div style={{ fontSize: '10px', color: impactColor(e.impact), lineHeight: 1.4 }}>
-                      {e.title}
-                    </div>
-                  </div>
+            <div
+              onClick={() => onNavigate(`/app/opportunities/${urgentLot.id}`)}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.opacity = '0.75'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.opacity = '1'; }}
+            >
+              {urgentLot.image_url && (
+                <img src={urgentLot.image_url} alt={urgentLot.title}
+                  style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
+              )}
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: '#1A2A44', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {urgentLot.artist} — {urgentLot.title}
                 </div>
-              ))}
-              {(pulse?.total_events || 0) > 3 && (
-                <div style={{ fontSize: '10px', color: '#9CA3AF', paddingLeft: '13px' }}>
-                  +{pulse.total_events - 3} {lang === 'fr' ? 'autres signaux' : 'more signals'}
+                <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>
+                  {urgencyLabel(urgentLot)} · {fmtPrice(urgentLot.price)}
                 </div>
+              </div>
+              <span style={{ marginLeft: 'auto', fontSize: '14px', color: '#9CA3AF', flexShrink: 0 }}>→</span>
+            </div>
+          </div>
+        )}
+
+        {/* Match lots — 3 max, no score badge */}
+        {matchLots.length > 0 && (
+          <div style={{ borderTop: narrative || urgentLot ? '1px solid #E8E4DC' : 'none', paddingTop: narrative || urgentLot ? '12px' : 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '2px', textTransform: 'uppercase' }}>
+                {lang === 'fr' ? 'POUR VOUS' : 'FOR YOU'}
+              </span>
+              {totalMatch > 3 && (
+                <button
+                  onClick={() => onNavigate('/app/collection-match')}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: '#9CA3AF', padding: 0, fontFamily: 'inherit' }}
+                >
+                  +{totalMatch - 3} {lang === 'fr' ? 'autres lots →' : 'more lots →'}
+                </button>
               )}
             </div>
-          )}
-        </div>
-
-        {/* Divider */}
-        <div style={{ background: '#E8E4DC' }} />
-
-        {/* Right — Match lots */}
-        <div style={{ padding: '14px 20px' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '10px' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '2px', textTransform: 'uppercase' }}>
-              {lang === 'fr' ? 'POUR VOUS' : 'FOR YOU'}
-            </div>
-            {totalMatch > 0 && (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#1A6B3C', fontWeight: 700 }}>
-                {totalMatch} {lang === 'fr' ? 'correspondances' : 'matches'}
-              </div>
-            )}
-          </div>
-
-          {matchLots.length === 0 ? (
-            <div style={{ fontSize: '12px', color: '#9CA3AF' }}>
-              {lang === 'fr' ? 'Ajoutez des œuvres à votre collection pour obtenir des suggestions.' : 'Add artworks to your collection to get personalized matches.'}
-            </div>
-          ) : (
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'stretch' }}>
+            <div style={{ display: 'flex', gap: '10px' }}>
               {matchLots.map((lot: any) => (
                 <div
                   key={lot.id}
@@ -315,40 +345,24 @@ function CollectionOSWidget({ pulse, match, lang, onNavigate }: {
                     <div style={{ fontSize: '9px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>
                       {lot.artist || '—'}
                     </div>
-                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#1A2A44', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '5px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#1A2A44', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px' }}>
                       {lot.title}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '10px', color: '#6B7280' }}>
-                        {lot.price ? fmtPrice(lot.price) : '—'}
-                      </span>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: '#1A6B3C', background: 'rgba(26,107,60,0.08)', padding: '1px 5px', borderRadius: '3px' }}>
-                        {lot.match_score}
-                      </span>
+                    <div style={{ fontSize: '10px', color: '#6B7280' }}>
+                      {fmtPrice(lot.price)}
                     </div>
                     {lot.match_reasons?.[0] && (
-                      <div style={{ fontSize: '9px', color: '#9CA3AF', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: '9px', color: '#9CA3AF', marginTop: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {lot.match_reasons[0]}
                       </div>
                     )}
                   </div>
                 </div>
               ))}
-
-              {totalMatch > 3 && (
-                <div
-                  onClick={() => onNavigate('/app/collection-match')}
-                  style={{ width: '60px', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '3px', cursor: 'pointer', color: '#9CA3AF' }}
-                >
-                  <div style={{ fontSize: '20px', fontWeight: 300 }}>+{totalMatch - 3}</div>
-                  <div style={{ fontSize: '9px', textAlign: 'center', lineHeight: 1.3 }}>
-                    {lang === 'fr' ? 'autres lots' : 'more lots'}
-                  </div>
-                </div>
-              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

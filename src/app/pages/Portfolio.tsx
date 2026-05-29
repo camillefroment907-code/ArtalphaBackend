@@ -1129,103 +1129,148 @@ export default function Portfolio() {
             })()}
 
             {/* ── COLLECTION OS — HEALTH + ADVISOR ─────────────── */}
-            {portfolioItems.length > 0 && (osHealth || osAdvisor?.primary) && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+            {portfolioItems.length > 0 && (osHealth || osAdvisor?.primary) && (() => {
+              const STATES_FR = ['Collection naissante', 'En construction', 'Collection de conviction', 'Équilibrée', 'Collection de référence'];
+              const STATES_EN = ['Budding collection', 'Taking shape', 'Collection of conviction', 'Well-balanced', 'Reference collection'];
+              const STATES = currentLang === 'fr' ? STATES_FR : STATES_EN;
+              const n  = portfolioItems.length;
+              const sc = osHealth?.score ?? 0;
+              const si = n <= 2 ? 0 : n <= 5 || sc < 45 ? 1 : n <= 9 || sc < 60 ? 2 : sc < 78 ? 3 : 4;
+              const firstArtist = portfolioItems[0]?.artist_name;
 
-                {/* Health Score */}
-                {osHealth && (
-                  <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '16px 20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, paddingBottom: 10, borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
-                      <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+              const NARR_FR: Record<number, string> = {
+                0: firstArtist
+                  ? `Ton ${firstArtist} est un premier ancrage solide. Les grandes collections commencent souvent par un artiste qui compte vraiment.`
+                  : 'Cette première œuvre est un ancrage solide. Les grandes collections commencent souvent par un artiste qui compte vraiment.',
+                1: n === 2
+                  ? "Deux artistes, deux univers — c'est exactement comme ça que les collections qui durent prennent forme."
+                  : 'Ta collection prend de la cohérence. Nautilus commence à voir un fil conducteur.',
+                2: 'Un axe artistique clair se dessine. La prochaine étape : renforcer la documentation et la diversification.',
+                3: 'Collection bien équilibrée entre artistes et périodes. Les bases sont solides.',
+                4: 'Collection de référence — diversifiée, documentée, suivie régulièrement.',
+              };
+              const NARR_EN: Record<number, string> = {
+                0: firstArtist
+                  ? `Your ${firstArtist} is a strong first anchor. Great collections often start with one artist that truly matters.`
+                  : 'This first artwork is a strong anchor. Great collections often start with one artist that truly matters.',
+                1: n === 2
+                  ? "Two artists, two worlds — that's exactly how lasting collections take shape."
+                  : 'Your collection is gaining coherence. Nautilus is beginning to see a thread.',
+                2: 'A clear artistic direction is emerging. Next step: strengthen documentation and diversification.',
+                3: 'Well-balanced across artists and periods. The foundations are solid.',
+                4: 'Reference collection — diversified, documented, and regularly reviewed.',
+              };
+              const narrative = currentLang === 'fr' ? NARR_FR[si] : NARR_EN[si];
+              const showDims  = n >= 4 && osHealth?.dimensions;
+              const dimSlice  = showDims ? (Object.entries(osHealth.dimensions) as [string, any][]).slice(0, n >= 10 ? 5 : 2) : [];
+
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+
+                  {/* Health — redesigned: narrative state, no score/grade */}
+                  {osHealth && (
+                    <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '16px 20px' }}>
+                      <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 14, paddingBottom: 10, borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
                         Collection Health
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                        <span style={{ fontSize: 22, fontWeight: 700, color: osHealth.score >= 70 ? '#16A34A' : osHealth.score >= 50 ? '#B8922A' : '#C0392B', lineHeight: 1 }}>
-                          {osHealth.score}
-                        </span>
-                        <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)' }}>/100</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--color-text-secondary)', marginLeft: 2 }}>
-                          {osHealth.grade}
-                        </span>
+
+                      {/* State label */}
+                      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 12, lineHeight: 1.2 }}>
+                        {STATES[si]}
                       </div>
-                    </div>
 
-                    {osHealth.dimensions
-                      ? Object.entries(osHealth.dimensions).map(([key, dim]: [string, any]) => (
-                        <div key={key} style={{ marginBottom: 9 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                            <span style={{ fontSize: 9, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)' }}>{dim.label}</span>
-                            <span style={{ fontSize: 9, color: 'var(--color-text-primary)', fontFamily: 'var(--font-mono)' }}>{dim.score}/{dim.max}</span>
+                      {/* Progress arc */}
+                      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
+                        {STATES.map((_, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', flex: i < STATES.length - 1 ? 1 : 'none' }}>
+                            <div style={{
+                              width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                              background: i <= si ? '#1A2A44' : 'transparent',
+                              border: `1.5px solid ${i <= si ? '#1A2A44' : 'rgba(26,42,68,0.2)'}`,
+                              transition: 'all 0.3s',
+                            }} />
+                            {i < STATES.length - 1 && (
+                              <div style={{ flex: 1, height: 1, background: i < si ? '#1A2A44' : 'rgba(26,42,68,0.12)', margin: '0 3px' }} />
+                            )}
                           </div>
-                          <div style={{ height: 3, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: `${(dim.score / dim.max) * 100}%`, background: dim.score >= 14 ? '#16A34A' : dim.score >= 8 ? '#B8922A' : '#C0392B', borderRadius: 2, transition: 'width 0.4s ease' }} />
-                          </div>
-                        </div>
-                      ))
-                      : (
-                        <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 10 }}>
-                          {currentLang === 'fr' ? 'Détail disponible avec un abonnement Investor.' : 'Breakdown available with Investor plan.'}
-                        </div>
-                      )
-                    }
-
-                    {osHealth.top_action && (
-                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: '0.5px solid var(--color-border-tertiary)', fontSize: 10, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-                        ↑ {osHealth.top_action.message}
-                        <span style={{ marginLeft: 6, color: '#B8922A', fontFamily: 'var(--font-mono)', fontSize: 9 }}>
-                          {osHealth.top_action.impact}
-                        </span>
+                        ))}
                       </div>
-                    )}
-                  </div>
-                )}
 
-                {/* Advisor — Next Best Action */}
-                {osAdvisor?.primary && (
-                  <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '16px 20px', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 14, paddingBottom: 10, borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
-                      {currentLang === 'fr' ? 'Prochaine action recommandée' : 'Next recommended action'}
-                    </div>
+                      {/* Narrative text */}
+                      <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: dimSlice.length > 0 || osHealth.top_action ? 12 : 0 }}>
+                        {narrative}
+                      </div>
 
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12 }}>
-                        <span style={{ fontSize: 18, flexShrink: 0, lineHeight: 1 }}>{osAdvisor.primary.icon}</span>
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.3, marginBottom: 5 }}>
-                            {osAdvisor.primary.title}
+                      {/* Dimensions — only for 4+ items */}
+                      {dimSlice.length > 0 && (
+                        <div style={{ marginBottom: osHealth.top_action ? 12 : 0 }}>
+                          {dimSlice.map(([key, dim]) => (
+                            <div key={key} style={{ marginBottom: 8 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                                <span style={{ fontSize: 9, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)' }}>{dim.label}</span>
+                                <span style={{ fontSize: 9, color: 'var(--color-text-primary)', fontFamily: 'var(--font-mono)' }}>{dim.score}/{dim.max}</span>
+                              </div>
+                              <div style={{ height: 3, background: 'rgba(26,42,68,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+                                <div style={{ height: '100%', width: `${(dim.score / dim.max) * 100}%`, background: dim.score >= 14 ? '#16A34A' : dim.score >= 8 ? '#B8922A' : '#C0392B', borderRadius: 2, transition: 'width 0.4s ease' }} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Prochaine étape */}
+                      {osHealth.top_action && (
+                        <div style={{ paddingTop: 10, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
+                          <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+                            {currentLang === 'fr' ? 'Prochaine étape' : 'Next step'}
                           </div>
                           <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-                            {osAdvisor.primary.description}
+                            {osHealth.top_action.message}
                           </div>
                         </div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{
-                          fontSize: 9, fontFamily: 'var(--font-mono)', padding: '2px 7px', borderRadius: 4, fontWeight: 700,
-                          background: osAdvisor.primary.impact === 'ÉLEVÉ' ? 'rgba(192,57,43,0.12)' : 'rgba(184,146,42,0.12)',
-                          color: osAdvisor.primary.impact === 'ÉLEVÉ' ? '#C0392B' : '#B8922A',
-                        }}>
-                          {osAdvisor.primary.impact}
-                        </span>
-                        {(osAdvisor.total_actions || 0) > 1 && (
-                          <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)' }}>
-                            +{osAdvisor.total_actions - 1} {currentLang === 'fr' ? 'autres actions' : 'more actions'}
-                          </span>
-                        )}
-                      </div>
+                      )}
                     </div>
+                  )}
 
-                    <button
-                      onClick={() => navigate(osAdvisor.primary.cta_url || '/app/portfolio')}
-                      style={{ marginTop: 14, padding: '8px 14px', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 6, fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--color-text-primary)', cursor: 'pointer', textAlign: 'left' }}
-                    >
-                      {osAdvisor.primary.cta_label} →
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+                  {/* Advisor — redesigned: voice, anchor, no impact badge */}
+                  {osAdvisor?.primary && (() => {
+                    const p = osAdvisor.primary;
+                    const anchorMatch = p.title?.match(/[«"]\s*(.+?)\s*[»"]/);
+                    const anchor = anchorMatch ? anchorMatch[1] : null;
+                    return (
+                      <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '16px 20px', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 14, paddingBottom: 10, borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
+                          {anchor
+                            ? (currentLang === 'fr' ? `Pour « ${anchor} »` : `For "${anchor}"`)
+                            : (currentLang === 'fr' ? 'Pour ta collection' : 'For your collection')}
+                        </div>
+
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.4, marginBottom: 8 }}>
+                            {p.title}
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+                            {p.description}
+                          </div>
+                        </div>
+
+                        <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
+                          <button
+                            onClick={() => navigate(p.cta_url || '/app/portfolio')}
+                            style={{ padding: '8px 16px', background: '#1A2A44', border: 'none', borderRadius: 6, fontSize: 11, fontFamily: 'var(--font-mono)', color: 'white', cursor: 'pointer', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}
+                          >
+                            {p.cta_label} →
+                          </button>
+                          <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--color-text-secondary)', padding: 0, fontFamily: 'inherit' }}>
+                            {currentLang === 'fr' ? 'Pas maintenant' : 'Not now'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              );
+            })()}
 
             {/* ── MINI VISUALISATIONS ──────────────────────────── */}
             {portfolioItems.length > 0 && (
@@ -1957,77 +2002,97 @@ export default function Portfolio() {
             )}
 
             {/* ── COLLECTION MATCH FEED ────────────────────────── */}
-            {osMatch?.lots?.length > 0 && (
-              <div style={{ paddingTop: '32px', borderTop: '1px solid var(--border)', marginBottom: '32px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px' }}>
-                  <div>
+            {osMatch?.lots?.length > 0 && (() => {
+              const firstArtist = portfolioItems[0]?.artist_name;
+              const shownLots   = osMatch.lots.slice(0, 3);
+              const urgencyLbl  = (lot: any): string | null => {
+                const d = lot.days_until_close;
+                if (d == null) return null;
+                if (d === 0) return currentLang === 'fr' ? "Ferme aujourd'hui" : 'Closes today';
+                const target = new Date(); target.setDate(target.getDate() + d);
+                const daysFr = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+                if (d <= 2) return currentLang === 'fr' ? `Ferme ${daysFr[target.getDay()]}` : `Closes ${target.toLocaleDateString('en-GB', { weekday: 'long' })}`;
+                if (d <= 7) return currentLang === 'fr' ? 'Cette semaine' : 'This week';
+                return null;
+              };
+              return (
+                <div style={{ paddingTop: '32px', borderTop: '1px solid var(--border)', marginBottom: '32px' }}>
+                  <div style={{ marginBottom: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '5px' }}>
                       <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#16A34A' }} />
                       <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
                         Collection Match
                       </span>
                     </div>
-                    <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', margin: '0 0 4px' }}>
-                      {currentLang === 'fr' ? 'Sélectionnés pour votre collection' : 'Selected for your collection'}
+                    <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', margin: 0 }}>
+                      {firstArtist
+                        ? (currentLang === 'fr' ? `Dans la continuité de ${firstArtist}` : `In the spirit of ${firstArtist}`)
+                        : (currentLang === 'fr' ? 'Sélectionnés pour vous' : 'Selected for you')}
                     </h2>
-                    <p style={{ fontSize: '12px', color: 'var(--text-3)', margin: 0 }}>
-                      {osMatch.total_matches} {currentLang === 'fr' ? 'correspondances basées sur votre profil de collection' : 'matches based on your collection profile'}
-                    </p>
                   </div>
-                </div>
 
-                <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '6px' }}>
-                  {osMatch.lots.slice(0, 6).map((lot: any) => (
-                    <div
-                      key={lot.id}
-                      onClick={() => navigate(`/app/opportunities/${lot.id}`)}
-                      style={{ width: '178px', flexShrink: 0, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', cursor: 'pointer', transition: 'border-color 0.12s' }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#1A2A44'; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'; }}
-                    >
-                      <div style={{ height: '100px', background: '#F0EDE8', overflow: 'hidden' }}>
-                        {lot.image_url
-                          ? <img src={lot.image_url} alt={lot.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
-                          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: '22px', opacity: 0.15 }}>◇</span></div>
-                        }
-                      </div>
-                      <div style={{ padding: '10px' }}>
-                        <div style={{ fontSize: '9px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>
-                          {lot.artist || '—'}
-                        </div>
-                        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '6px' }}>
-                          {lot.title}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>
-                            {lot.price >= 1000 ? `€${(lot.price / 1000).toFixed(0)}k` : lot.price ? `€${lot.price}` : '—'}
-                          </span>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: '#16A34A', background: 'rgba(22,163,74,0.08)', padding: '1px 6px', borderRadius: '4px' }}>
-                            {lot.match_score}
-                          </span>
-                        </div>
-                        {lot.match_reasons?.[0] && (
-                          <div style={{ fontSize: '9px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {lot.match_reasons[0]}
+                  <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '6px' }}>
+                    {shownLots.map((lot: any) => {
+                      const urgency = urgencyLbl(lot);
+                      const reason  = lot.match_reasons?.[0];
+                      return (
+                        <div
+                          key={lot.id}
+                          onClick={() => navigate(`/app/opportunities/${lot.id}`)}
+                          style={{ width: '178px', flexShrink: 0, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', cursor: 'pointer', transition: 'border-color 0.12s' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#1A2A44'; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'; }}
+                        >
+                          <div style={{ height: '100px', background: '#F0EDE8', overflow: 'hidden', position: 'relative' }}>
+                            {lot.image_url
+                              ? <img src={lot.image_url} alt={lot.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+                              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: '22px', opacity: 0.15 }}>◇</span></div>
+                            }
+                            {urgency && (
+                              <div style={{
+                                position: 'absolute', top: 7, left: 7,
+                                background: (lot.days_until_close ?? 99) <= 2 ? 'rgba(192,57,43,0.9)' : 'rgba(184,146,42,0.9)',
+                                borderRadius: 4, padding: '2px 7px',
+                                fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: 'white',
+                              }}>
+                                {urgency}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {(osMatch.total_matches || 0) > 6 && (
-                    <div
+                          <div style={{ padding: '10px' }}>
+                            <div style={{ fontSize: '9px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>
+                              {lot.artist || '—'}
+                            </div>
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px' }}>
+                              {lot.title}
+                            </div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-2)' }}>
+                              {lot.price >= 1000 ? `€${(lot.price / 1000).toFixed(0)}k` : lot.price ? `€${lot.price}` : '—'}
+                            </div>
+                            {reason && (
+                              <div style={{ fontSize: '9px', color: 'var(--text-3)', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {reason}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {(osMatch.total_matches || 0) > 3 && (
+                    <button
                       onClick={() => navigate('/app/collection-match')}
-                      style={{ width: '80px', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', cursor: 'pointer', color: 'var(--text-3)' }}
+                      style={{ marginTop: 14, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--color-text-secondary)', padding: 0, fontFamily: 'inherit' }}
                     >
-                      <div style={{ fontSize: '20px', fontWeight: 300 }}>+{osMatch.total_matches - 6}</div>
-                      <div style={{ fontSize: '9px', textAlign: 'center', lineHeight: 1.3 }}>
-                        {currentLang === 'fr' ? 'autres lots' : 'more lots'}
-                      </div>
-                    </div>
+                      {currentLang === 'fr'
+                        ? `Voir ${osMatch.total_matches - 3} autres lots →`
+                        : `See ${osMatch.total_matches - 3} more lots →`}
+                    </button>
                   )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Market Opportunities */}
             <div style={{ paddingTop: '32px', borderTop: '1px solid var(--border)' }}>
