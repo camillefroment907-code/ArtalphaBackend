@@ -2015,7 +2015,10 @@ export default function Portfolio() {
                     </div>
                   ))}
                   {(osMatch.total_matches || 0) > 6 && (
-                    <div style={{ width: '80px', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', cursor: 'pointer', color: 'var(--text-3)' }}>
+                    <div
+                      onClick={() => navigate('/app/collection-match')}
+                      style={{ width: '80px', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', cursor: 'pointer', color: 'var(--text-3)' }}
+                    >
                       <div style={{ fontSize: '20px', fontWeight: 300 }}>+{osMatch.total_matches - 6}</div>
                       <div style={{ fontSize: '9px', textAlign: 'center', lineHeight: 1.3 }}>
                         {currentLang === 'fr' ? 'autres lots' : 'more lots'}

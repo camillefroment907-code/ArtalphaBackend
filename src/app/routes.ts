@@ -21,7 +21,8 @@ const ArtistDetail  = lazy(() => import('./pages/ArtistDetail'));
 const ArtistIntelligence = lazy(() => import('./pages/ArtistIntelligence'));
 const Market        = lazy(() => import('./pages/Market'));
 const Alerts        = lazy(() => import('./pages/Alerts'));
-const Portfolio     = lazy(() => import('./pages/Portfolio'));
+const Portfolio        = lazy(() => import('./pages/Portfolio'));
+const CollectionMatch  = lazy(() => import('./pages/CollectionMatch'));
 const Agent         = lazy(() => import('./pages/Agent'));
 const FAQ           = lazy(() => import('./pages/FAQ'));
 const BillingSuccess = lazy(() => import('./pages/BillingSuccess'));
@@ -150,6 +151,7 @@ export const router = createBrowserRouter([
       { path: 'market', Component: Market },
       { path: 'alerts', Component: Alerts },
       { path: 'portfolio', Component: Portfolio },
+      { path: 'collection-match', Component: CollectionMatch },
       { path: 'agent', Component: Agent },
       { path: 'onboarding', Component: Onboarding },
       { path: 'profile/preferences', Component: Preferences },

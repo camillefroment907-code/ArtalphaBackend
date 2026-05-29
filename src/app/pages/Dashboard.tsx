@@ -337,7 +337,7 @@ function CollectionOSWidget({ pulse, match, lang, onNavigate }: {
 
               {totalMatch > 3 && (
                 <div
-                  onClick={() => onNavigate('/app/portfolio')}
+                  onClick={() => onNavigate('/app/collection-match')}
                   style={{ width: '60px', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '3px', cursor: 'pointer', color: '#9CA3AF' }}
                 >
                   <div style={{ fontSize: '20px', fontWeight: 300 }}>+{totalMatch - 3}</div>
