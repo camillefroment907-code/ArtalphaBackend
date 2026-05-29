@@ -17,4 +17,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8080"]
+CMD ["sh", "-c", "i=0; until alembic upgrade head; do i=$((i+1)); if [ $i -ge 5 ]; then echo 'Alembic failed after 5 retries, aborting'; exit 1; fi; echo \"Alembic retry $i/5 in 5s...\"; sleep 5; done && uvicorn app.main:app --host 0.0.0.0 --port 8080"]
