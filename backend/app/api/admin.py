@@ -530,6 +530,16 @@ async def artsper_enrichment_status() -> Dict[str, Any]:
     return dict(_artsper_enrich_status) or {"status": "never_run"}
 
 
+# ── Portfolio snapshot trigger ────────────────────────────────────────────────
+
+@router.post("/portfolio-snapshot/run", dependencies=[Depends(verify_admin)])
+async def trigger_portfolio_snapshot():
+    """Run portfolio snapshot job immediately (normally runs Sunday 20:00 UTC)."""
+    from app.jobs.portfolio_snapshot import run_portfolio_snapshots
+    result = await run_portfolio_snapshots()
+    return {"status": "ok", **result}
+
+
 @router.post("/artsper-enrichment/trigger", dependencies=[Depends(verify_admin)])
 async def trigger_artsper_enrichment(body: dict = None) -> Dict[str, Any]:
     """
