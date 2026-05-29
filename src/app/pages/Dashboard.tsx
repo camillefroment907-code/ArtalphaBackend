@@ -203,6 +203,157 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
   );
 }
 
+// ── Collection OS Widget ───────────────────────────────────────────────────────
+
+function CollectionOSWidget({ pulse, match, lang, onNavigate }: {
+  pulse: any; match: any; lang: string; onNavigate: (path: string) => void;
+}) {
+  const events     = (pulse?.events  || []).slice(0, 3);
+  const matchLots  = (match?.lots    || []).slice(0, 3);
+  const totalMatch = match?.total_matches || 0;
+
+  if (!events.length && !matchLots.length) return null;
+
+  const impactDot = (impact: string) =>
+    ({ positive: '#1A6B3C', opportunity: '#B8922A', negative: '#DC2626' }[impact] ?? '#9CA3AF');
+
+  const impactColor = (impact: string) =>
+    ({ positive: '#1A6B3C', opportunity: '#B8922A', negative: '#DC2626' }[impact] ?? '#6B7280');
+
+  return (
+    <div style={{ background: 'white', border: '1px solid #E8E4DC', borderRadius: '12px', marginBottom: '32px', overflow: 'hidden' }}>
+
+      {/* Header strip */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 20px', background: 'rgba(26,42,68,0.025)', borderBottom: '1px solid #E8E4DC' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#1A6B3C' }} />
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: '#1A2A44', letterSpacing: '1.5px' }}>
+            NAUTILUS COLLECTION OS
+          </span>
+        </div>
+        <button
+          onClick={() => onNavigate('/app/portfolio')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: '#9CA3AF', padding: 0 }}
+        >
+          {lang === 'fr' ? 'Voir ma collection →' : 'View my collection →'}
+        </button>
+      </div>
+
+      {/* Body: Pulse | divider | Match */}
+      <div style={{ display: 'grid', gridTemplateColumns: '260px 1px 1fr' }}>
+
+        {/* Left — Pulse */}
+        <div style={{ padding: '14px 20px' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '10px' }}>
+            {lang === 'fr' ? 'SIGNAUX MARCHÉ' : 'MARKET SIGNALS'}
+          </div>
+          {events.length === 0 ? (
+            <div style={{ fontSize: '12px', color: '#9CA3AF' }}>
+              {lang === 'fr' ? 'Aucune activité ce mois' : 'No activity this month'}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {events.map((e: any, i: number) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: impactDot(e.impact), flexShrink: 0, marginTop: '5px' }} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#1A2A44', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {e.artist}
+                    </div>
+                    <div style={{ fontSize: '10px', color: impactColor(e.impact), lineHeight: 1.4 }}>
+                      {e.title}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {(pulse?.total_events || 0) > 3 && (
+                <div style={{ fontSize: '10px', color: '#9CA3AF', paddingLeft: '13px' }}>
+                  +{pulse.total_events - 3} {lang === 'fr' ? 'autres signaux' : 'more signals'}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Divider */}
+        <div style={{ background: '#E8E4DC' }} />
+
+        {/* Right — Match lots */}
+        <div style={{ padding: '14px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '10px' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '2px', textTransform: 'uppercase' }}>
+              {lang === 'fr' ? 'POUR VOUS' : 'FOR YOU'}
+            </div>
+            {totalMatch > 0 && (
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#1A6B3C', fontWeight: 700 }}>
+                {totalMatch} {lang === 'fr' ? 'correspondances' : 'matches'}
+              </div>
+            )}
+          </div>
+
+          {matchLots.length === 0 ? (
+            <div style={{ fontSize: '12px', color: '#9CA3AF' }}>
+              {lang === 'fr' ? 'Ajoutez des œuvres à votre collection pour obtenir des suggestions.' : 'Add artworks to your collection to get personalized matches.'}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'stretch' }}>
+              {matchLots.map((lot: any) => (
+                <div
+                  key={lot.id}
+                  onClick={() => onNavigate(`/app/opportunities/${lot.id}`)}
+                  style={{ width: '156px', flexShrink: 0, background: '#FAFAF8', border: '1px solid #E8E4DC', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', transition: 'border-color 0.12s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#1A2A44'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#E8E4DC'; }}
+                >
+                  <div style={{ height: '76px', background: '#F0EDE8', overflow: 'hidden' }}>
+                    {lot.image_url
+                      ? <img src={lot.image_url} alt={lot.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+                      : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: '18px', opacity: 0.15 }}>◇</span></div>
+                    }
+                  </div>
+                  <div style={{ padding: '8px' }}>
+                    <div style={{ fontSize: '9px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>
+                      {lot.artist || '—'}
+                    </div>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#1A2A44', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '5px' }}>
+                      {lot.title}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '10px', color: '#6B7280' }}>
+                        {lot.price ? fmtPrice(lot.price) : '—'}
+                      </span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: '#1A6B3C', background: 'rgba(26,107,60,0.08)', padding: '1px 5px', borderRadius: '3px' }}>
+                        {lot.match_score}
+                      </span>
+                    </div>
+                    {lot.match_reasons?.[0] && (
+                      <div style={{ fontSize: '9px', color: '#9CA3AF', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {lot.match_reasons[0]}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {totalMatch > 3 && (
+                <div
+                  onClick={() => onNavigate('/app/portfolio')}
+                  style={{ width: '60px', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '3px', cursor: 'pointer', color: '#9CA3AF' }}
+                >
+                  <div style={{ fontSize: '20px', fontWeight: 300 }}>+{totalMatch - 3}</div>
+                  <div style={{ fontSize: '9px', textAlign: 'center', lineHeight: 1.3 }}>
+                    {lang === 'fr' ? 'autres lots' : 'more lots'}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Dashboard ──────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -232,6 +383,9 @@ export default function Dashboard() {
   // Wishlist
   const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
 
+  // Collection OS
+  const [osData, setOSData] = useState<{ pulse: any; match: any } | null>(null);
+
   // ── Load profile + wishlist IDs on mount ──────────────────────────────────
   useEffect(() => {
     const token = getToken();
@@ -241,6 +395,18 @@ export default function Dashboard() {
       .then(r => r.ok ? r.json() : [])
       .then((ids: string[]) => setWishlistIds(new Set(ids)))
       .catch(() => {});
+
+    // Collection OS — fire and forget, widget only appears if there's meaningful data
+    Promise.all([
+      fetch(`${BACKEND}/api/collection-os/pulse`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`${BACKEND}/api/collection-os/match`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null).catch(() => null),
+    ]).then(([pulse, match]) => {
+      if ((pulse?.total_events ?? 0) > 0 || (match?.total_matches ?? 0) > 0) {
+        setOSData({ pulse, match });
+      }
+    });
 
     fetch(`${BACKEND}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
@@ -440,6 +606,9 @@ export default function Dashboard() {
 
       {/* ── FEED ── */}
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '40px 48px' }}>
+
+        {/* Collection OS widget — only shown when user has portfolio data */}
+        {osData && <CollectionOSWidget pulse={osData.pulse} match={osData.match} lang={lang} onNavigate={navigate} />}
 
         {/* No profile banner */}
         {!loading && !hasProfile && (
