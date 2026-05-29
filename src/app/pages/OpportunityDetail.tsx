@@ -828,7 +828,7 @@ export default function OpportunityDetail() {
             </div>
           </div>
 
-          {/* Grille principale */}
+          {/* Grille 160 | divider | 160 | divider | 1fr */}
           <div style={{ display: 'grid', gridTemplateColumns: '160px 0.5px 160px 0.5px 1fr' }}>
 
             {/* Mise à prix */}
@@ -897,17 +897,17 @@ export default function OpportunityDetail() {
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '1px', textTransform: 'uppercase' as const, width: '68px', flexShrink: 0 }}>{m.lbl}</div>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: m.color, width: '80px', flexShrink: 0 }}>{m.val}</div>
-                  <div style={{ flex: 1, height: '4px', background: '#E8E4DC', borderRadius: '2px', overflow: 'hidden' }}>
+                  <div style={{ width: '160px', flexShrink: 0, height: '4px', background: '#E8E4DC', borderRadius: '2px', overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${m.pct}%`, background: m.barColor, borderRadius: '2px' }} />
                   </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#9CA3AF', width: '44px', textAlign: 'right' as const, flexShrink: 0 }}>{m.num}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: LTT1, width: '52px', flexShrink: 0 }}>{m.num}</div>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Coût réel strip */}
-          <div style={{ display: 'flex', alignItems: 'center', padding: '7px 20px', background: '#F5F4F0', borderTop: '0.5px solid #E8E4DC', flexWrap: 'wrap' as const, gap: '0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', padding: '7px 20px', background: '#F5F4F0', borderTop: '0.5px solid #E8E4DC' }}>
             {[
               { lbl: isFr ? 'COÛT RÉEL' : 'REAL COST', val: fmtExact(realCost?.cost_basis || Math.round(price * premiumMultiplier)), color: LTT1 },
               { lbl: isFr ? 'FRAIS ACHETEUR' : 'BUYER FEES', val: `+${buyerPremiumPct}%`, color: LTT1 },
