@@ -931,6 +931,7 @@ export default function OpportunityDetail() {
             {([
               { label: 'Artiste', value: lot.artist_name_raw, nav: `/app/artists/${encodeURIComponent(lot.artist_name_raw || '')}` },
               { label: 'Technique', value: lot.medium },
+              { label: 'Dimensions', value: lot.dimensions },
               { label: 'Estimation', value: (estLow || estHigh) ? `${fmt(estLow)} – ${fmt(estHigh)}` : null },
               { label: 'Maison', value: lot.auction_house_name },
               { label: 'Clôture', value: auctionDateFmt, urgent: daysUntilClose != null && daysUntilClose < 14 },
