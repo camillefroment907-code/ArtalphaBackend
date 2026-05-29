@@ -27,7 +27,7 @@ from app.api.auth_utils import get_current_user
 from app.api.billing import _get_user_plan
 from app.database import get_db
 from app.engines.projections import get_artist_tier
-from app.models.db_models import Artist, Lot, PortfolioItem, User
+from app.models.db_models import Artist, Lot, PortfolioItem, PortfolioSnapshot, User
 
 logger = structlog.get_logger().bind(module="collection_os")
 router = APIRouter(prefix="/collection-os", tags=["collection-os"])
@@ -777,6 +777,112 @@ async def collection_advisor(
         "total_actions": len(recommendations),
         "is_limited": len(recommendations) > limit,
         "generated_at": now.isoformat(),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ENDPOINT 5 — Collection Timeline
+# ══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/timeline")
+async def collection_timeline(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns weekly portfolio snapshots for the Collection Timeline graph.
+
+    Each point contains:
+      - snapshot_date     ISO date string (weekly)
+      - total_value_eur   estimated portfolio value
+      - purchase_cost_eur total acquisition cost
+      - item_count        number of items at that date
+      - health_score      0-100 health score
+      - roi_pct           (total_value - purchase_cost) / purchase_cost × 100
+
+    Free: last 4 weeks (1 month preview).
+    Investor+: full history.
+    """
+    plan = await _get_user_plan(current_user, db)
+    is_paid = plan in _PAID_PLANS
+
+    result = await db.execute(
+        select(PortfolioSnapshot)
+        .where(PortfolioSnapshot.user_id == current_user.id)
+        .order_by(PortfolioSnapshot.snapshot_date.asc())
+    )
+    snapshots = result.scalars().all()
+
+    if not snapshots:
+        # No snapshots yet — build a synthetic single-point from live portfolio
+        items_result = await db.execute(
+            select(PortfolioItem).where(PortfolioItem.user_id == current_user.id)
+        )
+        items = items_result.scalars().all()
+        if not items:
+            return {"points": [], "is_limited": False, "has_data": False,
+                    "message": "Ajoutez des œuvres pour activer le Collection Timeline."}
+
+        total_value   = sum((i.estimated_current_value_eur or i.purchase_price_eur or 0) for i in items)
+        purchase_cost = sum(i.purchase_price_eur or 0 for i in items)
+        roi = round((total_value - purchase_cost) / purchase_cost * 100, 1) if purchase_cost else 0
+        from datetime import date
+        return {
+            "points": [{
+                "snapshot_date":    date.today().isoformat(),
+                "total_value_eur":  round(total_value, 2),
+                "purchase_cost_eur": round(purchase_cost, 2),
+                "item_count":       len(items),
+                "health_score":     None,
+                "roi_pct":          roi,
+            }],
+            "is_limited": False,
+            "has_data":   False,
+            "message":    "Premier snapshot dimanche prochain. En attendant, voici la valeur actuelle.",
+        }
+
+    # Build points
+    points = []
+    for s in snapshots:
+        cost  = s.purchase_cost_eur or 0
+        value = s.total_value_eur   or 0
+        roi   = round((value - cost) / cost * 100, 1) if cost else 0
+        points.append({
+            "snapshot_date":     s.snapshot_date.isoformat(),
+            "total_value_eur":   s.total_value_eur,
+            "purchase_cost_eur": s.purchase_cost_eur,
+            "item_count":        s.item_count,
+            "health_score":      s.health_score,
+            "health_breakdown":  s.health_breakdown if is_paid else None,
+            "roi_pct":           roi,
+        })
+
+    # Plan gating: free → last 4 points (~1 month)
+    total_points = len(points)
+    visible = points if is_paid else points[-4:]
+
+    # Summary stats
+    first = visible[0]  if visible else None
+    last  = visible[-1] if visible else None
+    trend_pct = None
+    if first and last and first["total_value_eur"] and last["total_value_eur"]:
+        trend_pct = round(
+            (last["total_value_eur"] - first["total_value_eur"]) / first["total_value_eur"] * 100, 1
+        )
+
+    return {
+        "points":       visible,
+        "total_points": total_points,
+        "is_limited":   not is_paid and total_points > 4,
+        "has_data":     True,
+        "summary": {
+            "latest_value_eur":   last["total_value_eur"]   if last else None,
+            "latest_cost_eur":    last["purchase_cost_eur"] if last else None,
+            "latest_roi_pct":     last["roi_pct"]           if last else None,
+            "latest_health":      last["health_score"]      if last else None,
+            "trend_pct":          trend_pct,
+            "period_weeks":       len(visible),
+        },
     }
 
 
