@@ -365,6 +365,11 @@ export default function Portfolio() {
   const [showAddArtist, setShowAddArtist] = useState(false);
   const [newArtistName, setNewArtistName] = useState('');
 
+  // ── Collection OS ──────────────────────────────────────────
+  const [osHealth, setOsHealth] = useState<any>(null);
+  const [osAdvisor, setOsAdvisor] = useState<any>(null);
+  const [osMatch, setOsMatch] = useState<any>(null);
+
   // ── Computed ───────────────────────────────────────────────
   const subscription = sub;
   const userPlan = plan;
@@ -486,6 +491,19 @@ export default function Portfolio() {
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.segments) setMarketSentiment(d); })
       .catch(() => {});
+
+    // Collection OS — fire and forget
+    if (token) {
+      Promise.all([
+        fetch(`${BACKEND}/api/collection-os/health`,  { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`${BACKEND}/api/collection-os/advisor`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`${BACKEND}/api/collection-os/match`,   { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null),
+      ]).then(([health, advisor, match]) => {
+        if (health?.score != null) setOsHealth(health);
+        if (advisor?.primary)     setOsAdvisor(advisor);
+        if (match?.total_matches) setOsMatch(match);
+      });
+    }
 
     // Preload watchlist, artists, invoices
     loadWatchlist();
@@ -1106,6 +1124,105 @@ export default function Portfolio() {
                 </div>
               );
             })()}
+
+            {/* ── COLLECTION OS — HEALTH + ADVISOR ─────────────── */}
+            {portfolioItems.length > 0 && (osHealth || osAdvisor?.primary) && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+
+                {/* Health Score */}
+                {osHealth && (
+                  <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '16px 20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, paddingBottom: 10, borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
+                      <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                        Collection Health
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                        <span style={{ fontSize: 22, fontWeight: 700, color: osHealth.score >= 70 ? '#16A34A' : osHealth.score >= 50 ? '#B8922A' : '#C0392B', lineHeight: 1 }}>
+                          {osHealth.score}
+                        </span>
+                        <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)' }}>/100</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--color-text-secondary)', marginLeft: 2 }}>
+                          {osHealth.grade}
+                        </span>
+                      </div>
+                    </div>
+
+                    {osHealth.dimensions
+                      ? Object.entries(osHealth.dimensions).map(([key, dim]: [string, any]) => (
+                        <div key={key} style={{ marginBottom: 9 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                            <span style={{ fontSize: 9, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)' }}>{dim.label}</span>
+                            <span style={{ fontSize: 9, color: 'var(--color-text-primary)', fontFamily: 'var(--font-mono)' }}>{dim.score}/{dim.max}</span>
+                          </div>
+                          <div style={{ height: 3, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${(dim.score / dim.max) * 100}%`, background: dim.score >= 14 ? '#16A34A' : dim.score >= 8 ? '#B8922A' : '#C0392B', borderRadius: 2, transition: 'width 0.4s ease' }} />
+                          </div>
+                        </div>
+                      ))
+                      : (
+                        <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 10 }}>
+                          {currentLang === 'fr' ? 'Détail disponible avec un abonnement Investor.' : 'Breakdown available with Investor plan.'}
+                        </div>
+                      )
+                    }
+
+                    {osHealth.top_action && (
+                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: '0.5px solid var(--color-border-tertiary)', fontSize: 10, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+                        ↑ {osHealth.top_action.message}
+                        <span style={{ marginLeft: 6, color: '#B8922A', fontFamily: 'var(--font-mono)', fontSize: 9 }}>
+                          {osHealth.top_action.impact}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Advisor — Next Best Action */}
+                {osAdvisor?.primary && (
+                  <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '16px 20px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 14, paddingBottom: 10, borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
+                      {currentLang === 'fr' ? 'Prochaine action recommandée' : 'Next recommended action'}
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12 }}>
+                        <span style={{ fontSize: 18, flexShrink: 0, lineHeight: 1 }}>{osAdvisor.primary.icon}</span>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.3, marginBottom: 5 }}>
+                            {osAdvisor.primary.title}
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+                            {osAdvisor.primary.description}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{
+                          fontSize: 9, fontFamily: 'var(--font-mono)', padding: '2px 7px', borderRadius: 4, fontWeight: 700,
+                          background: osAdvisor.primary.impact === 'ÉLEVÉ' ? 'rgba(192,57,43,0.12)' : 'rgba(184,146,42,0.12)',
+                          color: osAdvisor.primary.impact === 'ÉLEVÉ' ? '#C0392B' : '#B8922A',
+                        }}>
+                          {osAdvisor.primary.impact}
+                        </span>
+                        {(osAdvisor.total_actions || 0) > 1 && (
+                          <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                            +{osAdvisor.total_actions - 1} {currentLang === 'fr' ? 'autres actions' : 'more actions'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => navigate(osAdvisor.primary.cta_url || '/app/portfolio')}
+                      style={{ marginTop: 14, padding: '8px 14px', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 6, fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--color-text-primary)', cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      {osAdvisor.primary.cta_label} →
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* ── MINI VISUALISATIONS ──────────────────────────── */}
             {portfolioItems.length > 0 && (
@@ -1789,6 +1906,76 @@ export default function Portfolio() {
                 {aiAnalysis?.insufficient_data && (
                   <div style={{ padding: '24px', textAlign: 'center', fontSize: '13px', color: 'var(--text-3)' }}>{aiAnalysis.message}</div>
                 )}
+              </div>
+            )}
+
+            {/* ── COLLECTION MATCH FEED ────────────────────────── */}
+            {osMatch?.lots?.length > 0 && (
+              <div style={{ paddingTop: '32px', borderTop: '1px solid var(--border)', marginBottom: '32px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '5px' }}>
+                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#16A34A' }} />
+                      <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                        Collection Match
+                      </span>
+                    </div>
+                    <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: 'var(--text)', margin: '0 0 4px' }}>
+                      {currentLang === 'fr' ? 'Sélectionnés pour votre collection' : 'Selected for your collection'}
+                    </h2>
+                    <p style={{ fontSize: '12px', color: 'var(--text-3)', margin: 0 }}>
+                      {osMatch.total_matches} {currentLang === 'fr' ? 'correspondances basées sur votre profil de collection' : 'matches based on your collection profile'}
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '6px' }}>
+                  {osMatch.lots.slice(0, 6).map((lot: any) => (
+                    <div
+                      key={lot.id}
+                      onClick={() => navigate(`/app/opportunities/${lot.id}`)}
+                      style={{ width: '178px', flexShrink: 0, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', cursor: 'pointer', transition: 'border-color 0.12s' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#1A2A44'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'; }}
+                    >
+                      <div style={{ height: '100px', background: '#F0EDE8', overflow: 'hidden' }}>
+                        {lot.image_url
+                          ? <img src={lot.image_url} alt={lot.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+                          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: '22px', opacity: 0.15 }}>◇</span></div>
+                        }
+                      </div>
+                      <div style={{ padding: '10px' }}>
+                        <div style={{ fontSize: '9px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>
+                          {lot.artist || '—'}
+                        </div>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '6px' }}>
+                          {lot.title}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>
+                            {lot.price >= 1000 ? `€${(lot.price / 1000).toFixed(0)}k` : lot.price ? `€${lot.price}` : '—'}
+                          </span>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: '#16A34A', background: 'rgba(22,163,74,0.08)', padding: '1px 6px', borderRadius: '4px' }}>
+                            {lot.match_score}
+                          </span>
+                        </div>
+                        {lot.match_reasons?.[0] && (
+                          <div style={{ fontSize: '9px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {lot.match_reasons[0]}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {(osMatch.total_matches || 0) > 6 && (
+                    <div style={{ width: '80px', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', cursor: 'pointer', color: 'var(--text-3)' }}>
+                      <div style={{ fontSize: '20px', fontWeight: 300 }}>+{osMatch.total_matches - 6}</div>
+                      <div style={{ fontSize: '9px', textAlign: 'center', lineHeight: 1.3 }}>
+                        {currentLang === 'fr' ? 'autres lots' : 'more lots'}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
