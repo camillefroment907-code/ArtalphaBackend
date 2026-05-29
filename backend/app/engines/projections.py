@@ -102,7 +102,12 @@ def project_value(
         "base_cagr_pct": round(adjusted_cagr * 100, 2),
         "projections": projections,
         "recommended_hold_years": best_sell_year,
-        "sell_recommendation": _sell_recommendation(best_sell_year, trend),
+        "sell_recommendation": _sell_recommendation(
+            best_sell_year,
+            trend,
+            adjusted_cagr,
+            liquidity_score,
+        ),
     }
 
 
@@ -114,12 +119,21 @@ def _find_optimal_sell_window(price: float, cagr: float, volatility: float) -> i
     return max(break_even_year * 2, 5)
 
 
-def _sell_recommendation(years: int, trend: str) -> str:
-    if years <= 5:
-        return "Court terme — marché favorable maintenant"
+def _sell_recommendation(
+    years: int,
+    trend: str,
+    cagr: float,
+    liquidity_score: float,
+) -> str:
+    if trend == "down":
+        return "Marché en recul — attendre un retournement avant de vendre"
+    if cagr <= 0.03:
+        return "Croissance faible — horizon 10 ans+ recommandé"
+    if trend == "up" and liquidity_score >= 75 and years <= 5:
+        return f"Horizon optimal : 3–5 ans — artiste liquide en hausse"
+    elif years <= 5:
+        return f"Horizon optimal : 3–5 ans"
     elif years <= 10:
-        return "Moyen terme — conserver 5–10 ans idéalement"
-    elif years <= 20:
-        return "Long terme — actif de transmission patrimoniale"
+        return f"Horizon optimal : 5–10 ans"
     else:
-        return "Très long terme — transmission générationnelle"
+        return f"Horizon long terme : 10 ans+"
