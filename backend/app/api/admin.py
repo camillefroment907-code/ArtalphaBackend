@@ -540,6 +540,30 @@ async def trigger_portfolio_snapshot():
     return {"status": "ok", **result}
 
 
+@router.delete("/portfolio-snapshot/seed-cleanup", dependencies=[Depends(verify_admin)])
+async def cleanup_test_item(
+    user_email: str = "camillefroment907@gmail.com",
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete the test portfolio item created by seed-and-run."""
+    from app.models.db_models import User, PortfolioItem
+    result = await db.execute(select(User).where(User.email == user_email))
+    user = result.scalar_one_or_none()
+    if not user:
+        return {"status": "error", "detail": "User not found"}
+    del_result = await db.execute(
+        select(PortfolioItem).where(
+            PortfolioItem.user_id == user.id,
+            PortfolioItem.notes.like("%test%"),
+        )
+    )
+    items = del_result.scalars().all()
+    for item in items:
+        await db.delete(item)
+    await db.commit()
+    return {"status": "ok", "deleted": len(items)}
+
+
 @router.post("/portfolio-snapshot/seed-and-run", dependencies=[Depends(verify_admin)])
 async def seed_test_and_snapshot(
     user_email: str = "camillefroment907@gmail.com",
