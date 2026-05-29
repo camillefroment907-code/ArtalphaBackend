@@ -532,6 +532,56 @@ class PortfolioItem(Base):
     )
 
 
+class PortfolioSnapshot(Base):
+    """Weekly snapshot of a user's collection value — powers the Collection Timeline graph."""
+    __tablename__ = "portfolio_snapshots"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+
+    snapshot_date = Column(Date, nullable=False)          # ISO date of the snapshot (weekly)
+    total_value_eur = Column(Float, nullable=True)        # sum of estimated_current_value_eur
+    purchase_cost_eur = Column(Float, nullable=True)      # sum of purchase_price_eur
+    item_count = Column(Integer, nullable=False, default=0)
+    health_score = Column(Integer, nullable=True)         # 0–100 at snapshot time
+    health_breakdown = Column(JSON, nullable=True)        # {diversification, liquidity, ...}
+
+    created_at = Column(DateTime, server_default=text("NOW()"), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "snapshot_date", name="uq_portfolio_snapshot_user_date"),
+        Index("ix_portfolio_snapshots_user_date", "user_id", "snapshot_date"),
+    )
+
+
+class PortfolioRecommendation(Base):
+    """Persisted Advisor actions — so users can track/dismiss them across sessions."""
+    __tablename__ = "portfolio_recommendations"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+
+    recommendation_id = Column(String(100), nullable=False)  # e.g. "complete_documentation"
+    type = Column(String(50), nullable=False)                  # DATA_QUALITY / VALUATION / RISK / MARKET_SIGNAL
+    title = Column(Text, nullable=False)
+    description = Column(Text, nullable=True)
+    impact = Column(String(20), nullable=True)                 # ÉLEVÉ / MOYEN / FAIBLE
+    cta_label = Column(String(100), nullable=True)
+    cta_url = Column(String(300), nullable=True)
+    affected_items = Column(Integer, nullable=True)
+
+    status = Column(String(20), nullable=False, default="pending")  # pending / done / dismissed
+    generated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+    dismissed_at = Column(DateTime, nullable=True)
+
+    created_at = Column(DateTime, server_default=text("NOW()"), nullable=False)
+
+    __table_args__ = (
+        Index("ix_portfolio_reco_user_status", "user_id", "status"),
+    )
+
+
 class ScoringModel(Base):
     """Tracks scoring model versions for ML future-proofing."""
     __tablename__ = "scoring_models"
