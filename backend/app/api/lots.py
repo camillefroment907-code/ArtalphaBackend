@@ -69,7 +69,7 @@ def serialize_lot(lot, plan: str) -> dict:
         "deal_score": lot.deal_score,
         "estimate_low": lot.estimate_low,
         "pct_below_low_estimate": lot.pct_below_low_estimate,
-        "auction_house_name": "Source masquée" if plan == "free" else lot.auction_house_name,
+        "auction_house_name": lot.auction_house_name,
         "currency": lot.currency,
     }
     if plan != "free":
@@ -1802,7 +1802,6 @@ async def get_lot(
         lot_dict["price_history"] = None
 
     if lot_plan == "free":
-        lot_dict["auction_house_name"] = "Source masquée"
         lot_dict["url"] = None
         lot_dict["oracle"] = None
         lot_dict["projection"] = None
@@ -1969,6 +1968,16 @@ async def get_comparables(
         else [lot_to_list_dict(c) for c in live_comps[:6]]
     )
 
+    # ── Plan gating: free → 1 comparable (most recent), total count preserved ──
+    plan = await get_user_plan(current_user, db)
+    comparable_count_total = len(serialized)
+    if plan == "free" and serialized:
+        serialized = sorted(
+            serialized,
+            key=lambda c: c.get("auction_date") or "",
+            reverse=True,
+        )[:1]
+
     # ── Market analysis ───────────────────────────────────────────────────────
     comp_prices = [
         c.get("current_price") or c.get("estimate_low")
@@ -1991,7 +2000,7 @@ async def get_comparables(
         "comparables":  serialized,
         "data_source":  "historical_sales" if use_hammer else "active_listings",
         "market_analysis": {
-            "comparable_count":    len(serialized),
+            "comparable_count":    comparable_count_total,
             "market_avg_price":    round(market_avg) if market_avg else None,
             "market_median_price": round(median_price) if median_price else None,
             "price_gap_pct":       round(price_gap_pct, 1),

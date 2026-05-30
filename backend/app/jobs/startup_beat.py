@@ -227,6 +227,60 @@ def _auction_closing_loop():
         _run(send_auction_closing_alerts, "auction_closing_alerts")
 
 
+def _post_auction_loop():
+    """Daily at 06:00 UTC — fill actual_hammer_price in score_performance."""
+    import datetime as _dt
+    from app.jobs.post_auction_fill import fill_post_auction_results
+    from app.database import BgSessionLocal
+    while True:
+        now = _utcnow()
+        target = now.replace(hour=6, minute=0, second=0, microsecond=0)
+        if now >= target:
+            target = target + _dt.timedelta(days=1)
+        wait = (target - now).total_seconds()
+        logger.info(f"[scheduler] post_auction_fill sleeping {wait/3600:.1f}h until 06:00 UTC")
+        time.sleep(wait)
+        async def _run_fill():
+            async with BgSessionLocal() as db:
+                return await fill_post_auction_results(db, limit=500)
+        _run(_run_fill, "post_auction_fill")
+
+
+def _daily_email_loop():
+    """Daily at 09:00 UTC — lifecycle emails: NPS, re-engagement, trial, winback."""
+    import datetime as _dt
+    from app.jobs.email_scheduler import (
+        _check_nps,
+        _check_reengagement,
+        _check_trial_ending,
+        _check_trial_expired,
+        _check_annual_expiring,
+        _check_winback,
+    )
+    while True:
+        now = _utcnow()
+        target = now.replace(hour=9, minute=0, second=0, microsecond=0)
+        if now >= target:
+            target = target + _dt.timedelta(days=1)
+        wait = (target - now).total_seconds()
+        logger.info(f"[scheduler] daily_email sleeping {wait/3600:.1f}h until 09:00 UTC")
+        time.sleep(wait)
+        for check_fn, name in [
+            (_check_nps,             "email_nps"),
+            (_check_reengagement,    "email_reengagement"),
+            (_check_trial_ending,    "email_trial_ending"),
+            (_check_trial_expired,   "email_trial_expired"),
+            (_check_annual_expiring, "email_annual_expiring"),
+            (_check_winback,         "email_winback"),
+        ]:
+            try:
+                logger.info(f"[scheduler] running {name}")
+                check_fn()
+                logger.info(f"[scheduler] {name} complete")
+            except Exception as e:
+                logger.error(f"[scheduler] {name} failed: {e}", exc_info=True)
+
+
 def _keep_warm_loop():
     """Ping /health every 5 minutes to prevent Railway cold starts."""
     time.sleep(60)  # Wait 1 min after launch before first ping
@@ -252,7 +306,9 @@ def start_beat_in_background():
         threading.Thread(target=_historical_loop,         daemon=True, name="sched-historical"),
         threading.Thread(target=_auction_closing_loop,    daemon=True, name="sched-auction-closing"),
         threading.Thread(target=_portfolio_snapshot_loop, daemon=True, name="sched-portfolio-snapshot"),
-        threading.Thread(target=_keep_warm_loop,          daemon=True, name="sched-keep-warm"),
+        threading.Thread(target=_post_auction_loop,        daemon=True, name="sched-post-auction"),
+        threading.Thread(target=_daily_email_loop,          daemon=True, name="sched-daily-email"),
+        threading.Thread(target=_keep_warm_loop,           daemon=True, name="sched-keep-warm"),
     ]
     for t in threads:
         t.start()
