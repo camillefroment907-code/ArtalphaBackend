@@ -359,7 +359,7 @@ export default function Onboarding() {
                 {isFr ? 'Un aperçu de votre flux de deals.' : "Here's a taste of your deal flow."}
               </h2>
               <p style={{ fontSize: '13px', color: '#888', margin: 0, lineHeight: 1.6 }}>
-                {isFr ? 'Lots en direct scorés par Nautilus, filtrés selon votre profil. Un artiste par entrée.' : 'Live lots scored by Nautilus, filtered to your profile. Each artist appears once.'}
+                {isFr ? 'Lots filtrés selon votre profil. Nautilus calcule le prix maximum à ne pas dépasser.' : 'Lots filtered to your profile. Nautilus shows the maximum price you should pay.'}
               </p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '36px' }}>
@@ -388,6 +388,21 @@ export default function Onboarding() {
                         <div style={{ fontSize: '9px', color: '#bbb', marginTop: '2px', fontFamily: 'var(--font-mono, monospace)', letterSpacing: '0.06em' }}>SCORE</div>
                       </>
                     )}
+                    {(() => {
+                      const avoidApprox = lot.estimate_low ? Math.round(lot.estimate_low * 0.85) : null;
+                      if (!avoidApprox) return null;
+                      const fmt = (n: number) => n >= 1000 ? `€${Math.round(n / 1000)}K` : `€${n}`;
+                      return (
+                        <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #F0EEE8' }}>
+                          <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: '12px', fontWeight: 700, color: '#C6A85A' }}>
+                            {fmt(avoidApprox)}
+                          </div>
+                          <div style={{ fontSize: '9px', color: '#bbb', marginTop: '1px', fontFamily: 'var(--font-mono, monospace)', letterSpacing: '0.04em' }}>
+                            {isFr ? 'NE PAS DÉPASSER' : 'DO NOT EXCEED'}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               )) : (

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { getPlanLimits, getToken, getUserPlan } from '../../lib/auth';
+import { getPlanLimits, getToken, getUserPlan, isTrialActive, getTrialDaysLeft } from '../../lib/auth';
 import { useSEO } from '../../lib/useSEO';
 import { AIAnalyst } from '../components/AIAnalyst';
 import { UpgradeModal } from '../components/UpgradeModal';
@@ -340,9 +340,22 @@ export default function OpportunityDetail() {
   const buyerPremiumPct = Math.round((premiumMultiplier - 1) * 100);
   const bidBase = lot.estimate_high || lot.estimate_low || lot.current_price || null;
   const maxBid = bidBase ? Math.round(bidBase * premiumMultiplier) : null;
-  const avoidAbove = lot.real_cost?.breakeven_hammer
-    ? Math.round(lot.real_cost.breakeven_hammer * 0.85)
+  const breakeven = lot.real_cost?.breakeven_hammer ?? null;
+  const compPricesForBid = comparables
+    .map((c: any) => c.current_price || 0)
+    .filter((v: number) => v > 1000);
+  const medianComp = compPricesForBid.length >= 2
+    ? [...compPricesForBid].sort((a, b) => a - b)[Math.floor(compPricesForBid.length / 2)]
     : null;
+  const avoidAbove = (() => {
+    if (!breakeven) return null;
+    if (medianComp && medianComp > breakeven * 3) {
+      const estHigh = lot.estimate_high ?? breakeven * 5;
+      return Math.round(Math.min(medianComp * 0.6, estHigh * 3.0));
+    }
+    return Math.round(breakeven * 0.85);
+  })();
+  const avoidAboveUsedComps = !!(medianComp && medianComp > (breakeven ?? 0) * 3);
   const daysUntilClose = lot.auction_date
     ? Math.max(0, Math.round((new Date(lot.auction_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null;
@@ -750,7 +763,13 @@ export default function OpportunityDetail() {
             <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? 'MAX BID RENTABLE' : 'MAX PROFITABLE BID'}</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>{fmtExact(avoidAbove ?? maxBid)}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>{isFr ? 'Au-delà : perte garantie' : 'Beyond this: guaranteed loss'}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
+                {avoidAboveUsedComps && medianComp
+                  ? (isFr
+                      ? `Comparables médiane ${medianComp >= 1000 ? `€${(medianComp / 1000).toFixed(0)}k` : `€${medianComp}`} — marge 40%`
+                      : `Comparable median ${medianComp >= 1000 ? `€${(medianComp / 1000).toFixed(0)}k` : `€${medianComp}`} — 40% margin`)
+                  : (isFr ? 'Au-delà : perte garantie' : 'Beyond this: guaranteed loss')}
+              </div>
             </div>
           )}
 
@@ -977,18 +996,10 @@ export default function OpportunityDetail() {
         </div>
 
         {/* ── VENTES COMPARABLES ───────────────────────────────────────────── */}
+        {hasAccess && (
         <div style={{ padding: '24px 40px', background: '#F5F4F0', borderBottom: '0.5px solid #E8E4DC' }}>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ VENTES COMPARABLES</div>
-          {!hasAccess ? (
-            <LockedBlock
-              title="Ventes comparables"
-              teaser=""
-              ctaText="INVESTOR+ · UNLOCK →"
-              ctaPrice="Investor"
-              planId="investor"
-              preview={<div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px' }}>{[1,2,3].map(i => <div key={i} style={{ height: '44px', background: LT, borderRadius: '6px' }} />)}</div>}
-            />
-          ) : comparables.length === 0 ? (
+          {comparables.length === 0 ? (
             <div style={{ background: '#fff', borderRadius: '12px', padding: '48px 24px', textAlign: 'center' as const }}>
               <div style={{ fontSize: '28px', opacity: 0.12, marginBottom: '12px' }}>◎</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, letterSpacing: '0.1em' }}>Aucune vente comparable trouvée pour ce lot.</div>
@@ -1071,6 +1082,7 @@ export default function OpportunityDetail() {
             );
           })()}
         </div>
+        )}
 
         {/* ── ANALYSE NAUTILUS ─────────────────────────────────────────────── */}
         {hasAccess && analysisText && (
@@ -1199,67 +1211,6 @@ export default function OpportunityDetail() {
               </div>
             )}
 
-            {/* ── DESKTOP FREE: PAYWALL ── */}
-            {!hasAccess && (
-              <div className="lot-upgrade-block" style={{ margin: '0 40px 32px', borderRadius: '12px', overflow: 'hidden', background: '#0F1824', border: '1px solid rgba(198,168,90,0.18)' }}>
-                <div style={{ padding: '28px 32px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.2em', textTransform: 'uppercase' as const, marginBottom: '14px' }}>
-                    ◆ NAUTILUS INVESTOR
-                  </div>
-                  <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', color: '#F0EDE6', fontWeight: 600, marginBottom: '20px', lineHeight: 1.3 }}>
-                    {isFr ? 'Débloquez la conviction complète' : 'Unlock full conviction'}
-                  </div>
-                  {comparables.length > 0 && (
-                    <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: '6px' }}>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#6B7280' }}>
-                        {comparables.length} {isFr ? 'ventes comparables · Prix moyen' : 'comparable sales · Avg price'}
-                      </span>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: '#4B5563', userSelect: 'none' as const }}>████</span>
-                    </div>
-                  )}
-                  <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column' as const, gap: '7px' }}>
-                    {(isFr ? [
-                      "Jusqu'où enchérir sans surpayer",
-                      'Le vrai coût après frais',
-                      'Les comparables complets',
-                      'Pourquoi ce lot est sous-évalué',
-                      "Les risques réels avant d'acheter",
-                    ] : [
-                      'How high to bid without overpaying',
-                      'The true cost after all fees',
-                      'Full comparable sales data',
-                      'Why this lot is undervalued',
-                      'The real risks before you bid',
-                    ]).map(f => (
-                      <div key={f} style={{ fontSize: '13px', color: '#9CA3AF', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <span style={{ color: GOLD, fontSize: '10px' }}>✓</span> {f}
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#6B7280', fontStyle: 'italic', lineHeight: 1.55, marginBottom: '22px' }}>
-                    {isFr
-                      ? 'Les membres Investor identifient en moyenne +34% de potentiel sur les lots score 80+.'
-                      : 'Investor members identify on average +34% more potential on lots with score 80+.'}
-                  </div>
-                  <button
-                    onClick={() => { navigate('/app/pricing'); window.scrollTo(0, 0); }}
-                    style={{ background: '#C6A85A', color: '#0F1824', border: 'none', padding: '12px 28px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, cursor: 'pointer', display: 'block', maxWidth: '280px', margin: '0 auto' }}
-                  >
-                    {isFr ? 'Passer Investor →' : 'Upgrade to Investor →'}
-                  </button>
-                </div>
-                <div style={{ padding: '14px 32px 20px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                  <div
-                    onClick={() => navigate('/app/pricing?plan=pro')}
-                    style={{ fontSize: '11px', color: '#4B5563', cursor: 'pointer', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', textAlign: 'center' as const }}
-                  >
-                    {isFr
-                      ? 'Analyse institutionnelle complète disponible avec Pro →'
-                      : 'Full institutional analysis available with Pro →'}
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* ── MOBILE FREE: LECTURE NAUTILUS + PAYWALL ── */}
             {!hasAccess && (() => {
@@ -1330,19 +1281,8 @@ export default function OpportunityDetail() {
         <div style={{ padding: '16px 40px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
             {/* AI Intelligence cards */}
-            {!hasAccess ? null : (
             <div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'INTELLIGENCE IA' : 'AI INTELLIGENCE'}</div>
-              {!hasAccess ? (
-                <LockedBlock
-                  title="AI Intelligence"
-                  teaser=""
-                  ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
-                  ctaPrice="Investor"
-                  planId="investor"
-                  preview={<div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>{[1,2].map(i=><div key={i} style={{ height:'140px', background:LT, borderRadius:'12px' }}/>)}</div>}
-                />
-              ) : (
               <div className="lot-ai-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
 
                 {/* Investment Memo card */}
@@ -1374,15 +1314,116 @@ export default function OpportunityDetail() {
                       )}
                     </>
                   ) : (
-                    <div style={{ marginTop: '4px' }}>
-                      <LockedBlock
-                        title={isFr ? "Mémo d'investissement" : 'Investment Memo'}
-                        teaser=""
-                        ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
-                        ctaPrice="Investor"
-                        planId="investor"
-                        preview={<div style={{ height: '40px', background: LT, borderRadius: '6px' }} />}
-                      />
+                    <div style={{ border: '0.5px solid #E8E4DC', borderRadius: '10px', overflow: 'hidden', marginTop: '4px' }}>
+                      <div style={{ padding: '18px 20px', background: '#fff' }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#C6A85A', letterSpacing: '2px', textTransform: 'uppercase' as const, marginBottom: '14px' }}>
+                          {isFr ? 'APERÇU MÉMO' : 'MEMO PREVIEW'}
+                        </div>
+                        <div style={{ marginBottom: '14px' }}>
+                          <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: '#B0A898', letterSpacing: '1.5px', textTransform: 'uppercase' as const, marginBottom: '6px' }}>
+                            {isFr ? 'POURQUOI CE LOT' : 'WHY THIS LOT'}
+                          </div>
+                          <div style={{ fontSize: '13px', color: '#0D1F35', lineHeight: 1.6 }}>
+                            {isFr
+                              ? `${lot.title || lot.artist_name_raw || 'Ce lot'} — mise à prix ${fmtExact(price)}. ${upside > 0 ? `${Math.round(upside)}% sous estimation` : 'Prix attractif'}${lot.artist?.trend === 'up' ? ', artiste en hausse' : ''}.`
+                              : `${lot.title || lot.artist_name_raw || 'This lot'} — starting bid ${fmtExact(price)}. ${upside > 0 ? `${Math.round(upside)}% below estimate` : 'Attractive price'}${lot.artist?.trend === 'up' ? ', rising artist' : ''}.`
+                            }
+                          </div>
+                        </div>
+                        <div style={{ marginBottom: '16px' }}>
+                          <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: '#B0A898', letterSpacing: '1.5px', textTransform: 'uppercase' as const, marginBottom: '6px' }}>
+                            {isFr ? 'PRIX JUSTIFIÉ ?' : 'PRICE JUSTIFIED?'}
+                          </div>
+                          <div style={{ fontSize: '13px', color: '#0D1F35', lineHeight: 1.6 }}>
+                            {isFr
+                              ? `Coût réel avec frais : ${fmtExact(realCost?.cost_basis || Math.round(price * premiumMultiplier))}. Seuil de rentabilité : ${fmtExact(realCost?.breakeven_hammer || Math.round(price * premiumMultiplier * 1.5))}.`
+                              : `Real cost with fees: ${fmtExact(realCost?.cost_basis || Math.round(price * premiumMultiplier))}. Break-even: ${fmtExact(realCost?.breakeven_hammer || Math.round(price * premiumMultiplier * 1.5))}.`
+                            }
+                          </div>
+                        </div>
+                        {comparables.length > 0 && (() => {
+                          const comp = comparables[0];
+                          const compPrice = comp.current_price || comp.hammer_price || comp.estimate_low;
+                          const compDate = comp.auction_date
+                            ? new Date(comp.auction_date).toLocaleDateString(isFr ? 'fr-FR' : 'en-GB', { month: 'short', year: 'numeric' })
+                            : null;
+                          const hiddenCount = (marketAnalysis?.comparable_count ?? 0) - 1;
+                          return (
+                            <div style={{ marginBottom: '16px' }}>
+                              <div style={{ fontSize: '14px', fontWeight: 600, color: '#0D1F35', marginBottom: '4px' }}>
+                                {isFr ? 'Pourquoi ce score ?' : 'Why this score?'}
+                              </div>
+                              <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: '#B0A898', letterSpacing: '1.5px', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
+                                {isFr ? 'VENTE COMPARABLE RÉCENTE' : 'RECENT COMPARABLE SALE'}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
+                                <span style={{ fontSize: '16px', fontWeight: 600, color: '#0D1F35', fontFamily: 'var(--font-mono)' }}>
+                                  {compPrice ? fmtExact(compPrice) : '—'}
+                                </span>
+                                {(comp.auction_house_name || compDate) && (
+                                  <span style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                                    {[comp.auction_house_name, compDate].filter(Boolean).join(' · ')}
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '10px', lineHeight: 1.5 }}>
+                                {hiddenCount > 0
+                                  ? (isFr
+                                    ? `+ ${hiddenCount} vente${hiddenCount > 1 ? 's' : ''} utilisée${hiddenCount > 1 ? 's' : ''} pour calculer ce score`
+                                    : `+ ${hiddenCount} sale${hiddenCount > 1 ? 's' : ''} used to calculate this score`)
+                                  : (isFr ? 'Basé sur une vente comparable récente' : 'Based on one recent comparable sale')
+                                }
+                              </div>
+                              <button
+                                onClick={() => setUpgradeModal('investor')}
+                                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#C6A85A', fontWeight: 700, letterSpacing: '0.04em' }}
+                              >
+                                {isFr ? 'Voir notre prix maximum →' : 'See our maximum price →'}
+                              </button>
+                            </div>
+                          );
+                        })()}
+                        <div style={{ position: 'relative' }}>
+                          <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none' as const, opacity: 0.6 }}>
+                            <div style={{ marginBottom: '14px' }}>
+                              <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: '#B0A898', letterSpacing: '1.5px', textTransform: 'uppercase' as const, marginBottom: '6px' }}>
+                                {isFr ? 'LIQUIDITÉ' : 'LIQUIDITY'}
+                              </div>
+                              <div style={{ fontSize: '13px', color: '#0D1F35', lineHeight: 1.6 }}>
+                                {isFr ? 'Analyse de la liquidité et probabilité de revente dans 3–5 ans...' : 'Liquidity analysis and resale probability over 3–5 years...'}
+                              </div>
+                            </div>
+                            <div style={{ marginBottom: '14px' }}>
+                              <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: '#B0A898', letterSpacing: '1.5px', textTransform: 'uppercase' as const, marginBottom: '6px' }}>
+                                {isFr ? 'VERDICT ADVISOR' : 'ADVISOR VERDICT'}
+                              </div>
+                              <div style={{ fontSize: '13px', fontWeight: 600, color: '#0D1F35' }}>
+                                {isFr
+                                  ? `ACHETER si ≤ ${fmtExact(avoidAbove ?? Math.round(price * 1.3))} — analyse complète`
+                                  : `BUY if ≤ ${fmtExact(avoidAbove ?? Math.round(price * 1.3))} — full analysis`
+                                }
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: '10px', background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.97) 65%)' }}>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#0D1F35', fontWeight: 600, textAlign: 'center' as const, marginTop: '40px' }}>
+                              {isFr ? 'Verdict advisor · Conviction · Recommandation complète' : 'Advisor verdict · Conviction · Full recommendation'}
+                            </div>
+                            <button
+                              onClick={() => setUpgradeModal('investor')}
+                              style={{ background: '#C6A85A', color: '#0C1622', border: 'none', borderRadius: '5px', padding: '10px 24px', fontSize: '11px', fontWeight: 700, fontFamily: 'var(--font-mono)', letterSpacing: '1px', cursor: 'pointer' }}
+                            >
+                              {isFr ? 'GÉNÉRER LE MÉMO COMPLET →' : 'GENERATE FULL MEMO →'}
+                            </button>
+                            <div style={{ fontSize: '10px', color: '#9CA3AF', fontFamily: 'var(--font-mono)' }}>
+                              {isFr
+                                ? `Investor · 19€/mois${isTrialActive() ? ` · ${getTrialDaysLeft()} jours restants` : ' · 7 jours gratuits'}`
+                                : `Investor · €19/mo${isTrialActive() ? ` · ${getTrialDaysLeft()} days left` : ' · 7 days free'}`
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1410,9 +1451,7 @@ export default function OpportunityDetail() {
                 </div>
 
               </div>
-              )}
             </div>
-            )}
           </div>
 
         {/* ──────────────── DOCUMENTS ──────────────── */}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { getToken } from '../../lib/auth';
+import { getToken, isTrialActive, getTrialDaysLeft, getUserPlan } from '../../lib/auth';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -164,6 +164,16 @@ function LotCard({ lot, lang, onClick, wishlisted, onWishlistToggle }: {
         <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A2A44', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {lot.title || '—'}
         </div>
+        {lot.score_rationale && (
+          <div style={{
+            fontSize: '11px', color: '#6B7280', fontStyle: 'italic', lineHeight: 1.4,
+            marginTop: '4px', marginBottom: '6px',
+            display: '-webkit-box', WebkitLineClamp: 1,
+            WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          }}>
+            {lot.score_rationale}
+          </div>
+        )}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '8px' }}>
           <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
             {fmtPriceEur(lot.estimate_low, lot.currency)}
@@ -374,6 +384,10 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   const lang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
+  const isPaid = getUserPlan() !== 'free';
+
+  const trialActive = isTrialActive();
+  const trialDaysLeft = getTrialDaysLeft();
 
   const [userProfile, setUserProfile] = useState<{
     preferred_categories: string[];
@@ -646,6 +660,48 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Trial banner */}
+        {trialActive && (
+          <div style={{
+            display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#0C1622',
+            border: '0.5px solid rgba(198,168,90,0.25)',
+            borderRadius: '8px',
+            padding: '10px 18px',
+            marginBottom: '16px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%',
+                background: trialDaysLeft <= 2 ? '#C0392B' : '#C6A85A' }} />
+              <span style={{
+                fontFamily: 'var(--font-mono)', fontSize: '11px',
+                color: 'rgba(255,255,255,0.6)',
+              }}>
+                {lang === 'fr'
+                  ? trialDaysLeft <= 2
+                    ? `Trial Investor — plus que ${trialDaysLeft} jour${trialDaysLeft > 1 ? 's' : ''}`
+                    : `Trial Investor · ${trialDaysLeft} jours restants — accès complet`
+                  : trialDaysLeft <= 2
+                    ? `Investor trial — ${trialDaysLeft} day${trialDaysLeft > 1 ? 's' : ''} left`
+                    : `Investor trial · ${trialDaysLeft} days left — full access`
+                }
+              </span>
+            </div>
+            {trialDaysLeft <= 2 && (
+              <a href="/app/pricing" style={{
+                fontFamily: 'var(--font-mono)', fontSize: '10px',
+                fontWeight: 700, color: '#C6A85A',
+                textDecoration: 'none', letterSpacing: '0.05em',
+                border: '0.5px solid rgba(198,168,90,0.3)',
+                padding: '4px 10px', borderRadius: '4px',
+              }}>
+                {lang === 'fr' ? 'Continuer Investor →' : 'Keep Investor →'}
+              </a>
+            )}
+          </div>
+        )}
+
         {/* Loading skeleton */}
         {loading && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
@@ -711,6 +767,28 @@ export default function Dashboard() {
               {loadingMore
                 ? (lang === 'fr' ? 'Chargement…' : 'Loading…')
                 : (lang === 'fr' ? "Voir plus d'opportunités" : 'Load more opportunities')}
+            </button>
+          </div>
+        )}
+
+        {/* Hidden lots counter — free users only */}
+        {!isPaid && totalLots > 6 && (
+          <div style={{ margin: '24px 0', padding: '20px 24px', background: '#0C1622', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'rgba(255,255,255,0.4)', letterSpacing: '1px', marginBottom: '6px' }}>
+                {lang === 'fr' ? 'CETTE SEMAINE DANS VOS CATÉGORIES' : 'THIS WEEK IN YOUR CATEGORIES'}
+              </div>
+              <div style={{ fontSize: '15px', color: '#F0EDE6', fontWeight: 500, lineHeight: 1.4 }}>
+                {lang === 'fr'
+                  ? `${totalLots} opportunités détectées. Vous en avez vu ${Math.min(6, totalLots)}.`
+                  : `${totalLots} opportunities detected. You've seen ${Math.min(6, totalLots)}.`}
+              </div>
+            </div>
+            <button onClick={() => navigate('/app/pricing')}
+              style={{ background: '#C6A85A', color: '#0C1622', border: 'none', borderRadius: '5px', padding: '10px 20px', fontSize: '11px', fontWeight: 700, fontFamily: 'var(--font-mono)', letterSpacing: '1px', cursor: 'pointer', whiteSpace: 'nowrap', marginLeft: '20px', flexShrink: 0 }}>
+              {lang === 'fr'
+                ? `Débloquer les ${totalLots - 6} restantes →`
+                : `Unlock ${totalLots - 6} more →`}
             </button>
           </div>
         )}
