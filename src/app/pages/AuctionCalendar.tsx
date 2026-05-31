@@ -64,7 +64,7 @@ function fmtDate(dateStr: string) {
 
 function ScoreBadge({ score }: { score: number | null }) {
   if (!score) return null;
-  const color = score >= 80 ? 'var(--gold)' : score >= 65 ? 'var(--electric)' : 'var(--text-3)';
+  const color = score >= 83 ? 'var(--gold)' : score >= 70 ? 'var(--electric)' : 'var(--text-3)';
   return (
     <span style={{
       fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700,

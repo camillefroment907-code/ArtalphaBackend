@@ -310,9 +310,9 @@ export default function OpportunityDetail() {
   const priceHistory = (lot.price_history)    || null;
 
   const verdict = (() => {
-    if ((lot.deal_score || 0) >= 80 && upsidePct >= 20)
+    if ((lot.deal_score || 0) >= 83 && upsidePct >= 20)
       return { label: isFr ? 'ACHETER' : 'BUY',  dk: GD,        gl: GL,   icon: '↑', sub: isFr ? 'Signal fort de conviction' : 'Strong conviction signal' };
-    if ((lot.deal_score || 0) >= 65 && upsidePct >= 10)
+    if ((lot.deal_score || 0) >= 70 && upsidePct >= 10)
       return { label: isFr ? 'SURVEILLER' : 'WATCH',     dk: '#FBBF24',  gl: AMB,  icon: '◎', sub: isFr ? 'À surveiller de près' : 'Monitor closely' };
     if ((lot.deal_score || 0) < 50 || upsidePct < 0)
       return { label: isFr ? 'PASSER' : 'PASS', dk: '#EF4444',  gl: RED,  icon: '↓', sub: isFr ? 'Sous le seuil de conviction' : 'Below conviction threshold' };
@@ -320,7 +320,7 @@ export default function OpportunityDetail() {
   })();
 
   const dealScore     = lot.deal_score || 0;
-  const stickyTier    = dealScore >= 80 ? (isFr ? 'EXCEPTIONNEL' : 'EXCEPTIONAL') : dealScore >= 65 ? (isFr ? 'FORT' : 'STRONG') : (isFr ? 'INTÉRESSANT' : 'INTERESTING');
+  const stickyTier    = dealScore >= 83 ? (isFr ? 'EXCEPTIONNEL' : 'EXCEPTIONAL') : dealScore >= 77 ? (isFr ? 'FORT' : 'STRONG') : (isFr ? 'INTÉRESSANT' : 'INTERESTING');
   const totalCost     = realCost ? realCost.cost_basis : price;
   const breakEvenGain = realCost ? realCost.needed_gain_pct : 26;
   const netGain       = upsidePct - breakEvenGain;
@@ -475,7 +475,7 @@ export default function OpportunityDetail() {
         <div className="lot-hero-info" style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', gap: '14px', borderRight: `0.5px solid ${DKB}` }}>
 
           {/* EXCEPTIONAL badge */}
-          {dealScore >= 80 && (
+          {dealScore >= 83 && (
             <div style={{ display: 'inline-flex', alignSelf: 'flex-start' }}>
               <span style={{ background: 'rgba(198,168,90,0.1)', border: '0.5px solid rgba(198,168,90,0.4)', color: GOLD, fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.14em', padding: '3px 10px', borderRadius: '4px', textTransform: 'uppercase' }}>
                 {t('lot.exceptional')}
@@ -559,14 +559,14 @@ export default function OpportunityDetail() {
                 sub: `${lot.artist_name_raw || ''} · ${isFr ? 'Liquidité' : 'Liquidity'} ${Math.round(lot.artist?.liquidity_score || 0)}/100 · ${isFr ? 'Taux de vente' : 'Sell-through'} ${lot.artist?.sell_through_rate ? Math.round(lot.artist.sell_through_rate * 100) + '%' : '—'}`,
                 badge: null,
               });
-            else if ((lot.deal_score || 0) >= 80)
+            else if ((lot.deal_score || 0) >= 83)
               reasons.push({
                 icon: '◎', color: BLD, bg: 'rgba(96,165,250,0.12)',
                 main: isFr ? `Top des opportunités · ${Math.round(lot.deal_score)}/100` : `Top opportunity · ${Math.round(lot.deal_score)}/100`,
                 sub: isFr ? 'Parmi les scores les plus élevés cette semaine' : 'Among the highest scores this week',
                 badge: null,
               });
-            else if ((lot.deal_score || 0) >= 65)
+            else if ((lot.deal_score || 0) >= 70)
               reasons.push({
                 icon: '◎', color: BLD, bg: 'rgba(96,165,250,0.12)',
                 main: isFr ? `Signal positif de conviction · ${Math.round(lot.deal_score)}/100` : `Positive conviction signal · ${Math.round(lot.deal_score)}/100`,
@@ -584,7 +584,7 @@ export default function OpportunityDetail() {
 
             const topReasons = reasons.slice(0, 3);
 
-            const isBuy = (lot.deal_score || 0) >= 65;
+            const isBuy = (lot.deal_score || 0) >= 70;
             const whyLabel = isBuy ? (isFr ? 'POURQUOI ACHETER' : 'WHY BUY') : (isFr ? 'POURQUOI PASSER' : 'WHY PASS');
             const whyColor = isBuy ? GOLD : '#F87171';
 
@@ -659,7 +659,7 @@ export default function OpportunityDetail() {
                   ? `Momentum positif sur 6 mois. Prix actuel ${Math.round(lot.pct_below_low_estimate)}% sous l'estimation basse.${daysStr}`
                   : `Positive momentum over 6 months. Current price ${Math.round(lot.pct_below_low_estimate)}% below low estimate.${daysStr}`;
               }
-              if ((lot.deal_score || 0) >= 80 && realCost) {
+              if ((lot.deal_score || 0) >= 83 && realCost) {
                 return isFr
                   ? `Score de conviction fort. Coût réel avec frais : ${fmt(realCost.cost_basis)}. Seuil de rentabilité : +${Math.round(realCost.needed_gain_pct)}%.`
                   : `Strong conviction score. Real cost with fees: ${fmt(realCost.cost_basis)}. Break-even: +${Math.round(realCost.needed_gain_pct)}%.`;
@@ -858,7 +858,7 @@ export default function OpportunityDetail() {
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '26px', fontWeight: 800, color: '#0D1F35', lineHeight: 1 }}>
                 {fmtExact(price)}
               </div>
-              {(upsidePct >= 5 || dealScore >= 65) && (
+              {(upsidePct >= 5 || dealScore >= 70) && (
                 <div style={{ display: 'inline-block', fontSize: '8px', fontWeight: 700, color: '#166534', background: '#F0FDF4', border: '0.5px solid #BBF7D0', padding: '2px 6px', borderRadius: '2px', fontFamily: 'var(--font-mono)', letterSpacing: '0.5px', width: 'auto' }}>
                   {isFr ? 'BONNE ENTRÉE' : 'GOOD ENTRY'}
                 </div>
@@ -899,10 +899,10 @@ export default function OpportunityDetail() {
                 {
                   lbl: 'CONVICTION',
                   val: `${dealScore.toFixed(0)}/100`,
-                  color: dealScore >= 80 ? AMB : dealScore >= 60 ? AMB : RED,
+                  color: dealScore >= 83 ? AMB : dealScore >= 60 ? AMB : RED,
                   pct: Math.min(100, dealScore),
                   barColor: '#C6A85A',
-                  num: dealScore >= 80 ? 'top 5%' : dealScore >= 60 ? (isFr ? 'bon' : 'good') : (isFr ? 'modéré' : 'moderate'),
+                  num: dealScore >= 83 ? 'top 1%' : dealScore >= 77 ? 'top 5%' : dealScore >= 60 ? (isFr ? 'bon' : 'good') : (isFr ? 'modéré' : 'moderate'),
                 },
                 {
                   lbl: isFr ? 'DÉCOTE' : 'DISCOUNT',

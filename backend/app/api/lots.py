@@ -678,8 +678,8 @@ async def get_hot_deals(
             "source": lot.source.value if lot.source else None,
             "deal_score": lot.deal_score,
             "deal_class": (
-                "FIRE" if (lot.deal_score or 0) >= 90 else
-                "HOT" if (lot.deal_score or 0) >= 80 else
+                "FIRE" if (lot.deal_score or 0) >= 83 else
+                "HOT" if (lot.deal_score or 0) >= 77 else
                 "GOOD"
             ),
             "current_price": lot.current_price,
@@ -761,7 +761,7 @@ async def get_dashboard_stats(
     deals_today = await db.execute(
         select(func.count(Lot.id)).where(
             and_(
-                Lot.deal_score >= 80,
+                Lot.deal_score >= 83,
                 Lot.hammer_price.is_(None),
                 Lot.auction_date >= datetime.utcnow(),
             )

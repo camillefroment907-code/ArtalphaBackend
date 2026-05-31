@@ -168,7 +168,7 @@ function SkeletonCard() {
 
 function AlphaCard({ lot, onClick }: { lot: MappedLot; onClick: () => void }) {
   const ds = lot.dealScore;
-  const tier = ds >= 80 ? 'EXCEPTIONAL' : ds >= 65 ? 'STRONG' : 'INTERESTING';
+  const tier = ds >= 83 ? 'EXCEPTIONAL' : ds >= 77 ? 'STRONG' : ds >= 70 ? 'INTERESTING' : null;
   const tierColor = tier === 'EXCEPTIONAL' ? '#C0392B' : tier === 'STRONG' ? 'var(--navy)' : 'var(--gold-dim)';
   const tierBg = tier === 'EXCEPTIONAL' ? 'rgba(192,57,43,0.08)' : tier === 'STRONG' ? 'rgba(26,42,68,0.08)' : 'rgba(198,168,90,0.06)';
 
@@ -1484,7 +1484,7 @@ export default function Portfolio() {
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '5vh', overflowY: 'auto' }}
                   onClick={e => { if (e.target === e.currentTarget) { setShowAddModal(false); setArtistSuggestions([]); setShowAdvanced(false); } }}
                 >
-                  <div style={{ background: 'white', borderRadius: 12, width: 520, maxWidth: '92vw', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)', margin: '0 auto' }}>
+                  <div style={{ background: 'white', borderRadius: 12, width: 520, maxWidth: '92vw', boxShadow: '0 24px 64px rgba(0,0,0,0.18)', margin: '0 auto 40px' }}>
 
                     {/* Header */}
                     <div style={{ background: '#0A1628', padding: '22px 26px', borderRadius: '12px 12px 0 0' }}>
@@ -1542,11 +1542,9 @@ export default function Portfolio() {
                         <div style={{ gridColumn: '1 / -1', position: 'relative' }}>
                           <label style={LABEL}>
                             {currentLang === 'fr' ? 'Artiste' : 'Artist'}
-                            {newArtwork.artist_match_status && (
-                              <span style={{ marginLeft: 8, fontSize: 10, padding: '2px 7px', borderRadius: 20, fontWeight: 500, ...BADGE[newArtwork.artist_match_status] }}>
-                                {newArtwork.artist_match_status === 'confirmed' ? (currentLang === 'fr' ? 'Identifié' : 'Identified')
-                                  : newArtwork.artist_match_status === 'suggested' ? (currentLang === 'fr' ? 'Suggestion' : 'Suggestion')
-                                  : (currentLang === 'fr' ? 'Non résolu' : 'Unresolved')}
+                            {newArtwork.artist_id && (
+                              <span style={{ marginLeft: 8, fontSize: 10, padding: '2px 7px', borderRadius: 20, fontWeight: 500, background: '#dcfce7', color: '#166534', border: '0.5px solid #bbf7d0' }}>
+                                ✓ {currentLang === 'fr' ? 'Identifié' : 'Matched'}
                               </span>
                             )}
                           </label>
@@ -1566,23 +1564,18 @@ export default function Portfolio() {
                                 <button
                                   key={s.id}
                                   onClick={() => pickArtist(s)}
-                                  style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', borderBottom: '0.5px solid var(--border)', transition: 'background 0.1s' }}
+                                  style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', borderBottom: '0.5px solid var(--border)', transition: 'background 0.1s' }}
                                   onMouseEnter={e => (e.currentTarget.style.background = '#f8f9fa')}
                                   onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                                 >
                                   <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>{s.name}</div>
+                                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{s.name}</div>
                                     {(s.birth_year || s.nationality) && (
-                                      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>
-                                        {[s.nationality, s.birth_year ? `b. ${s.birth_year}` : null].filter(Boolean).join(' · ')}
+                                      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+                                        {[s.nationality, s.birth_year ? `${s.birth_year}–${s.death_year ?? ''}` : null].filter(Boolean).join(' · ')}
                                       </div>
                                     )}
                                   </div>
-                                  <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, flexShrink: 0, ...BADGE[s.confidence] }}>
-                                    {s.confidence === 'confirmed' ? (currentLang === 'fr' ? 'Identifié' : 'Match')
-                                      : s.confidence === 'suggested' ? (currentLang === 'fr' ? 'Proche' : 'Close')
-                                      : (currentLang === 'fr' ? 'Possible' : 'Possible')}
-                                  </span>
                                 </button>
                               ))}
                             </div>
@@ -2540,7 +2533,7 @@ export default function Portfolio() {
                           <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                             {item.lot?.artist_name}
                           </span>
-                          {(item.lot?.deal_score ?? 0) >= 80 && (
+                          {(item.lot?.deal_score ?? 0) >= 83 && (
                             <span style={{ fontSize: '8px', fontWeight: 700, color: 'var(--gold-dim)', background: 'var(--gold-subtle)', padding: '1px 6px', borderRadius: '3px', fontFamily: 'var(--font-mono)' }}>
                               EXCEPTIONAL
                             </span>

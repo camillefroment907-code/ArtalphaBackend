@@ -29,7 +29,7 @@ export default function Artists() {
   }, []);
 
   const scoreColor = (score: number) =>
-    score >= 80 ? '#C6A85A' : score >= 65 ? 'var(--electric)' : 'var(--text-3)';
+    score >= 83 ? '#C6A85A' : score >= 70 ? 'var(--electric)' : 'var(--text-3)';
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -233,7 +233,7 @@ export default function Artists() {
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ padding: '3px 10px', borderRadius: '4px', background: a.avg_score >= 80 ? 'rgba(198,168,90,0.1)' : 'var(--electric-subtle)', border: `1px solid ${a.avg_score >= 80 ? 'rgba(198,168,90,0.3)' : 'var(--electric-border)'}` }}>
+                        <div style={{ padding: '3px 10px', borderRadius: '4px', background: a.avg_score >= 83 ? 'rgba(198,168,90,0.1)' : 'var(--electric-subtle)', border: `1px solid ${a.avg_score >= 83 ? 'rgba(198,168,90,0.3)' : 'var(--electric-border)'}` }}>
                           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: scoreColor(a.avg_score) }}>{a.avg_score}/100</span>
                         </div>
                         <span style={{ color: 'var(--text-3)', fontSize: '14px' }}>→</span>
@@ -272,7 +272,7 @@ export default function Artists() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ padding: '3px 10px', borderRadius: '4px', background: a.avg_score >= 80 ? 'rgba(198,168,90,0.1)' : 'var(--electric-subtle)', border: `1px solid ${a.avg_score >= 80 ? 'rgba(198,168,90,0.3)' : 'var(--electric-border)'}` }}>
+                    <div style={{ padding: '3px 10px', borderRadius: '4px', background: a.avg_score >= 83 ? 'rgba(198,168,90,0.1)' : 'var(--electric-subtle)', border: `1px solid ${a.avg_score >= 83 ? 'rgba(198,168,90,0.3)' : 'var(--electric-border)'}` }}>
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: scoreColor(a.avg_score) }}>{a.avg_score}/100</span>
                     </div>
                     <span style={{ color: 'var(--text-3)', fontSize: '14px' }}>→</span>

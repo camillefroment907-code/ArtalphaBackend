@@ -446,7 +446,7 @@ export default function ArtistIntelligence() {
   };
 
   const scoreColor = (score: number) =>
-    score >= 80 ? '#C6A85A' : score >= 65 ? 'var(--electric)' : 'var(--text-3)';
+    score >= 83 ? '#C6A85A' : score >= 70 ? 'var(--electric)' : 'var(--text-3)';
 
   // ── Search / landing page ────────────────────────────────────
   if (!artistName) {
@@ -497,7 +497,7 @@ export default function ArtistIntelligence() {
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ padding: '3px 10px', borderRadius: '4px', background: a.avg_score >= 80 ? 'rgba(198,168,90,0.1)' : 'var(--electric-subtle)', border: `1px solid ${a.avg_score >= 80 ? 'rgba(198,168,90,0.3)' : 'var(--electric-border)'}` }}>
+                      <div style={{ padding: '3px 10px', borderRadius: '4px', background: a.avg_score >= 83 ? 'rgba(198,168,90,0.1)' : 'var(--electric-subtle)', border: `1px solid ${a.avg_score >= 83 ? 'rgba(198,168,90,0.3)' : 'var(--electric-border)'}` }}>
                         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: scoreColor(a.avg_score) }}>{a.avg_score}/100</span>
                       </div>
                       <span style={{ color: 'var(--text-3)', fontSize: '14px' }}>→</span>
@@ -649,7 +649,7 @@ export default function ArtistIntelligence() {
                 <div style={{ fontSize: '9px', fontWeight: 700, color: '#C6A85A', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '12px' }}>◆ ANALYSE NAUTILUS</div>
                 {[
                   { key: 'MOMENTUM', value: stats.momentum === 'rising' ? '↑ En hausse — activité croissante' : (stats.momentum === 'falling' || stats.momentum === 'low') ? '↓ En baisse — activité décroissante' : '→ Stable — marché équilibré', color: stats.momentum === 'rising' ? '#16A34A' : (stats.momentum === 'falling' || stats.momentum === 'low') ? '#F87171' : 'rgba(255,255,255,0.6)' },
-                  { key: 'CONVICTION', value: (stats.avg_score || 0) >= 80 ? `${stats.avg_score}/100 — Forte conviction` : (stats.avg_score || 0) >= 60 ? `${stats.avg_score}/100 — Intérêt modéré` : `${stats.avg_score || 0}/100 — Signal faible`, color: (stats.avg_score || 0) >= 60 ? '#C6A85A' : 'rgba(255,255,255,0.6)' },
+                  { key: 'CONVICTION', value: (stats.avg_score || 0) >= 83 ? `${stats.avg_score}/100 — Forte conviction` : (stats.avg_score || 0) >= 60 ? `${stats.avg_score}/100 — Intérêt modéré` : `${stats.avg_score || 0}/100 — Signal faible`, color: (stats.avg_score || 0) >= 60 ? '#C6A85A' : 'rgba(255,255,255,0.6)' },
                   { key: 'TENDANCE', value: (priceHistory?.statistics?.trend_direction ?? stats?.trend_direction) === 'up' ? 'Hausse sur 24 mois' : (priceHistory?.statistics?.trend_direction ?? stats?.trend_direction) === 'down' ? 'Baisse sur 24 mois' : 'Latéral sur 24 mois', color: (priceHistory?.statistics?.trend_direction ?? stats?.trend_direction) === 'up' ? '#16A34A' : (priceHistory?.statistics?.trend_direction ?? stats?.trend_direction) === 'down' ? '#F87171' : 'rgba(255,255,255,0.6)' },
                 ].map(row => (
                   <div key={row.key} style={{ display: 'flex', gap: '12px', alignItems: 'baseline', marginBottom: '8px' }}>
@@ -730,13 +730,13 @@ export default function ArtistIntelligence() {
                 {isFr ? 'SCORE DE CONVICTION MOY.' : 'AVG CONVICTION SCORE'}
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '10px' }}>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '44px', fontWeight: 700, color: (stats.avg_score || 0) >= 80 ? '#C6A85A' : 'white', lineHeight: 1 }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '44px', fontWeight: 700, color: (stats.avg_score || 0) >= 83 ? '#C6A85A' : 'white', lineHeight: 1 }}>
                   {stats.avg_score || '—'}
                 </span>
                 <span style={{ fontSize: '16px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)' }}>/100</span>
               </div>
               <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
-                <div style={{ height: '100%', borderRadius: '2px', width: `${stats.avg_score || 0}%`, background: (stats.avg_score || 0) >= 80 ? '#C6A85A' : '#2563EB', transition: 'width 0.8s ease' }} />
+                <div style={{ height: '100%', borderRadius: '2px', width: `${stats.avg_score || 0}%`, background: (stats.avg_score || 0) >= 83 ? '#C6A85A' : '#2563EB', transition: 'width 0.8s ease' }} />
               </div>
             </div>
 

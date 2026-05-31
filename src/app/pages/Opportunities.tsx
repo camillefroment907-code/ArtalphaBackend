@@ -220,7 +220,7 @@ function LiveSkeleton() {
 // ── AlphaCard ────────────────────────────────────────────────
 function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => void; locked: boolean }) {
   const ds = lot.dealScore;
-  const tier      = ds >= 80 ? "EXCEPTIONNEL" : ds >= 65 ? "FORT" : "INTÉRESSANT";
+  const tier      = ds >= 83 ? "EXCEPTIONNEL" : ds >= 77 ? "FORT" : ds >= 70 ? "INTÉRESSANT" : null;
   const tierColor = tier === "EXCEPTIONNEL" ? "#C0392B" : tier === "FORT" ? "var(--navy)" : "var(--gold-dim)";
   const tierBg    = tier === "EXCEPTIONNEL" ? "rgba(192,57,43,0.08)" : tier === "FORT" ? "rgba(26,42,68,0.08)" : "rgba(198,168,90,0.06)";
 
@@ -382,7 +382,7 @@ function LiveCard({ lot, onClick }: { lot: MappedLot; onClick: () => void }) {
   const src  = (lot.source || "").toLowerCase();
   const flag = SOURCE_FLAG[src] || "🌐";
   const ds = lot.dealScore;
-  const tier      = ds >= 80 ? "EXCEPTIONNEL" : ds >= 65 ? "FORT" : ds >= 45 ? "INTÉRESSANT" : null;
+  const tier      = ds >= 83 ? "EXCEPTIONNEL" : ds >= 77 ? "FORT" : ds >= 70 ? "INTÉRESSANT" : null;
   const tierColor = tier === "EXCEPTIONNEL" ? "#92400E" : tier === "FORT" ? "#065F46" : "#1E40AF";
   const tierBg    = tier === "EXCEPTIONNEL" ? "rgba(217,119,6,0.12)" : tier === "FORT" ? "rgba(6,95,70,0.10)" : "rgba(30,64,175,0.10)";
   const tierBorder= tier === "EXCEPTIONNEL" ? "rgba(217,119,6,0.4)" : tier === "FORT" ? "rgba(6,95,70,0.3)" : "rgba(30,64,175,0.3)";
@@ -687,10 +687,10 @@ export default function Opportunities() {
   const prevSearchRef = useRef({ q: "", artist: "", house: "" });
 
   // ── Tier separation (alpha only) ─────────────────────────
-  const alphaLots   = tab === "alpha" ? lots.filter(l => l.dealScore >= 45) : lots;
-  const EXCEPTIONAL = alphaLots.filter(l => l.dealScore >= 80);
-  const STRONG      = alphaLots.filter(l => l.dealScore >= 65 && l.dealScore < 80);
-  const INTERESTING = alphaLots.filter(l => l.dealScore >= 45 && l.dealScore < 65);
+  const alphaLots   = tab === "alpha" ? lots.filter(l => l.dealScore >= 60) : lots;
+  const EXCEPTIONAL = alphaLots.filter(l => l.dealScore >= 83);
+  const STRONG      = alphaLots.filter(l => l.dealScore >= 77 && l.dealScore < 83);
+  const INTERESTING = alphaLots.filter(l => l.dealScore >= 70 && l.dealScore < 77);
   const avgScore    = alphaLots.length > 0
     ? alphaLots.reduce((a, l) => a + l.dealScore, 0) / alphaLots.length
     : 0;

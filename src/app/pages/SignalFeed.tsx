@@ -186,7 +186,7 @@ export default function SignalFeed() {
                         )}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <div style={{ width: '40px', height: '3px', background: 'var(--bg-subtle)', borderRadius: '1px' }}>
-                            <div style={{ height: '100%', width: `${lot.deal_score || 0}%`, background: lot.deal_score >= 80 ? '#C6A85A' : 'var(--electric)', borderRadius: '1px' }} />
+                            <div style={{ height: '100%', width: `${lot.deal_score || 0}%`, background: lot.deal_score >= 83 ? '#C6A85A' : 'var(--electric)', borderRadius: '1px' }} />
                           </div>
                           <span style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: 'var(--text-3)' }}>{lot.deal_score?.toFixed(0)}</span>
                         </div>
@@ -225,7 +225,7 @@ export default function SignalFeed() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               {topLots.map((lot: any) => {
                 const up = upside(lot);
-                const scoreColor = lot.deal_score >= 80 ? '#C6A85A' : lot.deal_score >= 65 ? 'var(--electric)' : 'var(--text-3)';
+                const scoreColor = lot.deal_score >= 83 ? '#C6A85A' : lot.deal_score >= 70 ? 'var(--electric)' : 'var(--text-3)';
                 return (
                   <div key={lot.id}
                     onClick={() => navigate(`/app/opportunities/${lot.id}`)}
@@ -245,7 +245,7 @@ export default function SignalFeed() {
                         <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: scoreColor }} />
                         {lot.deal_score?.toFixed(0)}/100
                       </div>
-                      {lot.deal_score >= 80 && (
+                      {lot.deal_score >= 83 && (
                         <div style={{ position: 'absolute', top: '8px', left: '8px', background: '#C6A85A', padding: '2px 6px', borderRadius: '3px', fontSize: '8px', fontWeight: 700, color: 'white', fontFamily: 'var(--font-mono)' }}>
                           EXCEPTIONAL
                         </div>
@@ -292,7 +292,7 @@ export default function SignalFeed() {
             {[
               { label: 'Lots aux enchères', value: lotCount > 0 ? lotCount.toLocaleString() : '—', sub: 'Suivi en temps réel' },
               { label: 'Score moyen', value: `${marketStats.avgScore}/100`, sub: 'Sélection actuelle' },
-              { label: 'Exceptionnels', value: `${marketStats.exceptional}`, sub: 'Score ≥ 80' },
+              { label: 'Exceptionnels', value: `${marketStats.exceptional}`, sub: 'Score ≥ 83' },
             ].map(({ label, value, sub }) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--border-light)' }}>
                 <div>

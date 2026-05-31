@@ -269,8 +269,8 @@ function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => vo
   const { i18n } = useTranslation();
   const isFrCard = i18n.language?.startsWith('fr');
   const ds = lot.dealScore;
-  const tier      = ds >= 80 ? "EXCEPTIONAL" : ds >= 65 ? "STRONG" : "INTERESTING";
-  const tierLabel = ds >= 80 ? (isFrCard ? "EXCEPTIONNEL" : "EXCEPTIONAL") : ds >= 65 ? (isFrCard ? "FORT" : "STRONG") : (isFrCard ? "INTÉRESSANT" : "INTERESTING");
+  const tier      = ds >= 83 ? "EXCEPTIONAL" : ds >= 77 ? "STRONG" : ds >= 70 ? "INTERESTING" : null;
+  const tierLabel = ds >= 83 ? (isFrCard ? "EXCEPTIONNEL" : "EXCEPTIONAL") : ds >= 77 ? (isFrCard ? "FORT" : "STRONG") : ds >= 70 ? (isFrCard ? "INTÉRESSANT" : "INTERESTING") : null;
   const tierColor = tier === "EXCEPTIONAL" ? "#C0392B" : tier === "STRONG" ? "var(--navy)" : "var(--gold-dim)";
   const tierBg    = tier === "EXCEPTIONAL" ? "rgba(192,57,43,0.08)" : tier === "STRONG" ? "rgba(26,42,68,0.08)" : "rgba(198,168,90,0.06)";
   return (
@@ -321,7 +321,7 @@ function LiveCard({ lot, onClick }: { lot: MappedLot; onClick: () => void }) {
     <div onClick={onClick} onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.transform = "translateY(-4px)"; el.style.boxShadow = "0 12px 40px rgba(0,0,0,0.1)"; const img = el.querySelector("img") as HTMLImageElement | null; if (img) img.style.transform = "scale(1.05)"; }} onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.transform = "translateY(0)"; el.style.boxShadow = "none"; el.style.borderColor = "var(--border)"; const img = el.querySelector("img") as HTMLImageElement | null; if (img) img.style.transform = "scale(1)"; }} style={{ background: "white", borderRadius: "8px", overflow: "hidden", cursor: "pointer", border: "1px solid var(--border)", transition: "transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease", contain: "layout style paint" }}>
       <div style={{ position: "relative", paddingTop: "65%", background: "var(--bg-subtle)", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0 }}><LotImage src={lot.imageUrl} alt={lot.title} /></div>
-        {lot.dealScore > 0 && <div style={{ position: "absolute", top: "7px", right: "7px", padding: "3px 7px", background: "rgba(250,250,248,0.92)", backdropFilter: "blur(4px)", borderRadius: "4px", border: "1px solid var(--border)" }}><span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: lot.dealScore >= 80 ? "#C6A85A" : "#888" }}>{Math.round(lot.dealScore)}</span><span style={{ fontSize: "9px", color: "var(--text-3)" }}>/100</span></div>}
+        {lot.dealScore > 0 && <div style={{ position: "absolute", top: "7px", right: "7px", padding: "3px 7px", background: "rgba(250,250,248,0.92)", backdropFilter: "blur(4px)", borderRadius: "4px", border: "1px solid var(--border)" }}><span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: lot.dealScore >= 83 ? "#C6A85A" : lot.dealScore >= 70 ? "#B8922A" : "#888" }}>{Math.round(lot.dealScore)}</span><span style={{ fontSize: "9px", color: "var(--text-3)" }}>/100</span></div>}
         {lot.auctionDate && <div style={{ position: "absolute", bottom: "7px", right: "7px", background: "var(--navy)", color: "white", padding: "2px 7px", borderRadius: "3px", fontSize: "10px", fontWeight: 700 }}>{new Date(lot.auctionDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</div>}
         {lot.category && <div style={{ position: "absolute", bottom: "7px", left: "8px", background: "rgba(250,250,248,0.88)", backdropFilter: "blur(3px)", padding: "2px 6px", borderRadius: "3px", fontSize: "9px", fontWeight: 600, color: "var(--text-2)", border: "1px solid rgba(0,0,0,0.08)" }}>{lot.category}</div>}
       </div>
@@ -555,9 +555,9 @@ export default function Explore() {
   const tab = exploreTab === "auctions" ? "live" : "alpha";
 
   const alphaLots   = lots;
-  const EXCEPTIONAL = alphaLots.filter(l => l.dealScore >= 80);
-  const STRONG      = alphaLots.filter(l => l.dealScore >= 65 && l.dealScore < 80);
-  const INTERESTING = alphaLots.filter(l => l.dealScore >= 45 && l.dealScore < 65);
+  const EXCEPTIONAL = alphaLots.filter(l => l.dealScore >= 83);
+  const STRONG      = alphaLots.filter(l => l.dealScore >= 77 && l.dealScore < 83);
+  const INTERESTING = alphaLots.filter(l => l.dealScore >= 70 && l.dealScore < 77);
   const avgScore    = alphaLots.length > 0
     ? alphaLots.reduce((a, l) => a + l.dealScore, 0) / alphaLots.length : 0;
   const visibleLots = tab === "alpha" ? alphaLots.slice(0, maxVisible) : lots.slice(0, maxVisible);
@@ -857,9 +857,9 @@ export default function Explore() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   {([
                     { label: t('explorer.tierAll'),         minVal: 0,  maxVal: 0,  badge: null },
-                    { label: t('explorer.tierExceptional'), minVal: 80, maxVal: 0,  badge: 'EXCEP.', badgeColor: '#C0392B', badgeBg: 'rgba(192,57,43,0.08)' },
-                    { label: t('explorer.tierStrong'),      minVal: 65, maxVal: 79, badge: 'STRONG', badgeColor: 'var(--navy)', badgeBg: 'rgba(26,42,68,0.08)' },
-                    { label: t('explorer.tierInteresting'), minVal: 45, maxVal: 64, badge: 'INT.',   badgeColor: '#64748B', badgeBg: 'rgba(100,116,139,0.08)' },
+                    { label: t('explorer.tierExceptional'), minVal: 83, maxVal: 0,  badge: 'EXCEP.', badgeColor: '#C0392B', badgeBg: 'rgba(192,57,43,0.08)' },
+                    { label: t('explorer.tierStrong'),      minVal: 77, maxVal: 82, badge: 'STRONG', badgeColor: 'var(--navy)', badgeBg: 'rgba(26,42,68,0.08)' },
+                    { label: t('explorer.tierInteresting'), minVal: 70, maxVal: 76, badge: 'INT.',   badgeColor: '#64748B', badgeBg: 'rgba(100,116,139,0.08)' },
                   ] as { label: string; minVal: number; maxVal: number; badge: string | null; badgeColor?: string; badgeBg?: string }[]).map(({ label, minVal, maxVal, badge, badgeColor, badgeBg }) => {
                     const active = minScore === minVal && maxScore === maxVal;
                     return (

@@ -36,11 +36,11 @@ const FAQ_DATA = {
       questions: [
         {
           q: 'Comment fonctionne le score Nautilus ?',
-          a: "Chaque lot reçoit un score de conviction de 0 à 100. Le score combine : le prix actuel par rapport aux ventes historiques comparables (écart de prix), la dynamique de marché de l'artiste (résultats récents, tier de galerie, demande institutionnelle), les facteurs spécifiques au lot (technique, dimensions, provenance, état), et les signaux de timing de marché. Un score de 80+ est 'Exceptionnel' — notre niveau de conviction le plus élevé.",
+          a: "Chaque lot reçoit un score de conviction de 0 à 100. Le score combine : le prix actuel par rapport aux ventes historiques comparables (écart de prix), la dynamique de marché de l'artiste (résultats récents, tier de galerie, demande institutionnelle), les facteurs spécifiques au lot (technique, dimensions, provenance, état), et les signaux de timing de marché. Un score de 83+ est 'Exceptionnel' — notre niveau de conviction le plus élevé.",
         },
         {
           q: 'Quelle est la fiabilité du score ?',
-          a: "Sur 18 mois de prédictions suivies, les lots scorés 65+ ont montré une précision directionnelle (vendus au-dessus de l'estimation ou appréciés) à 73%. Les lots scorés 80+ ('Exceptionnel') ont enregistré en moyenne +31% de hausse. Les performances passées ne garantissent pas les résultats futurs.",
+          a: "Nos signaux sont basés sur les ventes réelles aux enchères. Les performances passées ne garantissent pas les résultats futurs.",
         },
         {
           q: "Qu'est-ce que le Max Bid calculé par Nautilus ?",
@@ -193,11 +193,11 @@ const FAQ_DATA = {
       questions: [
         {
           q: 'How does the Nautilus score work?',
-          a: "Every lot receives a Conviction Score from 0 to 100. The score combines: current price vs comparable historical sales (price gap), artist market momentum (recent auction results, gallery tier, institutional demand), lot-specific factors (medium, size, provenance, condition), and market timing signals. A score of 80+ is 'Exceptional' — our highest conviction tier.",
+          a: "Every lot receives a Conviction Score from 0 to 100. The score combines: current price vs comparable historical sales (price gap), artist market momentum (recent auction results, gallery tier, institutional demand), lot-specific factors (medium, size, provenance, condition), and market timing signals. A score of 83+ is 'Exceptional' — our highest conviction tier.",
         },
         {
           q: 'How accurate is the score?',
-          a: "Over 18 months of tracked predictions, lots scoring 65+ have shown directional accuracy (sold above estimate or appreciated) 73% of the time. Lots scoring 80+ ('Exceptional') have averaged +31% upside. Past accuracy does not guarantee future results.",
+          a: "Our signals are based on real auction sales data. Past performance does not guarantee future results.",
         },
         {
           q: "What is Nautilus's calculated Max Bid?",

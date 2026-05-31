@@ -48,8 +48,8 @@ export default function MarketIndex() {
       })
       .catch(() => {});
 
-    // Exceptional count: lots with deal_score >= 80
-    fetch(`${BACKEND}/api/lots?sort_by=deal_score&sort_dir=desc&min_score=80&page_size=1`, { headers: h })
+    // Exceptional count: lots with deal_score >= 83
+    fetch(`${BACKEND}/api/lots?sort_by=deal_score&sort_dir=desc&min_score=83&page_size=1`, { headers: h })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.total != null) setExceptionalCount(d.total); })
       .catch(() => {});
@@ -202,8 +202,8 @@ export default function MarketIndex() {
                       </div>
                     )}
                   </div>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: lot.deal_score >= 80 ? 'rgba(198,168,90,0.1)' : 'var(--electric-subtle)', border: `1px solid ${lot.deal_score >= 80 ? 'rgba(198,168,90,0.4)' : 'var(--electric-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: lot.deal_score >= 80 ? '#C6A85A' : 'var(--electric)', lineHeight: 1 }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: lot.deal_score >= 83 ? 'rgba(198,168,90,0.1)' : 'var(--electric-subtle)', border: `1px solid ${lot.deal_score >= 83 ? 'rgba(198,168,90,0.4)' : 'var(--electric-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: lot.deal_score >= 83 ? '#C6A85A' : 'var(--electric)', lineHeight: 1 }}>
                       {lot.deal_score?.toFixed(0)}
                     </span>
                   </div>

@@ -137,11 +137,11 @@ function LotCard({ lot, lang, onClick, wishlisted, onWishlistToggle }: {
   const insight = getMicroInsight(lot, lang);
   const [showTooltip, setShowTooltip] = useState(false);
   const badge = {
-    color: score >= 80 ? '#1A6B3C' : score >= 65 ? '#B8922A' : '#6B7280',
-    bg: score >= 80 ? 'rgba(26,107,60,0.08)' : score >= 65 ? 'rgba(184,146,42,0.08)' : 'rgba(107,114,128,0.08)',
-    border: score >= 80 ? 'rgba(26,107,60,0.2)' : score >= 65 ? 'rgba(184,146,42,0.2)' : 'rgba(107,114,128,0.15)',
+    color: score >= 83 ? '#1A6B3C' : score >= 70 ? '#B8922A' : '#6B7280',
+    bg: score >= 83 ? 'rgba(26,107,60,0.08)' : score >= 70 ? 'rgba(184,146,42,0.08)' : 'rgba(107,114,128,0.08)',
+    border: score >= 83 ? 'rgba(26,107,60,0.2)' : score >= 70 ? 'rgba(184,146,42,0.2)' : 'rgba(107,114,128,0.15)',
   };
-  const label = score >= 90 ? 'Exceptionnel' : score >= 80 ? 'Très fort' : score >= 65 ? 'Opportunité' : 'À surveiller';
+  const label = score >= 83 ? 'Exceptionnel' : score >= 77 ? 'Très fort' : score >= 70 ? 'Opportunité' : score >= 60 ? 'À surveiller' : 'Faible';
   return (
     <div onClick={onClick}
       style={{ background: 'white', border: '1px solid #E8E4DC', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', flexDirection: 'column' }}
