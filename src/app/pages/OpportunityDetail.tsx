@@ -112,6 +112,13 @@ export default function OpportunityDetail() {
   const [subId, setSubId]                 = useState<string | null>(null);
   const [subLoading, setSubLoading]       = useState(false);
   const [upgradeModal, setUpgradeModal]   = useState<'wishlist' | 'source' | 'provenance' | null>(null);
+
+  const [showPurchaseForm, setShowPurchaseForm] = useState(false);
+  const [purchaseLoading, setPurchaseLoading]   = useState(false);
+  const [purchaseDone, setPurchaseDone]         = useState(false);
+  const [purchasePrice, setPurchasePrice]       = useState('');
+  const [purchaseDate, setPurchaseDate]         = useState(() => new Date().toISOString().split('T')[0]);
+  const [purchaseSource, setPurchaseSource]     = useState<'auction' | 'gallery' | 'private'>('auction');
   const heroRef = useRef<HTMLDivElement>(null);
   const isFr = i18n.language?.startsWith('fr');
 
@@ -829,6 +836,144 @@ export default function OpportunityDetail() {
           >
             {subLoading ? '...' : subscribed ? (isFr ? '✓ Suivi' : '✓ Following') : (isFr ? '🔔 Suivre ce lot' : '🔔 Follow this lot')}
           </button>
+
+          {/* ── J'ai acheté ce lot ── */}
+          {!purchaseDone ? (
+            <>
+              <button
+                onClick={() => setShowPurchaseForm(v => !v)}
+                style={{
+                  marginTop: '8px',
+                  background: showPurchaseForm ? 'rgba(26,107,60,0.1)' : 'none',
+                  border: `0.5px solid ${showPurchaseForm ? '#1A6B3C' : '#2A3B4C'}`,
+                  color: showPurchaseForm ? '#52C97F' : '#6B7280',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '10px',
+                  letterSpacing: '0.08em',
+                  padding: '8px 14px',
+                  borderRadius: '4px',
+                  width: '100%',
+                }}
+              >
+                {isFr ? '✓ J\'ai acheté ce lot' : '✓ I bought this lot'}
+              </button>
+              {showPurchaseForm && (
+                <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <input
+                    type="number"
+                    placeholder={isFr ? 'Prix marteau payé (€)' : 'Hammer price paid (€)'}
+                    value={purchasePrice}
+                    onChange={e => setPurchasePrice(e.target.value)}
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '0.5px solid #2A3B4C',
+                      color: '#E8E4DC',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '11px',
+                      padding: '7px 10px',
+                      borderRadius: '4px',
+                      width: '100%',
+                      boxSizing: 'border-box' as const,
+                      outline: 'none',
+                    }}
+                  />
+                  <input
+                    type="date"
+                    value={purchaseDate}
+                    onChange={e => setPurchaseDate(e.target.value)}
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '0.5px solid #2A3B4C',
+                      color: '#E8E4DC',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '11px',
+                      padding: '7px 10px',
+                      borderRadius: '4px',
+                      width: '100%',
+                      boxSizing: 'border-box' as const,
+                      outline: 'none',
+                    }}
+                  />
+                  <select
+                    value={purchaseSource}
+                    onChange={e => setPurchaseSource(e.target.value as 'auction' | 'gallery' | 'private')}
+                    style={{
+                      background: '#0D1F35',
+                      border: '0.5px solid #2A3B4C',
+                      color: '#E8E4DC',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '11px',
+                      padding: '7px 10px',
+                      borderRadius: '4px',
+                      width: '100%',
+                    }}
+                  >
+                    <option value="auction">{isFr ? 'Enchères' : 'Auction'}</option>
+                    <option value="gallery">{isFr ? 'Galerie' : 'Gallery'}</option>
+                    <option value="private">{isFr ? 'Privé' : 'Private sale'}</option>
+                  </select>
+                  <button
+                    onClick={async () => {
+                      if (!purchasePrice || !getToken()) return;
+                      setPurchaseLoading(true);
+                      try {
+                        const r = await fetch(`${BACKEND}/api/lots/${id}/confirm-purchase`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${getToken()}`,
+                          },
+                          body: JSON.stringify({
+                            purchase_price: parseFloat(purchasePrice),
+                            purchase_date: purchaseDate,
+                            purchase_source: purchaseSource,
+                          }),
+                        });
+                        if (r.ok) {
+                          setPurchaseDone(true);
+                          setShowPurchaseForm(false);
+                        }
+                      } finally {
+                        setPurchaseLoading(false);
+                      }
+                    }}
+                    disabled={purchaseLoading || !purchasePrice}
+                    style={{
+                      background: !purchasePrice ? 'rgba(26,107,60,0.3)' : '#1A6B3C',
+                      border: 'none',
+                      color: '#fff',
+                      cursor: purchaseLoading || !purchasePrice ? 'default' : 'pointer',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '10px',
+                      letterSpacing: '0.08em',
+                      padding: '8px 14px',
+                      borderRadius: '4px',
+                      width: '100%',
+                    }}
+                  >
+                    {purchaseLoading ? '...' : (isFr ? 'Enregistrer l\'achat' : 'Save purchase')}
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{
+              marginTop: '8px',
+              border: '0.5px solid #1A6B3C',
+              color: '#52C97F',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '10px',
+              letterSpacing: '0.08em',
+              padding: '8px 14px',
+              borderRadius: '4px',
+              width: '100%',
+              textAlign: 'center' as const,
+              boxSizing: 'border-box' as const,
+            }}>
+              {isFr ? '✓ Achat enregistré dans votre archive' : '✓ Purchase saved to your archive'}
+            </div>
+          )}
 
         </div>
       </div>

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, Request, Header, Response
+from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_, desc, String, case
@@ -129,7 +130,7 @@ def parse_dimensions(dimensions_str: str) -> dict:
 from app.database import get_db, AsyncSessionLocal
 from app.models.db_models import (
     Lot, Artist, LotStatus, AuctionHouse, MarketType,
-    ArtistSignal, ArtistProfile, HammerPrice, UserEvent,
+    ArtistSignal, ArtistProfile, HammerPrice, UserEvent, DecisionArchive,
 )
 from app.models.schemas import LotOut, LotListResponse, TopDeal, DashboardStats
 from app.api.auth_utils import get_current_user_optional, get_current_user
@@ -2366,3 +2367,52 @@ async def get_lot_projection(
         trend=lot.artist.trend.value if lot.artist and lot.artist.trend else "stable",
         cagr_override=cagr_override,
     )
+
+
+# ── Decision Archive ───────────────────────────────────────────────────────────
+
+class ConfirmPurchaseRequest(BaseModel):
+    purchase_price: float
+    purchase_date: str           # ISO date string e.g. "2024-01-15"
+    purchase_source: str = "auction"   # auction | gallery | private
+    notes: str | None = None
+
+
+@router.post("/{lot_id}/confirm-purchase")
+async def confirm_purchase(
+    lot_id: str,
+    body: ConfirmPurchaseRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Record a purchase decision in the user's Decision Archive."""
+    lot = (await db.execute(select(Lot).where(Lot.id == lot_id))).scalar_one_or_none()
+    if not lot:
+        raise HTTPException(404, "Lot not found")
+
+    try:
+        purchase_date = datetime.fromisoformat(body.purchase_date)
+    except ValueError:
+        raise HTTPException(422, "Invalid purchase_date — use YYYY-MM-DD")
+
+    entry = DecisionArchive(
+        lot_id=lot.id,
+        user_id=current_user.id,
+        signal_score=lot.deal_score,
+        purchase_price=body.purchase_price,
+        purchase_date=purchase_date,
+        purchase_source=body.purchase_source,
+        notes=body.notes,
+    )
+    db.add(entry)
+    await db.commit()
+    await db.refresh(entry)
+
+    return {
+        "id": str(entry.id),
+        "lot_id": str(entry.lot_id),
+        "signal_score": entry.signal_score,
+        "purchase_price": entry.purchase_price,
+        "purchase_date": entry.purchase_date.isoformat(),
+        "purchase_source": entry.purchase_source,
+    }

@@ -853,6 +853,43 @@ class ScorePerformance(Base):
     )
 
 
+class DecisionArchive(Base):
+    """
+    User's private deal history — the Nautilus proprietary moat.
+    Each row = one purchase decision with full context: what Nautilus said,
+    what the user paid, and (later) what happened at resale.
+    Feeds calibration engine + personal track record screen.
+    """
+    __tablename__ = "decision_archive"
+
+    id               = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    lot_id           = Column(UUID(as_uuid=True), ForeignKey("lots.id", ondelete="SET NULL"), nullable=True, index=True)
+    user_id          = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # Nautilus context at time of purchase
+    signal_score     = Column(Float, nullable=True)   # deal_score at moment of buy
+    max_bid_at_time  = Column(Float, nullable=True)   # what Nautilus said not to exceed
+
+    # Purchase details (filled on creation)
+    purchase_price   = Column(Float, nullable=False)  # hammer price paid (pre-premium)
+    purchase_date    = Column(DateTime, nullable=False)
+    purchase_source  = Column(String(50), nullable=True)  # 'auction', 'gallery', 'private'
+
+    # Outcome (filled later when sold)
+    outcome_price    = Column(Float, nullable=True)
+    outcome_date     = Column(DateTime, nullable=True)
+    outcome_source   = Column(String(50), nullable=True)
+
+    notes            = Column(Text, nullable=True)
+    created_at       = Column(DateTime, default=datetime.utcnow)
+    updated_at       = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_decision_archive_user_id", "user_id"),
+        Index("ix_decision_archive_lot_id", "lot_id"),
+    )
+
+
 class ArtistMarketData(Base):
     """Artist market trajectory — proprietary momentum data by quarter."""
     __tablename__ = "artist_market_data"
