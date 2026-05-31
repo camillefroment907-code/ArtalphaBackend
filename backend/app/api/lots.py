@@ -1848,6 +1848,177 @@ async def get_lot(
     return lot_dict
 
 
+# ── Weighted max-bid helpers ──────────────────────────────────────────────────
+
+_MEDIUM_CATEGORIES: dict[str, list[str]] = {
+    "painting":   ["huile", "oil", "acrylic", "acrylique", "tempera", "gouache", "enamel"],
+    "print":      ["lithograph", "litho", "offset", "sérigraph", "serigraph", "screenprint",
+                   "etching", "gravure", "estampe", "woodcut", "linogravure"],
+    "photo":      ["photo", "photograph", "chromogenic", "c-print", "inkjet", "silver gelatin"],
+    "drawing":    ["drawing", "dessin", "crayon", "pencil", "ink", "encre", "pastel", "charcoal"],
+    "sculpture":  ["sculpture", "bronze", "ceramic", "céramique", "marble", "marbre",
+                   "resin", "résine", "plaster"],
+    "watercolor": ["aquarelle", "watercolor", "watercolour"],
+}
+
+_MEDIUM_DISCOUNT: dict[str, float] = {
+    "print": 0.20, "photo": 0.20, "drawing": 0.40,
+    "sculpture": 0.30, "watercolor": 0.60, "painting": 1.00,
+}
+
+_HOUSE_TIERS: dict[int, list[str]] = {
+    1: ["christies", "sotheby", "phillips", "bonhams"],
+    2: ["artcurial", "aguttes", "millon", "drouot"],
+}
+
+
+def _medium_category(medium_str: str | None) -> str | None:
+    if not medium_str:
+        return None
+    m = medium_str.lower()
+    for cat, keywords in _MEDIUM_CATEGORIES.items():
+        if any(kw in m for kw in keywords):
+            return cat
+    return None
+
+
+def _house_tier_num(house: str | None) -> int:
+    if not house:
+        return 3
+    h = house.lower()
+    for tier, names in _HOUSE_TIERS.items():
+        if any(n in h for n in names):
+            return tier
+    return 3
+
+
+def _comp_proximity_score(
+    row: dict,
+    lot_medium_cat: str | None,
+    lot_area: float | None,
+    lot_house_tier: int,
+    now_dt,
+) -> int:
+    from datetime import timezone as _tz
+    score = 0
+    hp_medium_cat = _medium_category(row.get("medium"))
+
+    # Medium match: +60 (combines +40 medium + +20 category from spec)
+    if lot_medium_cat and hp_medium_cat:
+        if lot_medium_cat == hp_medium_cat:
+            score += 60
+        else:
+            # Different edition mediums still closer than painting vs print
+            two_d = {"print", "drawing", "photo", "watercolor"}
+            if lot_medium_cat in two_d and hp_medium_cat in two_d:
+                score += 10
+
+    # Size ±30% by area: +15
+    if lot_area and lot_area > 0:
+        dims = parse_dimensions(row.get("dimensions") or "")
+        w, h = dims["width_cm"], dims["height_cm"]
+        if w and h:
+            hp_area = w * h
+            if abs(hp_area - lot_area) / lot_area <= 0.30:
+                score += 15
+
+    # Recency: +10 if <2yr, +5 if <5yr
+    sale_date = row.get("sale_date")
+    if sale_date:
+        sale_dt = sale_date if sale_date.tzinfo else sale_date.replace(tzinfo=_tz.utc)
+        age_days = (now_dt - sale_dt).days
+        if age_days <= 730:
+            score += 10
+        elif age_days <= 1825:
+            score += 5
+
+    # Same auction-house tier: +5
+    if lot_house_tier == _house_tier_num(row.get("auction_house")):
+        score += 5
+
+    return score
+
+
+async def _compute_weighted_max_bid(lot, db) -> dict:
+    """
+    Proximity-weighted market value for max-bid computation.
+    Returns dict {market_value, comp_count, comp_level, max_bid_source}
+    or {} when no data (caller falls back to estimate_high × 0.85).
+
+    Levels:
+        1 — ≥3 comps score ≥60 (medium+size match)
+        2 — ≥3 comps score ≥30 (partial match)
+        3 — ≥5 artist sales × medium discount (litho ×0.20, drawing ×0.40 …)
+    """
+    from sqlalchemy import text
+    from datetime import timezone as _tz
+    from app.jobs.quality_filter import normalize_artist_name as _norm_artist
+
+    if not lot.artist_name_raw:
+        return {}
+
+    artist_normalized = _norm_artist(lot.artist_name_raw)
+    if not artist_normalized:
+        return {}
+
+    result = await db.execute(
+        text("""
+            SELECT medium, dimensions, year_created, sale_date,
+                   hammer_price_eur, hammer_price, auction_house
+            FROM hammer_prices
+            WHERE artist_name_normalized = :norm
+              AND (hammer_price_eur IS NOT NULL OR hammer_price IS NOT NULL)
+            ORDER BY sale_date DESC NULLS LAST
+            LIMIT 200
+        """),
+        {"norm": artist_normalized},
+    )
+    rows = result.mappings().all()
+    if not rows:
+        return {}
+
+    now_dt = datetime.now(_tz.utc)
+    lot_dims = parse_dimensions(lot.dimensions or "")
+    lot_w, lot_h = lot_dims["width_cm"], lot_dims["height_cm"]
+    lot_area = (lot_w * lot_h) if (lot_w and lot_h) else None
+    lot_medium_cat = _medium_category(lot.medium) or _medium_category(lot.title or "")
+    lot_house_tier = _house_tier_num(lot.auction_house_name)
+
+    scored: list[tuple[int, float]] = []
+    for row in rows:
+        price = row["hammer_price_eur"] or row["hammer_price"]
+        if not price or price <= 0:
+            continue
+        s = _comp_proximity_score(row, lot_medium_cat, lot_area, lot_house_tier, now_dt)
+        scored.append((s, float(price)))
+
+    if not scored:
+        return {}
+
+    def _wavg(pairs: list[tuple[int, float]]) -> float:
+        total_w = sum(s for s, _ in pairs)
+        if total_w == 0:
+            return sum(p for _, p in pairs) / len(pairs)
+        return sum(s * p for s, p in pairs) / total_w
+
+    l1 = [(s, p) for s, p in scored if s >= 60]
+    if len(l1) >= 3:
+        return {"market_value": _wavg(l1), "comp_count": len(l1),
+                "comp_level": 1, "max_bid_source": "comparables_proches"}
+
+    l2 = [(s, p) for s, p in scored if s >= 30]
+    if len(l2) >= 3:
+        return {"market_value": _wavg(l2), "comp_count": len(l2),
+                "comp_level": 2, "max_bid_source": "comparables_partiels"}
+
+    if len(scored) >= 5:
+        discount = _MEDIUM_DISCOUNT.get(lot_medium_cat or "", 1.0)
+        return {"market_value": _wavg(scored) * discount, "comp_count": len(scored),
+                "comp_level": 3, "max_bid_source": "ventes_artiste"}
+
+    return {}
+
+
 @router.get("/{lot_id}/comparables")
 async def get_comparables(
     lot_id: str,
@@ -2049,21 +2220,20 @@ async def get_comparables(
         except Exception:
             pass
 
-    # ── Max bid — cascade: p50 (≥5 sales) > median comps (≥2) > estimate_high ──
+    # ── Max bid — proximity-weighted comparable analysis ──────────────────────
     max_bid: int | None = None
     max_bid_source: str | None = None
-    mv: float | None = None
-    if market_benchmarks and (market_benchmarks.get("based_on") or 0) >= 5:
-        mv = float(market_benchmarks["p50"])
-        max_bid_source = "p50"
-    elif median_price and len(comp_prices) >= 2:
-        mv = float(median_price)
-        max_bid_source = "median"
+    max_bid_comp_count: int | None = None
+    max_bid_comp_level: int | None = None
+    weighted = await _compute_weighted_max_bid(lot, db)
+    if weighted:
+        max_bid = compute_max_bid(weighted["market_value"], lot.auction_house_name)
+        max_bid_source = weighted["max_bid_source"]
+        max_bid_comp_count = weighted["comp_count"]
+        max_bid_comp_level = weighted["comp_level"]
     elif lot.estimate_high:
-        mv = float(lot.estimate_high) * 0.85
+        max_bid = compute_max_bid(float(lot.estimate_high) * 0.85, lot.auction_house_name)
         max_bid_source = "estimate"
-    if mv:
-        max_bid = compute_max_bid(mv, lot.auction_house_name)
 
     response = {
         "lot_id": lot_id,
@@ -2078,6 +2248,8 @@ async def get_comparables(
         "market_benchmarks": market_benchmarks,
         "max_bid": max_bid,
         "max_bid_source": max_bid_source,
+        "max_bid_comp_count": max_bid_comp_count,
+        "max_bid_comp_level": max_bid_comp_level,
         "market_analysis": {
             "comparable_count":    comparable_count_total,
             "market_avg_price":    round(market_avg) if market_avg else None,
