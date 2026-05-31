@@ -256,6 +256,7 @@ def _daily_email_loop():
         _check_trial_expired,
         _check_annual_expiring,
         _check_winback,
+        _check_post_auction_watchlist,
     )
     while True:
         now = _utcnow()
@@ -266,12 +267,13 @@ def _daily_email_loop():
         logger.info(f"[scheduler] daily_email sleeping {wait/3600:.1f}h until 09:00 UTC")
         time.sleep(wait)
         for check_fn, name in [
-            (_check_nps,             "email_nps"),
-            (_check_reengagement,    "email_reengagement"),
-            (_check_trial_ending,    "email_trial_ending"),
-            (_check_trial_expired,   "email_trial_expired"),
-            (_check_annual_expiring, "email_annual_expiring"),
-            (_check_winback,         "email_winback"),
+            (_check_nps,                     "email_nps"),
+            (_check_reengagement,            "email_reengagement"),
+            (_check_trial_ending,            "email_trial_ending"),
+            (_check_trial_expired,           "email_trial_expired"),
+            (_check_annual_expiring,         "email_annual_expiring"),
+            (_check_winback,                 "email_winback"),
+            (_check_post_auction_watchlist,  "email_post_auction_watchlist"),
         ]:
             try:
                 logger.info(f"[scheduler] running {name}")

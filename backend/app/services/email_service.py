@@ -57,6 +57,7 @@ from app.services.email_alerts import (
     send_artist_gallery_upgrade_email,
     send_portfolio_artist_sale_email,
     send_collection_completion_email,
+    send_post_auction_watchlist_email,
 )
 
 # Backward-compat alias used by tasks.py alert broadcasting

@@ -843,3 +843,100 @@ def send_annual_reviews():
         except Exception as e:
             logger.error("annual_review_failed user=%s error=%s", user.email, e)
     logger.info("annual_reviews_sent count=%d", sent)
+
+
+# ── POST-AUCTION WATCHLIST ─────────────────────────────────────────────────────
+
+def _check_post_auction_watchlist():
+    """Daily 09:00 UTC — 'Did you buy this?' email for watchlist lots that ended 12–48h ago.
+
+    Skipped if:
+    - alert already sent for this (user, lot) pair
+    - user already declared a purchase (DecisionArchive entry exists)
+    """
+    from app.services.email_alerts import send_post_auction_watchlist_email
+    from app.models.db_models import (
+        User, Lot, Wishlist, Alert, AlertChannel, DecisionArchive,
+    )
+    from sqlalchemy import select
+
+    now = datetime.now(timezone.utc)
+    window_start = now - timedelta(hours=48)
+    window_end   = now - timedelta(hours=12)
+
+    db = _get_sync_db()
+    try:
+        rows = db.execute(
+            select(User, Lot)
+            .join(Wishlist, Wishlist.lot_id == Lot.id)
+            .join(User, User.id == Wishlist.user_id)
+            .where(
+                Lot.auction_date.between(window_start, window_end),
+                User.is_active == True,
+            )
+        ).all()
+
+        already_sent = {
+            (str(uid), str(lid))
+            for uid, lid in db.execute(
+                select(Alert.user_id, Alert.lot_id).where(Alert.message.like("POST_AUCTION_%"))
+            ).all()
+        }
+
+        already_purchased = {
+            (str(uid), str(lid))
+            for uid, lid in db.execute(
+                select(DecisionArchive.user_id, DecisionArchive.lot_id)
+                .where(DecisionArchive.lot_id.isnot(None))
+            ).all()
+        }
+    finally:
+        db.close()
+
+    sent = 0
+    for user, lot in rows:
+        key = (str(user.id), str(lot.id))
+        if key in already_sent or key in already_purchased:
+            continue
+        try:
+            estimate = ""
+            if lot.estimate_low and lot.estimate_high:
+                estimate = f"€{int(lot.estimate_low):,}–€{int(lot.estimate_high):,}"
+            elif lot.estimate_low:
+                estimate = f"€{int(lot.estimate_low):,}+"
+
+            lot_url = f"{settings.frontend_url}/app/lot/{lot.id}"
+            lang = getattr(user, "language", "fr") or "fr"
+
+            _run(send_post_auction_watchlist_email(
+                to_email=user.email,
+                lot_title=lot.title or "Lot",
+                artist_name=lot.artist_name_raw or "",
+                auction_house=lot.auction_house_name or "",
+                estimate=estimate,
+                score=int(lot.deal_score or 0),
+                lot_url=lot_url,
+                lang=lang,
+            ))
+
+            db2 = _get_sync_db()
+            try:
+                db2.add(Alert(
+                    user_id=user.id,
+                    lot_id=lot.id,
+                    channel=AlertChannel.EMAIL,
+                    recipient=user.email,
+                    message=f"POST_AUCTION_{user.id}_{lot.id}",
+                    deal_score_at_send=lot.deal_score,
+                    sent_at=now,
+                    is_delivered=True,
+                ))
+                db2.commit()
+            finally:
+                db2.close()
+
+            sent += 1
+        except Exception as e:
+            logger.error("post_auction_watchlist_failed user=%s lot=%s error=%s", user.email, lot.id, e)
+
+    logger.info("post_auction_watchlist_sent count=%d", sent)

@@ -585,3 +585,37 @@ async def send_collection_completion_email(
 {cta(_cta, lot_url, gold=True)}
 """
     return await send_email(to_email, _subject, html_email(content, "Collection completion"), ALERT_FROM)
+
+
+async def send_post_auction_watchlist_email(
+    to_email: str, lot_title: str, artist_name: str, auction_house: str,
+    estimate: str, score: int, lot_url: str,
+    user_id: Optional[str] = None, db=None,
+    lang: str = "fr",
+) -> bool:
+    """Email — post-auction follow-up for watchlisted lot (~24h after auction ends)."""
+    if not await _pref_ok(user_id, "auction_closing_24h", db): return False
+    is_fr = lang == "fr"
+    _label = "ENCHÈRE TERMINÉE" if is_fr else "AUCTION ENDED"
+    _h1 = "Avez-vous acheté ce lot ?" if is_fr else "Did you buy this lot?"
+    _body = (
+        f"L'enchère pour <strong>{lot_title}</strong> de <strong>{artist_name}</strong> chez {auction_house} est maintenant terminée. "
+        f"Si vous l'avez acheté, enregistrez votre achat dans Nautilus pour suivre sa valeur dans le temps et construire votre track record."
+        if is_fr else
+        f"The auction for <strong>{lot_title}</strong> by <strong>{artist_name}</strong> at {auction_house} is now over. "
+        f"If you bought it, record your purchase in Nautilus to track its value over time and build your track record."
+    )
+    _cta = "Déclarer mon achat" if is_fr else "Record my purchase"
+    _subject = (
+        f"Avez-vous acheté {lot_title} ?"
+        if is_fr else
+        f"Did you buy {lot_title}?"
+    )
+    content = f"""
+{label(_label)}
+<h1>{_h1}</h1>
+<p>{_body}</p>
+{lot_card(artist_name.upper(), lot_title, auction_house, f"Est. {estimate}", score=score)}
+{cta(_cta, lot_url, gold=True)}
+"""
+    return await send_email(to_email, _subject, html_email(content, _h1), ALERT_FROM)
