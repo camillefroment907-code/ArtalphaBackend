@@ -749,19 +749,32 @@ export default function OpportunityDetail() {
           })()}
 
           {/* Block 4 — MAX BID */}
-          {avoidAbove && (
+          {avoidAbove && maxBidSource !== 'estimate' && (
             <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? 'MAX BID RENTABLE' : 'MAX PROFITABLE BID'}</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>{fmtExact(avoidAbove)}</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
-                {maxBidSource === 'p50'
+                {maxBidSource === 'comparables_proches'
                   ? (isFr ? 'Basé sur les ventes réelles — marge 10%' : 'Based on real sales — 10% margin')
-                  : maxBidSource === 'median'
+                  : maxBidSource === 'comparables_partiels'
                   ? (isFr ? 'Basé sur les comparables — marge 10%' : 'Based on comparables — 10% margin')
-                  : maxBidSource === 'estimate'
-                  ? (isFr ? 'Basé sur l\'estimation — indicatif' : 'Based on estimate — indicative only')
+                  : maxBidSource === 'ventes_artiste'
+                  ? (isFr ? 'Ventes artiste (médium ajusté) — marge 10%' : 'Artist sales (medium-adjusted) — 10% margin')
                   : (isFr ? 'Au-delà : perte garantie' : 'Beyond this: guaranteed loss')}
               </div>
+            </div>
+          )}
+          {(!avoidAbove || maxBidSource === 'estimate') && (
+            <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? 'MAX BID' : 'MAX BID'}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>
+                {isFr ? 'Données insuffisantes' : 'Insufficient data'}
+              </div>
+              {estLow > 0 && (
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.25)', marginTop: '2px' }}>
+                  {isFr ? `Basez-vous sur ${fmtExact(estLow)}–${fmtExact(estHigh)}` : `Refer to ${fmtExact(estLow)}–${fmtExact(estHigh)}`}
+                </div>
+              )}
             </div>
           )}
 
@@ -864,17 +877,33 @@ export default function OpportunityDetail() {
 
             {/* À ne pas dépasser */}
             <div style={{ padding: '12px 14px', background: '#FFFBEB', display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#92400E', letterSpacing: '2px', textTransform: 'uppercase' as const }}>
-                {isFr ? 'À NE PAS DÉPASSER' : 'DO NOT EXCEED'}
-              </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '26px', fontWeight: 800, color: AMB, lineHeight: 1 }}>
-                {avoidAbove ? fmtExact(avoidAbove) : '—'}
-              </div>
-              <div style={{ fontSize: '10px', color: '#B45309', fontWeight: 500 }}>
-                {maxBidSource === 'estimate'
-                  ? (isFr ? 'Indicatif — estimation seule' : 'Indicative — estimate only')
-                  : (isFr ? 'Perte garantie au-delà' : 'Loss guaranteed above')}
-              </div>
+              {avoidAbove && maxBidSource !== 'estimate' ? (
+                <>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#92400E', letterSpacing: '2px', textTransform: 'uppercase' as const }}>
+                    {isFr ? 'À NE PAS DÉPASSER' : 'DO NOT EXCEED'}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '26px', fontWeight: 800, color: AMB, lineHeight: 1 }}>
+                    {fmtExact(avoidAbove)}
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#B45309', fontWeight: 500 }}>
+                    {isFr ? 'Perte garantie au-delà' : 'Loss guaranteed above'}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#92400E', letterSpacing: '2px', textTransform: 'uppercase' as const }}>
+                    {isFr ? 'BUDGET MAX' : 'MAX BUDGET'}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: '#B45309', lineHeight: 1.3, textAlign: 'center' as const }}>
+                    {isFr ? 'Données insuffisantes' : 'Insufficient data'}
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#B45309', textAlign: 'center' as const }}>
+                    {estLow > 0
+                      ? (isFr ? `Basez-vous sur ${fmtExact(estLow)}–${fmtExact(estHigh)}` : `Refer to ${fmtExact(estLow)}–${fmtExact(estHigh)}`)
+                      : (isFr ? 'Estimation non disponible' : 'No estimate available')}
+                  </div>
+                </>
+              )}
             </div>
 
             <div style={{ background: '#E8E4DC' }} />
