@@ -2385,8 +2385,12 @@ async def confirm_purchase(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Record a purchase decision in the user's Decision Archive."""
-    lot = (await db.execute(select(Lot).where(Lot.id == lot_id))).scalar_one_or_none()
+    """Record a purchase in the Decision Archive AND add to the user's portfolio."""
+    from app.models.db_models import PortfolioItem
+
+    lot = (await db.execute(
+        select(Lot).options(selectinload(Lot.artist)).where(Lot.id == lot_id)
+    )).scalar_one_or_none()
     if not lot:
         raise HTTPException(404, "Lot not found")
 
@@ -2395,6 +2399,7 @@ async def confirm_purchase(
     except ValueError:
         raise HTTPException(422, "Invalid purchase_date — use YYYY-MM-DD")
 
+    # ── 1. Decision Archive entry ─────────────────────────────────────────────
     entry = DecisionArchive(
         lot_id=lot.id,
         user_id=current_user.id,
@@ -2405,6 +2410,36 @@ async def confirm_purchase(
         notes=body.notes,
     )
     db.add(entry)
+
+    # ── 2. Portfolio item (idempotent — skip if already tracked) ─────────────
+    existing_pi = (await db.execute(
+        select(PortfolioItem).where(
+            PortfolioItem.user_id == current_user.id,
+            PortfolioItem.lot_id == lot.id,
+        )
+    )).scalar_one_or_none()
+
+    portfolio_item_id: str | None = None
+    if not existing_pi:
+        pi = PortfolioItem(
+            user_id=current_user.id,
+            lot_id=lot.id,
+            title=lot.title or "Lot sans titre",
+            artist_name=lot.artist_name_raw,
+            medium=lot.medium,
+            dimensions=lot.dimensions,
+            image_url=lot.image_url,
+            purchase_price_eur=body.purchase_price,
+            purchase_date=purchase_date,
+            purchase_source=body.purchase_source,
+            notes=body.notes,
+        )
+        db.add(pi)
+        await db.flush()   # get id before commit
+        portfolio_item_id = str(pi.id)
+    else:
+        portfolio_item_id = str(existing_pi.id)
+
     await db.commit()
     await db.refresh(entry)
 
@@ -2415,4 +2450,5 @@ async def confirm_purchase(
         "purchase_price": entry.purchase_price,
         "purchase_date": entry.purchase_date.isoformat(),
         "purchase_source": entry.purchase_source,
+        "portfolio_item_id": portfolio_item_id,
     }

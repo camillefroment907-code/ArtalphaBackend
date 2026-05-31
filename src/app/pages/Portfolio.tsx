@@ -329,6 +329,14 @@ export default function Portfolio() {
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [watchlistLoading, setWatchlistLoading] = useState(false);
 
+  // ── J'ai acheté — inline purchase form in watchlist ────────
+  const [purchaseFormId, setPurchaseFormId]     = useState<string | null>(null);
+  const [purchasePrice, setPurchasePrice]       = useState('');
+  const [purchaseDate, setPurchaseDate]         = useState(() => new Date().toISOString().split('T')[0]);
+  const [purchaseSource, setPurchaseSource]     = useState<'auction' | 'gallery' | 'private'>('auction');
+  const [purchaseLoading, setPurchaseLoading]   = useState(false);
+  const [purchasedLotIds, setPurchasedLotIds]   = useState<string[]>([]);
+
   // ── Favorite artists ───────────────────────────────────────
   const [favoriteArtists, setFavoriteArtists] = useState<any[]>([]);
   const [artistsLoading, setArtistsLoading] = useState(false);
@@ -2512,86 +2520,181 @@ export default function Portfolio() {
                   return (
                     <div key={item.watchlist_id} style={{
                       background: 'white',
-                      border: `1px solid ${isUrgent ? 'var(--gold)' : 'var(--border)'}`,
-                      borderLeft: `3px solid ${isUrgent ? 'var(--gold)' : isPast ? 'var(--border)' : 'var(--electric)'}`,
+                      border: `1px solid ${isUrgent ? 'var(--gold)' : isPast && !purchasedLotIds.includes(item.lot_id) ? 'rgba(26,107,60,0.2)' : 'var(--border)'}`,
+                      borderLeft: `3px solid ${isUrgent ? 'var(--gold)' : isPast ? '#1A6B3C' : 'var(--electric)'}`,
                       borderRadius: '8px', padding: '16px 20px',
-                      display: 'flex', gap: '16px', alignItems: 'center',
-                      opacity: isPast ? 0.6 : 1,
                       transition: 'box-shadow 0.15s',
-                    }}
-                      onMouseEnter={e => !isPast && ((e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-sm)')}
-                      onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.boxShadow = 'none')}
-                    >
-                      {/* Image */}
-                      <div style={{ width: '72px', height: '72px', background: 'var(--bg-subtle)', borderRadius: '6px', flexShrink: 0, overflow: 'hidden' }}>
-                        {item.lot?.image_url && <img src={item.lot.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                      </div>
+                      flexDirection: 'column' as const,
+                      display: 'flex', gap: '12px',
+                    }}>
+                      <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                        {/* Image */}
+                        <div style={{ width: '72px', height: '72px', background: 'var(--bg-subtle)', borderRadius: '6px', flexShrink: 0, overflow: 'hidden' }}>
+                          {item.lot?.image_url && <img src={item.lot.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                        </div>
 
-                      {/* Info */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
-                          <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                            {item.lot?.artist_name}
-                          </span>
-                          {(item.lot?.deal_score ?? 0) >= 83 && (
-                            <span style={{ fontSize: '8px', fontWeight: 700, color: 'var(--gold-dim)', background: 'var(--gold-subtle)', padding: '1px 6px', borderRadius: '3px', fontFamily: 'var(--font-mono)' }}>
-                              EXCEPTIONAL
+                        {/* Info */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>
+                              {item.lot?.artist_name}
                             </span>
-                          )}
+                            {(item.lot?.deal_score ?? 0) >= 83 && (
+                              <span style={{ fontSize: '8px', fontWeight: 700, color: 'var(--gold-dim)', background: 'var(--gold-subtle)', padding: '1px 6px', borderRadius: '3px', fontFamily: 'var(--font-mono)' }}>
+                                EXCEPTIONAL
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '6px' }}>
+                            {item.lot?.title}
+                          </div>
+                          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' as const }}>
+                            {item.lot?.current_price && (
+                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>
+                                €{Number(item.lot.current_price).toLocaleString()}
+                              </span>
+                            )}
+                            {item.lot?.deal_score && (
+                              <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--electric)', background: 'var(--electric-subtle)', padding: '2px 7px', borderRadius: '3px', border: '1px solid var(--electric-border)' }}>
+                                Score {item.lot.deal_score}/100
+                              </span>
+                            )}
+                            {item.lot?.auction_house && (
+                              <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>{item.lot.auction_house}</span>
+                            )}
+                            {isToday && (
+                              <span style={{ fontSize: '10px', fontWeight: 700, color: 'white', background: 'var(--red)', padding: '2px 8px', borderRadius: '3px', fontFamily: 'var(--font-mono)' }}>
+                                🔴 CLOSES TODAY
+                              </span>
+                            )}
+                            {isUrgent && !isToday && (
+                              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold-dim)', background: 'var(--gold-subtle)', padding: '2px 8px', borderRadius: '3px', fontFamily: 'var(--font-mono)' }}>
+                                ⚡ {daysLeft}d left
+                              </span>
+                            )}
+                            {!isUrgent && !isPast && daysLeft !== null && (
+                              <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>
+                                {auctionDate?.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} · {daysLeft}d
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '6px' }}>
-                          {item.lot?.title}
-                        </div>
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                          {item.lot?.current_price && (
-                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>
-                              €{Number(item.lot.current_price).toLocaleString()}
-                            </span>
-                          )}
-                          {item.lot?.deal_score && (
-                            <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--electric)', background: 'var(--electric-subtle)', padding: '2px 7px', borderRadius: '3px', border: '1px solid var(--electric-border)' }}>
-                              Score {item.lot.deal_score}/100
-                            </span>
-                          )}
-                          {item.lot?.auction_house && (
-                            <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>{item.lot.auction_house}</span>
-                          )}
-                          {isToday && (
-                            <span style={{ fontSize: '10px', fontWeight: 700, color: 'white', background: 'var(--red)', padding: '2px 8px', borderRadius: '3px', fontFamily: 'var(--font-mono)' }}>
-                              🔴 CLOSES TODAY
-                            </span>
-                          )}
-                          {isUrgent && !isToday && (
-                            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold-dim)', background: 'var(--gold-subtle)', padding: '2px 8px', borderRadius: '3px', fontFamily: 'var(--font-mono)' }}>
-                              ⚡ {daysLeft}d left
-                            </span>
-                          )}
-                          {!isUrgent && !isPast && daysLeft !== null && (
-                            <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>
-                              {auctionDate?.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} · {daysLeft}d
-                            </span>
-                          )}
-                          {isPast && <span style={{ fontSize: '11px', color: 'var(--text-ghost)' }}>Auction ended</span>}
-                        </div>
-                      </div>
 
-                      {/* Actions */}
-                      <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                        {!isPast && (
+                        {/* Actions */}
+                        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                           <button
                             onClick={() => navigate(`/app/opportunities/${item.lot_id}`)}
-                            style={{ padding: '7px 14px', background: 'var(--navy)', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 700, color: 'white', cursor: 'pointer', letterSpacing: '0.04em' }}
+                            style={{ padding: '7px 14px', background: isPast ? 'transparent' : 'var(--navy)', border: isPast ? '1px solid var(--border)' : 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 700, color: isPast ? 'var(--text-3)' : 'white', cursor: 'pointer', letterSpacing: '0.04em' }}
                           >
-                            View →
+                            {isPast ? (currentLang === 'fr' ? 'Voir' : 'View') : 'View →'}
                           </button>
-                        )}
-                        <button
-                          onClick={() => removeFromWatchlist(item.lot_id)}
-                          style={{ padding: '7px 10px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-3)', cursor: 'pointer' }}
-                        >
-                          ×
-                        </button>
+                          <button
+                            onClick={() => removeFromWatchlist(item.lot_id)}
+                            style={{ padding: '7px 10px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-3)', cursor: 'pointer' }}
+                          >
+                            ×
+                          </button>
+                        </div>
                       </div>
+
+                      {/* ── Past lot: "Avez-vous acheté ce lot ?" ── */}
+                      {isPast && !purchasedLotIds.includes(item.lot_id) && (
+                        <div style={{ borderTop: '1px solid rgba(26,107,60,0.12)', paddingTop: '12px' }}>
+                          {purchaseFormId !== item.lot_id ? (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                              <span style={{ fontSize: '12px', color: '#1A6B3C', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
+                                {currentLang === 'fr' ? 'Avez-vous acheté ce lot ?' : 'Did you buy this lot?'}
+                              </span>
+                              <button
+                                onClick={() => {
+                                  setPurchaseFormId(item.lot_id);
+                                  setPurchasePrice('');
+                                  setPurchaseDate(new Date().toISOString().split('T')[0]);
+                                  setPurchaseSource('auction');
+                                }}
+                                style={{ padding: '6px 14px', background: '#1A6B3C', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 700, color: 'white', cursor: 'pointer', letterSpacing: '0.04em', flexShrink: 0 }}
+                              >
+                                {currentLang === 'fr' ? 'J\'ai acheté' : 'I bought it'}
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px' }}>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <input
+                                  type="number"
+                                  placeholder={currentLang === 'fr' ? 'Prix marteau (€)' : 'Hammer price (€)'}
+                                  value={purchasePrice}
+                                  onChange={e => setPurchasePrice(e.target.value)}
+                                  style={{ flex: 1, border: '1px solid var(--border)', borderRadius: '6px', padding: '7px 10px', fontSize: '12px', fontFamily: 'var(--font-mono)', outline: 'none' }}
+                                />
+                                <input
+                                  type="date"
+                                  value={purchaseDate}
+                                  onChange={e => setPurchaseDate(e.target.value)}
+                                  style={{ width: '140px', border: '1px solid var(--border)', borderRadius: '6px', padding: '7px 10px', fontSize: '12px', fontFamily: 'var(--font-mono)', outline: 'none' }}
+                                />
+                                <select
+                                  value={purchaseSource}
+                                  onChange={e => setPurchaseSource(e.target.value as 'auction' | 'gallery' | 'private')}
+                                  style={{ border: '1px solid var(--border)', borderRadius: '6px', padding: '7px 10px', fontSize: '12px', fontFamily: 'var(--font-mono)', background: 'white', cursor: 'pointer' }}
+                                >
+                                  <option value="auction">{currentLang === 'fr' ? 'Enchères' : 'Auction'}</option>
+                                  <option value="gallery">{currentLang === 'fr' ? 'Galerie' : 'Gallery'}</option>
+                                  <option value="private">{currentLang === 'fr' ? 'Privé' : 'Private'}</option>
+                                </select>
+                              </div>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  onClick={async () => {
+                                    if (!purchasePrice) return;
+                                    setPurchaseLoading(true);
+                                    try {
+                                      const r = await fetch(`${BACKEND}/api/lots/${item.lot_id}/confirm-purchase`, {
+                                        method: 'POST',
+                                        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                          purchase_price: parseFloat(purchasePrice),
+                                          purchase_date: purchaseDate,
+                                          purchase_source: purchaseSource,
+                                        }),
+                                      });
+                                      if (r.ok) {
+                                        setPurchasedLotIds(prev => [...prev, item.lot_id]);
+                                        setPurchaseFormId(null);
+                                      }
+                                    } finally {
+                                      setPurchaseLoading(false);
+                                    }
+                                  }}
+                                  disabled={purchaseLoading || !purchasePrice}
+                                  style={{ flex: 1, padding: '7px 14px', background: !purchasePrice ? '#ccc' : '#1A6B3C', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 700, color: 'white', cursor: purchaseLoading || !purchasePrice ? 'default' : 'pointer' }}
+                                >
+                                  {purchaseLoading ? '...' : (currentLang === 'fr' ? 'Enregistrer dans mon portfolio' : 'Save to portfolio')}
+                                </button>
+                                <button
+                                  onClick={() => setPurchaseFormId(null)}
+                                  style={{ padding: '7px 12px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-3)', cursor: 'pointer' }}
+                                >
+                                  {currentLang === 'fr' ? 'Annuler' : 'Cancel'}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Confirmation after purchase */}
+                      {isPast && purchasedLotIds.includes(item.lot_id) && (
+                        <div style={{ borderTop: '1px solid rgba(26,107,60,0.12)', paddingTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ color: '#1A6B3C', fontSize: '12px' }}>✓</span>
+                          <span style={{ fontSize: '12px', color: '#1A6B3C', fontFamily: 'var(--font-mono)' }}>
+                            {currentLang === 'fr' ? 'Ajouté à votre portfolio' : 'Added to your portfolio'}
+                          </span>
+                          <button onClick={() => navigate('/app/portfolio')} style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--electric)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>
+                            {currentLang === 'fr' ? 'Voir le portfolio →' : 'View portfolio →'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
