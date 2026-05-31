@@ -104,6 +104,8 @@ export default function OpportunityDetail() {
   const [showMemo, setShowMemo]           = useState(false);
   const [comparables, setComparables]     = useState<any[]>([]);
   const [marketAnalysis, setMarketAnalysis] = useState<any>(null);
+  const [maxBidFromApi, setMaxBidFromApi]   = useState<number | null>(null);
+  const [maxBidSource, setMaxBidSource]     = useState<string | null>(null);
   const [stickyVisible, setStickyVisible] = useState(false);
 
   const [subscribed, setSubscribed]       = useState(false);
@@ -180,6 +182,8 @@ export default function OpportunityDetail() {
     }).then(r => r.json()).then(data => {
       setComparables(data.comparables || []);
       setMarketAnalysis(data.market_analysis || null);
+      setMaxBidFromApi(data.max_bid ?? null);
+      setMaxBidSource(data.max_bid_source ?? null);
     }).catch(() => {});
   }, [id]);
 
@@ -340,22 +344,8 @@ export default function OpportunityDetail() {
   const buyerPremiumPct = Math.round((premiumMultiplier - 1) * 100);
   const bidBase = lot.estimate_high || lot.estimate_low || lot.current_price || null;
   const maxBid = bidBase ? Math.round(bidBase * premiumMultiplier) : null;
-  const breakeven = lot.real_cost?.breakeven_hammer ?? null;
-  const compPricesForBid = comparables
-    .map((c: any) => c.current_price || 0)
-    .filter((v: number) => v > 1000);
-  const medianComp = compPricesForBid.length >= 2
-    ? [...compPricesForBid].sort((a, b) => a - b)[Math.floor(compPricesForBid.length / 2)]
-    : null;
-  const avoidAbove = (() => {
-    if (!breakeven) return null;
-    if (medianComp && medianComp > breakeven * 3) {
-      const estHigh = lot.estimate_high ?? breakeven * 5;
-      return Math.round(Math.min(medianComp * 0.6, estHigh * 3.0));
-    }
-    return Math.round(breakeven * 0.85);
-  })();
-  const avoidAboveUsedComps = !!(medianComp && medianComp > (breakeven ?? 0) * 3);
+  const avoidAbove = maxBidFromApi ?? null;
+  const avoidAboveUsedComps = maxBidFromApi != null;
   const daysUntilClose = lot.auction_date
     ? Math.max(0, Math.round((new Date(lot.auction_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null;
@@ -764,10 +754,12 @@ export default function OpportunityDetail() {
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? 'MAX BID RENTABLE' : 'MAX PROFITABLE BID'}</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>{fmtExact(avoidAbove ?? maxBid)}</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
-                {avoidAboveUsedComps && medianComp
-                  ? (isFr
-                      ? `Comparables médiane ${medianComp >= 1000 ? `€${(medianComp / 1000).toFixed(0)}k` : `€${medianComp}`} — marge 40%`
-                      : `Comparable median ${medianComp >= 1000 ? `€${(medianComp / 1000).toFixed(0)}k` : `€${medianComp}`} — 40% margin`)
+                {maxBidSource === 'p50'
+                  ? (isFr ? 'Basé sur les ventes réelles — marge 10%' : 'Based on real sales — 10% margin')
+                  : maxBidSource === 'median'
+                  ? (isFr ? 'Basé sur les comparables — marge 10%' : 'Based on comparables — 10% margin')
+                  : maxBidSource === 'estimate'
+                  ? (isFr ? 'Basé sur l\'estimation — indicatif' : 'Based on estimate — indicative only')
                   : (isFr ? 'Au-delà : perte garantie' : 'Beyond this: guaranteed loss')}
               </div>
             </div>

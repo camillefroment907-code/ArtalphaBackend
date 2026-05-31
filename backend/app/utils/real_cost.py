@@ -57,3 +57,28 @@ def compute_real_cost(
         "needed_gain_pct": needed_gain_pct,
         "buyers_premium_pct": round(premium_rate * 100, 1),
     }
+
+
+def compute_max_bid(
+    market_value: float,
+    auction_house: str | None,
+    profit_margin: float = 0.10,
+    holding_years: int = 3,
+) -> int:
+    """
+    Max hammer price to bid given a target resale market value.
+
+    Solves breakeven backwards:
+        market_value = bid × (1 + premium) × (1 + holding_rate) / (1 - seller_fee)
+    Then applies profit_margin safety factor.
+    """
+    house_key = (auction_house or "").lower()
+    premium_rate = _DEFAULT_PREMIUM
+    for key, rate in BUYERS_PREMIUM_RATES.items():
+        if key in house_key:
+            premium_rate = rate
+            break
+    seller_fee = 0.15
+    holding_rate = 0.006 * holding_years
+    breakeven_bid = market_value * (1 - seller_fee) / ((1 + premium_rate) * (1 + holding_rate))
+    return round(breakeven_bid * (1 - profit_margin))

@@ -28,7 +28,7 @@ _FX_TO_EUR: dict[str, float] = {
     'AUD': 0.59, 'CAD': 0.68,
 }
 
-from app.utils.real_cost import compute_real_cost
+from app.utils.real_cost import compute_real_cost, compute_max_bid
 from app.utils.estimation_bias import get_estimation_bias
 from app.utils.cycle_stage import get_cycle_stage
 from app.utils.consignment_alert import get_consignment_alert
@@ -2024,6 +2024,22 @@ async def get_comparables(
         except Exception:
             pass
 
+    # ── Max bid — cascade: p50 (≥5 sales) > median comps (≥2) > estimate_high ──
+    max_bid: int | None = None
+    max_bid_source: str | None = None
+    mv: float | None = None
+    if market_benchmarks and (market_benchmarks.get("based_on") or 0) >= 5:
+        mv = float(market_benchmarks["p50"])
+        max_bid_source = "p50"
+    elif median_price and len(comp_prices) >= 2:
+        mv = float(median_price)
+        max_bid_source = "median"
+    elif lot.estimate_high:
+        mv = float(lot.estimate_high) * 0.85
+        max_bid_source = "estimate"
+    if mv:
+        max_bid = compute_max_bid(mv, lot.auction_house_name)
+
     response = {
         "lot_id": lot_id,
         "reference": {
@@ -2035,6 +2051,8 @@ async def get_comparables(
         "comparables":  serialized,
         "data_source":  "historical_sales" if use_hammer else "active_listings",
         "market_benchmarks": market_benchmarks,
+        "max_bid": max_bid,
+        "max_bid_source": max_bid_source,
         "market_analysis": {
             "comparable_count":    comparable_count_total,
             "market_avg_price":    round(market_avg) if market_avg else None,
