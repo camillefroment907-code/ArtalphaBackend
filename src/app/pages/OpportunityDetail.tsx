@@ -243,13 +243,14 @@ export default function OpportunityDetail() {
   const price       = Number(lot.current_price || estimateMid || estLow || 0);
   const fairVal     = estHigh || price * 1.2;
   const upside    = Number(lot.pct_below_low_estimate || 0);
-  const upsidePct = upside > 0 ? upside : (fairVal > price ? ((fairVal - price) / price) * 100 : 0);
+  const upsidePct = upside > 0 ? upside : 0;
   // Use API projections when available, fallback to CAGR calc
   const _projMap: Record<number, { projected_value_eur: number; gain_pct: number }> = {};
   if (Array.isArray(lot.projection?.years)) {
     for (const p of lot.projection.years) _projMap[p.years] = p;
   }
-  const projCagr = lot.projection?.cagr_pct || 7;
+  const projCagr = lot.projection?.cagr_pct ?? 0;
+  const hasProjection = !!lot.projection?.cagr_pct;
   const proj      = (years: number): number =>
     _projMap[years]?.projected_value_eur ?? Math.round(price * Math.pow(1 + projCagr / 100, years));
   const projGainPct = (years: number): number =>
@@ -258,9 +259,9 @@ export default function OpportunityDetail() {
     { year: isFr ? "Aujourd'hui" : 'Now', optimistic: price, value: price, conservative: price },
     ...[1, 3, 5, 10].map(y => ({
       year: `${y}${isFr ? 'an' : 'yr'}`,
-      optimistic:   _projMap[y]?.optimistic_eur   ?? Math.round(price * (1 + (projCagr * 1.5) / 100) ** y),
-      value:        _projMap[y]?.projected_value_eur ?? Math.round(price * (1 + projCagr / 100) ** y),
-      conservative: _projMap[y]?.conservative_eur ?? Math.round(price * (1 + (projCagr * 0.3) / 100) ** y),
+      optimistic:   _projMap[y]?.optimistic_eur   ?? price,
+      value:        _projMap[y]?.projected_value_eur ?? price,
+      conservative: _projMap[y]?.conservative_eur ?? price,
     })),
   ];
 
@@ -326,9 +327,6 @@ export default function OpportunityDetail() {
 
   const dealScore     = lot.deal_score || 0;
   const stickyTier    = dealScore >= 83 ? (isFr ? 'EXCEPTIONNEL' : 'EXCEPTIONAL') : dealScore >= 77 ? (isFr ? 'FORT' : 'STRONG') : (isFr ? 'INTÉRESSANT' : 'INTERESTING');
-  const totalCost     = realCost ? realCost.cost_basis : price;
-  const breakEvenGain = realCost ? realCost.needed_gain_pct : 26;
-  const netGain       = upsidePct - breakEvenGain;
 
   const getBuyerPremium = (houseName: string): number => {
     const h = (houseName || '').toLowerCase();
@@ -343,6 +341,10 @@ export default function OpportunityDetail() {
   };
   const premiumMultiplier = getBuyerPremium(lot.auction_house_name || '');
   const buyerPremiumPct = Math.round((premiumMultiplier - 1) * 100);
+
+  const totalCost     = realCost ? realCost.cost_basis : (price > 0 ? Math.round(price * premiumMultiplier) : null);
+  const breakEvenGain = realCost?.needed_gain_pct ?? null;
+  const netGain       = breakEvenGain != null ? upsidePct - breakEvenGain : null;
   const avoidAbove = maxBidFromApi ?? null;
   const avoidAboveUsedComps = maxBidFromApi != null;
   const daysUntilClose = lot.auction_date
@@ -397,8 +399,7 @@ export default function OpportunityDetail() {
   const scorePillars = [
     { label: isFr ? 'VALORISATION' : 'PRICING',    value: Math.round(sb.below_estimate_score ?? 0) },
     { label: isFr ? 'LIQUIDITÉ' : 'LIQUIDITY',      value: Math.round(sb.liquidity_score ?? lot.artist?.liquidity_score ?? 0) },
-    { label: 'MOMENTUM',                             value: lot.artist?.trend === 'up' ? 75 : lot.artist?.trend === 'stable' ? 50 : lot.artist?.trend === 'down' ? 25 : 0 },
-    { label: isFr ? 'TAUX DE VENTE' : 'SELL-THR',  value: Math.round(lot.artist?.sell_through_rate ?? 0) },
+    { label: isFr ? 'TAUX DE VENTE' : 'SELL-THR',  value: Math.round((lot.artist?.sell_through_rate ?? 0) * 100) },
   ].filter(p => p.value > 0);
 
   return (
@@ -833,8 +834,8 @@ export default function OpportunityDetail() {
             <div style={{ color: '#C6E8D0', margin: '0 4px' }}>|</div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#6B7280' }}>
               {isFr
-                ? `Mise à prix ${fmtExact(price)} · enchère${daysUntilClose != null ? ` · clôture dans ${daysUntilClose} jour${daysUntilClose > 1 ? 's' : ''}` : ''}`
-                : `Starting bid ${fmtExact(price)} · auction${daysUntilClose != null ? ` · closes in ${daysUntilClose} day${daysUntilClose > 1 ? 's' : ''}` : ''}`}
+                ? `${lot.current_price ? 'Enchère en cours' : 'Estimation'} ${fmtExact(price)} · enchère${daysUntilClose != null ? ` · clôture dans ${daysUntilClose} jour${daysUntilClose > 1 ? 's' : ''}` : ''}`
+                : `${lot.current_price ? 'Current bid' : 'Estimate'} ${fmtExact(price)} · auction${daysUntilClose != null ? ` · closes in ${daysUntilClose} day${daysUntilClose > 1 ? 's' : ''}` : ''}`}
             </div>
           </div>
 
@@ -844,12 +845,12 @@ export default function OpportunityDetail() {
             {/* Mise à prix */}
             <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '2px', textTransform: 'uppercase' as const }}>
-                {isFr ? 'MISE À PRIX' : 'STARTING BID'}
+                {lot.current_price ? (isFr ? 'MISE À PRIX' : 'STARTING BID') : (isFr ? 'ESTIMATION' : 'ESTIMATE')}
               </div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '26px', fontWeight: 800, color: '#0D1F35', lineHeight: 1 }}>
                 {fmtExact(price)}
               </div>
-              {(upsidePct >= 5 || dealScore >= 70) && (
+              {(upsidePct >= 5 && dealScore >= 70) && (
                 <div style={{ display: 'inline-block', fontSize: '8px', fontWeight: 700, color: '#166534', background: '#F0FDF4', border: '0.5px solid #BBF7D0', padding: '2px 6px', borderRadius: '2px', fontFamily: 'var(--font-mono)', letterSpacing: '0.5px', width: 'auto' }}>
                   {isFr ? 'BONNE ENTRÉE' : 'GOOD ENTRY'}
                 </div>
@@ -870,7 +871,9 @@ export default function OpportunityDetail() {
                 {avoidAbove ? fmtExact(avoidAbove) : '—'}
               </div>
               <div style={{ fontSize: '10px', color: '#B45309', fontWeight: 500 }}>
-                {isFr ? 'Perte garantie au-delà' : 'Loss guaranteed above'}
+                {maxBidSource === 'estimate'
+                  ? (isFr ? 'Indicatif — estimation seule' : 'Indicative — estimate only')
+                  : (isFr ? 'Perte garantie au-delà' : 'Loss guaranteed above')}
               </div>
             </div>
 
@@ -919,10 +922,10 @@ export default function OpportunityDetail() {
           {/* Coût réel strip */}
           <div style={{ display: 'flex', alignItems: 'center', padding: '7px 20px', background: '#F5F4F0', borderTop: '0.5px solid #E8E4DC' }}>
             {[
-              { lbl: isFr ? 'COÛT RÉEL' : 'REAL COST', val: fmtExact(realCost?.cost_basis || Math.round(price * premiumMultiplier)), color: LTT1 },
+              { lbl: isFr ? 'COÛT RÉEL' : 'REAL COST', val: totalCost ? fmtExact(totalCost) : '—', color: LTT1 },
               { lbl: isFr ? 'FRAIS ACHETEUR' : 'BUYER FEES', val: `+${buyerPremiumPct}%`, color: LTT1 },
               { lbl: isFr ? 'RENTABILITÉ DÈS' : 'BREAK-EVEN AT', val: realCost?.breakeven_hammer ? fmtExact(Math.round(realCost.breakeven_hammer)) : '—', color: AMB },
-              { lbl: isFr ? 'PROGRESSION NÉCESSAIRE' : 'NEEDED GAIN', val: `+${Math.round(breakEvenGain)}%`, color: LTT1 },
+              { lbl: isFr ? 'PROGRESSION NÉCESSAIRE' : 'NEEDED GAIN', val: breakEvenGain != null ? `+${Math.round(breakEvenGain)}%` : '—', color: LTT1 },
             ].map((item, i, arr) => (
               <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: '5px', paddingRight: i < arr.length - 1 ? '16px' : 0, borderRight: i < arr.length - 1 ? '0.5px solid #E0DDD8' : 'none', marginRight: i < arr.length - 1 ? '16px' : 0 }}>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '1.5px', textTransform: 'uppercase' as const }}>{item.lbl}</div>
@@ -972,9 +975,9 @@ export default function OpportunityDetail() {
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', paddingTop: '10px', borderTop: '0.5px solid #E8E4DC' }}>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT2, fontWeight: 600 }}>COÛT TOTAL</span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', color: GOLD, fontWeight: 700 }}>{fmt(totalCost)}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', color: GOLD, fontWeight: 700 }}>{totalCost ? fmt(totalCost) : '—'}</span>
               </div>
-              {realCost && (
+              {realCost && breakEvenGain != null && (
                 <>
                   <div style={{ marginTop: '12px', borderTop: '0.5px solid #E8E4DC', paddingTop: '10px' }}>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, marginBottom: '4px' }}>Nécessite +{breakEvenGain.toFixed(1)}% pour rentabiliser</div>
@@ -1164,7 +1167,7 @@ export default function OpportunityDetail() {
                   preview={<div style={{ height:'220px', background:LT, borderRadius:'8px' }}/>}
                 />
               </div>
-            ) : canSeeAnalysis && visibleYears.length > 0 && (
+            ) : canSeeAnalysis && visibleYears.length > 0 && hasProjection && (
               <div style={{ padding: '0 40px 24px' }}>
                 <div style={wCard}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
@@ -1244,7 +1247,7 @@ export default function OpportunityDetail() {
                         ))}
                       </div>
                       <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', marginBottom: '16px', fontStyle: 'italic' }}>
-                        {isFr ? '🔒 Rejoint par 1 200+ collectionneurs' : '🔒 Joined by 1,200+ collectors'}
+                        {isFr ? '🔒 Réservé aux membres Investor' : '🔒 Investor members only'}
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
                         <button
