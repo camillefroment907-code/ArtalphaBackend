@@ -237,10 +237,11 @@ export default function OpportunityDetail() {
   );
 
   // ── DATA ──────────────────────────────────────────────────────────────────────
-  const price     = Number(lot.current_price || lot.estimate_low || 0);
-  const estLow    = Number(lot.estimate_low || 0);
-  const estHigh   = Number(lot.estimate_high || lot.estimate_low || 0);
-  const fairVal   = estHigh || price * 1.2;
+  const estLow      = Number(lot.estimate_low || 0);
+  const estHigh     = Number(lot.estimate_high || lot.estimate_low || 0);
+  const estimateMid = estLow && estHigh ? Math.round((estLow + estHigh) / 2) : null;
+  const price       = Number(lot.current_price || estimateMid || estLow || 0);
+  const fairVal     = estHigh || price * 1.2;
   const upside    = Number(lot.pct_below_low_estimate || 0);
   const upsidePct = upside > 0 ? upside : (fairVal > price ? ((fairVal - price) / price) * 100 : 0);
   // Use API projections when available, fallback to CAGR calc
@@ -342,8 +343,6 @@ export default function OpportunityDetail() {
   };
   const premiumMultiplier = getBuyerPremium(lot.auction_house_name || '');
   const buyerPremiumPct = Math.round((premiumMultiplier - 1) * 100);
-  const bidBase = lot.estimate_high || lot.estimate_low || lot.current_price || null;
-  const maxBid = bidBase ? Math.round(bidBase * premiumMultiplier) : null;
   const avoidAbove = maxBidFromApi ?? null;
   const avoidAboveUsedComps = maxBidFromApi != null;
   const daysUntilClose = lot.auction_date
@@ -749,10 +748,10 @@ export default function OpportunityDetail() {
           })()}
 
           {/* Block 4 — MAX BID */}
-          {(avoidAbove ?? maxBid) && (
+          {avoidAbove && (
             <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? 'MAX BID RENTABLE' : 'MAX PROFITABLE BID'}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>{fmtExact(avoidAbove ?? maxBid)}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>{fmtExact(avoidAbove)}</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
                 {maxBidSource === 'p50'
                   ? (isFr ? 'Basé sur les ventes réelles — marge 10%' : 'Based on real sales — 10% margin')
@@ -962,8 +961,8 @@ export default function OpportunityDetail() {
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '16px' }}>COÛT RÉEL DÉTAILLÉ</div>
             <div style={{ background: '#F5F4F0', borderRadius: '10px', padding: '16px 18px' }}>
               {([
-                { k: 'Prix adjugé', v: price },
-                { k: `Frais acheteur (${buyerPremiumPct}%)`, v: Math.round(price * premiumMultiplier) - price },
+                { k: lot.current_price ? (isFr ? 'Enchère en cours' : 'Current bid') : (isFr ? 'Estimation' : 'Estimate'), v: realCost?.ref_price || price },
+                { k: `Frais acheteur (${buyerPremiumPct}%)`, v: realCost ? realCost.cost_basis - (realCost.ref_price || price) : Math.round(price * (premiumMultiplier - 1)) },
                 { k: 'Coût de détention (3 ans)', v: realCost?.holding_cost_3y || 0 },
               ] as { k: string; v: number }[]).filter(r => r.v > 0).map((r, i, arr) => (
                 <div key={r.k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: i < arr.length - 1 ? '0.5px solid #E8E4DC' : 'none' }}>

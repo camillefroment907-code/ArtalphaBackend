@@ -35,10 +35,29 @@ from app.utils.consignment_alert import get_consignment_alert
 from app.utils.provenance_risk import get_provenance_risk
 
 
+def _resolve_ref_price(lot) -> tuple[float | None, str | None]:
+    """Return (hammer_price, basis) for real cost calculation.
+
+    Prefers current_price (live bid), falls back to estimate midpoint,
+    then estimate_low alone — never uses estimate_low when estimate_high exists.
+    """
+    if lot.current_price:
+        return float(lot.current_price), "current_bid"
+    if lot.estimate_low and lot.estimate_high:
+        return (float(lot.estimate_low) + float(lot.estimate_high)) / 2.0, "estimate_mid"
+    if lot.estimate_low:
+        return float(lot.estimate_low), "estimate_low"
+    return None, None
+
+
 def lot_to_list_dict(lot) -> dict:
     """Minimal lot payload for list views — skip heavy fields."""
-    hammer = lot.current_price or lot.estimate_low
-    real_cost = compute_real_cost(float(hammer), lot.auction_house_name) if hammer else None
+    hammer, price_basis = _resolve_ref_price(lot)
+    real_cost = None
+    if hammer:
+        real_cost = compute_real_cost(hammer, lot.auction_house_name)
+        real_cost["ref_price"] = round(hammer)
+        real_cost["price_basis"] = price_basis
     return {
         "id": str(lot.id),
         "title": lot.title,
@@ -1600,8 +1619,14 @@ async def get_lot(
     lot_dict["width_cm"] = dims["width_cm"]
     lot_dict["height_cm"] = dims["height_cm"]
     lot_dict["dimensions_parsed"] = dims
-    hammer = lot.current_price or lot.estimate_low
-    lot_dict["real_cost"] = compute_real_cost(float(hammer), lot.auction_house_name) if hammer else None
+    hammer, price_basis = _resolve_ref_price(lot)
+    if hammer:
+        rc = compute_real_cost(hammer, lot.auction_house_name)
+        rc["ref_price"] = round(hammer)
+        rc["price_basis"] = price_basis
+        lot_dict["real_cost"] = rc
+    else:
+        lot_dict["real_cost"] = None
     lot_dict["estimation_bias"] = await get_estimation_bias(lot.auction_house_name, db)
     lot_dict["cycle_stage"] = await get_cycle_stage(lot.artist_name_raw, db)
     lot_dict["consignment_alert"] = await get_consignment_alert(lot.artist_name_raw, str(lot.id), db)
