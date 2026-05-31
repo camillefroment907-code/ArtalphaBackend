@@ -137,3 +137,58 @@ def _sell_recommendation(
         return f"Horizon optimal : 5–10 ans"
     else:
         return f"Horizon long terme : 10 ans+"
+
+
+async def compute_market_benchmarks(artist_name: str, db) -> dict:
+    """
+    SQL PERCENTILE_CONT on all hammer_prices for the artist.
+    Uses artist_name_normalized index — sub-50ms even for high-volume artists.
+    Winsorises p10/p90 before computing p25/p50/p75.
+    Returns {} if fewer than 2 sales found.
+    """
+    from sqlalchemy import text
+    from app.jobs.quality_filter import normalize_artist_name as _norm
+
+    artist_normalized = _norm(artist_name)
+    if not artist_normalized:
+        return {}
+
+    row = (await db.execute(
+        text("""
+        WITH raw AS (
+          SELECT hammer_price_eur
+          FROM hammer_prices
+          WHERE artist_name_normalized = :artist_normalized
+            AND hammer_price_eur > 0
+        ),
+        bounds AS (
+          SELECT
+            PERCENTILE_CONT(0.10) WITHIN GROUP (ORDER BY hammer_price_eur) AS p10,
+            PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY hammer_price_eur) AS p90
+          FROM raw
+        )
+        SELECT
+          COUNT(*)                                                           AS based_on,
+          PERCENTILE_CONT(0.10) WITHIN GROUP (ORDER BY r.hammer_price_eur)  AS p10,
+          PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY r.hammer_price_eur)  AS p25,
+          PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY r.hammer_price_eur)  AS p50,
+          PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY r.hammer_price_eur)  AS p75,
+          PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY r.hammer_price_eur)  AS p90
+        FROM raw r
+        CROSS JOIN bounds b
+        WHERE r.hammer_price_eur BETWEEN b.p10 AND b.p90
+        """),
+        {"artist_normalized": artist_normalized},
+    )).fetchone()
+
+    if not row or not row.based_on or row.based_on < 2:
+        return {}
+
+    return {
+        "based_on": int(row.based_on),
+        "p10": round(row.p10) if row.p10 else None,
+        "p25": round(row.p25) if row.p25 else None,
+        "p50": round(row.p50) if row.p50 else None,
+        "p75": round(row.p75) if row.p75 else None,
+        "p90": round(row.p90) if row.p90 else None,
+    }

@@ -117,6 +117,7 @@ from app.api.auth_utils import get_current_user_optional, get_current_user
 from app.models.db_models import User
 from app.config import get_settings as _get_settings
 from app.utils.plan_utils import get_user_plan
+from app.engines.projections import compute_market_benchmarks
 
 ADMIN_EMAILS = {e.strip() for e in _get_settings().admin_emails.split(",") if e.strip()}
 
@@ -1989,6 +1990,40 @@ async def get_comparables(
     median_price = sorted_prices[len(sorted_prices) // 2] if sorted_prices else None
     price_gap_pct = ((market_avg - ref_price) / ref_price * 100) if ref_price and market_avg else 0
 
+    # ── Market benchmarks — SQL PERCENTILE_CONT, fire-and-forget ─────────────
+    market_benchmarks: dict | None = None
+    if lot.artist_name_raw:
+        try:
+            bm = await compute_market_benchmarks(lot.artist_name_raw, db)
+            if bm:
+                estimate_mid = None
+                if lot.estimate_low and lot.estimate_high:
+                    estimate_mid = (lot.estimate_low + lot.estimate_high) / 2
+                elif lot.estimate_low:
+                    estimate_mid = lot.estimate_low
+                gap = (
+                    (bm["p50"] - estimate_mid) / estimate_mid * 100
+                ) if (estimate_mid and bm.get("p50")) else None
+                if bm["based_on"] >= 10 and gap is not None:
+                    bm["verdict"] = (
+                        "Marché historique nettement supérieur à l'estimation" if gap > 30
+                        else "Marché historique supérieur à l'estimation"      if gap > 10
+                        else "Marché historique proche de l'estimation"        if gap > -10
+                        else "Marché historique inférieur à l'estimation"      if gap > -30
+                        else "Marché historique nettement inférieur à l'estimation"
+                    )
+                    bm["verdict_color"] = (
+                        "#1A6B3C" if gap > 30
+                        else "#52C97F" if gap > 10
+                        else "#6B7280" if gap > -10
+                        else "#C6A85A" if gap > -30
+                        else "#EF4444"
+                    )
+                    bm["price_gap_pct"] = round(gap, 1)
+                market_benchmarks = bm
+        except Exception:
+            pass
+
     response = {
         "lot_id": lot_id,
         "reference": {
@@ -1999,6 +2034,7 @@ async def get_comparables(
         },
         "comparables":  serialized,
         "data_source":  "historical_sales" if use_hammer else "active_listings",
+        "market_benchmarks": market_benchmarks,
         "market_analysis": {
             "comparable_count":    comparable_count_total,
             "market_avg_price":    round(market_avg) if market_avg else None,
