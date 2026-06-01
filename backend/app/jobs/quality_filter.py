@@ -173,6 +173,70 @@ def normalize_artist_name(name: str) -> str:
     return name
 
 
+# ── Unknown-artist exclusion ─────────────────────────────────────────────────
+# Normalized forms (post-normalize_artist_name) of "unknown artist" phrases
+# across common auction languages. These must never be aggregated into
+# hammer_artist_stats — they would merge prices across unrelated anonymous works.
+_UNKNOWN_ARTIST_NORMALIZED: frozenset[str] = frozenset({
+    # Swedish
+    "oidentifierad konstnar",   # OIDENTIFIERAD KONSTNÄR
+    "okand konstnar",            # OKÄND KONSTNÄR
+    "obekant konstnar",          # OKÄND / OBEKANT KONSTNÄR
+    # Danish / Norwegian
+    "ubekendt kunstner",         # UBEKENDT KUNSTNER (DK)
+    "ukjent kunstner",           # UKJENT KUNSTNER (NO)
+    "ukjent",
+    # French
+    "artiste inconnu",
+    "auteur inconnu",
+    "peintre inconnu",
+    "ecole non identifiee",
+    "anonyme",
+    # English
+    "unknown artist",
+    "unknown",
+    "artist unknown",
+    "unidentified artist",
+    "anonymous",
+    "anon",
+    # German
+    "unbekannter kunstler",      # Unbekannter Künstler
+    "unbekannt",
+    # Dutch
+    "onbekende kunstenaar",
+    "onbekend",
+    # Italian
+    "artista ignoto",
+    "anonimo",
+    "ignoto",
+    # Spanish
+    "artista desconocido",
+    "desconocido",
+    # Portuguese
+    "artista desconhecido",
+    "desconhecido",
+    # Russian (transliterated after normalization)
+    "neizvestnyj hudozhnik",
+    # Chinese auction catalogs
+    "wu ming shi",
+})
+
+
+def is_unknown_artist(name: str) -> bool:
+    """Return True if name resolves to a generic 'unknown artist' phrase."""
+    if not name:
+        return True
+    normalized = normalize_artist_name(name)
+    # Exact match
+    if normalized in _UNKNOWN_ARTIST_NORMALIZED:
+        return True
+    # Prefix match: "unknown artist (19th century)" → still unknown
+    for phrase in _UNKNOWN_ARTIST_NORMALIZED:
+        if normalized.startswith(phrase):
+            return True
+    return False
+
+
 def normalize_title(title: str) -> str:
     """Lowercase, strip lot numbers, dimensions, punctuation."""
     if not title:

@@ -4,6 +4,7 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 import structlog
+from app.jobs.quality_filter import normalize_artist_name as _norm_name, is_unknown_artist as _is_unknown
 
 logger = structlog.get_logger()
 
@@ -17,6 +18,13 @@ async def save_hammer_prices(prices: list, db: AsyncSession) -> int:
             if not external_id:
                 continue
 
+            # Skip anonymous / "unknown artist" entries
+            artist_raw = price.get("artist_name")
+            if not artist_raw:
+                continue
+            if _is_unknown(artist_raw):
+                continue
+
             # Check duplicate
             existing = await db.execute(
                 text("SELECT id FROM hammer_prices WHERE external_id = :eid"),
@@ -26,11 +34,9 @@ async def save_hammer_prices(prices: list, db: AsyncSession) -> int:
                 continue
 
             # Compute normalized name if not already provided
-            artist_raw = price.get("artist_name")
             artist_norm = price.get("artist_name_normalized")
             if not artist_norm and artist_raw:
-                from app.jobs.quality_filter import normalize_artist_name as _norm
-                artist_norm = _norm(artist_raw)
+                artist_norm = _norm_name(artist_raw)
 
             await db.execute(
                 text("""

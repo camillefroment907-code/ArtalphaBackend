@@ -33,7 +33,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 from sqlalchemy import text
 from app.database import BgSessionLocal
-from app.jobs.quality_filter import normalize_artist_name
+from app.jobs.quality_filter import normalize_artist_name, is_unknown_artist
 
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", "5000"))
 MIN_SALES  = int(os.getenv("MIN_SALES", "5"))
@@ -161,6 +161,12 @@ async def step2_backfill_from_lots(session) -> int:
             skipped += 1
             continue
 
+        # Skip anonymous / "unknown artist" entries — they would aggregate
+        # prices from unrelated works under a single fake "artist" key.
+        if is_unknown_artist(row.artist_name_raw):
+            skipped += 1
+            continue
+
         # Check for existing entry
         exists = (await session.execute(
             text("SELECT 1 FROM hammer_prices WHERE external_id = :eid LIMIT 1"),
@@ -224,13 +230,20 @@ async def step2_backfill_from_lots(session) -> int:
 
 async def step3_refresh_stats(session, min_sales: int = MIN_SALES) -> int:
     """Recompute hammer_artist_stats from hammer_prices."""
+    from app.jobs.quality_filter import _UNKNOWN_ARTIST_NORMALIZED
     print(f"\n── Step 3: Refresh hammer_artist_stats (min {min_sales} sales) ──")
+
+    # Build SQL exclusion list for unknown-artist normalized strings.
+    # These are already normalized, so we can use a literal IN clause.
+    _excl = ", ".join(f"'{v}'" for v in sorted(_UNKNOWN_ARTIST_NORMALIZED))
 
     if DRY_RUN:
         preview = (await session.execute(text(f"""
             SELECT COUNT(DISTINCT artist_name_normalized)
             FROM hammer_prices
             WHERE artist_name_normalized IS NOT NULL
+              AND artist_name_normalized <> ''
+              AND artist_name_normalized NOT IN ({_excl})
               AND hammer_price_eur IS NOT NULL
               AND hammer_price_eur > 0
             GROUP BY artist_name_normalized
@@ -262,6 +275,7 @@ async def step3_refresh_stats(session, min_sales: int = MIN_SALES) -> int:
         FROM hammer_prices
         WHERE artist_name_normalized IS NOT NULL
           AND artist_name_normalized <> ''
+          AND artist_name_normalized NOT IN ({_excl})
           AND hammer_price_eur IS NOT NULL
           AND hammer_price_eur > 0
         GROUP BY artist_name_normalized
