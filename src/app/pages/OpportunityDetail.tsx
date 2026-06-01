@@ -400,6 +400,7 @@ export default function OpportunityDetail() {
   const displayComps = sameArtistComps.length >= 2 ? sameArtistComps.slice(0, 3) : allComps.slice(0, 3);
   const compsLabel   = sameArtistComps.length >= 2 ? (isFr ? 'VENTES COMPARABLES' : 'COMPARABLE SALES') : (isFr ? 'ŒUVRES SIMILAIRES' : 'SIMILAR WORKS');
   const maxCompPrice = comparables.length > 0 ? Math.max(...comparables.map((c: any) => c.current_price || 0), price) : price;
+  const isHistorical = comparables.length > 0 && comparables[0].is_historical === true;
 
   // Projection bar width: proportional to max value
   const maxProjVal = visibleYears.length > 0 ? proj(Math.max(...visibleYears)) : proj(20);
@@ -1209,7 +1210,7 @@ export default function OpportunityDetail() {
         {/* ── VENTES COMPARABLES ───────────────────────────────────────────── */}
         {hasAccess && (
         <div style={{ padding: '24px 40px', background: '#F5F4F0', borderBottom: '0.5px solid #E8E4DC' }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ VENTES COMPARABLES</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '16px' }}>{isHistorical ? '◆ VENTES RÉALISÉES AUX ENCHÈRES' : '◆ LOTS COMPARABLES ACTIFS'}</div>
           {comparables.length === 0 ? (
             <div style={{ background: '#fff', borderRadius: '12px', padding: '48px 24px', textAlign: 'center' as const }}>
               <div style={{ fontSize: '28px', opacity: 0.12, marginBottom: '12px' }}>◎</div>
@@ -1220,6 +1221,7 @@ export default function OpportunityDetail() {
             const minComp = compPrices.length > 0 ? Math.min(...compPrices) : 0;
             const maxComp = compPrices.length > 0 ? Math.max(...compPrices) : 0;
             const fmtK = (v: number) => v >= 1000 ? `€${(v / 1000).toFixed(0)}k` : `€${v}`;
+            const isHistorical = comparables.length > 0 && comparables[0].is_historical === true;
             return (
               <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '20px' }}>
                 {/* Story card */}
@@ -1229,11 +1231,13 @@ export default function OpportunityDetail() {
                       {fmtK(minComp)} – {fmtK(maxComp)}
                     </div>
                     <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.6, margin: 0 }}>
-                      Des œuvres de <strong>{lot.artist_name_raw}</strong> ont vendu entre {fmtK(minComp)} et {fmtK(maxComp)} sur les {comparables.length} ventes comparables récentes.
+                      Des œuvres de <strong>{lot.artist_name_raw}</strong> {isHistorical
+                        ? `ont réalisé entre ${fmtK(minComp)} et ${fmtK(maxComp)} aux enchères sur ${comparables.length} ventes historiques.`
+                        : `sont actuellement listées entre ${fmtK(minComp)} et ${fmtK(maxComp)} — prix demandés, pas encore réalisés.`}
                     </p>
                   </div>
                   <div style={{ marginTop: '16px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>
-                    {comparables.length} ventes analysées
+                    {isHistorical ? `${comparables.length} ventes réalisées` : `${comparables.length} lots actifs`}
                   </div>
                 </div>
                 {/* Table card */}
@@ -1241,7 +1245,7 @@ export default function OpportunityDetail() {
                   <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
                     <thead>
                       <tr>
-                        {['Artiste', 'Titre', '', 'Prix', 'Score', 'Date'].map((col, ci) => (
+                        {['Artiste', 'Titre', '', 'Prix', isHistorical ? 'Premium' : 'Score', 'Date'].map((col, ci) => (
                           <th key={ci} style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: LTT3, textAlign: 'left' as const, padding: '8px 10px 8px 0', borderBottom: '0.5px solid #E8E4DC' }}>{col}</th>
                         ))}
                       </tr>
@@ -1265,7 +1269,7 @@ export default function OpportunityDetail() {
                               </div>
                             </td>
                             <td style={{ padding: '9px 10px 9px 0', borderBottom: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600, color: GOLD, whiteSpace: 'nowrap' as const }}>{fmt(compPrice)}</td>
-                            <td style={{ padding: '9px 10px 9px 0', borderBottom: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, whiteSpace: 'nowrap' as const }}>{comp.deal_score ? `${comp.deal_score.toFixed(0)}/100` : '—'}</td>
+                            <td style={{ padding: '9px 10px 9px 0', borderBottom: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, whiteSpace: 'nowrap' as const }}>{isHistorical ? (comp.premium_ratio ? `${((comp.premium_ratio - 1) * 100).toFixed(0)}%` : '—') : (comp.deal_score ? `${comp.deal_score.toFixed(0)}/100` : '—')}</td>
                             <td style={{ padding: '9px 0', borderBottom: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, whiteSpace: 'nowrap' as const }}>{compDate}</td>
                           </tr>
                         );
@@ -1286,7 +1290,9 @@ export default function OpportunityDetail() {
                     </tbody>
                   </table>
                   <div style={{ marginTop: '10px', padding: '7px 10px', background: '#FFFBEB', border: '0.5px solid #FDE68A', borderRadius: '5px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: AMB }}>
-                    ⚠ Ces comparables peuvent inclure différents médiums. Vérifiez la technique avant d'enchérir.
+                    {isHistorical
+                      ? "⚠ Ces ventes peuvent inclure différents médiums. Vérifiez la technique avant d'acheter."
+                      : '⚠ Ces lots sont des prix demandés, pas des prix réalisés. Les ventes réelles peuvent différer.'}
                   </div>
                 </div>
               </div>
