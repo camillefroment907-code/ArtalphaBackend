@@ -1761,11 +1761,19 @@ async def get_lot(
                 from app.scripts.compute_cagr_by_medium import classify_signal
                 signal_used = classify_signal(lot.artist.cagr_raw or lot.artist.cagr_calculated or 0)
 
+        # When no DB-computed CAGR was found, mark source explicitly so the
+        # frontend always shows the "market tier estimate" disclaimer.
+        # Neutral adjustments (50/50) when artist data is unavailable.
+        if cagr_source_used is None:
+            cagr_source_used = "TIER_FALLBACK"
+
         proj = project_value(
             purchase_price_eur=float(proj_price or hammer),
             artist_name=lot.artist_name_raw,
-            liquidity_score=lot.artist.liquidity_score if lot.artist else 50.0,
-            popularity_score=lot.artist.popularity_score if lot.artist else 50.0,
+            # Use neutral 50.0 defaults when no artist DB record — avoids
+            # heuristic liquidity/popularity MD5 values contaminating real CAGR.
+            liquidity_score=50.0,
+            popularity_score=50.0,
             trend=lot.artist.trend.value if lot.artist and lot.artist.trend else "stable",
             years=[3, 5, 6, 7, 8, 9, 10],   # covers all possible recommended_hold_years outputs
             cagr_override=cagr_override,
@@ -2496,8 +2504,8 @@ async def get_lot_projection(
     return project_value(
         purchase_price_eur=float(price),
         artist_name=lot.artist_name_raw,
-        liquidity_score=lot.artist.liquidity_score if lot.artist else 50.0,
-        popularity_score=lot.artist.popularity_score if lot.artist else 50.0,
+        liquidity_score=50.0,   # neutral — heuristic artist data must not bias projections
+        popularity_score=50.0,
         trend=lot.artist.trend.value if lot.artist and lot.artist.trend else "stable",
         cagr_override=cagr_override,
     )

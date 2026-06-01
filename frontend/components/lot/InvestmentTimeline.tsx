@@ -106,25 +106,23 @@ export function InvestmentTimeline({ lot }: { lot: Lot }) {
         </div>
       </div>
 
-      {/* ── Signal description — data-driven only ────────────────────── */}
-      {(proj.cagr_source || proj.cagr_n_sales) && (
-        <p style={{ fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.55, marginBottom: "16px" }}>
-          {proj.cagr_source === "medium_specific" && mediumLabel && lot.artist_name_raw ? (
-            <>
-              Based on <strong style={{ color: NAVY }}>{proj.cagr_n_sales?.toLocaleString() ?? "—"} historical sales</strong> of {lot.artist_name_raw} {mediumLabel}.
-              {proj.cagr_confidence ? ` Confidence: ${proj.cagr_confidence}.` : ""}
-            </>
-          ) : proj.cagr_source === "COMPUTED" ? (
-            <>
-              Based on <strong style={{ color: NAVY }}>{proj.cagr_n_sales?.toLocaleString() ?? "—"} historical sales</strong> across all mediums for this artist.
-            </>
-          ) : (
-            <>
-              No sufficient historical data for this artist — CAGR estimated from market tier.
-            </>
-          )}
-        </p>
-      )}
+      {/* ── Signal description — always shown, label varies by data quality ── */}
+      <p style={{ fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.55, marginBottom: "16px" }}>
+        {proj.cagr_source === "medium_specific" && mediumLabel && lot.artist_name_raw ? (
+          <>
+            Based on <strong style={{ color: NAVY }}>{proj.cagr_n_sales?.toLocaleString() ?? "—"} historical sales</strong> of {lot.artist_name_raw} {mediumLabel}.
+            {proj.cagr_confidence ? ` Confidence: ${proj.cagr_confidence}.` : ""}
+          </>
+        ) : proj.cagr_source === "COMPUTED" ? (
+          <>
+            Based on <strong style={{ color: NAVY }}>{proj.cagr_n_sales?.toLocaleString() ?? "—"} historical sales</strong> across all mediums for this artist.
+          </>
+        ) : (
+          <>
+            Données historiques insuffisantes pour cet artiste — CAGR estimé par catégorie de marché. Projection indicative.
+          </>
+        )}
+      </p>
 
       {/* ── Timeline card ────────────────────────────────────────────── */}
       <div style={{
