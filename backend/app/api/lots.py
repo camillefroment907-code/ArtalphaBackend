@@ -2087,34 +2087,68 @@ async def _compute_weighted_max_bid(lot, db) -> dict:
     if not all_scored:
         return {}
 
+    def _median(prices: list[float]) -> float:
+        s = sorted(prices)
+        n = len(s)
+        return (s[n // 2 - 1] + s[n // 2]) / 2 if n % 2 == 0 else s[n // 2]
+
+    def _remove_outliers(pairs: list[tuple[int, float]]) -> list[tuple[int, float]]:
+        """
+        Remove statistical outliers using IQR method (≥4 comps) or
+        3×/÷3 median cap (3 comps). Prevents single record sales or
+        distressed sales from skewing the weighted average.
+        """
+        if len(pairs) < 3:
+            return pairs
+        prices = [p for _, p in pairs]
+        if len(prices) >= 4:
+            s = sorted(prices)
+            q1, q3 = s[len(s) // 4], s[(3 * len(s)) // 4]
+            iqr = q3 - q1
+            lo, hi = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+        else:
+            med = _median(prices)
+            lo, hi = med / 3.0, med * 3.0
+        filtered = [(s, p) for s, p in pairs if lo <= p <= hi]
+        # Never drop below 3 comps — if outlier removal leaves < 3, keep originals
+        return filtered if len(filtered) >= 3 else pairs
+
     def _wavg(pairs: list[tuple[int, float]]) -> float:
         total_w = sum(s for s, _ in pairs)
         if total_w == 0:
             return sum(p for _, p in pairs) / len(pairs)
         return sum(s * p for s, p in pairs) / total_w
 
+    def _eval(pairs: list[tuple[int, float]], min_count: int = 3) -> list[tuple[int, float]] | None:
+        """Apply outlier filter and return if enough comps remain."""
+        clean = _remove_outliers(pairs)
+        return clean if len(clean) >= min_count else None
+
     # Level 1 — ≥3 exact-medium comps, well-scored (size + recency match too)
-    l1 = [(s, p) for s, p in same_medium if s >= 60]
-    if len(l1) >= 3:
+    l1 = _eval([(s, p) for s, p in same_medium if s >= 60])
+    if l1:
         return {"market_value": _wavg(l1), "comp_count": len(l1),
                 "comp_level": 1, "max_bid_source": "comparables_proches"}
 
     # Level 2 — ≥3 exact-medium comps (any score; medium is mandatory)
-    if len(same_medium) >= 3:
-        return {"market_value": _wavg(same_medium), "comp_count": len(same_medium),
+    l2 = _eval(same_medium)
+    if l2:
+        return {"market_value": _wavg(l2), "comp_count": len(l2),
                 "comp_level": 2, "max_bid_source": "comparables_meme_technique"}
 
     # Level 3 — ≥3 cross-2D comps (e.g. drawing used to estimate print value)
-    if len(cross_2d) >= 3:
-        return {"market_value": _wavg(cross_2d), "comp_count": len(cross_2d),
+    l3 = _eval(cross_2d)
+    if l3:
+        return {"market_value": _wavg(l3), "comp_count": len(l3),
                 "comp_level": 3, "max_bid_source": "comparables_technique_proche"}
 
-    # Level 4 — ≥5 all artist sales with per-medium discount
-    # (e.g. paintings discounted to estimate a print's relative value)
-    # Only used as last resort; marked clearly so UI can warn.
-    if len(all_scored) >= 5:
+    # Level 4 — ≥5 all artist sales with empirical medium discount.
+    # Coefficients in _MEDIUM_DISCOUNT are industry approximations (not calibrated
+    # on this DB). Marked "ajuste" so the UI warns it is indicative only.
+    l4 = _eval(all_scored, min_count=5)
+    if l4:
         discount = _MEDIUM_DISCOUNT.get(lot_medium_cat or "", 1.0)
-        return {"market_value": _wavg(all_scored) * discount, "comp_count": len(all_scored),
+        return {"market_value": _wavg(l4) * discount, "comp_count": len(l4),
                 "comp_level": 4, "max_bid_source": "ventes_artiste_ajuste"}
 
     return {}

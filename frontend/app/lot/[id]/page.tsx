@@ -775,10 +775,24 @@ export default function LotPage({ params }: { params: { id: string } }) {
                         {lot.artist_name_raw}
                       </h1>
                     )}
-                    <div style={{ fontSize: "15px", color: "var(--text-muted)", marginBottom: "5px" }}>{lot.title}</div>
-                    {(lot.category || lot.medium || lot.dimensions) && (
-                      <div style={{ fontSize: "12px", color: "#9CA3AF", marginBottom: "18px" }}>
-                        {[lot.category, lot.medium, lot.dimensions].filter(Boolean).join(" · ")}
+                    <div style={{ fontSize: "15px", color: "var(--text-muted)", marginBottom: "8px" }}>{lot.title}</div>
+                    {(lot.medium || lot.dimensions) && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "14px" }}>
+                        {lot.medium && (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6B7280", background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: "4px", padding: "2px 8px", fontFamily: "monospace" }}>
+                            <span style={{ opacity: 0.5, fontSize: "9px" }}>TECHNIQUE</span>
+                            {lot.medium}
+                          </span>
+                        )}
+                        {lot.dimensions && (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#374151", background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "4px", padding: "2px 8px", fontFamily: "monospace", fontWeight: 600 }}>
+                            <span style={{ opacity: 0.5, fontSize: "9px" }}>FORMAT</span>
+                            {lot.dimensions}
+                          </span>
+                        )}
+                        {lot.category && (
+                          <span style={{ fontSize: "11px", color: "#9CA3AF", padding: "2px 4px" }}>{lot.category}</span>
+                        )}
                       </div>
                     )}
 
