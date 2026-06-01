@@ -79,7 +79,7 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
     from app.connectors.aggregator import fetch_all_lots, get_house_reputation
     from app.engines.scoring import compute_deal_score, ScoringInput
     from app.models.db_models import Lot, Artist, LotStatus
-    from app.engines.artist_enrichment import _find_in_db, _detect_artist_from_title, _generate_heuristic_enrichment
+    from app.engines.artist_enrichment import _find_in_db, _detect_artist_from_title
     from sqlalchemy import select
 
     from app.database import BgSessionLocal as AsyncSessionLocal
@@ -189,14 +189,18 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
         artist_cache: dict = {}  # name_normalized → db_artist | None (in-memory per run)
         for lot_data in new_lots:
             try:
-                # Artist enrichment (local DB + heuristics only — no per-lot OpenAI calls)
+                # Artist enrichment — real data only, no MD5-based heuristics
                 artist_name = lot_data.artist_name_raw
                 if not artist_name and lot_data.title:
                     artist_name = _detect_artist_from_title(lot_data.title)
 
+                # Start with curated DB (~12 known artists); empty dict for everyone else.
+                # _generate_heuristic_enrichment() is intentionally NOT called here —
+                # fake market metrics (avg_price, liquidity, popularity, sell_through)
+                # stored in the Artist record corrupt scoring and projections.
                 artist_data: dict = {}
                 if artist_name:
-                    artist_data = _find_in_db(artist_name) or _generate_heuristic_enrichment(artist_name)
+                    artist_data = _find_in_db(artist_name) or {}
 
                 # Find or create artist record (cached per run)
                 db_artist = None
@@ -215,55 +219,27 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                         db_artist = artist_result.scalars().first()
                         artist_cache[key] = db_artist
 
-                    if not db_artist and artist_data:
-                        db_artist = Artist(
-                            name=artist_name,
-                            name_normalized=artist_name.lower().strip(),
-                            nationality=artist_data.get("nationality"),
-                            birth_year=artist_data.get("birth_year"),
-                            death_year=artist_data.get("death_year"),
-                            movement=artist_data.get("movement"),
-                            popularity_score=artist_data.get("popularity", 50),
-                            avg_auction_price=artist_data.get("avg_price"),
-                            median_auction_price=artist_data.get("median_price"),
-                            price_volatility=artist_data.get("volatility", 0.3),
-                            liquidity_score=artist_data.get("liquidity", 50),
-                            trend=artist_data.get("trend", "stable"),
-                            total_lots_sold=artist_data.get("lots_sold", 0),
-                            sell_through_rate=artist_data.get("sell_through", 0.6),
-                            data_confidence=artist_data.get("confidence", 0.5),
-                            last_enriched_at=datetime.utcnow(),
-                        )
-                        session.add(db_artist)
-                        await session.flush()  # need id for FK
-                        artist_cache[key] = db_artist
+                    # ── Real data enrichment: Artsper + HammerArtistStats ──────────
+                    # Runs BEFORE Artist record creation so real values go into the DB.
+                    # Precedence: curated DB > Artsper primary market > hammer history.
+                    from app.models.db_models import ArtsperArtistSnapshot, HammerArtistStats, ArtistSignal
+                    from app.jobs.quality_filter import normalize_artist_name as _norm_name
 
-                # 5. Score the lot
-                # Sprint C: enrich artist_data with ArtsperArtistSnapshot avg price
-                # and pull oracle signal when artist already exists in DB
-                ingest_oracle_score_6m = None
-                ingest_oracle_signal = None
-                ingest_oracle_narrative = None
-                if artist_name and db_artist:
-                    name_norm = artist_name.lower().strip()
-                    from app.models.db_models import ArtsperArtistSnapshot, ArtistSignal
-                    artsper_res = await session.execute(
+                    _name_norm = key
+                    _artsper_res = await session.execute(
                         select(ArtsperArtistSnapshot)
-                        .where(ArtsperArtistSnapshot.artist_name_normalized == name_norm)
+                        .where(ArtsperArtistSnapshot.artist_name_normalized == _name_norm)
                         .limit(1)
                     )
-                    artsper = artsper_res.scalar_one_or_none()
-                    if artsper and artsper.price_avg and artsper.price_avg > 0:
-                        if not artist_data.get("avg_price") or (artsper.total_works or 0) > 10:
-                            artist_data["avg_price"] = artsper.price_avg
+                    _artsper = _artsper_res.scalar_one_or_none()
+                    if _artsper and _artsper.price_avg and _artsper.price_avg > 0:
+                        if not artist_data.get("avg_price") or (_artsper.total_works or 0) > 10:
+                            artist_data["avg_price"] = _artsper.price_avg
                             artist_data["confidence"] = min(
-                                (artist_data.get("confidence") or 0.5) + 0.10, 1.0
+                                (artist_data.get("confidence") or 0.1) + 0.20, 1.0
                             )
 
-                    # ── Phase 1: hammer price stats — fallback when no Artsper avg ──
                     if not artist_data.get("avg_price"):
-                        from app.models.db_models import HammerArtistStats
-                        from app.jobs.quality_filter import normalize_artist_name as _norm_name
                         _hn = _norm_name(artist_name)
                         if _hn:
                             _hs_res = await session.execute(
@@ -274,10 +250,55 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                             if _hs and _hs.sale_count >= 5 and _hs.avg_eur:
                                 artist_data["avg_price"] = _hs.avg_eur
                                 artist_data["median_price"] = _hs.median_eur
+                                artist_data["lots_sold"] = _hs.sale_count
                                 artist_data["confidence"] = min(
-                                    (artist_data.get("confidence") or 0.5) + 0.15, 1.0
+                                    (artist_data.get("confidence") or 0.1) + 0.25, 1.0
                                 )
 
+                    if not db_artist:
+                        # Market metrics use real values when available, null otherwise.
+                        # Null is honest; a fabricated number is not.
+                        # Scoring engine handles None gracefully (defaults to neutral).
+                        db_artist = Artist(
+                            name=artist_name,
+                            name_normalized=artist_name.lower().strip(),
+                            nationality=artist_data.get("nationality"),
+                            birth_year=artist_data.get("birth_year"),
+                            death_year=artist_data.get("death_year"),
+                            movement=artist_data.get("movement"),
+                            popularity_score=artist_data.get("popularity"),         # null when unknown
+                            avg_auction_price=artist_data.get("avg_price"),         # real or null
+                            median_auction_price=artist_data.get("median_price"),   # real or null
+                            price_volatility=artist_data.get("volatility"),         # null when unknown
+                            liquidity_score=artist_data.get("liquidity"),           # null when unknown
+                            trend=artist_data.get("trend"),                         # null when unknown
+                            total_lots_sold=artist_data.get("lots_sold", 0),
+                            sell_through_rate=artist_data.get("sell_through"),      # null when unknown
+                            data_confidence=artist_data.get("confidence", 0.1),     # 0.1 = no real data
+                            last_enriched_at=datetime.utcnow(),
+                        )
+                        session.add(db_artist)
+                        await session.flush()  # need id for FK
+                        artist_cache[key] = db_artist
+                    elif artist_data.get("avg_price") and (
+                        not db_artist.avg_auction_price
+                        or (db_artist.data_confidence or 0) < 0.3
+                    ):
+                        # Backfill existing artist records that were created with heuristic
+                        # data (data_confidence < 0.3) now that we have real market data.
+                        db_artist.avg_auction_price = artist_data["avg_price"]
+                        if artist_data.get("median_price"):
+                            db_artist.median_auction_price = artist_data["median_price"]
+                        if artist_data.get("lots_sold"):
+                            db_artist.total_lots_sold = artist_data["lots_sold"]
+                        db_artist.data_confidence = artist_data.get("confidence", 0.3)
+
+                # 5. Score the lot
+                ingest_oracle_score_6m = None
+                ingest_oracle_signal = None
+                ingest_oracle_narrative = None
+                if artist_name and db_artist:
+                    from app.models.db_models import ArtistSignal
                     sig_res = await session.execute(
                         select(ArtistSignal)
                         .where(ArtistSignal.artist_id == db_artist.id)
