@@ -196,6 +196,8 @@ class LotOut(BaseModel):
     score_rationale: Optional[str] = None
     confidence_score: Optional[float] = None
     estimate_low_eur: Optional[float] = None
+    is_buy_now: bool = False
+    market_type: Optional[str] = None
 
     class Config:
         from_attributes = True
