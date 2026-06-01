@@ -228,26 +228,47 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                     # Priority order: hammer prices are real secondary-market auction data
                     # and must take precedence over primary-market Artsper data and the
                     # static ARTIST_MARKET_DB fallback.
-                    from app.models.db_models import ArtsperArtistSnapshot, HammerArtistStats, ArtistSignal
-                    from app.jobs.quality_filter import normalize_artist_name as _norm_name
+                    from app.models.db_models import ArtsperArtistSnapshot, HammerArtistStats, HammerArtistMediumStats, ArtistSignal
+                    from app.jobs.quality_filter import normalize_artist_name as _norm_name, normalize_medium_category as _norm_medium
 
                     _name_norm = key
 
-                    # 1. HammerArtistStats — real secondary-market auction averages
+                    # 1. HammerArtistStats — medium-specific first, overall fallback
+                    #    A Warhol screenprint must be benchmarked against other Warhol
+                    #    prints, not against Warhol oils sold at Christie's for $50M.
                     _hn = _norm_name(artist_name)
                     if _hn:
-                        _hs_res = await session.execute(
-                            select(HammerArtistStats)
-                            .where(HammerArtistStats.artist_name_normalized == _hn)
-                        )
-                        _hs = _hs_res.scalar_one_or_none()
-                        if _hs and _hs.sale_count >= 5 and _hs.avg_eur:
-                            artist_data["avg_price"] = _hs.avg_eur
-                            artist_data["median_price"] = _hs.median_eur
-                            artist_data["lots_sold"] = _hs.sale_count
-                            artist_data["confidence"] = min(
-                                (artist_data.get("confidence") or 0.1) + 0.25, 1.0
+                        _medium_cat = _norm_medium(lot_data.medium or lot_data.category)
+                        _hm_res = await session.execute(
+                            select(HammerArtistMediumStats)
+                            .where(
+                                HammerArtistMediumStats.artist_name_normalized == _hn,
+                                HammerArtistMediumStats.medium_category == _medium_cat,
                             )
+                        )
+                        _hm = _hm_res.scalar_one_or_none()
+                        if _hm and _hm.sale_count >= 3 and _hm.avg_eur:
+                            # Medium-specific match — most accurate comparison
+                            artist_data["avg_price"] = _hm.avg_eur
+                            artist_data["median_price"] = _hm.median_eur
+                            artist_data["lots_sold"] = _hm.sale_count
+                            artist_data["confidence"] = min(
+                                (artist_data.get("confidence") or 0.1) + 0.30, 1.0
+                            )
+                        else:
+                            # Fall back to overall artist stats (all mediums combined)
+                            _hs_res = await session.execute(
+                                select(HammerArtistStats)
+                                .where(HammerArtistStats.artist_name_normalized == _hn)
+                            )
+                            _hs = _hs_res.scalar_one_or_none()
+                            if _hs and _hs.sale_count >= 5 and _hs.avg_eur:
+                                artist_data["avg_price"] = _hs.avg_eur
+                                artist_data["median_price"] = _hs.median_eur
+                                artist_data["lots_sold"] = _hs.sale_count
+                                artist_data["confidence"] = min(
+                                    (artist_data.get("confidence") or 0.1) + 0.25, 1.0
+                                )
 
                     # 2. Artsper primary-market data (useful for living artists with few
                     #    auction records)
@@ -720,23 +741,39 @@ async def _rescore_live_async():
                                 (artist_data.get("confidence") or 0.5) + 0.10, 1.0
                             )
 
-                    # ── Phase 1: hammer price stats — fallback when no Artsper avg ──
+                    # ── Phase 1: hammer price stats — medium-specific first, overall fallback ──
                     if not artist_data.get("avg_price"):
-                        from app.models.db_models import HammerArtistStats
-                        from app.jobs.quality_filter import normalize_artist_name as _norm_name
+                        from app.models.db_models import HammerArtistStats, HammerArtistMediumStats
+                        from app.jobs.quality_filter import normalize_artist_name as _norm_name, normalize_medium_category as _norm_medium
                         _hn = _norm_name(artist_name_raw)
                         if _hn:
-                            _hs_res = await session.execute(
-                                select(HammerArtistStats)
-                                .where(HammerArtistStats.artist_name_normalized == _hn)
-                            )
-                            _hs = _hs_res.scalar_one_or_none()
-                            if _hs and _hs.sale_count >= 5 and _hs.avg_eur:
-                                artist_data["avg_price"] = _hs.avg_eur
-                                artist_data["median_price"] = _hs.median_eur
-                                artist_data["confidence"] = min(
-                                    (artist_data.get("confidence") or 0.5) + 0.15, 1.0
+                            _medium_cat = _norm_medium(lot.medium or lot.category)
+                            _hm_res = await session.execute(
+                                select(HammerArtistMediumStats)
+                                .where(
+                                    HammerArtistMediumStats.artist_name_normalized == _hn,
+                                    HammerArtistMediumStats.medium_category == _medium_cat,
                                 )
+                            )
+                            _hm = _hm_res.scalar_one_or_none()
+                            if _hm and _hm.sale_count >= 3 and _hm.avg_eur:
+                                artist_data["avg_price"] = _hm.avg_eur
+                                artist_data["median_price"] = _hm.median_eur
+                                artist_data["confidence"] = min(
+                                    (artist_data.get("confidence") or 0.5) + 0.20, 1.0
+                                )
+                            else:
+                                _hs_res = await session.execute(
+                                    select(HammerArtistStats)
+                                    .where(HammerArtistStats.artist_name_normalized == _hn)
+                                )
+                                _hs = _hs_res.scalar_one_or_none()
+                                if _hs and _hs.sale_count >= 5 and _hs.avg_eur:
+                                    artist_data["avg_price"] = _hs.avg_eur
+                                    artist_data["median_price"] = _hs.median_eur
+                                    artist_data["confidence"] = min(
+                                        (artist_data.get("confidence") or 0.5) + 0.15, 1.0
+                                    )
 
                 # ── Sprint C: pull ArtistSignal oracle data ───────────────────
                 if lot.artist_id:

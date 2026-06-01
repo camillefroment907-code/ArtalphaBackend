@@ -237,6 +237,68 @@ def is_unknown_artist(name: str) -> bool:
     return False
 
 
+# ── Medium category normalization ────────────────────────────────────────────
+# Maps free-text medium/category strings to one of 6 canonical buckets.
+# Used to build hammer_artist_medium_stats so Warhol prints and Warhol oils
+# are not compared against each other.
+_MEDIUM_KEYWORDS: list[tuple[str, list[str]]] = [
+    ("print", [
+        "lithograph", "lithographie", "lithographe",
+        "serigraph", "serigraphie", "screenprint", "silk", "silkscreen",
+        "etching", "aquatint", "drypoint", "engraving", "mezzotint",
+        "woodcut", "linocut", "offset", "pochoir",
+        "print", "multiple", "multiples", "edition", "gravure", "estampe",
+        "monotype", "monoprint",
+    ]),
+    ("painting", [
+        "oil", "huile",
+        "acrylic", "acrylique",
+        "tempera", "gouache",
+        "watercolor", "watercolour", "aquarelle",
+        "pastel",
+        "peinture", "tableau",
+        "canvas", "toile",
+        "panel", "panneau",
+        "fresco",
+    ]),
+    ("photography", [
+        "photograph", "photographie", "photo",
+        "c-print", "cprint", "gelatin", "silver", "chromogenic",
+        "daguerreotype",
+    ]),
+    ("drawing", [
+        "drawing", "dessin",
+        "pencil", "crayon",
+        "charcoal", "fusain",
+        "ink", "encre",
+        "sketch", "croquis",
+        "marker", "felt",
+    ]),
+    ("sculpture", [
+        "sculpture", "bronze", "marble", "marbre",
+        "ceramic", "ceramique", "terracotta", "resin",
+        "cast", "fonte", "assemblage", "installation",
+        "glass", "verre",
+    ]),
+]
+
+
+def normalize_medium_category(medium: str | None) -> str:
+    """
+    Map a free-text medium string to a canonical category bucket.
+
+    Returns one of: 'print', 'painting', 'photography', 'drawing',
+    'sculpture', 'other'.
+    """
+    if not medium:
+        return "other"
+    m = medium.lower()
+    for category, keywords in _MEDIUM_KEYWORDS:
+        if any(kw in m for kw in keywords):
+            return category
+    return "other"
+
+
 def normalize_title(title: str) -> str:
     """Lowercase, strip lot numbers, dimensions, punctuation."""
     if not title:

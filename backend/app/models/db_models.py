@@ -833,6 +833,23 @@ class HammerArtistStats(Base):
     last_updated           = Column(DateTime, default=datetime.utcnow)
 
 
+class HammerArtistMediumStats(Base):
+    """Pre-aggregated hammer price stats per artist × medium category (≥3 sales).
+
+    Exists alongside HammerArtistStats to enable medium-aware comparisons:
+    a Warhol lithograph should be benchmarked against other Warhol prints,
+    not against Warhol oil paintings sold at Christie's for $50M.
+    """
+    __tablename__ = "hammer_artist_medium_stats"
+
+    artist_name_normalized = Column(String(500), primary_key=True)
+    medium_category        = Column(String(50),  primary_key=True)   # print/painting/photography/drawing/sculpture/other
+    avg_eur                = Column(Float, nullable=True)
+    median_eur             = Column(Float, nullable=True)
+    sale_count             = Column(Integer, default=0)
+    last_updated           = Column(DateTime, default=datetime.utcnow)
+
+
 class ScorePerformance(Base):
     """Nautilus score performance tracking — proves our edge over time."""
     __tablename__ = "score_performance"

@@ -305,6 +305,106 @@ async def step3_refresh_stats(session, min_sales: int = MIN_SALES) -> int:
     return n
 
 
+MIN_MEDIUM_SALES = int(os.getenv("MIN_MEDIUM_SALES", "3"))
+
+
+async def step4_refresh_medium_stats(session, min_sales: int = MIN_MEDIUM_SALES) -> int:
+    """Build hammer_artist_medium_stats — per artist × medium category (≥3 sales).
+
+    Solves the Warhol problem: a Warhol screenprint must be benchmarked against
+    other Warhol prints, not against Warhol oils sold for $50M.
+    """
+    from app.jobs.quality_filter import _UNKNOWN_ARTIST_NORMALIZED, normalize_medium_category
+    _excl = ", ".join(f"'{v}'" for v in sorted(_UNKNOWN_ARTIST_NORMALIZED))
+
+    print(f"\n── Step 4: Refresh hammer_artist_medium_stats (min {min_sales} sales per medium) ──")
+
+    if DRY_RUN:
+        preview = (await session.execute(text(f"""
+            SELECT COUNT(*)
+            FROM (
+                SELECT artist_name_normalized, medium
+                FROM hammer_prices
+                WHERE artist_name_normalized IS NOT NULL
+                  AND artist_name_normalized <> ''
+                  AND artist_name_normalized NOT IN ({_excl})
+                  AND hammer_price_eur IS NOT NULL
+                  AND hammer_price_eur > 0
+                  AND medium IS NOT NULL
+                GROUP BY artist_name_normalized, medium
+                HAVING COUNT(*) >= {min_sales}
+            ) x
+        """))).scalar() or 0
+        print(f"  DRY_RUN — ~{preview:,} artist×medium groups would be written.")
+        return 0
+
+    await session.execute(text("""
+        CREATE TABLE IF NOT EXISTS hammer_artist_medium_stats (
+            artist_name_normalized VARCHAR(500) NOT NULL,
+            medium_category        VARCHAR(50)  NOT NULL,
+            avg_eur                FLOAT,
+            median_eur             FLOAT,
+            sale_count             INTEGER DEFAULT 0,
+            last_updated           TIMESTAMP DEFAULT NOW(),
+            PRIMARY KEY (artist_name_normalized, medium_category)
+        )
+    """))
+    await session.commit()
+
+    # Pull all rows with a medium value; bucket in Python, then UPSERT.
+    rows = (await session.execute(text(f"""
+        SELECT artist_name_normalized, medium, hammer_price_eur
+        FROM hammer_prices
+        WHERE artist_name_normalized IS NOT NULL
+          AND artist_name_normalized <> ''
+          AND artist_name_normalized NOT IN ({_excl})
+          AND hammer_price_eur IS NOT NULL
+          AND hammer_price_eur > 0
+          AND medium IS NOT NULL
+    """))).fetchall()
+    print(f"  Rows with medium: {len(rows):,}")
+
+    # Group by (artist_norm, medium_category)
+    from collections import defaultdict
+    import statistics
+
+    groups: dict[tuple[str, str], list[float]] = defaultdict(list)
+    for r in rows:
+        cat = normalize_medium_category(r.medium)
+        groups[(r.artist_name_normalized, cat)].append(r.hammer_price_eur)
+
+    # Filter to groups with enough sales, build upsert params
+    params = []
+    for (artist_norm, cat), prices in groups.items():
+        if len(prices) < min_sales:
+            continue
+        params.append({
+            "artist_name_normalized": artist_norm,
+            "medium_category": cat,
+            "avg_eur": round(sum(prices) / len(prices), 2),
+            "median_eur": round(statistics.median(prices), 2),
+            "sale_count": len(prices),
+        })
+
+    if params:
+        await session.execute(text("""
+            INSERT INTO hammer_artist_medium_stats
+                (artist_name_normalized, medium_category, avg_eur, median_eur, sale_count, last_updated)
+            VALUES
+                (:artist_name_normalized, :medium_category, :avg_eur, :median_eur, :sale_count, NOW())
+            ON CONFLICT (artist_name_normalized, medium_category) DO UPDATE
+                SET avg_eur      = EXCLUDED.avg_eur,
+                    median_eur   = EXCLUDED.median_eur,
+                    sale_count   = EXCLUDED.sale_count,
+                    last_updated = NOW()
+        """), params)
+        await session.commit()
+
+    n = (await session.execute(text("SELECT COUNT(*) FROM hammer_artist_medium_stats"))).scalar() or 0
+    print(f"  hammer_artist_medium_stats: {n:,} artist×medium groups with >= {min_sales} sales.")
+    return n
+
+
 async def main():
     print("══ P0 Hammer backfill ══════════════════════════════════")
     print(f"  DRY_RUN={DRY_RUN}  BATCH_SIZE={BATCH_SIZE}  MIN_SALES={MIN_SALES}  SKIP_STEP1={SKIP_STEP1}")
@@ -317,6 +417,7 @@ async def main():
             print("\n── Step 1: Skipped (SKIP_STEP1=1) ──")
         await step2_backfill_from_lots(session)
         await step3_refresh_stats(session, MIN_SALES)
+        await step4_refresh_medium_stats(session, MIN_MEDIUM_SALES)
 
     print("\n══ Done ════════════════════════════════════════════════")
 
