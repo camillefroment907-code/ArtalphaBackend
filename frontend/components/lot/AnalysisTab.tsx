@@ -146,7 +146,7 @@ export function AnalysisTab({ lot }: AnalysisTabProps) {
               ] as { key: string; value: number | null }[]
             )
               .filter(({ value }) => value != null)
-              .map(({ key, value }) => (
+              .map(({ key, value: _v }) => { const value = _v!; return (
                 <div key={key}>
                   <div
                     style={{
@@ -188,7 +188,7 @@ export function AnalysisTab({ lot }: AnalysisTabProps) {
                     />
                   </div>
                 </div>
-              ))}
+              ); })}
           </div>
 
           {/* Overall score */}

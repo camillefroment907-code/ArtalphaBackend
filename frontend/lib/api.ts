@@ -110,6 +110,7 @@ export interface ScoreBreakdown {
   pct_below_market_avg?: number;
   rationale?: string[];
   ai_insight?: string;
+  coherence_ratio?: number | null;  // current_price / avg_market_price; <0.05 = possible medium mismatch
 }
 
 export interface Lot {

@@ -328,6 +328,110 @@ function PriceChart({ comparables, lot, fmt }: { comparables: Lot[]; lot: Lot; f
   );
 }
 
+// ── PriceVerdict ──────────────────────────────────────────────────────────────
+// Compares asking price to median of real hammer prices (last 24m).
+// Only renders when ≥5 verified sales exist. No fabrication.
+function PriceVerdict({ lot, fmt }: { lot: Lot; fmt: (v?: number | null) => string }) {
+  const median = lot.fair_value_nautilus;
+  const nSales = lot.real_data_n_sales ?? 0;
+  const price  = lot.current_price;
+
+  // Insufficient data — silent
+  if (!median || !price || price <= 0 || nSales < 5) return null;
+
+  const pctDiff  = ((median - price) / median) * 100;
+  const absPct   = Math.abs(pctDiff);
+  const below    = pctDiff > 0;
+  const verdictColor = below ? SUCCESS : pctDiff < -5 ? DANGER : WARNING;
+  const verdictLabel = below ? "BELOW MARKET MEDIAN" : "ABOVE MARKET MEDIAN";
+  const verdictIcon  = below ? <TrendingUp size={14} /> : <TrendingDown size={14} />;
+
+  // Warn when lot price is less than 5% of median — medium mismatch likely
+  // (e.g. Warhol offset print vs. Warhol oil — see coherence_ratio in scoring)
+  const coherenceWarning = lot.score_breakdown?.coherence_ratio != null && lot.score_breakdown.coherence_ratio < 0.05;
+
+  // Progress bar: clamp lot price as a fraction of median (max 200%)
+  const barPct = Math.min(Math.round((price / median) * 100), 200);
+
+  return (
+    <div style={{
+      background: "var(--white)",
+      borderBottom: `1px solid ${BORDER}`,
+      padding: "14px 32px",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
+
+        {/* Label */}
+        <div style={{ flexShrink: 0 }}>
+          <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "3px" }}>
+            PRICE ANALYSIS
+          </div>
+          <div style={{ fontSize: "11px", color: "#6B7280" }}>
+            vs. market median · {nSales} verified sales · 24 months
+          </div>
+        </div>
+
+        {/* Prices */}
+        <div style={{ display: "flex", alignItems: "center", gap: "20px", flexShrink: 0 }}>
+          <div>
+            <div style={{ fontSize: "9px", color: "var(--text-muted)", marginBottom: "2px" }}>Asking price</div>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "14px", fontWeight: 700, color: NAVY }}>{fmt(price)}</div>
+          </div>
+          <div style={{ color: BORDER, fontSize: "16px" }}>→</div>
+          <div>
+            <div style={{ fontSize: "9px", color: "var(--text-muted)", marginBottom: "2px" }}>Market median</div>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "14px", fontWeight: 700, color: NAVY }}>{fmt(median)}</div>
+          </div>
+        </div>
+
+        {/* Bar */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", gap: "6px", alignItems: "center", marginBottom: "5px" }}>
+            <div style={{ height: "6px", background: BORDER, borderRadius: "3px", flex: 1, overflow: "hidden", position: "relative" }}>
+              {/* Median marker */}
+              <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: "2px", background: "#D1D5DB", transform: "translateX(-50%)" }} />
+              {/* Price bar */}
+              <div style={{ height: "100%", width: `${Math.min(barPct / 2, 100)}%`, background: verdictColor, borderRadius: "3px", transition: "width 0.6s ease" }} />
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontSize: "9px", color: "var(--text-muted)" }}>0</span>
+            <span style={{ fontSize: "9px", color: "var(--text-muted)" }}>Median</span>
+          </div>
+        </div>
+
+        {/* Verdict badge */}
+        <div style={{
+          flexShrink: 0,
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+          background: `${verdictColor}12`,
+          border: `1px solid ${verdictColor}30`,
+          borderRadius: "6px",
+          padding: "10px 16px",
+          minWidth: "110px",
+          textAlign: "center",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "4px", color: verdictColor, marginBottom: "2px" }}>
+            {verdictIcon}
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "22px", fontWeight: 700 }}>
+              {below ? "-" : "+"}{absPct.toFixed(0)}%
+            </span>
+          </div>
+          <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.1em", color: verdictColor }}>{verdictLabel}</div>
+        </div>
+
+      </div>
+
+      {coherenceWarning && (
+        <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "5px", fontSize: "10px", color: "#92400E", background: "#FFF7ED", border: "1px solid #FDE68A", borderRadius: "4px", padding: "4px 10px" }}>
+          <Info size={10} style={{ flexShrink: 0 }} />
+          Large price range detected for this artist. Market median may include different mediums (prints vs. paintings). Use as a directional reference only.
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── ScoreBreakdownPanel ───────────────────────────────────────────────────────
 const PILLARS = [
   { key: "below_estimate_score"   as const, label: "Below Estimate" },
@@ -826,6 +930,8 @@ export default function LotPage({ params }: { params: { id: string } }) {
               {/* ── KPI STRIP ───────────────────────────────────── */}
               <KPIStrip lot={lot} fmt={fmt} />
 
+              {/* ── PRICE VERDICT ────────────────────────────────── */}
+              <PriceVerdict lot={lot} fmt={fmt} />
 
               {/* ── COMPARABLES HERO ────────────────────────────── */}
               <ComparablesHero
