@@ -288,6 +288,9 @@ export default function OpportunityDetail() {
     (lot.auction_date && new Date(lot.auction_date) > new Date() && !lot.status);
 
   const source = String(lot.source || '').toLowerCase();
+  const isGallery = lot.is_buy_now === true
+    || lot.market_type === 'primary'
+    || lot.market_type === 'PRIMARY';
   const sourceNames: Record<string, string> = {
     drouot: 'Drouot', interencheres: 'Interenchères', invaluable: 'Invaluable',
     sothebys: "Sotheby's", christies: "Christie's", bonhams: 'Bonhams',
@@ -779,7 +782,7 @@ export default function OpportunityDetail() {
           {/* Block 4 — MAX BID */}
           {maxBidIsReliable && (
             <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? 'MAX BID RENTABLE' : 'MAX PROFITABLE BID'}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? (isGallery ? 'PRIX MAXIMUM RECOMMANDÉ' : 'MAX BID RENTABLE') : (isGallery ? 'RECOMMENDED MAX PRICE' : 'MAX PROFITABLE BID')}</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>{fmtExact(avoidAbove)}</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
                 {maxBidSource === 'comparables_proches'
@@ -1019,7 +1022,7 @@ export default function OpportunityDetail() {
             <div style={{ color: '#C6E8D0', margin: '0 4px' }}>|</div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#6B7280' }}>
               {isFr
-                ? `${lot.current_price ? 'Enchère en cours' : 'Estimation'} ${fmtExact(price)} · enchère${daysUntilClose != null ? ` · clôture dans ${daysUntilClose} jour${daysUntilClose > 1 ? 's' : ''}` : ''}`
+                ? `${lot.current_price ? (isGallery ? 'Disponible' : 'Enchère en cours') : 'Estimation'} ${fmtExact(price)}${isGallery ? '' : ' · enchère'}${daysUntilClose != null ? ` · clôture dans ${daysUntilClose} jour${daysUntilClose > 1 ? 's' : ''}` : ''}`
                 : `${lot.current_price ? 'Current bid' : 'Estimate'} ${fmtExact(price)} · auction${daysUntilClose != null ? ` · closes in ${daysUntilClose} day${daysUntilClose > 1 ? 's' : ''}` : ''}`}
             </div>
           </div>
@@ -1027,10 +1030,10 @@ export default function OpportunityDetail() {
           {/* Grille 160 | divider | 160 | divider | 1fr */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.5px 1fr 0.5px 2fr' }}>
 
-            {/* Mise à prix */}
+            {/* Prix */}
             <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '2px', textTransform: 'uppercase' as const }}>
-                {lot.current_price ? (isFr ? 'MISE À PRIX' : 'STARTING BID') : (isFr ? 'ESTIMATION' : 'ESTIMATE')}
+                {lot.current_price ? (isFr ? (isGallery ? 'PRIX DEMANDÉ' : 'MISE À PRIX') : (isGallery ? 'ASKING PRICE' : 'STARTING BID')) : (isFr ? 'ESTIMATION' : 'ESTIMATE')}
               </div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '26px', fontWeight: 800, color: '#0D1F35', lineHeight: 1 }}>
                 {fmtExact(price)}
@@ -1041,7 +1044,7 @@ export default function OpportunityDetail() {
                 </div>
               )}
               <div style={{ fontSize: '10px', color: '#9CA3AF' }}>
-                {isFr ? 'Point de départ' : 'Starting point'}
+                {isFr ? (isGallery ? 'Prix fixe' : 'Point de départ') : (isGallery ? 'Fixed price' : 'Starting point')}
               </div>
             </div>
 
@@ -1054,7 +1057,7 @@ export default function OpportunityDetail() {
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#92400E', letterSpacing: '2px', textTransform: 'uppercase' as const }}>
                     {(maxBidSource === 'ventes_meme_technique_limite' || maxBidSource === 'comparables_2d_limite' || maxBidSource === 'ventes_artiste_sans_medium')
                       ? (isFr ? 'MAX BID INDICATIF' : 'INDICATIVE MAX BID')
-                      : (isFr ? 'À NE PAS DÉPASSER' : 'DO NOT EXCEED')}
+                      : (isFr ? (isGallery ? 'VALEUR MARCHÉ ESTIMÉE' : 'À NE PAS DÉPASSER') : (isGallery ? 'ESTIMATED MARKET VALUE' : 'DO NOT EXCEED'))}
                   </div>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '26px', fontWeight: 800, color: AMB, lineHeight: 1 }}>
                     {fmtExact(avoidAbove)}
@@ -1066,7 +1069,7 @@ export default function OpportunityDetail() {
                       ? (isFr ? 'Technique 2D proche — données limitées' : 'Adjacent 2D medium — limited data')
                       : maxBidSource === 'ventes_artiste_sans_medium'
                       ? (isFr ? 'Technique inconnue — indicatif seulement' : 'Medium unknown — indicative only')
-                      : (isFr ? 'Perte garantie au-delà' : 'Loss guaranteed above')}
+                      : (isFr ? (isGallery ? 'Au-dessus de la valeur marché' : 'Perte garantie au-delà') : (isGallery ? 'Above market value' : 'Loss guaranteed above'))}
                   </div>
                 </>
               ) : (
@@ -1155,7 +1158,7 @@ export default function OpportunityDetail() {
               { label: 'Technique', value: lot.medium },
               { label: 'Dimensions', value: lot.dimensions },
               { label: 'Estimation', value: (estLow || estHigh) ? `${fmt(estLow)} – ${fmt(estHigh)}` : null },
-              { label: 'Maison', value: lot.auction_house_name },
+              { label: isGallery ? 'Galerie' : 'Maison', value: lot.auction_house_name },
               { label: 'Clôture', value: auctionDateFmt, urgent: daysUntilClose != null && daysUntilClose < 14 },
             ] as { label: string; value?: string | null; nav?: string; urgent?: boolean }[]).filter(r => r.value).map(r => (
               <div key={r.label} style={dRow}>
