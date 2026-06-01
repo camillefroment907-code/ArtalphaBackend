@@ -157,6 +157,7 @@ class ScoreBreakdown(BaseModel):
     # Oracle signal component (Sprint C)
     oracle_score_6m: Optional[float] = None
     oracle_boost: Optional[float] = None     # points added/subtracted by oracle
+    coherence_ratio: Optional[float] = None  # lot.current_price / avg_market_price; <0.05 with high score triggers warning
 
 
 class LotOut(BaseModel):

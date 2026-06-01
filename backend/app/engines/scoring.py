@@ -331,6 +331,23 @@ def compute_deal_score(inp: ScoringInput) -> ScoringResult:
         lot.current_price, avg_market_price
     )
 
+    coherence_ratio = None
+    if avg_market_price and lot.current_price and avg_market_price > 0:
+        coherence_ratio = round(lot.current_price / avg_market_price, 4)
+
+    if (
+        coherence_ratio is not None
+        and coherence_ratio < 0.05
+        and below_mkt_score > 80
+    ):
+        logger.warning(
+            "market_coherence_warning",
+            artist_name=lot.artist_name_raw,
+            lot_title=lot.title[:50],
+            coherence_ratio=coherence_ratio,
+            below_mkt_score=below_mkt_score,
+        )
+
     liq_score = _score_liquidity(liquidity)
     rep_score = _score_house_reputation(reputation)
     conf_score = _score_confidence(
@@ -407,6 +424,7 @@ def compute_deal_score(inp: ScoringInput) -> ScoringResult:
         ai_insight=ai_insight,
         oracle_score_6m=inp.oracle_score_6m,
         oracle_boost=oracle_boost,
+        coherence_ratio=coherence_ratio,
     )
 
     logger.debug(
