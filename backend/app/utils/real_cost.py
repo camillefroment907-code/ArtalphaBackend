@@ -56,6 +56,7 @@ def compute_real_cost(
         "breakeven_hammer": round(breakeven_hammer),
         "needed_gain_pct": needed_gain_pct,
         "buyers_premium_pct": round(premium_rate * 100, 1),
+        "premium_rate": premium_rate,   # decimal form (e.g. 0.26) — used by projection block and RealCost interface
     }
 
 

@@ -82,7 +82,7 @@ function StatBanner({ stats }: { stats: PortfolioStats }) {
         {
           label: "Valeur actuelle est.",
           value: formatPriceInCurrency(stats.total_current_eur, currency, locale),
-          sub: "Estimation basée sur les tendances marché",
+          sub: stats.total_gain_pct !== 0 ? "Estimation basée sur valeur estimée renseignée" : "Aucune estimation renseignée — valeur = prix d'achat",
           color: "text-stone-900",
         },
         {
@@ -204,7 +204,7 @@ function ProjectionModal({
           <div className="mt-4 flex items-start gap-2 p-3 bg-amber-50 border border-amber-100 rounded-sm">
             <Info className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-amber-700 leading-relaxed">
-              Projections basées sur les données historiques Artprice/Mei Moses. Non contractuelles.
+              Projections indicatives basées sur des taux de croissance historiques par catégorie d&apos;artiste. Non contractuelles.
               Le marché de l&apos;art comporte des risques de liquidité.
             </p>
           </div>

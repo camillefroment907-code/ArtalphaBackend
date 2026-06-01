@@ -3,7 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { motion } from "framer-motion";
-import { Search, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Search, TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { artistsApi, type Artist } from "@/lib/api";
@@ -122,6 +122,14 @@ export default function ArtistsPage() {
               {t.charAt(0).toUpperCase() + t.slice(1)}
             </button>
           ))}
+        </div>
+
+        {/* Data quality notice */}
+        <div className="flex items-start gap-2.5 px-8 py-3 bg-amber-50/60 border-b border-amber-100">
+          <Info className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-700 leading-relaxed">
+            Les métriques (liquidité, prix moyen, tendance) sont <strong>estimées</strong> pour les artistes sans données réelles suffisantes dans notre base. Elles servent d&apos;indicateurs de référence uniquement.
+          </p>
         </div>
 
         <main className="px-8 py-6">
