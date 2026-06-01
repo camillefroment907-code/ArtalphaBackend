@@ -800,6 +800,7 @@ class HammerPrice(Base):
     artwork_title    = Column(String(1000), nullable=True)
     year_created     = Column(Integer, nullable=True)
     medium           = Column(String(300), nullable=True)
+    medium_category  = Column(String(20),  nullable=True, index=True)
     dimensions       = Column(String(200), nullable=True)
     sale_date        = Column(DateTime, index=True, nullable=True)
     hammer_price     = Column(Float, nullable=True)
