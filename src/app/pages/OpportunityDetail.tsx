@@ -354,6 +354,12 @@ export default function OpportunityDetail() {
   const netGain       = breakEvenGain != null ? upsidePct - breakEvenGain : null;
   const avoidAbove = maxBidFromApi ?? null;
   const avoidAboveUsedComps = maxBidFromApi != null;
+  const RELIABLE_SOURCES = [
+    'comparables_proches',
+    'comparables_meme_technique',
+    'comparables_technique_proche',
+  ];
+  const maxBidIsReliable = !!avoidAbove && RELIABLE_SOURCES.includes(maxBidSource ?? '');
   const daysUntilClose = lot.auction_date
     ? Math.max(0, Math.round((new Date(lot.auction_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null;
@@ -579,13 +585,16 @@ export default function OpportunityDetail() {
                 badge: null,
               });
 
-            const topReasons = reasons.slice(0, 3);
-
             const isBuy = (lot.deal_score || 0) >= 70;
+            const topReasons = isBuy
+              ? reasons.slice(0, 3)
+              : reasons.filter(r => r.color !== 'GD' && r.color !== '#52C97F').slice(0, 3);
+            const showReasons = topReasons.length > 0;
+
             const whyLabel = isBuy ? (isFr ? 'POURQUOI ACHETER' : 'WHY BUY') : (isFr ? 'POURQUOI PASSER' : 'WHY PASS');
             const whyColor = isBuy ? GOLD : '#F87171';
 
-            if (topReasons.length === 0) {
+            if (!showReasons) {
               if ((lot.deal_score || 0) < 45) return (
                 <div style={{ background: 'rgba(248,113,113,0.06)', border: '0.5px solid rgba(248,113,113,0.15)', borderRadius: 10, padding: '11px 16px' }}>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.15em', color: '#F87171', textTransform: 'uppercase' as const, marginBottom: 8 }}>
@@ -756,7 +765,7 @@ export default function OpportunityDetail() {
           })()}
 
           {/* Block 4 — MAX BID */}
-          {avoidAbove && maxBidSource !== 'estimate' && (
+          {maxBidIsReliable && (
             <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? 'MAX BID RENTABLE' : 'MAX PROFITABLE BID'}</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>{fmtExact(avoidAbove)}</div>
@@ -765,19 +774,19 @@ export default function OpportunityDetail() {
                   ? (isFr ? 'Ventes même technique + taille — marge 10%' : 'Same medium & size sales — 10% margin')
                   : maxBidSource === 'comparables_meme_technique'
                   ? (isFr ? 'Ventes même technique — marge 10%' : 'Same medium sales — 10% margin')
-                  : maxBidSource === 'comparables_technique_proche'
-                  ? (isFr ? 'Techniques proches (2D) — marge 10%' : 'Similar medium (2D) — 10% margin')
-                  : maxBidSource === 'ventes_meme_technique_limite'
-                  ? (isFr ? '1–2 ventes même technique — peu de données' : '1–2 same-medium sales — limited data')
-                  : maxBidSource === 'comparables_2d_limite'
-                  ? (isFr ? '1–2 ventes technique 2D proche — peu de données' : '1–2 adjacent 2D sales — limited data')
-                  : maxBidSource === 'ventes_artiste_sans_medium'
-                  ? (isFr ? 'Ventes artiste (technique inconnue) — indicatif' : 'Artist sales (medium unknown) — indicative')
-                  : (isFr ? 'Au-delà : perte garantie' : 'Beyond this: guaranteed loss')}
+                  : (isFr ? 'Techniques proches (2D) — marge 10%' : 'Similar medium (2D) — 10% margin')}
               </div>
             </div>
           )}
-          {(!avoidAbove || maxBidSource === 'estimate') && (
+          {avoidAbove && !maxBidIsReliable && (
+            <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>MAX BID</div>
+              <div style={{ color: '#64748B', fontSize: '13px', fontStyle: 'italic' }}>
+                {isFr ? 'Données insuffisantes pour un prix max fiable' : 'Insufficient data for a reliable max bid'}
+              </div>
+            </div>
+          )}
+          {!avoidAbove && (
             <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? 'MAX BID' : 'MAX BID'}</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>
@@ -1028,7 +1037,7 @@ export default function OpportunityDetail() {
 
             {/* À ne pas dépasser */}
             <div style={{ padding: '12px 14px', background: '#FFFBEB', display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
-              {avoidAbove && maxBidSource !== 'estimate' ? (
+              {maxBidIsReliable ? (
                 <>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#92400E', letterSpacing: '2px', textTransform: 'uppercase' as const }}>
                     {(maxBidSource === 'ventes_meme_technique_limite' || maxBidSource === 'comparables_2d_limite' || maxBidSource === 'ventes_artiste_sans_medium')
