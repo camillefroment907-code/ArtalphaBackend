@@ -467,6 +467,29 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                         exceptional_lot_ids.append(_lot_uuid)
                     processed += 1
 
+                    # Record predicted_upside at ingest so ScorePerformance is
+                    # populated before the auction, not only after.
+                    # Uses the actual lot_id from DB (handles both new inserts
+                    # and on_conflict_do_nothing cases where _lot_uuid wasn't used).
+                    if lot_data.auction_date and _lot_status != LotStatus.SOLD:
+                        from app.models.db_models import Lot as _Lot
+                        _id_r = await session.execute(
+                            select(_Lot.id).where(
+                                _Lot.source == lot_obj.source,
+                                _Lot.external_id == lot_obj.external_id,
+                            )
+                        )
+                        _actual_id = _id_r.scalar_one_or_none()
+                        if _actual_id:
+                            from app.jobs.score_validator import upsert_score_performance
+                            await upsert_score_performance(
+                                session,
+                                lot_id=_actual_id,
+                                nautilus_score=score_result.deal_score,
+                                predicted_upside=score_result.pct_below_low_estimate,
+                                auction_date=lot_data.auction_date,
+                            )
+
                     # Batch commit every 100 lots — avoids single huge transaction
                     if processed % 100 == 0:
                         await session.commit()
@@ -683,6 +706,16 @@ async def _rescore_live_async():
                 lot.pct_below_market_avg = score_result.pct_below_market_avg
                 lot.score_breakdown = score_result.breakdown.model_dump()
                 lot.scored_at = datetime.utcnow()
+
+                # Keep ScorePerformance.predicted_upside in sync with latest score
+                from app.jobs.score_validator import upsert_score_performance
+                await upsert_score_performance(
+                    session,
+                    lot_id=lot.id,
+                    nautilus_score=score_result.deal_score,
+                    predicted_upside=score_result.pct_below_low_estimate,
+                    auction_date=lot.auction_date,
+                )
                 _TRUST_LIST_R = {'artsy', 'liveauctioneers', 'invaluable', 'drouot', 'artcurial', 'phillips', 'bonhams', 'christies', 'sothebys', 'artmarketapi', 'catawiki', 'interencheres'}
                 _source_str_r = str(lot.source.value if hasattr(lot.source, "value") else lot.source)
                 if _source_str_r in _TRUST_LIST_R and (lot.current_price or 0) >= 500 and lot.artist_name_raw:
