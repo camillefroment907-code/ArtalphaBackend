@@ -148,7 +148,7 @@ export default function TopDealsPage() {
     <>
       <TopBar
         title="Top Deals Today"
-        subtitle="Best opportunities ranked by deal score — next 7 days"
+        subtitle="Best opportunities ranked by deal score — next 30 days"
       />
 
       <main className="flex-1 px-8 py-6">

@@ -45,7 +45,7 @@ export function StatsBar() {
     avg_deal_score: 0,
     top_deal_score: 0,
     alerts_sent_today: 0,
-    sources_active: 3,
+    sources_active: 0,
   };
 
   return (
