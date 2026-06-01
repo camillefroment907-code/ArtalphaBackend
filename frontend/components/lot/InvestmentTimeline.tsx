@@ -42,19 +42,23 @@ export function InvestmentTimeline({ lot }: { lot: Lot }) {
   const cfg      = SIGNAL_CONFIG[signal];
   const { Icon } = cfg;
 
-  // CAGR is a percentage in the API (e.g. 8.5 = 8.5%)
-  const cagrPct   = proj.cagr_pct ?? 0;
+  // CAGR is a percentage in the API (e.g. 8.5 = 8.5%).
+  // Do NOT default to 0 — a missing CAGR must not appear as "flat growth".
+  const cagrPct   = proj.cagr_pct ?? null;
   const holdYears = proj.recommended_hold_years ?? 5;
 
   // Base for projection: all_in_cost if available, else current_price
   const allIn = proj.all_in_cost ?? lot.current_price ?? 0;
 
   // Projected exit price: use backend pre-computed value when available,
-  // otherwise fall back to frontend compound calculation from the same CAGR.
+  // otherwise compute from CAGR only if CAGR is a real value (not null).
+  // Never fabricate a range when the backend didn't provide one.
   const yearData  = proj.years?.[holdYears];
-  const exitPrice = yearData?.base_eur ?? (allIn > 0 ? allIn * Math.pow(1 + cagrPct / 100, holdYears) : 0);
-  const exitLow   = yearData?.conservative_eur ?? exitPrice * 0.85;
-  const exitHigh  = yearData?.optimistic_eur   ?? exitPrice * 1.15;
+  const exitPrice = yearData?.base_eur
+    ?? (allIn > 0 && cagrPct != null ? allIn * Math.pow(1 + cagrPct / 100, holdYears) : null);
+  // Range: only show backend-supplied conservative/optimistic — no ±15% invention
+  const exitLow   = yearData?.conservative_eur ?? null;
+  const exitHigh  = yearData?.optimistic_eur   ?? null;
 
   // Medium display label
   const mediumLabel = proj.cagr_medium_used
@@ -89,12 +93,12 @@ export function InvestmentTimeline({ lot }: { lot: Lot }) {
         }}>
           <Icon size={12} />
           <span>{cfg.label}</span>
-          {signal === "BUY" && cagrPct > 0 && (
+          {signal === "BUY" && cagrPct != null && cagrPct > 0 && (
             <span style={{ opacity: 0.7, fontWeight: 500 }}>
               · {cagrPct.toFixed(1)}% CAGR
             </span>
           )}
-          {signal === "AVOID" && (proj.cagr_raw_pct ?? 0) < 0 && (
+          {signal === "AVOID" && proj.cagr_raw_pct != null && proj.cagr_raw_pct < 0 && (
             <span style={{ opacity: 0.7, fontWeight: 500 }}>
               · {(proj.cagr_raw_pct!).toFixed(1)}% trend
             </span>
@@ -170,8 +174,14 @@ export function InvestmentTimeline({ lot }: { lot: Lot }) {
           {/* EXIT node */}
           <TimelineNode
             label="EXIT"
-            value={exitPrice > 0 ? fmt(exitPrice) : "—"}
-            sub={exitPrice > 0 ? `${fmt(exitLow)} – ${fmt(exitHigh)}` : "Insufficient data"}
+            value={exitPrice != null && exitPrice > 0 ? fmt(exitPrice) : "—"}
+            sub={
+              exitPrice != null && exitPrice > 0
+                ? (exitLow != null && exitHigh != null
+                    ? `${fmt(exitLow)} – ${fmt(exitHigh)}`
+                    : `${holdYears}y at ${cagrPct != null ? cagrPct.toFixed(1) + "% CAGR" : "—"}`)
+                : "Insufficient data"
+            }
             dotColor={cfg.color}
             labelColor={cfg.color}
             valueColor={cfg.color}
