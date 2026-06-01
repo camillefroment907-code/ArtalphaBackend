@@ -2572,6 +2572,71 @@ async def get_lot_projection(
     )
 
 
+@router.get("/{lot_id}/hammer-history")
+async def get_hammer_history(
+    lot_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    """Historical realized prices from hammer_prices for the lot's artist."""
+    plan = await get_user_plan(current_user, db)
+    if plan not in {"investor", "pro", "institutional"}:
+        return {"locked": True}
+
+    lot_result = await db.execute(select(Lot).where(Lot.id == lot_id))
+    lot = lot_result.scalar_one_or_none()
+    if not lot:
+        raise HTTPException(404, "Lot not found")
+
+    if not lot.artist_name_raw:
+        return {"artist": None, "total_sales": 0, "median_eur": None,
+                "avg_eur": None, "sales": []}
+
+    from app.jobs.quality_filter import normalize_artist_name
+    artist_norm = normalize_artist_name(lot.artist_name_raw)
+
+    hp_result = await db.execute(
+        select(HammerPrice)
+        .where(
+            HammerPrice.artist_name_normalized == artist_norm,
+            HammerPrice.hammer_price_eur.isnot(None),
+        )
+        .order_by(HammerPrice.sale_date.desc())
+        .limit(50)
+    )
+    rows = hp_result.scalars().all()
+
+    prices = [r.hammer_price_eur for r in rows]
+    total  = len(prices)
+    avg    = round(sum(prices) / total, 2) if total else None
+    median = None
+    if total:
+        s   = sorted(prices)
+        mid = total // 2
+        median = round((s[mid - 1] + s[mid]) / 2, 2) if total % 2 == 0 else round(s[mid], 2)
+
+    sales = [
+        {
+            "sale_date":        r.sale_date.strftime("%Y-%m-%d") if r.sale_date else None,
+            "hammer_price_eur": r.hammer_price_eur,
+            "medium_category":  r.medium_category,
+            "auction_house":    r.auction_house,
+            "estimate_low":     r.estimate_low,
+            "estimate_high":    r.estimate_high,
+            "artwork_title":    r.artwork_title,
+        }
+        for r in rows
+    ]
+
+    return {
+        "artist":      artist_norm,
+        "total_sales": total,
+        "median_eur":  median,
+        "avg_eur":     avg,
+        "sales":       sales,
+    }
+
+
 # ── Decision Archive ───────────────────────────────────────────────────────────
 
 class ConfirmPurchaseRequest(BaseModel):
