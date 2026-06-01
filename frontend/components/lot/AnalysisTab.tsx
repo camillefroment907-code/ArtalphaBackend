@@ -143,10 +143,9 @@ export function AnalysisTab({ lot }: AnalysisTabProps) {
                 { key: "liquidity_score", value: breakdown.liquidity_score },
                 { key: "house_reputation_score", value: breakdown.house_reputation_score },
                 { key: "confidence_score", value: breakdown.confidence_score },
-              ] as { key: string; value: number }[]
+              ] as { key: string; value: number | null }[]
             )
-              // below_market_score === 45.0 is a sentinel: no real market data available
-              .filter(({ key, value }) => value != null && !(key === "below_market_score" && value === 45))
+              .filter(({ value }) => value != null)
               .map(({ key, value }) => (
                 <div key={key}>
                   <div

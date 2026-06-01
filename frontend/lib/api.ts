@@ -102,7 +102,7 @@ export interface Artist {
 
 export interface ScoreBreakdown {
   below_estimate_score: number;
-  below_market_score: number;
+  below_market_score: number | null;
   liquidity_score: number;
   house_reputation_score: number;
   confidence_score: number;

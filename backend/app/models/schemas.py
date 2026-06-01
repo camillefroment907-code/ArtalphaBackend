@@ -145,7 +145,7 @@ class LotNormalized(BaseModel):
 
 class ScoreBreakdown(BaseModel):
     below_estimate_score: float
-    below_market_score: float
+    below_market_score: Optional[float] = None
     liquidity_score: float
     house_reputation_score: float
     confidence_score: float

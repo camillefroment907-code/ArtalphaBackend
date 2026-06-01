@@ -353,8 +353,7 @@ function ScoreBreakdownPanel({ lot }: { lot: Lot }) {
         <div style={{ display: "flex", flexDirection: "column", gap: "13px", marginBottom: "16px" }}>
           {PILLARS.map(({ key, label: pl }) => {
             const v = sb[key];
-            // 45.0 is the sentinel for "no real market data" — hide rather than mislead
-            if (v == null || (key === "below_market_score" && v === 45)) return null;
+            if (v == null) return null;
             const pc = pillarColor(v);
             return (
               <div key={key}>
@@ -568,7 +567,7 @@ function deriveRisks(lot: Lot): RiskFlag[] {
     flags.push({ icon: "alert", title: "Near estimate ceiling", detail: `Current price ≥ 88% of estimate high (${lot.estimate_high.toLocaleString()})` });
 
   // Factual: no market comparison data available
-  if (sb && sb.below_market_score === 45)
+  if (sb && sb.below_market_score == null)
     flags.push({ icon: "triangle", title: "No market comparison", detail: "Insufficient historical sales to benchmark this artist" });
 
   return flags.slice(0, 3);

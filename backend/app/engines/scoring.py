@@ -301,7 +301,7 @@ def compute_deal_score(inp: ScoringInput) -> ScoringResult:
             pct_below_market_avg=None,
             breakdown=ScoreBreakdown(
                 below_estimate_score=0.0,
-                below_market_score=0.0,
+                below_market_score=None,
                 liquidity_score=round((artist.get("liquidity", 50) / 100) * 100, 2),
                 house_reputation_score=0.0,
                 confidence_score=0.0,
@@ -396,7 +396,7 @@ def compute_deal_score(inp: ScoringInput) -> ScoringResult:
 
     breakdown = ScoreBreakdown(
         below_estimate_score=round(below_est_score, 2),
-        below_market_score=round(below_mkt_score, 2),
+        below_market_score=round(below_mkt_score, 2) if pct_below_market is not None else None,
         liquidity_score=round(liq_score, 2),
         house_reputation_score=round(rep_score, 2),
         confidence_score=round(conf_score, 2),
