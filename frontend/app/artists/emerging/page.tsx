@@ -29,7 +29,7 @@ export default function EmergingPage() {
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#0a0a0b" }}>
       <Sidebar />
       <div style={{ flex: 1, minWidth: 0, marginLeft: "52px", backgroundColor: "#0a0a0b" }}>
-        <TopBar title="Emerging Artists" subtitle="Rising market — early opportunity" />
+        <TopBar title="Emerging Artists" subtitle="All artists outside the blue-chip segment" />
         <main style={{ padding: "20px" }}>
           {isLoading ? (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>

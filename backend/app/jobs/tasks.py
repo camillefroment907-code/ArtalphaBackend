@@ -194,13 +194,18 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                 if not artist_name and lot_data.title:
                     artist_name = _detect_artist_from_title(lot_data.title)
 
-                # Start with curated DB (~12 known artists); empty dict for everyone else.
-                # _generate_heuristic_enrichment() is intentionally NOT called here —
-                # fake market metrics (avg_price, liquidity, popularity, sell_through)
-                # stored in the Artist record corrupt scoring and projections.
+                # Curated DB (~12 known artists) provides biography + metadata.
+                # avg_price is extracted separately and used only as last-resort fallback
+                # so that real auction data always wins.
+                # _generate_heuristic_enrichment() is intentionally NOT called here.
                 artist_data: dict = {}
+                _static_avg_price: float | None = None
+                _static_median_price: float | None = None
                 if artist_name:
                     artist_data = _find_in_db(artist_name) or {}
+                    # Pull out static prices — real data below will override them
+                    _static_avg_price = artist_data.pop("avg_price", None)
+                    _static_median_price = artist_data.pop("median_price", None)
 
                 # Find or create artist record (cached per run)
                 db_artist = None
@@ -219,41 +224,52 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                         db_artist = artist_result.scalars().first()
                         artist_cache[key] = db_artist
 
-                    # ── Real data enrichment: Artsper + HammerArtistStats ──────────
-                    # Runs BEFORE Artist record creation so real values go into the DB.
-                    # Precedence: curated DB > Artsper primary market > hammer history.
+                    # ── Real data enrichment: HammerArtistStats > Artsper > static DB ──
+                    # Priority order: hammer prices are real secondary-market auction data
+                    # and must take precedence over primary-market Artsper data and the
+                    # static ARTIST_MARKET_DB fallback.
                     from app.models.db_models import ArtsperArtistSnapshot, HammerArtistStats, ArtistSignal
                     from app.jobs.quality_filter import normalize_artist_name as _norm_name
 
                     _name_norm = key
-                    _artsper_res = await session.execute(
-                        select(ArtsperArtistSnapshot)
-                        .where(ArtsperArtistSnapshot.artist_name_normalized == _name_norm)
-                        .limit(1)
-                    )
-                    _artsper = _artsper_res.scalar_one_or_none()
-                    if _artsper and _artsper.price_avg and _artsper.price_avg > 0:
-                        if not artist_data.get("avg_price") or (_artsper.total_works or 0) > 10:
+
+                    # 1. HammerArtistStats — real secondary-market auction averages
+                    _hn = _norm_name(artist_name)
+                    if _hn:
+                        _hs_res = await session.execute(
+                            select(HammerArtistStats)
+                            .where(HammerArtistStats.artist_name_normalized == _hn)
+                        )
+                        _hs = _hs_res.scalar_one_or_none()
+                        if _hs and _hs.sale_count >= 5 and _hs.avg_eur:
+                            artist_data["avg_price"] = _hs.avg_eur
+                            artist_data["median_price"] = _hs.median_eur
+                            artist_data["lots_sold"] = _hs.sale_count
+                            artist_data["confidence"] = min(
+                                (artist_data.get("confidence") or 0.1) + 0.25, 1.0
+                            )
+
+                    # 2. Artsper primary-market data (useful for living artists with few
+                    #    auction records)
+                    if not artist_data.get("avg_price"):
+                        _artsper_res = await session.execute(
+                            select(ArtsperArtistSnapshot)
+                            .where(ArtsperArtistSnapshot.artist_name_normalized == _name_norm)
+                            .limit(1)
+                        )
+                        _artsper = _artsper_res.scalar_one_or_none()
+                        if _artsper and _artsper.price_avg and _artsper.price_avg > 0 \
+                                and (_artsper.total_works or 0) >= 5:
                             artist_data["avg_price"] = _artsper.price_avg
                             artist_data["confidence"] = min(
                                 (artist_data.get("confidence") or 0.1) + 0.20, 1.0
                             )
 
-                    if not artist_data.get("avg_price"):
-                        _hn = _norm_name(artist_name)
-                        if _hn:
-                            _hs_res = await session.execute(
-                                select(HammerArtistStats)
-                                .where(HammerArtistStats.artist_name_normalized == _hn)
-                            )
-                            _hs = _hs_res.scalar_one_or_none()
-                            if _hs and _hs.sale_count >= 5 and _hs.avg_eur:
-                                artist_data["avg_price"] = _hs.avg_eur
-                                artist_data["median_price"] = _hs.median_eur
-                                artist_data["lots_sold"] = _hs.sale_count
-                                artist_data["confidence"] = min(
-                                    (artist_data.get("confidence") or 0.1) + 0.25, 1.0
-                                )
+                    # 3. Static ARTIST_MARKET_DB avg_price as absolute last resort
+                    if not artist_data.get("avg_price") and _static_avg_price:
+                        artist_data["avg_price"] = _static_avg_price
+                        if _static_median_price:
+                            artist_data["median_price"] = _static_median_price
 
                     if not db_artist:
                         # Market metrics use real values when available, null otherwise.
