@@ -95,33 +95,20 @@ function LockedBlock({ preview, ctaText }: {
   );
 }
 
-// ── SECTION LABEL ─────────────────────────────────────────────────────────────
+// ── EDITORIAL SECTION ─────────────────────────────────────────────────────────
 
-const SLabel = ({ children }: { children: React.ReactNode }) => (
-  <div style={{
-    fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.10em',
-    textTransform: 'uppercase', color: LTT3, marginBottom: '10px',
-  }}>{children}</div>
+const EdSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <div style={{ marginBottom: '28px' }}>
+    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '12px' }}>
+      {title}
+    </div>
+    {children}
+  </div>
 );
 
-// ── DECISION CARD ─────────────────────────────────────────────────────────────
-
-const DCard = ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => (
-  <div style={{
-    padding: '1rem 1.25rem',
-    border: `0.5px solid ${LTB}`,
-    borderRadius: '12px',
-    background: LTC,
-    marginBottom: '0.75rem',
-    ...style,
-  }}>{children}</div>
-);
-
-// ── SIGNAL ITEM ───────────────────────────────────────────────────────────────
-
-const SigItem = ({ icon, color, children }: { icon: string; color: string; children: React.ReactNode }) => (
-  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '9px', fontSize: '14px', color: LTT1, lineHeight: 1.5, marginBottom: '8px' }}>
-    <span style={{ color, fontSize: '14px', flexShrink: 0, marginTop: '1px' }}>{icon}</span>
+const EdItem = ({ icon, iconColor, children }: { icon: string; iconColor: string; children: React.ReactNode }) => (
+  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px', fontSize: '14px', color: LTT2, lineHeight: 1.6 }}>
+    <span style={{ color: iconColor, flexShrink: 0, marginTop: '1px', fontSize: '13px' }}>{icon}</span>
     <span>{children}</span>
   </div>
 );
@@ -672,16 +659,19 @@ export default function OpportunityDetail() {
 
   // ── DECISION SIGNALS (derived) ────────────────────────────────────────────────
   const compCount       = lot.fair_value_confidence || comparables.length || 0;
-  const badgeProps      = scoreBadgeColor(dealScore);
-  const confProps       = confidenceLabel(compCount);
+  const badgeC          = scoreBadgeColor(dealScore);
+  const confP           = confidenceLabel(compCount);
   const optimismSigs    = buildOptimismSignals(lot, isFr);
   const vigilanceSigs   = buildVigilanceSignals(lot, isFr);
   const changeOfMind    = buildChangeOfMind(lot, isFr);
   const whyNotHigher    = buildWhyNotHigher(lot, isFr);
   const timingReasons   = buildTimingReasons(lot, isFr, daysUntilClose);
-  const recoText        = buildRecoText(dealScore, isFr);
+  const recoText        = dealScore >= 80
+    ? (isFr ? "Cette opportunité mérite d'être étudiée sérieusement." : 'This opportunity is worth a serious look.')
+    : dealScore >= 65
+    ? (isFr ? 'Cette œuvre vaut la peine d\'être suivie de près.' : 'This work is worth following closely.')
+    : (isFr ? "À surveiller — d'autres opportunités peuvent être plus prioritaires." : 'Worth monitoring — other opportunities may be more pressing.');
   const narrativeReading = buildNarrativeReading(lot, isFr, compCount);
-  const ctaText         = ctaLabel(dealScore);
   const humanLabel      = scoreHumanLabel(dealScore);
 
   // ── TOP PCT ───────────────────────────────────────────────────────────────────
@@ -733,8 +723,8 @@ export default function OpportunityDetail() {
         </div>
       </div>
 
-      {/* ═══ HERO — original 3-col terminal layout preserved ═══ */}
-      <div ref={heroRef} className="lot-hero-grid" style={{ background: DK, display: 'grid', gridTemplateColumns: '300px 1fr 280px', minHeight: '380px' }}>
+      {/* ═══ HERO DARK — left: image+info / right: verdict ═══ */}
+      <div ref={heroRef} className="lot-hero-grid" style={{ background: DK, display: 'grid', gridTemplateColumns: '1fr 320px', minHeight: '380px' }}>
 
         {/* COL 1 — Image */}
         <div className="lot-hero-image" style={{ background: DK4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', borderRight: `0.5px solid ${DKB}`, position: 'relative', paddingLeft: '16px' }}>
@@ -816,45 +806,73 @@ export default function OpportunityDetail() {
           </div>
         </div>
 
-        {/* COL 3 — Conviction stack (unchanged) */}
-        <div style={{ padding: '28px 16px', display: 'flex', flexDirection: 'column', gap: '8px', background: DK4 }}>
-          <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>SCORE</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '42px', fontWeight: 700, color: 'white', lineHeight: 1 }}>{Math.round(dealScore)}</span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>/100</span>
-            </div>
-            <div style={{ marginTop: '6px', height: '3px', background: DKB, borderRadius: '1px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', borderRadius: '1px', width: `${dealScore}%`, background: GOLD }} />
-            </div>
-            {lot.fair_value_nautilus && price && (
-              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', marginTop: '6px', fontFamily: 'var(--font-mono)' }}>
-                -{Math.round((1 - price / (lot.fair_value_nautilus as number)) * 100)}% vs comparables
-              </div>
-            )}
+        {/* COL 3 — Verdict décisionnel */}
+        <div style={{ padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: '0', background: DK4 }}>
+
+          {/* Badge verdict */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', marginBottom: '18px' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: badgeC.dot, display: 'inline-block', flexShrink: 0 }} />
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: badgeC.color, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+              {scoreBadgeLabel(dealScore)}
+            </span>
           </div>
-          <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>SIGNAL</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: verdict.dk, lineHeight: 1 }}>{verdict.icon} {verdict.label}</div>
+
+          {/* Score + human label */}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '4px' }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '52px', fontWeight: 700, color: '#F0EDE6', lineHeight: 1 }}>{Math.round(dealScore)}</span>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', color: 'rgba(255,255,255,0.3)' }}>/100</span>
           </div>
-          {lot.fair_value_nautilus && price > 0 && (() => {
-            const heroGapPct = Math.round((1 - price / (lot.fair_value_nautilus as number)) * 100);
-            return (
-              <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>VS COMPARABLES</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: '#34D399', lineHeight: 1 }}>{heroGapPct > 0 ? '-' : '+'}{Math.abs(heroGapPct)}%</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>{isFr ? `Médiane : ${fmt(lot.fair_value_nautilus)}` : `Median: ${fmt(lot.fair_value_nautilus)}`}</div>
-              </div>
-            );
-          })()}
-          {!isGallery && maxBidIsReliable && (
-            <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? 'MAX BID RENTABLE' : 'MAX PROFITABLE BID'}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>{fmtExact(avoidAbove)}</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600, color: badgeC.color, marginBottom: '12px', letterSpacing: '0.04em' }}>
+            {humanLabel}
+          </div>
+          {topPct && (
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', marginBottom: '16px' }}>
+              <span style={{ color: GD, fontWeight: 700 }}>TOP {topPct}%</span> {isFr ? 'DES OPPORTUNITÉS NAUTILUS' : 'OF NAUTILUS OPPORTUNITIES'}
             </div>
           )}
-          {/* Follow / Purchase buttons — unchanged */}
+
+          <div style={{ height: '0.5px', background: DKB, marginBottom: '14px' }} />
+
+          {/* Confiance */}
+          <div style={{ marginBottom: '14px' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: confP.color, marginBottom: '3px' }}>{confP.label}</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.04em' }}>
+              {isFr ? `Basée sur ${compCount > 0 ? compCount : '—'} ventes comparables` : `Based on ${compCount > 0 ? compCount : '—'} comparable sales`}
+            </div>
+          </div>
+
+          <div style={{ height: '0.5px', background: DKB, marginBottom: '14px' }} />
+
+          {/* Notre lecture */}
+          <div style={{ flex: 1, marginBottom: '18px' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '8px' }}>
+              {isFr ? 'NOTRE LECTURE' : 'OUR TAKE'}
+            </div>
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.7, margin: 0 }}>
+              {narrativeReading}
+            </p>
+          </div>
+
+          {/* CTA shortlist */}
           <button
+            onClick={async () => {
+              if (!getToken()) { window.location.href = '/app/login'; return; }
+              setSubLoading(true);
+              try {
+                const r = await fetch(`${BACKEND}/api/wishlist/${id}`, { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } });
+                if (r.status === 403) setUpgradeModal('wishlist');
+                else if (r.ok) { setSubscribed(true); setSubId(id); trackEvent('lot_watchlist_add', 'lot', lot.id, { lot_title: lot.title, artist: lot.artist_name_raw, deal_score: lot.deal_score, source: 'hero_cta' }); }
+              } finally { setSubLoading(false); }
+            }}
+            disabled={subLoading}
+            style={{ padding: '11px 16px', background: subscribed ? 'rgba(82,201,127,0.12)' : 'rgba(198,168,90,0.1)', border: `0.5px solid ${subscribed ? GD : GOLD}`, color: subscribed ? GD : GOLD, cursor: subLoading ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.1em', borderRadius: '4px', textTransform: 'uppercase', marginBottom: '8px', width: '100%' }}
+          >
+            {subLoading ? '...' : subscribed ? (isFr ? '✓ AJOUTÉ À VOTRE SHORTLIST' : '✓ ADDED TO SHORTLIST') : ctaLabel(dealScore).toUpperCase()}
+          </button>
+
+          {/* Follow / Purchase (compact row) */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+            <button
             onClick={async () => {
               if (!getToken()) { window.location.href = '/app/login'; return; }
               setSubLoading(true);
@@ -873,15 +891,32 @@ export default function OpportunityDetail() {
               } finally { setSubLoading(false); }
             }}
             disabled={subLoading}
-            style={{ marginTop: 'auto', background: subscribed ? 'rgba(82,201,127,0.1)' : 'none', border: `0.5px solid ${subscribed ? GD : DKB}`, color: subscribed ? GD : '#9CA3AF', cursor: subLoading ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.08em', padding: '8px 14px', borderRadius: '4px', width: '100%' }}
+            onClick={async () => {
+              if (!getToken()) { window.location.href = '/app/login'; return; }
+              setSubLoading(true);
+              try {
+                if (subscribed && subId) {
+                  await fetch(`${BACKEND}/api/wishlist/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } });
+                  setSubscribed(false); setSubId(null);
+                } else {
+                  const r = await fetch(`${BACKEND}/api/wishlist/${id}`, { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } });
+                  if (r.status === 403) setUpgradeModal('wishlist');
+                  else if (r.ok) { setSubscribed(true); setSubId(id); trackEvent('lot_watchlist_add', 'lot', lot.id, { lot_title: lot.title, artist: lot.artist_name_raw, deal_score: lot.deal_score }); }
+                }
+              } finally { setSubLoading(false); }
+            }}
+            style={{ flex: 1, background: 'none', border: `0.5px solid ${DKB}`, color: '#6B7280', cursor: subLoading ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.08em', padding: '7px 10px', borderRadius: '4px' }}
           >
-            {subLoading ? '...' : subscribed ? (isFr ? '✓ Suivi' : '✓ Following') : (isFr ? '🔔 Suivre ce lot' : '🔔 Follow this lot')}
+            {subscribed ? (isFr ? '✓ Suivi' : '✓ Following') : (isFr ? '🔔 Suivre' : '🔔 Follow')}
           </button>
+            <button onClick={() => setShowPurchaseForm(v => !v)} style={{ flex: 1, background: showPurchaseForm ? 'rgba(26,107,60,0.1)' : 'none', border: `0.5px solid ${showPurchaseForm ? '#1A6B3C' : '#2A3B4C'}`, color: showPurchaseForm ? '#52C97F' : '#6B7280', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.08em', padding: '7px 10px', borderRadius: '4px' }}>
+              {isFr ? '✓ Acheté' : '✓ Bought'}
+            </button>
+          </div>
           {!purchaseDone ? (
             <>
-              <button onClick={() => setShowPurchaseForm(v => !v)} style={{ marginTop: '8px', background: showPurchaseForm ? 'rgba(26,107,60,0.1)' : 'none', border: `0.5px solid ${showPurchaseForm ? '#1A6B3C' : '#2A3B4C'}`, color: showPurchaseForm ? '#52C97F' : '#6B7280', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.08em', padding: '8px 14px', borderRadius: '4px', width: '100%' }}>
-                {isFr ? '✓ J\'ai acheté ce lot' : '✓ I bought this lot'}
-              </button>
+              <div style={{ display: 'none' }}> {/* placeholder to keep structure */}
+              </div>
               {showPurchaseForm && (
                 <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <input type="number" placeholder={isFr ? 'Prix marteau payé (€)' : 'Hammer price paid (€)'} value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid #2A3B4C', color: '#E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', padding: '7px 10px', borderRadius: '4px', width: '100%', boxSizing: 'border-box' as const, outline: 'none' }} />
@@ -998,132 +1033,60 @@ export default function OpportunityDetail() {
           </div>
         </div>
 
-        {/* ═══════════════════════════════════════════════
-            DECISION COPILOT ZONE
-            ═══════════════════════════════════════════════ */}
-        <div style={{ padding: '24px 40px 8px' }}>
+        {/* ═══ ZONE ÉDITORIALE ═══ */}
+        <div style={{ padding: '40px 40px 8px' }}>
 
-          {/* ── HERO DÉCISIONNEL ── */}
-          <div style={{
-            padding: '1.5rem', border: `0.5px solid ${LTB}`, borderRadius: '12px',
-            background: LTC, marginBottom: '0.75rem',
-          }}>
-            {/* Artist / Title */}
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: LTT3, marginBottom: '6px' }}>
-              {lot.artist_name_raw || ''}
+          {/* Lecture Nautilus (score_rationale) */}
+          {hasAccess && analysisText && (
+            <div style={{ borderLeft: '3px solid rgba(198,168,90,0.4)', paddingLeft: '16px', marginBottom: '36px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '8px' }}>LECTURE NAUTILUS</div>
+              <p style={{ fontSize: '13px', color: LTT2, lineHeight: 1.75, fontStyle: 'italic', margin: 0 }}>{analysisText}</p>
             </div>
-            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 600, color: LTT1, marginBottom: '10px' }}>
-              {lot.title || 'Untitled'}
-            </div>
+          )}
 
-            {/* Verdict badge */}
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 500, marginBottom: '10px', background: badgeProps.bg, color: badgeProps.color }}>
-              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: badgeProps.dot, display: 'inline-block', flexShrink: 0 }}></span>
-              {scoreBadgeLabel(dealScore)}
-            </div>
+          {/* ── OPTIMISME ── */}
+          {optimismSigs.length > 0 && (
+            <EdSection title={isFr ? 'Pourquoi nous sommes optimistes' : 'Why we are optimistic'}>
+              {optimismSigs.map((s, i) => <EdItem key={i} icon="✓" iconColor={GL2}>{s}</EdItem>)}
+            </EdSection>
+          )}
 
-            {/* Synopsis */}
-            <div style={{ fontSize: '14px', color: LTT2, lineHeight: 1.5, marginBottom: '10px' }}>
-              {isFr
-                ? 'Cette œuvre ressort parmi les meilleures opportunités actuellement disponibles.'
-                : 'This work stands out among the best opportunities currently available.'}
-            </div>
-
-            {/* Top pct */}
-            {topPct && (
-              <div style={{ fontSize: '12px', color: LTT3, marginBottom: '14px' }}>
-                <strong style={{ color: GL2, fontWeight: 500 }}>Top {topPct}%</strong> {isFr ? 'des opportunités Nautilus' : 'of Nautilus opportunities'}
-              </div>
-            )}
-
-            {/* Score band */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', padding: '14px 0', borderTop: `0.5px solid ${LTB}`, borderBottom: `0.5px solid ${LTB}`, marginBottom: '14px' }}>
-              <div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '40px', fontWeight: 500, color: LTT1, lineHeight: 1 }}>{Math.round(dealScore)}</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, marginTop: '2px' }}>/ 100</div>
-              </div>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div style={{ fontSize: '16px', fontWeight: 500, color: GL2, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: GL2, display: 'inline-block', flexShrink: 0 }}></span>
-                  {humanLabel}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 500, color: confProps.color, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: confProps.color, display: 'inline-block', flexShrink: 0 }}></span>
-                    {confProps.label}
-                  </div>
-                  <div style={{ fontSize: '12px', color: LTT3, paddingLeft: '13px' }}>
-                    {isFr
-                      ? `Basée sur ${compCount > 0 ? compCount : '—'} ventes comparables`
-                      : `Based on ${compCount > 0 ? compCount : '—'} comparable sales`}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Notre lecture */}
-            <div style={{ background: LT, borderRadius: '8px', padding: '0.9rem 1rem' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.10em', textTransform: 'uppercase', color: LTT3, marginBottom: '7px' }}>
-                {isFr ? 'Notre lecture' : 'Our take'}
-              </div>
-              <p style={{ fontSize: '14px', color: LTT1, lineHeight: 1.7, margin: 0 }}>
-                {narrativeReading}
-              </p>
-            </div>
-          </div>
-
-          {/* ── OPTIMISME / VIGILANCE (2 colonnes) ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
-            <div style={{ padding: '1rem 1.25rem', border: `0.5px solid ${LTB}`, borderRadius: '12px', background: LTC }}>
-              <SLabel>{isFr ? 'Pourquoi nous sommes optimistes' : 'Why we are optimistic'}</SLabel>
-              {optimismSigs.length > 0
-                ? optimismSigs.map((s, i) => <SigItem key={i} icon="✓" color={GL2}>{s}</SigItem>)
-                : <div style={{ fontSize: '13px', color: LTT3 }}>—</div>}
-            </div>
-            <div style={{ padding: '1rem 1.25rem', border: `0.5px solid ${LTB}`, borderRadius: '12px', background: LTC }}>
-              <SLabel>{isFr ? 'Points de vigilance' : 'Points of caution'}</SLabel>
-              {vigilanceSigs.length > 0
-                ? vigilanceSigs.map((s, i) => <SigItem key={i} icon="▲" color={AMB}>{s}</SigItem>)
-                : <div style={{ fontSize: '13px', color: LTT3 }}>{isFr ? 'Aucun signal négatif majeur identifié.' : 'No major negative signal identified.'}</div>}
-            </div>
-          </div>
+          {/* ── VIGILANCE ── */}
+          {vigilanceSigs.length > 0 && (
+            <EdSection title={isFr ? 'Points de vigilance' : 'Points of caution'}>
+              {vigilanceSigs.map((s, i) => <EdItem key={i} icon="▲" iconColor={AMB}>{s}</EdItem>)}
+            </EdSection>
+          )}
 
           {/* ── CE QUI POURRAIT CHANGER D'AVIS ── */}
-          <DCard>
-            <SLabel>{isFr ? 'Ce qui pourrait nous faire changer d\'avis' : 'What could change our mind'}</SLabel>
-            {changeOfMind.map((s, i) => <SigItem key={i} icon="↺" color={LTT3}>{s}</SigItem>)}
-          </DCard>
+          <EdSection title={isFr ? "Ce qui pourrait nous faire changer d'avis" : 'What could change our mind'}>
+            {changeOfMind.map((s, i) => <EdItem key={i} icon="↺" iconColor={LTT3}>{s}</EdItem>)}
+          </EdSection>
 
           {/* ── POURQUOI PAS MIEUX NOTÉ ── */}
           {whyNotHigher.length > 0 && (
-            <div style={{ background: 'rgba(107,114,128,0.05)', borderRadius: '8px', padding: '0.9rem 1rem', marginBottom: '0.75rem', border: `0.5px solid ${LTB}` }}>
-              <SLabel>{isFr ? 'Pourquoi cette œuvre n\'est-elle pas mieux notée ?' : 'Why isn\'t this work rated higher?'}</SLabel>
-              {whyNotHigher.map((s, i) => <SigItem key={i} icon="ℹ" color={LTT3}>{s}</SigItem>)}
-            </div>
+            <EdSection title={isFr ? "Pourquoi cette œuvre n'est-elle pas mieux notée ?" : "Why isn't this work rated higher?"}>
+              {whyNotHigher.map((s, i) => <EdItem key={i} icon="ℹ" iconColor={LTT3}>{s}</EdItem>)}
+            </EdSection>
           )}
 
           {/* ── POURQUOI MAINTENANT ── */}
           {timingReasons.length > 0 && (
-            <DCard>
-              <SLabel>{isFr ? 'Pourquoi maintenant ?' : 'Why now?'}</SLabel>
+            <EdSection title={isFr ? 'Pourquoi maintenant ?' : 'Why now?'}>
               {timingReasons.map((s, i) => (
-                <div key={i} style={{ fontSize: '14px', color: LTT1, lineHeight: 1.6, padding: '5px 0', borderBottom: i < timingReasons.length - 1 ? `0.5px solid ${LTB}` : 'none' }}>
-                  {s}
-                </div>
+                <div key={i} style={{ fontSize: '14px', color: LTT2, lineHeight: 1.6, paddingBottom: '8px', marginBottom: i < timingReasons.length - 1 ? '8px' : 0, borderBottom: i < timingReasons.length - 1 ? `0.5px solid ${LTB}` : 'none' }}>{s}</div>
               ))}
-            </DCard>
+            </EdSection>
           )}
 
-          {/* ── RECOMMANDATION + CTA ── */}
-          <div style={{ background: GREEN_BG, border: `0.5px solid ${GREEN_BDR}`, borderRadius: '12px', padding: '1.1rem 1.25rem', marginBottom: '0.75rem' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.10em', textTransform: 'uppercase', color: GL2, marginBottom: '6px' }}>
-              {isFr ? 'Notre recommandation' : 'Our recommendation'}
+          {/* ── RECOMMANDATION FINALE ── */}
+          <div style={{ background: 'rgba(26,107,60,0.05)', border: `0.5px solid rgba(26,107,60,0.15)`, borderRadius: '12px', padding: '24px 28px', marginBottom: '36px' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '10px' }}>
+              ◆ {isFr ? 'NOTRE RECOMMANDATION' : 'OUR RECOMMENDATION'}
             </div>
-            <div style={{ fontSize: '15px', fontWeight: 500, color: GL2, marginBottom: '4px' }}>{recoText}</div>
-            <div style={{ fontSize: '13px', color: LTT2, lineHeight: 1.6, marginBottom: '12px' }}>
-              {isFr
-                ? 'Les signaux disponibles sont suffisamment solides pour l\'analyser avant la clôture.'
-                : 'The available signals are solid enough to analyze before the closing.'}
+            <div style={{ fontSize: '17px', fontWeight: 500, color: GL2, marginBottom: '6px' }}>{recoText}</div>
+            <div style={{ fontSize: '13px', color: LTT2, lineHeight: 1.6, marginBottom: '16px' }}>
+              {isFr ? "Les signaux disponibles sont suffisamment solides pour l'analyser avant la clôture." : 'The available signals are solid enough to analyze before the closing.'}
             </div>
             <button
               onClick={async () => {
@@ -1131,44 +1094,26 @@ export default function OpportunityDetail() {
                 setSubLoading(true);
                 try {
                   const r = await fetch(`${BACKEND}/api/wishlist/${id}`, { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } });
-                  if (r.status === 403) { setUpgradeModal('wishlist'); }
-                  else if (r.ok) {
-                    setSubscribed(true); setSubId(id);
-                    trackEvent('lot_watchlist_add', 'lot', lot.id, { lot_title: lot.title, artist: lot.artist_name_raw, deal_score: lot.deal_score, source: 'cta_reco' });
-                  }
+                  if (r.status === 403) setUpgradeModal('wishlist');
+                  else if (r.ok) { setSubscribed(true); setSubId(id); trackEvent('lot_watchlist_add', 'lot', lot.id, { lot_title: lot.title, artist: lot.artist_name_raw, deal_score: lot.deal_score, source: 'cta_reco' }); }
                 } finally { setSubLoading(false); }
               }}
-              style={{ display: 'block', width: '100%', padding: '0.85rem', background: LTT1, color: LTC, border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 500, cursor: 'pointer', textAlign: 'center', fontFamily: 'var(--font-sans)' }}
+              style={{ padding: '11px 24px', background: subscribed ? 'rgba(26,107,60,0.1)' : GL2, border: 'none', color: subscribed ? GL2 : '#fff', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.1em', borderRadius: '4px', textTransform: 'uppercase', fontWeight: 600 }}
             >
-              {subscribed ? (isFr ? '✓ Ajouté à votre shortlist' : '✓ Added to your shortlist') : ctaText}
+              {subscribed ? (isFr ? '✓ AJOUTÉ À VOTRE SHORTLIST' : '✓ ADDED TO SHORTLIST') : ctaLabel(dealScore).toUpperCase()}
             </button>
           </div>
 
           {/* ── DISCLAIMER ── */}
-          <div style={{ fontSize: '12px', color: LTT3, lineHeight: 1.6, padding: '0.75rem 1rem', background: LT, borderRadius: '8px', marginBottom: '0.75rem', border: `0.5px solid ${LTB}` }}>
+          <div style={{ fontSize: '11px', color: LTT3, lineHeight: 1.6, marginBottom: '36px', paddingBottom: '36px', borderBottom: `0.5px solid ${LTB}` }}>
             {isFr
-              ? 'Cette analyse repose sur les données disponibles aujourd\'hui. Le marché de l\'art peut évoluer et aucune performance future ne peut être garantie. Nautilus est un outil d\'aide à la décision — pas un conseil financier réglementé.'
+              ? "Cette analyse repose sur les données disponibles aujourd'hui. Le marché de l'art peut évoluer et aucune performance future ne peut être garantie. Nautilus est un outil d'aide à la décision — pas un conseil financier réglementé."
               : 'This analysis is based on data available today. The art market may evolve and no future performance can be guaranteed. Nautilus is a decision support tool — not regulated financial advice.'}
           </div>
         </div>
 
         {/* ─────────────────────────────────────────────
-            LOT DETAILS + REAL COST (existing layout)
-            ───────────────────────────────────────────── */}
-        <div style={{ padding: '0 40px 8px' }}>
-          {/* NAUTILUS READING (score_rationale) */}
-          {hasAccess && analysisText && (
-            <div style={{ background: '#fff', border: `0.5px solid ${LTB}`, borderRadius: '12px', padding: '1rem 1.25rem', marginBottom: '0.75rem' }}>
-              <div style={{ borderLeft: '3px solid rgba(198,168,90,0.5)', paddingLeft: '16px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '10px' }}>LECTURE NAUTILUS</div>
-                <p style={{ fontSize: '13px', color: LTT2, lineHeight: 1.75, fontStyle: 'italic', margin: 0 }}>{analysisText}</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ─────────────────────────────────────────────
-            DÉTAILS + COÛT RÉEL (existing layout)
+            DÉTAILS + COÛT RÉEL
             ───────────────────────────────────────────── */}
         <div className="lot-details-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#fff', borderBottom: '0.5px solid #E8E4DC', borderTop: '0.5px solid #E8E4DC' }}>
           <div style={{ padding: '28px 24px 28px 40px', borderRight: '0.5px solid #E8E4DC' }}>
@@ -1229,9 +1174,8 @@ export default function OpportunityDetail() {
             CE QUE MONTRE LE MARCHÉ (narrative version of market intel)
             ───────────────────────────────────────────── */}
         {(formatMatrix?.formats?.length > 0 || timingData?.best_house || hammerHistory?.total_sales > 0) && (
-          <div style={{ padding: '24px 40px 0' }}>
-            <DCard>
-              <SLabel>{isFr ? 'Ce que montre le marché' : 'What the market shows'}</SLabel>
+          <div style={{ padding: '36px 40px 0' }}>
+            <EdSection title={isFr ? 'Ce que montre le marché' : 'What the market shows'}>
               {/* Narrative from hammer history */}
               {hammerHistory?.total_sales > 0 && hammerHistory?.median_eur && (
                 <p style={{ fontSize: '14px', color: LTT2, lineHeight: 1.7, margin: '0 0 10px' }}>
@@ -1267,7 +1211,7 @@ export default function OpportunityDetail() {
                     : `${Math.round(lot.artist.sell_through_rate * 100)}% of this artist's works find a buyer at first auction.`}
                 </p>
               )}
-            </DCard>
+            </EdSection>
           </div>
         )}
 
@@ -1376,19 +1320,16 @@ export default function OpportunityDetail() {
         )}
 
         {/* ── POURQUOI POUVONS-NOUS ÊTRE CONFIANTS ── */}
-        <div style={{ padding: '24px 40px 0' }}>
-          <DCard>
-            <SLabel>{isFr ? 'Pourquoi pouvons-nous être confiants ?' : 'Why can we be confident?'}</SLabel>
+        <div style={{ padding: '36px 40px 0' }}>
+          <EdSection title={isFr ? 'Pourquoi pouvons-nous être confiants ?' : 'Why can we be confident?'}>
             {[
               compCount > 0 ? (isFr ? `${compCount} ventes comparables analysées` : `${compCount} comparable sales analyzed`) : null,
               hammerHistory?.total_sales > 0 ? (isFr ? `Historique de ventes réelles : ${hammerHistory.total_sales} transactions` : `Realized price history: ${hammerHistory.total_sales} transactions`) : null,
               isFr ? 'Données mises à jour quotidiennement' : 'Data updated daily',
             ].filter(Boolean).map((item, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: LTT2, marginBottom: '6px' }}>
-                <span style={{ color: GL2, fontSize: '14px' }}>✓</span>{item}
-              </div>
+              <EdItem key={i} icon="✓" iconColor={GL2}>{item}</EdItem>
             ))}
-          </DCard>
+          </EdSection>
         </div>
 
         {/* ═══ ANALYSE AVANCÉE (accordion) ═══ */}
