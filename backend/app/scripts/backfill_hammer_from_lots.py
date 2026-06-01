@@ -35,9 +35,10 @@ from sqlalchemy import text
 from app.database import BgSessionLocal
 from app.jobs.quality_filter import normalize_artist_name, is_unknown_artist
 
-BATCH_SIZE = int(os.getenv("BATCH_SIZE", "5000"))
-MIN_SALES  = int(os.getenv("MIN_SALES", "5"))
-DRY_RUN    = os.getenv("DRY_RUN", "0") == "1"
+BATCH_SIZE  = int(os.getenv("BATCH_SIZE", "5000"))
+MIN_SALES   = int(os.getenv("MIN_SALES", "5"))
+DRY_RUN     = os.getenv("DRY_RUN", "0") == "1"
+SKIP_STEP1  = os.getenv("SKIP_STEP1", "0") == "1"
 
 # Static FX rates → EUR (same as artsy_historical_scraper)
 _FX: dict[str, float] = {
@@ -53,15 +54,27 @@ def _to_eur(amount: float | None, currency: str | None) -> float | None:
     return round(amount * rate, 2)
 
 
-async def step1_renormalize(session) -> int:
-    """Clear artist_name_normalized and recompute with fixed function."""
-    print("\n── Step 1: Re-normalize hammer_prices.artist_name_normalized ──")
-
-    # Add column if missing (idempotent)
+async def step0_ensure_constraints(session) -> None:
+    """Ensure schema prerequisites: UNIQUE on external_id, normalized column."""
+    print("\n── Step 0: Ensure schema constraints ──")
     await session.execute(text("""
         ALTER TABLE hammer_prices
         ADD COLUMN IF NOT EXISTS artist_name_normalized VARCHAR(500)
     """))
+    # ON CONFLICT (external_id) requires a unique constraint.
+    await session.execute(text("""
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_hammer_prices_external_id
+        ON hammer_prices (external_id)
+    """))
+    await session.commit()
+    print("  Constraints OK.")
+
+
+async def step1_renormalize(session) -> int:
+    """Clear artist_name_normalized and recompute with fixed function."""
+    print("\n── Step 1: Re-normalize hammer_prices.artist_name_normalized ──")
+
+    # Column already ensured in step0
     await session.commit()
 
     # Count total rows
@@ -198,7 +211,6 @@ async def step2_backfill_from_lots(session) -> int:
                 :estimate_low, :estimate_high,
                 :auction_house, :lot_number, :source, :image_url, :created_at
             )
-            ON CONFLICT (external_id) DO NOTHING
         """), {
             "id": str(uuid.uuid4()),
             "external_id": ext_id,
@@ -295,10 +307,14 @@ async def step3_refresh_stats(session, min_sales: int = MIN_SALES) -> int:
 
 async def main():
     print("══ P0 Hammer backfill ══════════════════════════════════")
-    print(f"  DRY_RUN={DRY_RUN}  BATCH_SIZE={BATCH_SIZE}  MIN_SALES={MIN_SALES}")
+    print(f"  DRY_RUN={DRY_RUN}  BATCH_SIZE={BATCH_SIZE}  MIN_SALES={MIN_SALES}  SKIP_STEP1={SKIP_STEP1}")
 
     async with BgSessionLocal() as session:
-        await step1_renormalize(session)
+        await step0_ensure_constraints(session)
+        if not SKIP_STEP1:
+            await step1_renormalize(session)
+        else:
+            print("\n── Step 1: Skipped (SKIP_STEP1=1) ──")
         await step2_backfill_from_lots(session)
         await step3_refresh_stats(session, MIN_SALES)
 
