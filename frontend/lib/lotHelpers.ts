@@ -1,8 +1,12 @@
 import type { Lot } from "@/lib/api";
 
+/**
+ * Returns the fair value for a lot.
+ * Uses fair_value_nautilus (median of last 24m hammer prices, ≥5 sales) when available.
+ * Returns null if insufficient historical data — do NOT fabricate a value.
+ */
 export function computeFairValue(lot: Lot): number | null {
-  if (lot.estimate_low == null || lot.pct_below_low_estimate == null) return null;
-  return Math.round(lot.estimate_low * (1 + lot.pct_below_low_estimate / 100));
+  return lot.fair_value_nautilus ?? null;
 }
 
 export function formatTimeLeft(hours?: number | null): string {

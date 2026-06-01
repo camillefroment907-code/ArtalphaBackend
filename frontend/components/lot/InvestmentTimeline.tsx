@@ -24,38 +24,10 @@ const MEDIUM_DISPLAY: Record<string, string> = {
 
 // ── Signal config ─────────────────────────────────────────────────────────────
 const SIGNAL_CONFIG = {
-  BUY: {
-    color: SUCCESS,
-    bg: "rgba(22,163,74,0.08)",
-    border: "rgba(22,163,74,0.25)",
-    label: "BUY",
-    Icon: TrendingUp,
-    description: "Strong upside potential — favorable market dynamics for this medium.",
-  },
-  NEUTRAL: {
-    color: NEUTRAL,
-    bg: "rgba(107,114,128,0.08)",
-    border: "rgba(107,114,128,0.25)",
-    label: "NEUTRAL",
-    Icon: TrendingUp,
-    description: "Stable market — moderate appreciation expected over the hold period.",
-  },
-  WATCH: {
-    color: WARNING,
-    bg: "rgba(234,88,12,0.08)",
-    border: "rgba(234,88,12,0.25)",
-    label: "WATCH",
-    Icon: AlertTriangle,
-    description: "Limited upside — monitor market conditions before bidding.",
-  },
-  AVOID: {
-    color: DANGER,
-    bg: "rgba(220,38,38,0.08)",
-    border: "rgba(220,38,38,0.25)",
-    label: "AVOID",
-    Icon: TrendingDown,
-    description: "Declining market — consider cross-medium alternatives below.",
-  },
+  BUY:     { color: SUCCESS, bg: "rgba(22,163,74,0.08)",   border: "rgba(22,163,74,0.25)",   label: "BUY",     Icon: TrendingUp   },
+  NEUTRAL: { color: NEUTRAL, bg: "rgba(107,114,128,0.08)", border: "rgba(107,114,128,0.25)", label: "NEUTRAL", Icon: TrendingUp   },
+  WATCH:   { color: WARNING, bg: "rgba(234,88,12,0.08)",   border: "rgba(234,88,12,0.25)",   label: "WATCH",   Icon: AlertTriangle },
+  AVOID:   { color: DANGER,  bg: "rgba(220,38,38,0.08)",   border: "rgba(220,38,38,0.25)",   label: "AVOID",   Icon: TrendingDown  },
 } as const;
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -71,20 +43,18 @@ export function InvestmentTimeline({ lot }: { lot: Lot }) {
   const { Icon } = cfg;
 
   // CAGR is a percentage in the API (e.g. 8.5 = 8.5%)
-  const cagrPct     = proj.cagr_pct ?? 0;
-  const cagrDecimal = cagrPct / 100;
-  const holdYears   = proj.recommended_hold_years ?? 5;
+  const cagrPct   = proj.cagr_pct ?? 0;
+  const holdYears = proj.recommended_hold_years ?? 5;
 
   // Base for projection: all_in_cost if available, else current_price
   const allIn = proj.all_in_cost ?? lot.current_price ?? 0;
 
-  // Projected exit price
-  const exitPrice = allIn > 0 ? allIn * Math.pow(1 + cagrDecimal, holdYears) : 0;
-
-  // Confidence band ± based on signal
-  const band      = signal === "BUY" ? 0.05 : signal === "NEUTRAL" ? 0.08 : 0.12;
-  const exitLow   = exitPrice * (1 - band);
-  const exitHigh  = exitPrice * (1 + band);
+  // Projected exit price: use backend pre-computed value when available,
+  // otherwise fall back to frontend compound calculation from the same CAGR.
+  const yearData  = proj.years?.[holdYears];
+  const exitPrice = yearData?.base_eur ?? (allIn > 0 ? allIn * Math.pow(1 + cagrPct / 100, holdYears) : 0);
+  const exitLow   = yearData?.conservative_eur ?? exitPrice * 0.85;
+  const exitHigh  = yearData?.optimistic_eur   ?? exitPrice * 1.15;
 
   // Medium display label
   const mediumLabel = proj.cagr_medium_used
@@ -132,22 +102,25 @@ export function InvestmentTimeline({ lot }: { lot: Lot }) {
         </div>
       </div>
 
-      {/* ── Signal description ───────────────────────────────────────── */}
-      <p style={{
-        fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.55, marginBottom: "16px",
-      }}>
-        {cfg.description}
-        {mediumLabel && lot.artist_name_raw && (
-          <>
-            {" "}Based on{" "}
-            <strong style={{ color: NAVY }}>
-              {lot.artist_name_raw} {mediumLabel}
-            </strong>
-            {" "}historical data
-            {proj.cagr_n_sales ? ` (${proj.cagr_n_sales.toLocaleString()} sales)` : ""}.
-          </>
-        )}
-      </p>
+      {/* ── Signal description — data-driven only ────────────────────── */}
+      {(proj.cagr_source || proj.cagr_n_sales) && (
+        <p style={{ fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.55, marginBottom: "16px" }}>
+          {proj.cagr_source === "medium_specific" && mediumLabel && lot.artist_name_raw ? (
+            <>
+              Based on <strong style={{ color: NAVY }}>{proj.cagr_n_sales?.toLocaleString() ?? "—"} historical sales</strong> of {lot.artist_name_raw} {mediumLabel}.
+              {proj.cagr_confidence ? ` Confidence: ${proj.cagr_confidence}.` : ""}
+            </>
+          ) : proj.cagr_source === "COMPUTED" ? (
+            <>
+              Based on <strong style={{ color: NAVY }}>{proj.cagr_n_sales?.toLocaleString() ?? "—"} historical sales</strong> across all mediums for this artist.
+            </>
+          ) : (
+            <>
+              No sufficient historical data for this artist — CAGR estimated from market tier.
+            </>
+          )}
+        </p>
+      )}
 
       {/* ── Timeline card ────────────────────────────────────────────── */}
       <div style={{
@@ -171,7 +144,12 @@ export function InvestmentTimeline({ lot }: { lot: Lot }) {
           <TimelineNode
             label="TODAY"
             value={allIn > 0 ? fmt(allIn) : "—"}
-            sub="All-in cost"
+            sub={
+              proj.projection_price_basis === "hammer"       ? "All-in (hammer + premium)" :
+              proj.projection_price_basis === "estimate_mid" ? "All-in (est. mid + premium)" :
+              proj.projection_price_basis === "estimate_low" ? "All-in (est. low + premium)" :
+              "All-in (current bid)"
+            }
             dotColor={NAVY}
             labelColor={NAVY}
             valueColor={NAVY}

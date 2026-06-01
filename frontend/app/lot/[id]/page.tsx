@@ -27,7 +27,7 @@ import { DocumentsTab } from "@/components/lot/DocumentsTab";
 import { useLanguageStore, formatPriceInCurrency } from "@/lib/useLanguage";
 import { convertPrice } from "@/lib/i18n";
 import { useAuthStore } from "@/lib/store";
-import { computeFairValue, getConfidenceLabel } from "@/lib/lotHelpers";
+import { computeFairValue } from "@/lib/lotHelpers";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const SUCCESS = "#16A34A";
@@ -134,10 +134,9 @@ function CountdownTimer({ hours, style: s }: { hours: number; style?: React.CSSP
 // ── KPIStrip ──────────────────────────────────────────────────────────────────
 function KPIStrip({ lot, fmt }: { lot: Lot; fmt: (v?: number | null) => string }) {
   const fairValue = computeFairValue(lot);
-  const conf = lot.score_breakdown?.confidence_score;
-  const confLabel = conf != null ? getConfidenceLabel(conf).split(" ")[0] : "—";
-  const confColor = conf != null ? (conf >= 80 ? SUCCESS : conf >= 60 ? "#CA8A04" : DANGER) : "var(--text-muted)";
-  const approxComps = conf != null ? Math.round(conf / 5) : null;
+  const nSales = lot.real_data_n_sales ?? 0;
+  const salesLabel = nSales === 0 ? "—" : nSales >= 30 ? "Strong" : nSales >= 10 ? "Solid" : nSales >= 3 ? "Limited" : "Sparse";
+  const salesColor = nSales >= 10 ? SUCCESS : nSales >= 3 ? "#CA8A04" : nSales > 0 ? DANGER : "var(--text-muted)";
 
   return (
     <div style={{ display: "flex", background: "var(--white)", borderBottom: `1px solid ${BORDER}` }}>
@@ -145,7 +144,9 @@ function KPIStrip({ lot, fmt }: { lot: Lot; fmt: (v?: number | null) => string }
       <div style={{ flex: 1, padding: "14px 20px", borderRight: `1px solid ${BORDER}` }}>
         <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "4px" }}>Current price</div>
         <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 700, color: NAVY }}>{fmt(lot.current_price)}</div>
-        {lot.auction_date && <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "3px" }}>Last bid ({formatDate(lot.auction_date)})</div>}
+        {lot.auction_date && <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "3px" }}>
+          {lot.status === "sold" ? `Hammer (${formatDate(lot.auction_date)})` : lot.status === "live" ? "Current bid" : `Estimate date: ${formatDate(lot.auction_date)}`}
+        </div>}
       </div>
 
       {/* Estimate */}
@@ -158,21 +159,35 @@ function KPIStrip({ lot, fmt }: { lot: Lot; fmt: (v?: number | null) => string }
 
       {/* Fair value */}
       <div style={{ flex: 1, padding: "14px 20px", borderRight: `1px solid ${BORDER}` }}>
-        <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "4px" }}>Fair value (AI)</div>
+        <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "4px" }}>Fair value</div>
         <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 700, color: NAVY }}>{fairValue != null ? fmt(fairValue) : "—"}</div>
-        {lot.pct_below_low_estimate != null && lot.pct_below_low_estimate > 0 && (
-          <div style={{ fontSize: "10px", color: SUCCESS, marginTop: "3px", fontWeight: 600 }}>Upside +{lot.pct_below_low_estimate.toFixed(0)}%</div>
-        )}
+        {fairValue != null
+          ? <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "3px" }}>Median 24-month sales</div>
+          : <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "3px" }}>Insufficient data</div>
+        }
       </div>
 
-      {/* Confidence */}
+      {/* Est. discount */}
       <div style={{ flex: 1, padding: "14px 20px", borderRight: `1px solid ${BORDER}` }}>
         <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "4px" }}>
-          Confidence
+          Est. discount
           <Info size={9} style={{ display: "inline", marginLeft: "3px", verticalAlign: "middle", opacity: 0.5, cursor: "help" }} />
         </div>
-        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 700, color: confColor }}>{confLabel}</div>
-        {approxComps != null && <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "3px" }}>Based on {approxComps} comps</div>}
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 700, color: lot.pct_below_low_estimate != null && lot.pct_below_low_estimate > 0 ? SUCCESS : NAVY }}>
+          {lot.pct_below_low_estimate != null ? `${lot.pct_below_low_estimate > 0 ? "-" : "+"}${Math.abs(lot.pct_below_low_estimate).toFixed(0)}%` : "—"}
+        </div>
+        <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "3px" }}>vs low estimate</div>
+      </div>
+
+      {/* Market data coverage */}
+      <div style={{ flex: 1, padding: "14px 20px", borderRight: `1px solid ${BORDER}` }}>
+        <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "4px" }}>
+          Market data
+        </div>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 700, color: salesColor }}>{salesLabel}</div>
+        <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "3px" }}>
+          {nSales === 0 ? "No hammer prices" : `${nSales} sale${nSales > 1 ? "s" : ""} (24m)`}
+        </div>
       </div>
 
       {/* Time remaining */}
@@ -247,7 +262,7 @@ function PriceChart({ comparables, lot, fmt }: { comparables: Lot[]; lot: Lot; f
         {[
           { color: "#9CA3AF", label: "Auction results", dot: true },
           { color: "#2563EB", label: "Estimate range", dot: false },
-          { color: WARNING,   label: "Fair value (AI)", dot: false },
+          { color: WARNING,   label: "Fair value (24m median)", dot: false },
           { color: GOLD,      label: "Current price",  dot: true },
         ].map(({ color, label, dot }) => (
           <div key={label} style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "10px", color: "var(--text-muted)" }}>
@@ -291,7 +306,7 @@ function PriceChart({ comparables, lot, fmt }: { comparables: Lot[]; lot: Lot; f
           )}
           {fairValue != null && (
             <ReferenceLine y={fairValue} stroke={WARNING} strokeDasharray="5 3" strokeWidth={2}
-              label={{ value: `Fair value (AI) ${fmtShort(fairValue)}`, position: "right", fontSize: 9, fill: WARNING, dy: -4 }} />
+              label={{ value: `Fair value ${fmtShort(fairValue)}`, position: "right", fontSize: 9, fill: WARNING, dy: -4 }} />
           )}
           {lot.current_price != null && (
             <ReferenceLine y={lot.current_price} stroke={GOLD} strokeDasharray="3 6" strokeWidth={1} opacity={0.5}
@@ -301,12 +316,11 @@ function PriceChart({ comparables, lot, fmt }: { comparables: Lot[]; lot: Lot; f
         </ComposedChart>
       </ResponsiveContainer>
 
-      {lot.pct_below_low_estimate != null && lot.pct_below_low_estimate > 0 && (
+      {fairValue != null && lot.current_price != null && lot.current_price > 0 && (
         <div style={{ marginTop: "8px", padding: "8px 12px", background: "rgba(37,99,235,0.04)", border: "1px solid rgba(37,99,235,0.14)", borderRadius: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
           <Info size={12} style={{ color: "#2563EB", flexShrink: 0 }} />
           <span style={{ fontSize: "11px", color: "#2563EB" }}>
-            AI fair value is <strong>+{lot.pct_below_low_estimate.toFixed(0)}%</strong> above the current price.
-            <Info size={10} style={{ display: "inline", marginLeft: "4px", verticalAlign: "middle", opacity: 0.5, cursor: "help" }} />
+            Fair value <strong>{fmtShort(fairValue)}</strong> — based on median of past 24-month sales for this artist.
           </span>
         </div>
       )}
@@ -316,11 +330,11 @@ function PriceChart({ comparables, lot, fmt }: { comparables: Lot[]; lot: Lot; f
 
 // ── ScoreBreakdownPanel ───────────────────────────────────────────────────────
 const PILLARS = [
-  { key: "below_estimate_score"   as const, label: "Valuation" },
-  { key: "below_market_score"     as const, label: "Market Momentum" },
+  { key: "below_estimate_score"   as const, label: "Below Estimate" },
+  { key: "below_market_score"     as const, label: "Below Market Avg" },
   { key: "liquidity_score"        as const, label: "Liquidity" },
-  { key: "house_reputation_score" as const, label: "Quality & Provenance" },
-  { key: "confidence_score"       as const, label: "Strategic Context" },
+  { key: "house_reputation_score" as const, label: "House Reputation" },
+  { key: "confidence_score"       as const, label: "Data Confidence" },
 ];
 
 function ScoreBreakdownPanel({ lot }: { lot: Lot }) {
@@ -339,7 +353,8 @@ function ScoreBreakdownPanel({ lot }: { lot: Lot }) {
         <div style={{ display: "flex", flexDirection: "column", gap: "13px", marginBottom: "16px" }}>
           {PILLARS.map(({ key, label: pl }) => {
             const v = sb[key];
-            if (v == null) return null;
+            // 45.0 is the sentinel for "no real market data" — hide rather than mislead
+            if (v == null || (key === "below_market_score" && v === 45)) return null;
             const pc = pillarColor(v);
             return (
               <div key={key}>
@@ -434,22 +449,14 @@ function FullSpecs({ lot, fmt }: { lot: Lot; fmt: (v?: number | null) => string 
     { label: "Medium",     value: lot.medium },
     { label: "Dimensions", value: lot.dimensions },
     { label: "Category",   value: lot.category },
-    { label: "Edition",    value: null },
-    { label: "Signature",  value: null },
-    { label: "Condition",  value: null },
-    { label: "Provenance", value: null },
-    { label: "Exhibited",  value: null },
-    { label: "Literature", value: null },
-  ];
+  ].filter(f => f.value);
   const auction = [
     { label: "Auction house", value: lot.auction_house_name?.split("—")[0].trim() },
     { label: "Sale",          value: lot.auction_sale_title },
-    { label: "Sale date",     value: formatDate(lot.auction_date) },
+    { label: "Sale date",     value: lot.auction_date ? formatDate(lot.auction_date) : null },
     { label: "Lot",           value: lot.lot_number },
-    { label: "Category",      value: lot.category },
     { label: "Estimate",      value: lot.estimate_low != null ? `${fmt(lot.estimate_low)} – ${fmt(lot.estimate_high)}` : null },
-    { label: "Starting bid",  value: null },
-  ];
+  ].filter(f => f.value);
 
   const Row = ({ label, value }: { label: string; value?: string | null }) => (
     <div style={{ display: "flex", gap: "8px", padding: "4px 0", borderBottom: `1px solid ${BORDER}` }}>
@@ -485,10 +492,10 @@ function FullSpecs({ lot, fmt }: { lot: Lot; fmt: (v?: number | null) => string 
 // ── DocsSection ───────────────────────────────────────────────────────────────
 function DocsSection({ lot }: { lot: Lot }) {
   const docs = [
-    { label: "Catalogue (PDF)", sub: "Available" },
-    { label: "Condition report", sub: "Available" },
-    { label: "Provenance documents", sub: "Available" },
-    { label: "Certificate of authenticity", sub: "Available" },
+    { label: "Catalogue (PDF)" },
+    { label: "Condition report" },
+    { label: "Provenance documents" },
+    { label: "Certificate of authenticity" },
   ];
   return (
     <div>
@@ -499,19 +506,20 @@ function DocsSection({ lot }: { lot: Lot }) {
             <FileText size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: "11px", color: NAVY, fontWeight: 500 }}>{d.label}</div>
-              <div style={{ fontSize: "9px", color: "var(--text-muted)" }}>{d.sub}</div>
             </div>
-            {lot.url && (
-              <a href={lot.url} target="_blank" rel="noopener noreferrer">
-                <Download size={11} style={{ color: "var(--text-muted)" }} />
-              </a>
-            )}
+            {lot.url
+              ? <a href={lot.url} target="_blank" rel="noopener noreferrer"><Download size={11} style={{ color: "var(--text-muted)" }} /></a>
+              : <span style={{ fontSize: "9px", color: "#D1D5DB" }}>—</span>
+            }
           </div>
         ))}
       </div>
-      <button style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "8px", fontSize: "11px", color: GOLD, fontWeight: 600, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-        View all documents <ChevronRight size={12} />
-      </button>
+      {lot.url && (
+        <a href={lot.url} target="_blank" rel="noopener noreferrer"
+          style={{ display: "inline-flex", alignItems: "center", gap: "4px", marginTop: "8px", fontSize: "11px", color: GOLD, fontWeight: 600, textDecoration: "none" }}>
+          View on source <ExternalLink size={11} />
+        </a>
+      )}
     </div>
   );
 }
@@ -540,29 +548,29 @@ function AiInsightsSection({ lot }: { lot: Lot }) {
           </div>
         ))}
       </div>
-      <button style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "8px", fontSize: "11px", color: GOLD, fontWeight: 600, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-        View full analysis <ChevronRight size={12} />
-      </button>
     </div>
   );
 }
 
-// ── Risk Flags ────────────────────────────────────────────────────────────────
+// ── Risk Flags — factual only ─────────────────────────────────────────────────
 interface RiskFlag { icon: "clock" | "alert" | "triangle"; title: string; detail: string }
 
 function deriveRisks(lot: Lot): RiskFlag[] {
   const flags: RiskFlag[] = [];
   const sb = lot.score_breakdown;
-  if (sb) {
-    if (sb.liquidity_score < 70)
-      flags.push({ icon: "clock", title: sb.liquidity_score < 50 ? "Low liquidity" : "Medium liquidity", detail: "Limited bidding depth in recent sales" });
-    if (sb.house_reputation_score < 70)
-      flags.push({ icon: "alert", title: "Estimate upper range close", detail: "Price may face resistance" });
-    if (sb.below_market_score < 60)
-      flags.push({ icon: "triangle", title: "Market volatility", detail: "Short-term volatility possible" });
-  }
+
+  // Factual: low liquidity based on artist liquidity_score from DB
+  if (sb && sb.liquidity_score < 50)
+    flags.push({ icon: "clock", title: "Low artist liquidity", detail: `Score: ${sb.liquidity_score.toFixed(0)}/100 — resale may take time` });
+
+  // Factual: current price above 88% of auction house estimate ceiling
   if (lot.estimate_high && lot.current_price && lot.current_price > lot.estimate_high * 0.88)
-    flags.push({ icon: "alert", title: "Near estimate ceiling", detail: "Current price approaching upper estimate" });
+    flags.push({ icon: "alert", title: "Near estimate ceiling", detail: `Current price ≥ 88% of estimate high (${lot.estimate_high.toLocaleString()})` });
+
+  // Factual: no market comparison data available
+  if (sb && sb.below_market_score === 45)
+    flags.push({ icon: "triangle", title: "No market comparison", detail: "Insufficient historical sales to benchmark this artist" });
+
   return flags.slice(0, 3);
 }
 
@@ -593,13 +601,10 @@ function RightPanel({ lot, lotId }: { lot: Lot; lotId: string }) {
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "22px", fontWeight: 700, color, marginBottom: "6px" }}>
           {getLabel(score)}
         </div>
-        <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.55)", lineHeight: 1.55, marginBottom: "12px" }}>
-          This lot is significantly undervalued vs. recent comparable sales.
-        </p>
         {upside != null && upside > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-            <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>Upside potential</span>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "18px", fontWeight: 700, color: GOLD }}>+{upside.toFixed(0)}%</span>
+            <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>Below low estimate</span>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "18px", fontWeight: 700, color: GOLD }}>-{upside.toFixed(0)}%</span>
           </div>
         )}
         <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
@@ -627,14 +632,11 @@ function RightPanel({ lot, lotId }: { lot: Lot; lotId: string }) {
       {/* Countdown */}
       {lot.time_left_hours != null && lot.time_left_hours > 0 && (
         <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <Clock size={11} style={{ color: DANGER }} />
             <span style={{ fontSize: "11px", fontWeight: 700, color: DANGER }}>
               Sale ends in <CountdownTimer hours={lot.time_left_hours} style={{ fontSize: "11px" }} />
             </span>
-          </div>
-          <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.38)", marginTop: "2px" }}>
-            Increased bidding activity expected near closing.
           </div>
         </div>
       )}
@@ -657,9 +659,6 @@ function RightPanel({ lot, lotId }: { lot: Lot; lotId: string }) {
               </div>
             ))}
           </div>
-          <button style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "rgba(255,255,255,0.4)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-            View full risk analysis <ChevronRight size={11} />
-          </button>
         </div>
       )}
     </div>
@@ -814,14 +813,6 @@ export default function LotPage({ params }: { params: { id: string } }) {
               {/* ── KPI STRIP ───────────────────────────────────── */}
               <KPIStrip lot={lot} fmt={fmt} />
 
-              {/* ── EUR→USD DISCLAIMER (EN only) ─────────────────── */}
-              {lang === "en" && (
-                <div style={{ padding: "4px 32px", background: "var(--white)", borderBottom: `1px solid ${BORDER}` }}>
-                  <span style={{ fontSize: "10px", fontStyle: "italic", color: "var(--text-muted)" }}>
-                    Prices converted at 1 EUR = 1.10 USD
-                  </span>
-                </div>
-              )}
 
               {/* ── COMPARABLES HERO ────────────────────────────── */}
               <ComparablesHero

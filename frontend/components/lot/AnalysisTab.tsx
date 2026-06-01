@@ -7,11 +7,11 @@ const SUCCESS = "#16A34A";
 const WARNING = "#EA580C";
 
 const PILLAR_DISPLAY: Record<string, string> = {
-  below_estimate_score: "Valuation",
-  below_market_score: "Market Momentum",
+  below_estimate_score: "Below Estimate",
+  below_market_score: "Below Market Avg",
   liquidity_score: "Liquidity",
-  house_reputation_score: "Quality & Provenance",
-  confidence_score: "Strategic Context",
+  house_reputation_score: "House Reputation",
+  confidence_score: "Data Confidence",
 };
 
 interface AnalysisTabProps {
@@ -145,7 +145,8 @@ export function AnalysisTab({ lot }: AnalysisTabProps) {
                 { key: "confidence_score", value: breakdown.confidence_score },
               ] as { key: string; value: number }[]
             )
-              .filter(({ value }) => value != null)
+              // below_market_score === 45.0 is a sentinel: no real market data available
+              .filter(({ key, value }) => value != null && !(key === "below_market_score" && value === 45))
               .map(({ key, value }) => (
                 <div key={key}>
                   <div

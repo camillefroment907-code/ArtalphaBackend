@@ -37,7 +37,7 @@ from app.utils.provenance_risk import get_provenance_risk
 
 
 def _resolve_ref_price(lot) -> tuple[float | None, str | None]:
-    """Return (hammer_price, basis) for real cost calculation.
+    """Return (price, basis) for real cost calculation (current bid / live price).
 
     Prefers current_price (live bid), falls back to estimate midpoint,
     then estimate_low alone — never uses estimate_low when estimate_high exists.
@@ -49,6 +49,26 @@ def _resolve_ref_price(lot) -> tuple[float | None, str | None]:
     if lot.estimate_low:
         return float(lot.estimate_low), "estimate_low"
     return None, None
+
+
+def _resolve_projection_price(lot) -> tuple[float | None, str]:
+    """Return (price, basis) to use as the base for investment projections.
+
+    Uses the EXPECTED ACQUISITION price, not the current bid:
+    - Sold lots   → actual hammer price (what was paid)
+    - Live/upcoming → estimate midpoint (realistic expected purchase price)
+    - Fallback     → estimate_low, then current_price as last resort
+    """
+    if lot.hammer_price and lot.hammer_price > 0:
+        return float(lot.hammer_price), "hammer"
+    if lot.estimate_low and lot.estimate_high:
+        mid = (float(lot.estimate_low) + float(lot.estimate_high)) / 2.0
+        return mid, "estimate_mid"
+    if lot.estimate_low and lot.estimate_low > 0:
+        return float(lot.estimate_low), "estimate_low"
+    if lot.current_price and lot.current_price > 0:
+        return float(lot.current_price), "current_bid"
+    return None, "none"
 
 
 def lot_to_list_dict(lot) -> dict:
@@ -1688,6 +1708,7 @@ async def get_lot(
             }
 
     # ── Bundled projection (3 / 5 / 10 years) — no separate API call needed ──
+    proj_price, proj_price_basis = _resolve_projection_price(lot)
     lot_dict["projection"] = None
     if hammer:
         from app.engines.projections import project_value
@@ -1741,12 +1762,12 @@ async def get_lot(
                 signal_used = classify_signal(lot.artist.cagr_raw or lot.artist.cagr_calculated or 0)
 
         proj = project_value(
-            purchase_price_eur=float(hammer),
+            purchase_price_eur=float(proj_price or hammer),
             artist_name=lot.artist_name_raw,
             liquidity_score=lot.artist.liquidity_score if lot.artist else 50.0,
             popularity_score=lot.artist.popularity_score if lot.artist else 50.0,
             trend=lot.artist.trend.value if lot.artist and lot.artist.trend else "stable",
-            years=[3, 5, 10],
+            years=[3, 5, 6, 7, 8, 9, 10],   # covers all possible recommended_hold_years outputs
             cagr_override=cagr_override,
         )
         lot_dict["projection"] = {
@@ -1763,11 +1784,18 @@ async def get_lot(
             "recommended_hold_years": proj["recommended_hold_years"],
             "sell_recommendation":    proj["sell_recommendation"],
             "years":                  proj["projections"],
+            # all_in_cost uses the projection price (expected acquisition price),
+            # NOT the current bid — avoids misleading low values on upcoming lots.
+            "all_in_cost":            round((proj_price or hammer) * (1 + (rc["premium_rate"] if rc else 0.26))),
+            "projection_price_basis": proj_price_basis,
         }
 
-    # ── Nautilus fair value (median of comparable sold lots, last 24 months) ──
+    # ── Nautilus fair value + real market average ─────────────────────────────
+    # Both share the same DB query. fair_value = median (≥5). market avg = mean (≥3).
     lot_dict["fair_value_nautilus"] = None
     lot_dict["fair_value_confidence"] = None
+    lot_dict["real_data_n_sales"] = 0    # real hammer prices in DB for this artist (24m)
+    _prices_for_market: list = []   # scoped outside so else-branch can see it
     if lot.artist_name_raw:
         cutoff = datetime.utcnow() - timedelta(days=730)
         comp_result = await db.execute(
@@ -1781,10 +1809,62 @@ async def get_lot(
                 )
             )
         )
-        prices = [row[0] for row in comp_result.fetchall() if row[0] and row[0] > 0]
-        if len(prices) >= 5:
-            lot_dict["fair_value_nautilus"] = statistics.median(prices)
-            lot_dict["fair_value_confidence"] = len(prices)
+        _prices_for_market = [row[0] for row in comp_result.fetchall() if row[0] and row[0] > 0]
+        lot_dict["real_data_n_sales"] = len(_prices_for_market)
+        if len(_prices_for_market) >= 5:
+            lot_dict["fair_value_nautilus"] = statistics.median(_prices_for_market)
+            lot_dict["fair_value_confidence"] = len(_prices_for_market)
+
+        # ── Override below_market metrics with real DB data (≥3 sales) ─────────
+        # Replaces heuristic/GPT-generated Artist.avg_auction_price with actual
+        # hammer prices from the database for this artist (last 24 months).
+        sb = lot_dict.get("score_breakdown")
+        if len(_prices_for_market) >= 3:
+            real_avg_market = statistics.mean(_prices_for_market)
+            ref_price = lot.current_price or hammer
+            if ref_price and ref_price > 0 and real_avg_market > 0:
+                pct_below_mkt = (real_avg_market - ref_price) / real_avg_market * 100
+                # Same sigmoid as scoring engine: steepness=0.09, midpoint=25
+                new_below_mkt = 100.0 / (1 + math.exp(-0.09 * (pct_below_mkt - 25)))
+                new_below_mkt = round(max(0.0, min(100.0, new_below_mkt)), 2)
+
+                lot_dict["pct_below_market_avg"] = round(pct_below_mkt, 2)
+                if sb:
+                    old_score = sb.get("below_market_score") or 45.0
+                    sb["below_market_score"] = new_below_mkt
+                    sb["pct_below_market_avg"] = round(pct_below_mkt, 2)
+                    # Adjust deal_score: swap old market component for real one
+                    if lot_dict.get("deal_score") is not None:
+                        delta = (new_below_mkt - old_score) * 0.30  # weight_below_market
+                        lot_dict["deal_score"] = round(
+                            max(0.0, min(100.0, lot_dict["deal_score"] + delta)), 1
+                        )
+        else:
+            # < 3 real sales — reset heuristic to sentinel
+            lot_dict["pct_below_market_avg"] = None
+            if sb:
+                old_score = sb.get("below_market_score") or 45.0
+                sb["below_market_score"] = 45.0
+                sb["pct_below_market_avg"] = None
+                if lot_dict.get("deal_score") is not None and old_score != 45.0:
+                    delta = (45.0 - old_score) * 0.30
+                    lot_dict["deal_score"] = round(
+                        max(0.0, min(100.0, lot_dict["deal_score"] + delta)), 1
+                    )
+
+    if not _prices_for_market and not lot.artist_name_raw:
+        # No artist — reset any heuristic batch value to sentinel
+        lot_dict["pct_below_market_avg"] = None
+        _sb = lot_dict.get("score_breakdown")
+        if _sb:
+            old_score = _sb.get("below_market_score") or 45.0
+            _sb["below_market_score"] = 45.0
+            _sb["pct_below_market_avg"] = None
+            if lot_dict.get("deal_score") is not None and old_score != 45.0:
+                delta = (45.0 - old_score) * 0.30
+                lot_dict["deal_score"] = round(
+                    max(0.0, min(100.0, lot_dict["deal_score"] + delta)), 1
+                )
 
     # ── Artist price history statistics ──────────────────────────────────────
     try:

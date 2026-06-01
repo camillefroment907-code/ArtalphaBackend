@@ -48,6 +48,23 @@ export interface ProjectionAlternative {
   rationale: string;
 }
 
+export interface YearProjection {
+  year: number;
+  conservative_eur: number;
+  base_eur: number;
+  optimistic_eur: number;
+  base_roi_pct: number;
+  cagr_pct: number;
+  tier: string;
+}
+
+export interface RealCost {
+  cost_basis: number;      // hammer × (1 + buyer's premium)
+  premium_rate: number;    // e.g. 0.26 = 26%
+  ref_price: number;       // hammer price
+  price_basis: string;     // "hammer" | "estimate_mid" | etc.
+}
+
 export interface LotProjection {
   cagr_pct?: number | null;         // percentage 0–15 (capped)
   cagr_raw_pct?: number | null;     // percentage, can be negative
@@ -61,7 +78,8 @@ export interface LotProjection {
   recommended_hold_years?: number | null;
   optimal_exit_label?: string;
   all_in_cost?: number | null;
-  years?: Record<number, unknown>;
+  projection_price_basis?: string;  // "hammer" | "estimate_mid" | "estimate_low" | "current_bid"
+  years?: Record<number, YearProjection>;
 }
 
 export interface Artist {
@@ -127,6 +145,10 @@ export interface Lot {
   time_left_hours?: number;
   fomo_level?: "critical" | "high" | "medium" | "low";
   projection?: LotProjection;
+  fair_value_nautilus?: number | null;   // median of last 24m hammer_prices (≥5 sales), null otherwise
+  fair_value_confidence?: number | null; // count of sales used for fair_value (same as real_data_n_sales when ≥5)
+  real_data_n_sales?: number;            // actual hammer prices in DB for this artist (last 24m), 0 if none
+  real_cost?: RealCost | null;           // buyer's premium + cost basis (null when no hammer price)
 }
 
 export interface LotListResponse {
