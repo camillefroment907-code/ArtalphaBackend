@@ -107,7 +107,9 @@ export default function BlogPostPage() {
               </button>
             ))}
           </div>
-          <Link to="/blog" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>← All articles</Link>
+          <Link to="/blog" style={{ fontSize: '13px', color: 'var(--text-2)', textDecoration: 'none' }}>
+            {lang === 'fr' ? '← Tous les articles' : '← All articles'}
+          </Link>
         </div>
       </header>
 
@@ -122,15 +124,19 @@ export default function BlogPostPage() {
       {error && (
         <div style={{ maxWidth: '720px', margin: '80px auto', padding: '0 40px', textAlign: 'center' }}>
           <div style={{ fontSize: '32px', marginBottom: '16px' }}>◆</div>
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', color: 'var(--text)', marginBottom: '12px' }}>Article not found</h1>
-          <Link to="/blog" style={{ color: 'var(--navy)', fontWeight: 600 }}>← Back to the blog</Link>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', color: 'var(--text)', marginBottom: '12px' }}>
+            {lang === 'fr' ? 'Article introuvable' : 'Article not found'}
+          </h1>
+          <Link to="/blog" style={{ color: 'var(--navy)', fontWeight: 600 }}>
+            {lang === 'fr' ? '← Retour au blog' : '← Back to the blog'}
+          </Link>
         </div>
       )}
 
       {post && (
         <article style={{ maxWidth: '720px', margin: '0 auto', padding: '56px 40px 80px' }}>
           {/* Meta */}
-          {post.tags.length > 0 && (
+          {Array.isArray(post.tags) && post.tags.length > 0 && (
             <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
               {post.tags.map((tag: string) => (
                 <span key={tag} style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold-dim)', background: 'var(--gold-subtle)', border: '1px solid var(--gold-border)', borderRadius: '20px', padding: '2px 8px', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>
@@ -156,7 +162,10 @@ export default function BlogPostPage() {
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{post.author}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{formatDate(post.published_at)} · {post.read_time_minutes} min read</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                {formatDate(post.published_at)}
+                {post.read_time_minutes ? ` · ${post.read_time_minutes} min ${lang === 'fr' ? 'de lecture' : 'read'}` : ''}
+              </div>
             </div>
           </div>
 
@@ -167,18 +176,83 @@ export default function BlogPostPage() {
           )}
 
           {/* Content */}
+          <style>{`
+            .nautilus-prose p {
+              margin: 0 0 1.5em;
+              color: var(--text);
+            }
+            .nautilus-prose h2 {
+              font-family: var(--font-serif);
+              font-size: 22px;
+              font-weight: 700;
+              color: var(--text);
+              margin: 2.4em 0 0.7em;
+              line-height: 1.3;
+              letter-spacing: -0.01em;
+            }
+            .nautilus-prose h3 {
+              font-family: var(--font-serif);
+              font-size: 18px;
+              font-weight: 600;
+              color: var(--text);
+              margin: 2em 0 0.5em;
+              line-height: 1.35;
+            }
+            .nautilus-prose strong {
+              font-weight: 700;
+              color: var(--text);
+            }
+            .nautilus-prose em {
+              font-style: italic;
+              color: var(--text-2);
+            }
+            .nautilus-prose ul, .nautilus-prose ol {
+              margin: 0 0 1.5em 1.25em;
+              padding: 0;
+            }
+            .nautilus-prose li {
+              margin-bottom: 0.5em;
+              color: var(--text);
+            }
+            .nautilus-prose a {
+              color: var(--navy);
+              text-decoration: underline;
+              text-underline-offset: 3px;
+            }
+            .nautilus-prose blockquote {
+              border-left: 3px solid var(--gold);
+              margin: 1.5em 0;
+              padding: 0.25em 0 0.25em 1.25em;
+              color: var(--text-2);
+              font-style: italic;
+            }
+            .nautilus-prose hr {
+              border: none;
+              border-top: 1px solid var(--border);
+              margin: 2.5em 0;
+            }
+          `}</style>
           <div
+            className="nautilus-prose"
             style={{ fontSize: '16px', lineHeight: 1.85 }}
             dangerouslySetInnerHTML={{ __html: localize(post.content) }}
           />
 
           {/* CTA */}
           <div style={{ marginTop: '56px', padding: '32px', background: 'var(--navy)', borderRadius: '12px', textAlign: 'center' }}>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '12px' }}>ACCESS THE FULL PLATFORM</div>
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'white', marginBottom: '8px' }}>See these signals live in Nautilus</div>
-            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', marginBottom: '20px' }}>500,000+ lots analyzed · AI-powered deal scoring · Real-time alerts</p>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: '0.16em', marginBottom: '12px' }}>
+              {lang === 'fr' ? 'ACCÉDER À LA PLATEFORME' : 'ACCESS THE FULL PLATFORM'}
+            </div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'white', marginBottom: '8px' }}>
+              {lang === 'fr' ? 'Voyez ces signaux en direct sur Nautilus' : 'See these signals live in Nautilus'}
+            </div>
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', marginBottom: '20px' }}>
+              {lang === 'fr'
+                ? '1,5M+ lots analysés · Score de conviction IA · Alertes en temps réel'
+                : '1.5M+ lots analyzed · AI-powered deal scoring · Real-time alerts'}
+            </p>
             <Link to="/app/signup" style={{ display: 'inline-block', background: 'var(--gold)', color: 'var(--navy)', padding: '12px 28px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
-              Start free →
+              {lang === 'fr' ? 'Commencer gratuitement →' : 'Start free →'}
             </Link>
           </div>
         </article>

@@ -108,7 +108,7 @@ export default function DashboardPage() {
             Live Feed
           </div>
           <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "1px", fontFamily: "monospace" }}>
-            {isLoading ? "Loading…" : `${total.toLocaleString()} lots · Updated every 15min`}
+            {isLoading ? "Loading…" : `${total.toLocaleString()} lots`}
           </div>
         </div>
 

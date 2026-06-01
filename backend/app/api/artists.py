@@ -15,6 +15,7 @@ _ATTRIBUTION_PREFIXES = (
     "attribué à", "attribue a", "attributed to",
     "follower of", "circle of", "workshop of",
     "school of", "manner of",
+    ". nach", " nach ",
 )
 
 
@@ -992,8 +993,9 @@ async def autocomplete_artists(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Fuzzy artist autocomplete using pg_trgm similarity on canonical artist table."""
+    """Fuzzy artist autocomplete with attribution filtering, dedup, and popularity weighting."""
     import unicodedata
+    from collections import defaultdict
     from app.models.db_models import Artist
 
     def _norm(name: str) -> str:
@@ -1003,18 +1005,91 @@ async def autocomplete_artists(
         return n
 
     nq = _norm(q)
+
+    # ── 1. Fetch extra headroom for filtering / dedup ─────────────────────────
     sim = func.similarity(Artist.name_normalized, nq)
     stmt = (
         select(Artist, sim.label("sim"))
         .where(sim > 0.2)
         .order_by(sim.desc())
-        .limit(limit)
+        .limit(limit * 6)
     )
     result = await db.execute(stmt)
     rows = result.all()
 
+    # ── 2. Filter attributions ────────────────────────────────────────────────
+    rows = [(a, s) for a, s in rows if not _is_attribution(a.name or "")]
+
+    # ── 3. Deduplicate by canonical name, keep highest liquidity_score ────────
+    seen: dict[str, tuple] = {}
+    for artist, s in rows:
+        canon = _canonical_name(artist.name or "")
+        existing = seen.get(canon)
+        if existing is None or (artist.liquidity_score or 0) > (existing[0].liquidity_score or 0):
+            seen[canon] = (artist, s)
+
+    # ── 4. Re-sort by composite score (sim 70 % + popularity 30 %) ───────────
+    deduped = sorted(
+        seen.values(),
+        key=lambda x: float(x[1]) * 0.7 + (x[0].liquidity_score or 50.0) / 100.0 * 0.3,
+        reverse=True,
+    )[:limit]
+
+    # ── 5. Fallback to Lot.artist_name_raw when artists table is sparse ───────
+    if len(deduped) < 2:
+        sim_raw = func.similarity(Lot.artist_name_raw, nq)
+        lot_stmt = (
+            select(Lot.artist_name_raw, sim_raw.label("sim"))
+            .where(
+                Lot.artist_name_raw.isnot(None),
+                sim_raw > 0.25,
+            )
+            .order_by(sim_raw.desc())
+            .limit(limit * 6)
+        )
+        lot_result = await db.execute(lot_stmt)
+        lot_rows = lot_result.all()
+
+        fallback_seen: dict[str, float] = {}
+        for raw_name, s in lot_rows:
+            if _is_attribution(raw_name or ""):
+                continue
+            canon = _canonical_name(raw_name or "")
+            if canon not in fallback_seen or float(s) > fallback_seen[canon]:
+                fallback_seen[canon] = float(s)
+
+        # Merge fallback entries not already covered by artists table
+        covered = {_canonical_name(a.name or "") for a, _ in deduped}
+        fallback_entries = [
+            {"name": canon.title(), "similarity": round(s, 3), "confidence": "unresolved"}
+            for canon, s in sorted(fallback_seen.items(), key=lambda x: x[1], reverse=True)
+            if canon not in covered
+        ][: limit - len(deduped)]
+
+        suggestions = []
+        for artist, similarity_score in deduped:
+            confidence = (
+                "confirmed" if similarity_score >= 0.80
+                else "suggested" if similarity_score >= 0.45
+                else "unresolved"
+            )
+            suggestions.append({
+                "id": str(artist.id),
+                "name": artist.name,
+                "nationality": artist.nationality,
+                "birth_year": artist.birth_year,
+                "death_year": artist.death_year,
+                "trend": artist.trend.value if artist.trend else None,
+                "liquidity_score": artist.liquidity_score,
+                "similarity": round(float(similarity_score), 3),
+                "confidence": confidence,
+            })
+        suggestions.extend(fallback_entries)
+        return {"suggestions": suggestions}
+
+    # ── Normal path ───────────────────────────────────────────────────────────
     suggestions = []
-    for artist, similarity_score in rows:
+    for artist, similarity_score in deduped:
         confidence = (
             "confirmed" if similarity_score >= 0.80
             else "suggested" if similarity_score >= 0.45

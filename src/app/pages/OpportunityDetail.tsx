@@ -1138,7 +1138,7 @@ export default function OpportunityDetail() {
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '16px' }}>COÛT RÉEL DÉTAILLÉ</div>
             <div style={{ background: '#F5F4F0', borderRadius: '10px', padding: '16px 18px' }}>
               {([
-                { k: lot.current_price ? (isFr ? 'Enchère en cours' : 'Current bid') : (isFr ? 'Estimation' : 'Estimate'), v: realCost?.ref_price || price },
+                { k: isFr ? 'Prix de départ' : 'Starting price', v: realCost?.ref_price || price },
                 { k: `Frais acheteur (${buyerPremiumPct}%)`, v: realCost ? realCost.cost_basis - (realCost.ref_price || price) : Math.round(price * (premiumMultiplier - 1)) },
                 { k: 'Coût de détention (3 ans)', v: realCost?.holding_cost_3y || 0 },
               ] as { k: string; v: number }[]).filter(r => r.v > 0).map((r, i, arr) => (
@@ -1159,6 +1159,11 @@ export default function OpportunityDetail() {
                   </div>
                 </>
               )}
+              <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '0.5px solid #E8E4DC' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>
+                  {isFr ? 'Calculé sur la mise à prix — le coût réel dépendra du marteau final.' : 'Calculated at starting price — actual cost depends on final hammer.'}
+                </span>
+              </div>
             </div>
           </div>
         </div>

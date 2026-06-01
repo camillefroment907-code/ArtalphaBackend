@@ -12,9 +12,10 @@ import type { Lot } from "@/lib/api";
 interface Props { lot: Lot; index?: number; }
 
 function ScoreBadge({ score }: { score: number }) {
+  // Thresholds match backend hot-deals API deal_class logic (83/77)
   const cfg =
-    score >= 90 ? { label: "FIRE", cls: "badge-fire" } :
-    score >= 80 ? { label: "HOT",  cls: "badge-hot"  } :
+    score >= 83 ? { label: "FIRE", cls: "badge-fire" } :
+    score >= 77 ? { label: "HOT",  cls: "badge-hot"  } :
     score >= 70 ? { label: "DEAL", cls: "badge-deal" } :
                   { label: String(Math.round(score)), cls: "badge-watch" };
   return (
@@ -26,10 +27,6 @@ function ScoreBadge({ score }: { score: number }) {
       {cfg.label}
     </span>
   );
-}
-
-function getProjection(price: number, years: number) {
-  return Math.round(price * Math.pow(1.08, years));
 }
 
 export function GalleryCard({ lot, index = 0 }: Props) {
@@ -50,7 +47,8 @@ export function GalleryCard({ lot, index = 0 }: Props) {
   const pctBelow = lot.pct_below_low_estimate;
   const artist = lot.artist_name_raw?.trim() || "";
 
-  const proj10y = price ? getProjection(price, 10) : null;
+  // Use real backend projection if available — never fabricate from a hardcoded CAGR
+  const proj10y = lot.projection?.years?.[10]?.base_eur ?? null;
   const projMultiple = price && proj10y ? (proj10y / price).toFixed(1) : null;
 
   const timeLeft = lot.time_left_hours;
