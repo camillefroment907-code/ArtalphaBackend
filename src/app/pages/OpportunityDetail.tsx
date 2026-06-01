@@ -780,7 +780,7 @@ export default function OpportunityDetail() {
           })()}
 
           {/* Block 4 — MAX BID */}
-          {maxBidIsReliable && (
+          {!isGallery && maxBidIsReliable && (
             <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? (isGallery ? 'PRIX MAXIMUM RECOMMANDÉ' : 'MAX BID RENTABLE') : (isGallery ? 'RECOMMENDED MAX PRICE' : 'MAX PROFITABLE BID')}</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>{fmtExact(avoidAbove)}</div>
@@ -793,7 +793,7 @@ export default function OpportunityDetail() {
               </div>
             </div>
           )}
-          {avoidAbove && !maxBidIsReliable && (
+          {!isGallery && avoidAbove && !maxBidIsReliable && (
             <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>MAX BID</div>
               <div style={{ color: '#64748B', fontSize: '13px', fontStyle: 'italic' }}>
@@ -801,7 +801,7 @@ export default function OpportunityDetail() {
               </div>
             </div>
           )}
-          {!avoidAbove && (
+          {!isGallery && !avoidAbove && (
             <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? 'MAX BID' : 'MAX BID'}</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>
@@ -1028,7 +1028,7 @@ export default function OpportunityDetail() {
           </div>
 
           {/* Grille 160 | divider | 160 | divider | 1fr */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.5px 1fr 0.5px 2fr' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isGallery ? '1fr 2fr' : '1fr 0.5px 1fr 0.5px 2fr' }}>
 
             {/* Prix */}
             <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
@@ -1048,10 +1048,10 @@ export default function OpportunityDetail() {
               </div>
             </div>
 
-            <div style={{ background: '#E8E4DC' }} />
+            {!isGallery && <div style={{ background: '#E8E4DC' }} />}
 
             {/* À ne pas dépasser */}
-            <div style={{ padding: '12px 14px', background: '#FFFBEB', display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
+            {!isGallery && <div style={{ padding: '12px 14px', background: '#FFFBEB', display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
               {maxBidIsReliable ? (
                 <>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#92400E', letterSpacing: '2px', textTransform: 'uppercase' as const }}>
@@ -1087,9 +1087,9 @@ export default function OpportunityDetail() {
                   </div>
                 </>
               )}
-            </div>
+            </div>}
 
-            <div style={{ background: '#E8E4DC' }} />
+            {!isGallery && <div style={{ background: '#E8E4DC' }} />}
 
             {/* 3 métriques */}
             <div style={{ padding: '10px 14px 10px 16px', display: 'flex', flexDirection: 'column' as const, justifyContent: 'space-between', gap: '7px', minWidth: 0, overflow: 'hidden' }}>
