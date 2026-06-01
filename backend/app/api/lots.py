@@ -2595,6 +2595,15 @@ async def get_hammer_history(
     from app.jobs.quality_filter import normalize_artist_name
     artist_norm = normalize_artist_name(lot.artist_name_raw)
 
+    print(f"DEBUG hammer-history: lot_id={lot_id} artist_raw='{lot.artist_name_raw}' artist_norm='{artist_norm}'")
+
+    from sqlalchemy import text as _sa_text
+    count_result = await db.execute(
+        _sa_text("SELECT COUNT(*) FROM hammer_prices WHERE artist_name_normalized = :norm"),
+        {"norm": artist_norm},
+    )
+    debug_count = count_result.scalar_one()
+
     hp_result = await db.execute(
         select(HammerPrice)
         .where(
@@ -2630,6 +2639,8 @@ async def get_hammer_history(
 
     return {
         "artist":      artist_norm,
+        "artist_norm": artist_norm,
+        "debug_count": debug_count,
         "total_sales": total,
         "median_eur":  median,
         "avg_eur":     avg,
