@@ -817,6 +817,10 @@ class HammerPrice(Base):
     lot_number       = Column(String(100), nullable=True)
     lot_id           = Column(UUID(as_uuid=True), ForeignKey("lots.id"), nullable=True)
     created_at       = Column(DateTime, default=datetime.utcnow)
+    signed           = Column(Boolean, nullable=True)
+    edition_number   = Column(Integer, nullable=True)
+    edition_size     = Column(Integer, nullable=True)
+    is_ea            = Column(Boolean, nullable=True)
 
     __table_args__ = (
         Index("ix_hammer_prices_artist_date", "artist_name", "sale_date"),

@@ -12,6 +12,8 @@ Env:
 import asyncio
 import os
 import logging
+import ssl
+from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -25,17 +27,42 @@ log = logging.getLogger(__name__)
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", "5000"))
 DRY_RUN    = os.getenv("DRY_RUN", "0") == "1"
 
+# asyncpg does not accept sslmode/channel_binding as query params.
+# Strip them from the URL and pass ssl=True via connect_args instead.
+_ASYNCPG_UNSUPPORTED_PARAMS = {"sslmode", "channel_binding"}
 
-def _get_db_url() -> str:
-    url = os.getenv("DATABASE_URL")
-    if url:
-        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    from app.config import settings
-    return settings.database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+def _parse_db_url() -> tuple[str, dict]:
+    """Return (asyncpg_url, connect_args) with SSL handled properly."""
+    raw = os.getenv("DATABASE_URL")
+    if not raw:
+        from app.config import settings
+        raw = settings.database_url
+
+    parsed = urlparse(raw)
+    params = parse_qs(parsed.query, keep_blank_values=True)
+
+    needs_ssl = params.pop("sslmode", [""])[0] in ("require", "verify-ca", "verify-full")
+    params.pop("channel_binding", None)
+
+    clean_query = urlencode({k: v[0] for k, v in params.items()})
+    clean_url = urlunparse(parsed._replace(query=clean_query))
+    clean_url = clean_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    clean_url = clean_url.replace("postgresql+psycopg2://", "postgresql+asyncpg://", 1)
+
+    connect_args: dict = {}
+    if needs_ssl:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        connect_args["ssl"] = ctx
+
+    return clean_url, connect_args
 
 
 async def run() -> None:
-    engine = create_async_engine(_get_db_url(), pool_pre_ping=True)
+    db_url, connect_args = _parse_db_url()
+    engine = create_async_engine(db_url, connect_args=connect_args, pool_pre_ping=True)
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     async with async_session() as session:
@@ -54,19 +81,19 @@ async def run() -> None:
             log.info("DRY_RUN=1 — exiting without writing.")
             return
 
-        offset = 0
         updated = 0
 
         while True:
-            # Fetch a batch of (id, medium) where medium_category is NULL
+            # Always fetch from OFFSET 0 — updated rows leave the NULL set,
+            # so incrementing offset would double-skip rows.
             rows = (await session.execute(
                 text(
                     "SELECT id, medium FROM hammer_prices "
                     "WHERE medium_category IS NULL "
                     "ORDER BY id "
-                    "LIMIT :limit OFFSET :offset"
+                    "LIMIT :limit"
                 ),
-                {"limit": BATCH_SIZE, "offset": offset},
+                {"limit": BATCH_SIZE},
             )).fetchall()
 
             if not rows:
@@ -79,7 +106,6 @@ async def run() -> None:
                 by_category.setdefault(cat, []).append(str(row_id))
 
             for cat, ids in by_category.items():
-                # Use ANY(:ids) — safe, no interpolation
                 await session.execute(
                     text(
                         "UPDATE hammer_prices "
@@ -92,10 +118,6 @@ async def run() -> None:
             await session.commit()
             updated += len(rows)
             log.info(f"  {updated}/{total} rows updated")
-
-            if len(rows) < BATCH_SIZE:
-                break
-            offset += BATCH_SIZE
 
         log.info(f"Done — {updated} rows backfilled.")
 
