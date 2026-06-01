@@ -2065,15 +2065,26 @@ async def _compute_weighted_max_bid(lot, db) -> dict:
     lot_medium_cat = _medium_category(lot.medium) or _medium_category(lot.title or "")
     lot_house_tier = _house_tier_num(lot.auction_house_name)
 
-    scored: list[tuple[int, float]] = []
+    _2D_CATS = {"print", "drawing", "photo", "watercolor"}
+
+    # Bucket each comparable by how well its medium matches the lot
+    same_medium:  list[tuple[int, float]] = []   # exact same medium category
+    cross_2d:     list[tuple[int, float]] = []   # different 2-D medium (e.g. print ↔ drawing)
+    all_scored:   list[tuple[int, float]] = []   # everything else (e.g. painting for a print lot)
+
     for row in rows:
         price = row["hammer_price_eur"] or row["hammer_price"]
         if not price or price <= 0:
             continue
         s = _comp_proximity_score(row, lot_medium_cat, lot_area, lot_house_tier, now_dt)
-        scored.append((s, float(price)))
+        hp_medium_cat = _medium_category(row.get("medium"))
+        all_scored.append((s, float(price)))
+        if lot_medium_cat and hp_medium_cat == lot_medium_cat:
+            same_medium.append((s, float(price)))
+        elif (lot_medium_cat in _2D_CATS and hp_medium_cat in _2D_CATS):
+            cross_2d.append((s, float(price)))
 
-    if not scored:
+    if not all_scored:
         return {}
 
     def _wavg(pairs: list[tuple[int, float]]) -> float:
@@ -2082,20 +2093,29 @@ async def _compute_weighted_max_bid(lot, db) -> dict:
             return sum(p for _, p in pairs) / len(pairs)
         return sum(s * p for s, p in pairs) / total_w
 
-    l1 = [(s, p) for s, p in scored if s >= 60]
+    # Level 1 — ≥3 exact-medium comps, well-scored (size + recency match too)
+    l1 = [(s, p) for s, p in same_medium if s >= 60]
     if len(l1) >= 3:
         return {"market_value": _wavg(l1), "comp_count": len(l1),
                 "comp_level": 1, "max_bid_source": "comparables_proches"}
 
-    l2 = [(s, p) for s, p in scored if s >= 30]
-    if len(l2) >= 3:
-        return {"market_value": _wavg(l2), "comp_count": len(l2),
-                "comp_level": 2, "max_bid_source": "comparables_partiels"}
+    # Level 2 — ≥3 exact-medium comps (any score; medium is mandatory)
+    if len(same_medium) >= 3:
+        return {"market_value": _wavg(same_medium), "comp_count": len(same_medium),
+                "comp_level": 2, "max_bid_source": "comparables_meme_technique"}
 
-    if len(scored) >= 5:
+    # Level 3 — ≥3 cross-2D comps (e.g. drawing used to estimate print value)
+    if len(cross_2d) >= 3:
+        return {"market_value": _wavg(cross_2d), "comp_count": len(cross_2d),
+                "comp_level": 3, "max_bid_source": "comparables_technique_proche"}
+
+    # Level 4 — ≥5 all artist sales with per-medium discount
+    # (e.g. paintings discounted to estimate a print's relative value)
+    # Only used as last resort; marked clearly so UI can warn.
+    if len(all_scored) >= 5:
         discount = _MEDIUM_DISCOUNT.get(lot_medium_cat or "", 1.0)
-        return {"market_value": _wavg(scored) * discount, "comp_count": len(scored),
-                "comp_level": 3, "max_bid_source": "ventes_artiste"}
+        return {"market_value": _wavg(all_scored) * discount, "comp_count": len(all_scored),
+                "comp_level": 4, "max_bid_source": "ventes_artiste_ajuste"}
 
     return {}
 

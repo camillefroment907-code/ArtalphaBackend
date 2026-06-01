@@ -762,11 +762,13 @@ export default function OpportunityDetail() {
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>{fmtExact(avoidAbove)}</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
                 {maxBidSource === 'comparables_proches'
-                  ? (isFr ? 'Basé sur les ventes réelles — marge 10%' : 'Based on real sales — 10% margin')
-                  : maxBidSource === 'comparables_partiels'
-                  ? (isFr ? 'Basé sur les comparables — marge 10%' : 'Based on comparables — 10% margin')
-                  : maxBidSource === 'ventes_artiste'
-                  ? (isFr ? 'Ventes artiste (médium ajusté) — marge 10%' : 'Artist sales (medium-adjusted) — 10% margin')
+                  ? (isFr ? 'Ventes même technique + taille — marge 10%' : 'Same medium & size sales — 10% margin')
+                  : maxBidSource === 'comparables_meme_technique'
+                  ? (isFr ? 'Ventes même technique — marge 10%' : 'Same medium sales — 10% margin')
+                  : maxBidSource === 'comparables_technique_proche'
+                  ? (isFr ? 'Techniques proches (2D) — marge 10%' : 'Similar medium (2D) — 10% margin')
+                  : maxBidSource === 'ventes_artiste_ajuste'
+                  ? (isFr ? 'Ventes artiste, coefficient technique appliqué — indicatif' : 'Artist sales, medium coefficient applied — indicative')
                   : (isFr ? 'Au-delà : perte garantie' : 'Beyond this: guaranteed loss')}
               </div>
             </div>
@@ -1025,13 +1027,17 @@ export default function OpportunityDetail() {
               {avoidAbove && maxBidSource !== 'estimate' ? (
                 <>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#92400E', letterSpacing: '2px', textTransform: 'uppercase' as const }}>
-                    {isFr ? 'À NE PAS DÉPASSER' : 'DO NOT EXCEED'}
+                    {maxBidSource === 'ventes_artiste_ajuste'
+                      ? (isFr ? 'MAX BID INDICATIF' : 'INDICATIVE MAX BID')
+                      : (isFr ? 'À NE PAS DÉPASSER' : 'DO NOT EXCEED')}
                   </div>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '26px', fontWeight: 800, color: AMB, lineHeight: 1 }}>
                     {fmtExact(avoidAbove)}
                   </div>
                   <div style={{ fontSize: '10px', color: '#B45309', fontWeight: 500 }}>
-                    {isFr ? 'Perte garantie au-delà' : 'Loss guaranteed above'}
+                    {maxBidSource === 'ventes_artiste_ajuste'
+                      ? (isFr ? 'Basé sur autres œuvres — coefficient technique' : 'Based on other works — medium coefficient')
+                      : (isFr ? 'Perte garantie au-delà' : 'Loss guaranteed above')}
                   </div>
                 </>
               ) : (
