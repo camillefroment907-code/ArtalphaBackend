@@ -36,19 +36,12 @@ const LTT1 = '#111827';
 const LTT2 = '#4B5563';
 const LTT3 = '#9CA3AF';
 const GOLD = '#C6A85A';
-const GD   = '#52C97F';
-const GL   = '#1A7F4B';
-const GL2  = '#1A6B3C';
-const BL   = '#1D6EBF';
-const BLD  = '#60A5FA';
+const GD   = '#52C97F';   // green on dark
+const GL   = '#1A7F4B';   // green on light
+const BL   = '#1D6EBF';   // blue link on light
+const BLD  = '#60A5FA';   // blue on dark
 const AMB  = '#D97706';
 const RED  = '#DC2626';
-
-// Decision colors
-const GREEN_BG  = 'rgba(26,107,60,0.08)';
-const GREEN_BDR = 'rgba(26,107,60,0.18)';
-const AMBER_BG  = 'rgba(184,146,42,0.10)';
-const GRAY_BG   = 'rgba(107,114,128,0.08)';
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────
 
@@ -69,7 +62,76 @@ const fmtExact = (v?: number | null): string => {
 const isFrench = (s: string) =>
   /par rapport|d'acquisition|sous-évalué|artiste|liquidité|achat|vente|décote/i.test(s);
 
-// ── LOCKED BLOCK ──────────────────────────────────────────────────────────────
+// ── DECISION HELPERS ──────────────────────────────────────────────────────────
+
+function scoreHumanLabel(s: number): string {
+  if (s >= 90) return 'Exceptionnel';
+  if (s >= 80) return 'Très intéressant';
+  if (s >= 70) return 'À regarder de près';
+  if (s >= 60) return 'Potentiel modéré';
+  return 'Peu prioritaire';
+}
+function confidenceLabel(n: number): { label: string; color: string } {
+  if (n >= 50) return { label: 'Confiance élevée',   color: GD };
+  if (n >= 10) return { label: 'Confiance moyenne',  color: '#FBBF24' };
+  return              { label: 'Confiance limitée',  color: '#9CA3AF' };
+}
+function buildOptimismSignals(lot: any, isFr: boolean): string[] {
+  const out: string[] = [];
+  const pct = lot.pct_below_low_estimate || 0;
+  if (pct > 5) out.push(isFr ? `Prix actuel ${Math.round(pct)}% sous l'estimation basse` : `Current price ${Math.round(pct)}% below low estimate`);
+  if ((lot.artist?.sell_through_rate || 0) >= 0.65) out.push(isFr ? `${Math.round(lot.artist.sell_through_rate * 100)}% des œuvres de cet artiste trouvent acheteur` : `${Math.round(lot.artist.sell_through_rate * 100)}% of this artist's works find a buyer`);
+  else if ((lot.artist?.liquidity_score || 0) >= 65) out.push(isFr ? 'Liquidité artiste élevée — facile à revendre' : 'High artist liquidity — easy to resell');
+  const cc = lot.fair_value_confidence || 0;
+  if (cc >= 10) out.push(isFr ? `Analyse basée sur ${cc} ventes comparables` : `Analysis based on ${cc} comparable sales`);
+  if (lot.artist?.trend === 'up') out.push(isFr ? 'Marché artiste en progression' : 'Artist market trending up');
+  return out.slice(0, 3);
+}
+function buildVigilanceSignals(lot: any, isFr: boolean): string[] {
+  const out: string[] = [];
+  if (lot.provenance_risk) out.push(isFr ? "Provenance peu documentée — vérifiez avant d'enchérir" : 'Provenance poorly documented — verify before bidding');
+  if (lot.artist?.trend === 'down') out.push(isFr ? 'Marché artiste en recul récemment' : 'Artist market declining recently');
+  if (lot.consignment_alert) out.push(isFr ? 'Volume de consignation élevé sur cette maison' : 'High consignment volume at this house');
+  const cc = lot.fair_value_confidence || 0;
+  if (cc > 0 && cc < 10) out.push(isFr ? 'Peu de ventes comparables disponibles' : 'Few comparable sales available');
+  return out.slice(0, 2);
+}
+function buildChangeOfMind(lot: any, isFr: boolean): string[] {
+  const out: string[] = [];
+  if (lot.provenance_risk) out.push(isFr ? 'Provenance incomplète ou contestée' : 'Incomplete or contested provenance');
+  if ((lot.artist?.sell_through_rate || 0) < 0.5) out.push(isFr ? 'Taux de vente inférieur à la moyenne du marché' : 'Sell-through rate below market average');
+  out.push(isFr ? "Correction significative du marché secondaire de l'artiste" : "Significant correction in artist's secondary market");
+  if ((lot.fair_value_confidence || 0) < 20) out.push(isFr ? 'Données encore limitées pour cette œuvre' : 'Still limited data for this work');
+  return out.slice(0, 3);
+}
+function buildWhyNotHigher(lot: any, isFr: boolean): string[] {
+  const out: string[] = [];
+  const pct = lot.pct_below_low_estimate || 0;
+  if (lot.provenance_risk) out.push(isFr ? 'Le prix semble attractif, mais la provenance reste partiellement documentée.' : 'The price looks attractive, but provenance remains partially documented.');
+  else if (pct < 10) out.push(isFr ? "L'écart avec les comparables est positif, mais modeste." : 'The gap with comparables is positive, but modest.');
+  if (lot.artist?.trend === 'down') out.push(isFr ? "Le marché de l'artiste montre quelques signes de ralentissement." : "The artist's market shows some signs of slowing.");
+  else if ((lot.artist?.sell_through_rate || 0) < 0.7) out.push(isFr ? "Le marché reste actif, mais moins dynamique qu'en période haute." : "The market remains active, but less dynamic than at its peak.");
+  if ((lot.fair_value_confidence || 0) < 30) out.push(isFr ? 'Les données sont solides, mais le nombre de transactions récentes reste limité.' : 'The data is solid, but the number of recent transactions remains limited.');
+  return out.slice(0, 2);
+}
+function buildTimingReasons(lot: any, isFr: boolean, days: number | null): string[] {
+  const out: string[] = [];
+  if (days !== null && days >= 0 && days <= 14) out.push(isFr ? `La vente se termine dans ${days} jour${days > 1 ? 's' : ''} — le prix actuel reste inférieur aux comparables récents.` : `The sale closes in ${days} day${days !== 1 ? 's' : ''} — current price remains below recent comparables.`);
+  const pct = lot.pct_below_low_estimate || 0;
+  if (pct > 15) out.push(isFr ? `Cette œuvre est proposée ${Math.round(pct)}% sous l'estimation — une décote rarement observée pour ce segment.` : `This work is offered ${Math.round(pct)}% below estimate — a discount rarely seen in this segment.`);
+  else if (pct > 5) out.push(isFr ? 'Le prix actuel reste inférieur à la médiane des ventes comparables récentes.' : 'The current price remains below the median of recent comparable sales.');
+  if (lot.artist?.trend === 'up') out.push(isFr ? "Le marché de l'artiste est en progression — les prix pourraient évoluer à la hausse." : "The artist's market is trending up — prices may move higher.");
+  return out.slice(0, 2);
+}
+function buildNarrativeReading(lot: any, isFr: boolean, cc: number): string {
+  const pct = lot.pct_below_low_estimate || 0;
+  const active = lot.artist?.trend !== 'down' && (lot.artist?.sell_through_rate || 0) >= 0.5;
+  if (pct > 15 && cc >= 20) return isFr ? "Parmi les lots comparables actuellement disponibles, celui-ci présente l'un des rapports prix / opportunité les plus attractifs observés récemment. Le marché reste actif et les données disponibles nous permettent d'évaluer cette opportunité avec confiance." : "Among comparable lots currently available, this one presents one of the most attractive price / opportunity ratios observed recently. The market remains active and the available data allows us to evaluate this opportunity with confidence.";
+  if (active && cc >= 10) return isFr ? "Cette œuvre présente plusieurs signaux favorables simultanément. Le marché de l'artiste reste soutenu et les comparables disponibles confortent notre lecture du prix." : "This work shows several favorable signals simultaneously. The artist's market remains supported and the available comparables reinforce our reading of the price.";
+  return isFr ? "Cette œuvre ressort positivement dans notre analyse. Le niveau de conviction reste mesuré en raison du volume de données disponibles, mais les signaux observés justifient une attention particulière." : "This work stands out positively in our analysis. The conviction level remains measured due to the volume of available data, but the observed signals justify special attention.";
+}
+
+// ── LOCKED BLOCK (light theme) ────────────────────────────────────────────────
 
 function LockedBlock({ preview, ctaText }: {
   title: string; teaser: string; ctaText?: string; ctaPrice: string;
@@ -95,233 +157,6 @@ function LockedBlock({ preview, ctaText }: {
   );
 }
 
-// ── EDITORIAL SECTION ─────────────────────────────────────────────────────────
-
-const EdSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div style={{ marginBottom: '28px' }}>
-    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '12px' }}>
-      {title}
-    </div>
-    {children}
-  </div>
-);
-
-const EdItem = ({ icon, iconColor, children }: { icon: string; iconColor: string; children: React.ReactNode }) => (
-  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px', fontSize: '14px', color: LTT2, lineHeight: 1.6 }}>
-    <span style={{ color: iconColor, flexShrink: 0, marginTop: '1px', fontSize: '13px' }}>{icon}</span>
-    <span>{children}</span>
-  </div>
-);
-
-// ── ACCORDION ─────────────────────────────────────────────────────────────────
-
-function Accordion({ label, children }: { label: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ marginBottom: '0.75rem' }}>
-      <button
-        onClick={() => setOpen(v => !v)}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0.9rem 1.25rem',
-          background: LTC,
-          border: `0.5px solid ${LTB}`,
-          borderRadius: open ? '12px 12px 0 0' : '12px',
-          borderBottom: open ? 'none' : `0.5px solid ${LTB}`,
-          cursor: 'pointer', fontSize: '13px', color: LTT2,
-          fontFamily: 'var(--font-sans)',
-          transition: 'background 0.15s',
-        }}
-        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = LT; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = LTC; }}
-      >
-        <span>{label}</span>
-        <span style={{ color: LTT3, transition: 'transform 0.2s', display: 'inline-block', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
-      </button>
-      {open && (
-        <div style={{
-          border: `0.5px solid ${LTB}`, borderTop: 'none',
-          borderRadius: '0 0 12px 12px',
-          padding: '1rem 1.25rem',
-          background: LTC,
-        }}>
-          {children}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── SCORE HUMAN LABEL ─────────────────────────────────────────────────────────
-
-function scoreHumanLabel(score: number): string {
-  if (score >= 90) return 'Exceptionnel';
-  if (score >= 80) return 'Très intéressant';
-  if (score >= 70) return 'À regarder de près';
-  if (score >= 60) return 'Potentiel modéré';
-  return 'Peu prioritaire';
-}
-
-function scoreBadgeLabel(score: number): string {
-  if (score >= 83) return 'Opportunité forte';
-  if (score >= 70) return 'Opportunité';
-  if (score >= 55) return 'À surveiller';
-  return 'Peu prioritaire';
-}
-
-function scoreBadgeColor(score: number): { bg: string; color: string; dot: string } {
-  if (score >= 70) return { bg: GREEN_BG, color: GL2, dot: GL2 };
-  if (score >= 55) return { bg: AMBER_BG, color: AMB, dot: AMB };
-  return { bg: GRAY_BG, color: LTT3, dot: LTT3 };
-}
-
-function confidenceLabel(comparableCount: number): { label: string; color: string } {
-  if (comparableCount >= 50)  return { label: 'Confiance élevée',   color: GL2 };
-  if (comparableCount >= 10)  return { label: 'Confiance moyenne',  color: AMB };
-  return                             { label: 'Confiance limitée',  color: LTT3 };
-}
-
-function ctaLabel(score: number): string {
-  if (score >= 70) return 'Ajouter à ma shortlist';
-  if (score >= 55) return 'Suivre cette œuvre';
-  return 'Continuer à surveiller';
-}
-
-// ── DECISION SIGNALS ──────────────────────────────────────────────────────────
-
-function buildOptimismSignals(lot: any, isFr: boolean): string[] {
-  const signals: string[] = [];
-  const pctBelow = lot.pct_below_low_estimate || 0;
-  if (pctBelow > 5) {
-    signals.push(isFr
-      ? `Prix actuel ${Math.round(pctBelow)}% sous l'estimation basse`
-      : `Current price ${Math.round(pctBelow)}% below low estimate`);
-  }
-  if ((lot.artist?.sell_through_rate || 0) >= 0.65) {
-    const pct = Math.round((lot.artist.sell_through_rate) * 100);
-    signals.push(isFr
-      ? `${pct}% des œuvres de cet artiste trouvent acheteur`
-      : `${pct}% of this artist's works find a buyer`);
-  } else if ((lot.artist?.liquidity_score || 0) >= 65) {
-    signals.push(isFr
-      ? `Liquidité artiste élevée — facile à revendre`
-      : `High artist liquidity — easy to resell`);
-  }
-  const compCount = lot.fair_value_confidence || 0;
-  if (compCount >= 10) {
-    signals.push(isFr
-      ? `Analyse basée sur ${compCount} ventes comparables`
-      : `Analysis based on ${compCount} comparable sales`);
-  }
-  if (lot.artist?.trend === 'up') {
-    signals.push(isFr ? 'Marché artiste en progression' : 'Artist market trending up');
-  }
-  return signals.slice(0, 3);
-}
-
-function buildVigilanceSignals(lot: any, isFr: boolean): string[] {
-  const signals: string[] = [];
-  const provRisk = lot.provenance_risk;
-  if (provRisk) signals.push(isFr ? 'Provenance peu documentée — vérifiez avant d\'enchérir' : 'Provenance poorly documented — verify before bidding');
-  if (lot.artist?.trend === 'down') signals.push(isFr ? 'Marché artiste en recul récemment' : 'Artist market declining recently');
-  const consignAlert = lot.consignment_alert;
-  if (consignAlert) signals.push(isFr ? 'Volume de consignation élevé sur cette maison' : 'High consignment volume at this house');
-  const compCount = lot.fair_value_confidence || 0;
-  if (compCount < 10 && compCount > 0) signals.push(isFr ? 'Peu de ventes comparables disponibles' : 'Few comparable sales available');
-  return signals.slice(0, 2);
-}
-
-function buildChangeOfMind(lot: any, isFr: boolean): string[] {
-  const items: string[] = [];
-  if (lot.provenance_risk) items.push(isFr ? 'Provenance incomplète ou contestée' : 'Incomplete or contested provenance');
-  if ((lot.artist?.sell_through_rate || 0) < 0.5) {
-    items.push(isFr ? 'Taux de vente inférieur à la moyenne du marché' : 'Sell-through rate below market average');
-  }
-  items.push(isFr ? 'Correction significative du marché secondaire de l\'artiste' : 'Significant correction in artist\'s secondary market');
-  const compCount = lot.fair_value_confidence || 0;
-  if (compCount < 20) items.push(isFr ? 'Données encore limitées pour cette œuvre' : 'Still limited data for this work');
-  return items.slice(0, 3);
-}
-
-function buildWhyNotHigher(lot: any, isFr: boolean): string[] {
-  const items: string[] = [];
-  const pctBelow = lot.pct_below_low_estimate || 0;
-  if (lot.provenance_risk) {
-    items.push(isFr
-      ? 'Le prix semble attractif, mais la provenance reste partiellement documentée.'
-      : 'The price looks attractive, but provenance remains partially documented.');
-  } else if (pctBelow < 10) {
-    items.push(isFr
-      ? 'L\'écart avec les comparables est positif, mais modeste.'
-      : 'The gap with comparables is positive, but modest.');
-  }
-  if (lot.artist?.trend === 'down') {
-    items.push(isFr
-      ? 'Le marché de l\'artiste montre quelques signes de ralentissement.'
-      : 'The artist\'s market shows some signs of slowing.');
-  } else if ((lot.artist?.sell_through_rate || 0) < 0.7) {
-    items.push(isFr
-      ? 'Le marché de l\'artiste reste actif, mais moins dynamique qu\'en période haute.'
-      : 'The artist\'s market remains active, but less dynamic than at its peak.');
-  }
-  const compCount = lot.fair_value_confidence || 0;
-  if (compCount < 30) {
-    items.push(isFr
-      ? 'Les données sont solides, mais le nombre de transactions récentes reste limité.'
-      : 'The data is solid, but the number of recent transactions remains limited.');
-  }
-  return items.slice(0, 2);
-}
-
-function buildTimingReasons(lot: any, isFr: boolean, daysUntilClose: number | null): string[] {
-  const items: string[] = [];
-  if (daysUntilClose !== null && daysUntilClose >= 0 && daysUntilClose <= 14) {
-    items.push(isFr
-      ? `La vente se termine dans ${daysUntilClose} jour${daysUntilClose > 1 ? 's' : ''} — le prix actuel reste inférieur aux comparables récents.`
-      : `The sale closes in ${daysUntilClose} day${daysUntilClose !== 1 ? 's' : ''} — current price remains below recent comparables.`);
-  }
-  const pctBelow = lot.pct_below_low_estimate || 0;
-  if (pctBelow > 15) {
-    items.push(isFr
-      ? `Cette œuvre est proposée ${Math.round(pctBelow)}% sous l'estimation — une décote rarement observée pour ce segment.`
-      : `This work is offered ${Math.round(pctBelow)}% below estimate — a discount rarely seen in this segment.`);
-  } else if (pctBelow > 5) {
-    items.push(isFr
-      ? 'Le prix actuel reste inférieur à la médiane des ventes comparables récentes.'
-      : 'The current price remains below the median of recent comparable sales.');
-  }
-  if (lot.artist?.trend === 'up') {
-    items.push(isFr
-      ? 'Le marché de l\'artiste est en progression — les prix pourraient évoluer à la hausse.'
-      : 'The artist\'s market is trending up — prices may move higher.');
-  }
-  return items.slice(0, 2);
-}
-
-function buildRecoText(score: number, isFr: boolean): string {
-  if (score >= 80) return isFr ? 'Cette opportunité mérite d\'être étudiée sérieusement.' : 'This opportunity is worth a serious look.';
-  if (score >= 65) return isFr ? 'Cette œuvre vaut la peine d\'être suivie de près.' : 'This work is worth following closely.';
-  return isFr ? 'À surveiller — d\'autres opportunités peuvent être plus prioritaires.' : 'Worth monitoring — other opportunities may be more pressing.';
-}
-
-function buildNarrativeReading(lot: any, isFr: boolean, compCount: number): string {
-  const pctBelow = lot.pct_below_low_estimate || 0;
-  const hasGoodData = compCount >= 20;
-  const marketActive = lot.artist?.trend !== 'down' && (lot.artist?.sell_through_rate || 0) >= 0.5;
-  if (pctBelow > 15 && hasGoodData) {
-    return isFr
-      ? `Parmi les lots comparables actuellement disponibles, celui-ci présente l'un des rapports prix / opportunité les plus attractifs observés récemment. Le marché reste actif et les données disponibles nous permettent d'évaluer cette opportunité avec confiance.`
-      : `Among comparable lots currently available, this one presents one of the most attractive price / opportunity ratios observed recently. The market remains active and the available data allows us to evaluate this opportunity with confidence.`;
-  }
-  if (marketActive && compCount >= 10) {
-    return isFr
-      ? `Cette œuvre présente plusieurs signaux favorables simultanément. Le marché de l'artiste reste soutenu et les comparables disponibles confortent notre lecture du prix.`
-      : `This work shows several favorable signals simultaneously. The artist's market remains supported and the available comparables reinforce our reading of the price.`;
-  }
-  return isFr
-    ? `Cette œuvre ressort positivement dans notre analyse. Le niveau de conviction reste mesuré en raison du volume de données disponibles, mais les signaux observés justifient une attention particulière.`
-    : `This work stands out positively in our analysis. The conviction level remains measured due to the volume of available data, but the observed signals justify special attention.`;
-}
 
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 
@@ -517,6 +352,7 @@ export default function OpportunityDetail() {
   const fairVal     = estHigh || price * 1.2;
   const upside    = Number(lot.pct_below_low_estimate || 0);
   const upsidePct = upside > 0 ? upside : 0;
+  // Use API projections when available, fallback to CAGR calc
   const _projMap: Record<number, { projected_value_eur: number; gain_pct: number }> = {};
   if (Array.isArray(lot.projection?.years)) {
     for (const p of lot.projection.years) _projMap[p.years] = p;
@@ -557,12 +393,14 @@ export default function OpportunityDetail() {
     sothebys: '🇬🇧', christies: '🇬🇧', bonhams: '🇬🇧',
     liveauctioneers: '🇺🇸', ebay: '🌐', artsy: '🌐',
   };
+
   const formatSource = (src: string, house?: string) => {
     if (!src || src === 'other' || src === 'unknown') return house || '—';
     return src;
   };
   const resolvedSource = formatSource(source, lot.auction_house_name);
   const sourceLabel = `${flags[resolvedSource.toLowerCase()] || ''} ${sourceNames[resolvedSource.toLowerCase()] || resolvedSource}`.trim();
+
   const artistEnc = encodeURIComponent((lot.artist_name_raw || '').slice(0, 40));
   const sourceSearch: Record<string, string> = {
     drouot: `https://www.drouot.com/search?q=${artistEnc}`,
@@ -578,6 +416,7 @@ export default function OpportunityDetail() {
   const isValidUrl = rawUrl && rawUrl.startsWith('http') && !NON_ART.some((w: string) => rawUrl.toLowerCase().includes(w));
   const externalUrl = isValidUrl ? rawUrl : (sourceSearch[source] || `https://www.google.com/search?q=${artistEnc}+${source}`);
   const trackUrl   = lot.id ? `${BACKEND}/api/track/${lot.id}` : externalUrl;
+
   const auctionDateFmt = lot.auction_date
     ? new Date(lot.auction_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
     : null;
@@ -622,15 +461,30 @@ export default function OpportunityDetail() {
   const netGain       = breakEvenGain != null ? upsidePct - breakEvenGain : null;
   const avoidAbove = maxBidFromApi ?? null;
   const avoidAboveUsedComps = maxBidFromApi != null;
-  const RELIABLE_SOURCES = ['comparables_proches', 'comparables_meme_technique', 'comparables_technique_proche'];
+  const RELIABLE_SOURCES = [
+    'comparables_proches',
+    'comparables_meme_technique',
+    'comparables_technique_proche',
+  ];
   const maxBidIsReliable = !!avoidAbove && RELIABLE_SOURCES.includes(maxBidSource ?? '');
   const daysUntilClose = lot.auction_date
     ? Math.max(0, Math.round((new Date(lot.auction_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null;
+  const timingSignal = lot.oracle?.signal === 'BUY_NOW'
+    ? (isFr ? 'Signal fort — meilleur moment pour acheter' : 'Strong signal — optimal entry')
+    : lot.oracle?.signal === 'AVOID'
+    ? (isFr ? 'Signal négatif — éviter pour le moment' : 'Negative signal — avoid for now')
+    : null;
+  const bullets: string[] = [
+    lot.score_rationale ? String(lot.score_rationale) : null,
+  ].filter(Boolean) as string[];
+
+  // Analysis text
   const analysisText = typeof lot.score_rationale === 'string' && lot.score_rationale.trim()
     ? lot.score_rationale.trim()
     : null;
 
+  // Comparables
   const allComps: any[] = comparables;
   const sameArtistComps = allComps.filter((c: any) =>
     c.artist_name_raw?.toLowerCase().trim() === (lot.artist_name_raw || '').toLowerCase().trim()
@@ -639,17 +493,29 @@ export default function OpportunityDetail() {
   const compsLabel   = sameArtistComps.length >= 2 ? (isFr ? 'VENTES COMPARABLES' : 'COMPARABLE SALES') : (isFr ? 'ŒUVRES SIMILAIRES' : 'SIMILAR WORKS');
   const maxCompPrice = comparables.length > 0 ? Math.max(...comparables.map((c: any) => c.current_price || 0), price) : price;
   const isHistorical = comparables.length > 0 && comparables[0].is_historical === true;
+
+  // Projection bar width: proportional to max value
   const maxProjVal = visibleYears.length > 0 ? proj(Math.max(...visibleYears)) : proj(20);
+
+  // Shared section label
+  const sl: React.CSSProperties = {
+    fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.15em',
+    textTransform: 'uppercase', color: LTT3, marginBottom: '16px',
+  };
 
   // White card style
   const wCard: React.CSSProperties = {
     background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '22px 24px',
   };
+
   // Light data row
   const dRow: React.CSSProperties = {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
     padding: '6px 0', borderBottom: `1px solid #F0EDE6`,
   };
+
+
+  // Score pillars — real score_breakdown keys
   const sb = (lot as any).score_breakdown || {};
   const scorePillars = [
     { label: isFr ? 'VALORISATION' : 'PRICING',    value: Math.round(sb.below_estimate_score ?? 0) },
@@ -657,25 +523,23 @@ export default function OpportunityDetail() {
     { label: isFr ? 'TAUX DE VENTE' : 'SELL-THR',  value: Math.round((lot.artist?.sell_through_rate ?? 0) * 100) },
   ].filter(p => p.value > 0);
 
-  // ── DECISION SIGNALS (derived) ────────────────────────────────────────────────
-  const compCount       = lot.fair_value_confidence || comparables.length || 0;
-  const badgeC          = scoreBadgeColor(dealScore);
-  const confP           = confidenceLabel(compCount);
-  const optimismSigs    = buildOptimismSignals(lot, isFr);
-  const vigilanceSigs   = buildVigilanceSignals(lot, isFr);
-  const changeOfMind    = buildChangeOfMind(lot, isFr);
-  const whyNotHigher    = buildWhyNotHigher(lot, isFr);
-  const timingReasons   = buildTimingReasons(lot, isFr, daysUntilClose);
-  const recoText        = dealScore >= 80
+  // ── DECISION SIGNALS ────────────────────────────────────────────────────────
+  const compCount      = lot.fair_value_confidence || comparables.length || 0;
+  const confP          = confidenceLabel(compCount);
+  const topPct         = dealScore >= 90 ? 5 : dealScore >= 83 ? 10 : dealScore >= 75 ? 20 : dealScore >= 65 ? 30 : null;
+  const humanLabel     = scoreHumanLabel(dealScore);
+  const optimismSigs   = buildOptimismSignals(lot, isFr);
+  const vigilanceSigs  = buildVigilanceSignals(lot, isFr);
+  const changeOfMind   = buildChangeOfMind(lot, isFr);
+  const whyNotHigher   = buildWhyNotHigher(lot, isFr);
+  const timingReasons  = buildTimingReasons(lot, isFr, daysUntilClose);
+  const narrative      = buildNarrativeReading(lot, isFr, compCount);
+  const recoText       = dealScore >= 80
     ? (isFr ? "Cette opportunité mérite d'être étudiée sérieusement." : 'This opportunity is worth a serious look.')
     : dealScore >= 65
-    ? (isFr ? 'Cette œuvre vaut la peine d\'être suivie de près.' : 'This work is worth following closely.')
+    ? (isFr ? "Cette œuvre vaut la peine d'être suivie de près." : 'This work is worth following closely.')
     : (isFr ? "À surveiller — d'autres opportunités peuvent être plus prioritaires." : 'Worth monitoring — other opportunities may be more pressing.');
-  const narrativeReading = buildNarrativeReading(lot, isFr, compCount);
-  const humanLabel      = scoreHumanLabel(dealScore);
-
-  // ── TOP PCT ───────────────────────────────────────────────────────────────────
-  const topPct = dealScore >= 90 ? 5 : dealScore >= 83 ? 10 : dealScore >= 75 ? 20 : dealScore >= 65 ? 30 : null;
+  const ctaWishlist    = dealScore >= 70 ? (isFr ? 'Ajouter à ma shortlist' : 'Add to my shortlist') : (isFr ? 'Suivre cette œuvre' : 'Follow this work');
 
   return (
     <div className="lot-detail-page" style={{ minHeight: '100vh', background: LT }}>
@@ -691,16 +555,9 @@ export default function OpportunityDetail() {
         @keyframes dot{0%,100%{opacity:1}50%{opacity:0.3}}
         .comp-card-light { transition: transform 0.18s ease, box-shadow 0.18s ease; }
         .comp-card-light:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
-        @media(max-width:768px){
-          .lot-hero-grid { grid-template-columns: 1fr !important; }
-          .lot-hero-image { display: none !important; }
-          .lot-light-zone-grid { grid-template-columns: 1fr !important; }
-          .lot-mobile-only { display: flex !important; }
-          .lot-details-grid { grid-template-columns: 1fr !important; }
-        }
       `}</style>
 
-      {/* ═══ STICKY BAR ═══ */}
+      {/* ═══ STICKY BAR — fixed, fades in ═══ */}
       <div className="lot-sticky-header" style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
         background: DK, borderBottom: `0.5px solid ${DKB}`,
@@ -723,8 +580,8 @@ export default function OpportunityDetail() {
         </div>
       </div>
 
-      {/* ═══ HERO DARK — left: image+info / right: verdict ═══ */}
-      <div ref={heroRef} className="lot-hero-grid" style={{ background: DK, display: 'grid', gridTemplateColumns: '1fr 320px', minHeight: '380px' }}>
+      {/* ═══ HERO — terminal 3-col ═══ */}
+      <div ref={heroRef} className="lot-hero-grid" style={{ background: DK, display: 'grid', gridTemplateColumns: '300px 1fr 280px', minHeight: '380px' }}>
 
         {/* COL 1 — Image */}
         <div className="lot-hero-image" style={{ background: DK4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', borderRight: `0.5px solid ${DKB}`, position: 'relative', paddingLeft: '16px' }}>
@@ -743,8 +600,10 @@ export default function OpportunityDetail() {
           )}
         </div>
 
-        {/* COL 2 — Context (unchanged) */}
+        {/* COL 2 — Context */}
         <div className="lot-hero-info" style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', gap: '14px', borderRight: `0.5px solid ${DKB}` }}>
+
+          {/* EXCEPTIONAL badge */}
           {dealScore >= 83 && (
             <div style={{ display: 'inline-flex', alignSelf: 'flex-start' }}>
               <span style={{ background: 'rgba(198,168,90,0.1)', border: '0.5px solid rgba(198,168,90,0.4)', color: GOLD, fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.14em', padding: '3px 10px', borderRadius: '4px', textTransform: 'uppercase' }}>
@@ -752,6 +611,8 @@ export default function OpportunityDetail() {
               </span>
             </div>
           )}
+
+          {/* Artist / Title / Medium */}
           <div>
             <div
               onClick={() => navigate(`/app/artists/${encodeURIComponent(lot.artist_name_raw || '')}`)}
@@ -765,11 +626,15 @@ export default function OpportunityDetail() {
               {[lot.medium, lot.auction_house_name?.split('—')[0].trim()].filter(Boolean).join(' · ')}
             </div>
           </div>
+
+          {/* Urgency */}
           {daysUntilClose !== null && daysUntilClose <= 7 && (
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: daysUntilClose <= 2 ? '#EF4444' : '#FBBF24', letterSpacing: '0.08em' }}>
               ⚡ {isFr ? `Se clôture dans ${daysUntilClose} jour${daysUntilClose > 1 ? 's' : ''}` : `Closes in ${daysUntilClose} day${daysUntilClose !== 1 ? 's' : ''}`}
             </div>
           )}
+
+          {/* Market context stats */}
           {(priceHistory?.statistics?.trend_pct != null || lot.fair_value_confidence != null) && (
             <div style={{ display: 'flex', gap: '20px', marginTop: '14px', flexWrap: 'wrap' as const }}>
               {priceHistory?.statistics?.trend_pct != null && (
@@ -792,13 +657,169 @@ export default function OpportunityDetail() {
               )}
             </div>
           )}
+
+          {/* WHY block */}
+          {(() => {
+            const reasons: { icon: string; color: string; bg: string; main: string; sub: string; badge?: string | null; badgeColor?: string; badgeBg?: string }[] = [];
+
+            if ((lot.pct_below_low_estimate || 0) > 10)
+              reasons.push({
+                icon: '↓', color: GD, bg: 'rgba(82,201,127,0.12)',
+                main: isFr ? `${Math.round(lot.pct_below_low_estimate)}% sous estimation basse` : `${Math.round(lot.pct_below_low_estimate)}% below low estimate`,
+                sub: isFr ? `Entrée à ${fmt(price)} · estimation ${fmt(lot.estimate_low)}–${fmt(lot.estimate_high || lot.estimate_low)}` : `Entry at ${fmt(price)} · estimate ${fmt(lot.estimate_low)}–${fmt(lot.estimate_high || lot.estimate_low)}`,
+                badge: `-${Math.round(lot.pct_below_low_estimate)}%`, badgeColor: GD, badgeBg: 'rgba(82,201,127,0.12)',
+              });
+
+            if (lot.auction_date) {
+              const daysLeft = Math.ceil((new Date(lot.auction_date).getTime() - Date.now()) / 86400000);
+              if (daysLeft > 0 && daysLeft <= 14)
+                reasons.push({
+                  icon: '◷', color: GOLD, bg: 'rgba(198,168,90,0.12)',
+                  main: isFr ? `Se clôture dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}` : `Closes in ${daysLeft} day${daysLeft > 1 ? 's' : ''}`,
+                  sub: `${lot.auction_house_name || ''} · ${new Date(lot.auction_date).toLocaleDateString(isFr ? 'fr-FR' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+                  badge: daysLeft <= 3 ? (isFr ? 'Urgent' : 'Urgent') : null, badgeColor: GOLD, badgeBg: 'rgba(198,168,90,0.12)',
+                });
+            }
+
+            if (lot.artist?.trend === 'up')
+              reasons.push({
+                icon: '↑', color: GD, bg: 'rgba(82,201,127,0.15)',
+                main: isFr ? 'Artiste en hausse' : 'Rising artist',
+                sub: `${lot.artist_name_raw || ''} · ${isFr ? 'Liquidité' : 'Liquidity'} ${Math.round(lot.artist?.liquidity_score || 0)}/100 · ${isFr ? 'Taux de vente' : 'Sell-through'} ${lot.artist?.sell_through_rate ? Math.round(lot.artist.sell_through_rate * 100) + '%' : '—'}`,
+                badge: null,
+              });
+            else if ((lot.deal_score || 0) >= 83)
+              reasons.push({
+                icon: '◎', color: BLD, bg: 'rgba(96,165,250,0.12)',
+                main: isFr ? `Top des opportunités · ${Math.round(lot.deal_score)}/100` : `Top opportunity · ${Math.round(lot.deal_score)}/100`,
+                sub: isFr ? 'Parmi les scores les plus élevés cette semaine' : 'Among the highest scores this week',
+                badge: null,
+              });
+            else if ((lot.deal_score || 0) >= 70)
+              reasons.push({
+                icon: '◎', color: BLD, bg: 'rgba(96,165,250,0.12)',
+                main: isFr ? `Signal positif de conviction · ${Math.round(lot.deal_score)}/100` : `Positive conviction signal · ${Math.round(lot.deal_score)}/100`,
+                sub: isFr ? 'Au-dessus du seuil de conviction' : 'Above conviction threshold',
+                badge: null,
+              });
+
+            if (reasons.length < 3 && (lot.artist?.liquidity_score || 0) >= 70 && lot.artist?.trend !== 'up')
+              reasons.push({
+                icon: '~', color: '#2DD4BF', bg: 'rgba(45,212,191,0.10)',
+                main: isFr ? `Liquidité artiste élevée (${Math.round(lot.artist.liquidity_score)}/100)` : `High artist liquidity (${Math.round(lot.artist.liquidity_score)}/100)`,
+                sub: isFr ? `${lot.artist_name_raw || ''} · Taux de vente ${lot.artist?.sell_through_rate ? Math.round(lot.artist.sell_through_rate * 100) + '%' : 'élevé'}` : `${lot.artist_name_raw || ''} · ${lot.artist?.sell_through_rate ? Math.round(lot.artist.sell_through_rate * 100) + '% sell-through' : 'High sell-through'}`,
+                badge: null,
+              });
+
+            const isBuy = (lot.deal_score || 0) >= 70;
+            const topReasons = isBuy
+              ? reasons.slice(0, 3)
+              : reasons.filter(r => r.color !== 'GD' && r.color !== '#52C97F').slice(0, 3);
+            const showReasons = topReasons.length > 0;
+
+            const whyLabel = isBuy ? (isFr ? 'POURQUOI ACHETER' : 'WHY BUY') : (isFr ? 'POURQUOI PASSER' : 'WHY PASS');
+            const whyColor = isBuy ? GOLD : '#F87171';
+
+            if (!showReasons) {
+              if ((lot.deal_score || 0) < 45) return (
+                <div style={{ background: 'rgba(248,113,113,0.06)', border: '0.5px solid rgba(248,113,113,0.15)', borderRadius: 10, padding: '11px 16px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.15em', color: '#F87171', textTransform: 'uppercase' as const, marginBottom: 8 }}>
+                    {isFr ? 'POURQUOI PASSER' : 'WHY PASS'}
+                  </div>
+                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
+                    {isFr ? `Score insuffisant (${Math.round(lot.deal_score || 0)}/100) — de meilleures opportunités sont disponibles cette semaine.` : `Insufficient score (${Math.round(lot.deal_score || 0)}/100) — better opportunities available this week.`}
+                  </div>
+                </div>
+              );
+              return null;
+            }
+
+            return (
+              <div style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.08)', borderRadius: 10, overflow: 'hidden' }}>
+                <div style={{ padding: '10px 16px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.15em', color: whyColor, textTransform: 'uppercase' as const }}>
+                    {whyLabel}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>
+                    {topReasons.length} signal{topReasons.length > 1 ? 's' : ''}
+                  </div>
+                </div>
+                {topReasons.map((r, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '11px 16px', borderBottom: i < topReasons.length - 1 ? '0.5px solid rgba(255,255,255,0.05)' : 'none' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 6, background: r.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1, fontSize: 14, color: r.color }}>
+                      {r.icon}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.88)', fontWeight: 500, lineHeight: 1.4 }}>{r.main}</div>
+                      {r.sub && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', marginTop: 2, fontFamily: 'var(--font-mono)', letterSpacing: '0.03em' }}>{r.sub}</div>}
+                    </div>
+                    {r.badge && (
+                      <div style={{ marginLeft: 'auto', flexShrink: 0, background: r.badgeBg, color: r.badgeColor, fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4, fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' as const }}>
+                        {r.badge}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* Market narrative */}
+          {(() => {
+            const buildNarrative = () => {
+              const house = lot.auction_house_name || '';
+              const bigHouses = ['christie', 'sotheby', 'phillips', 'bonhams', 'artcurial', 'drouot'];
+              const isSmallHouse = !bigHouses.some(h => house.toLowerCase().includes(h));
+              const daysLeft = lot.auction_date
+                ? Math.ceil((new Date(lot.auction_date).getTime() - Date.now()) / 86400000)
+                : null;
+
+              if (isSmallHouse && (lot.pct_below_low_estimate || 0) > 20) {
+                const daysStr = daysLeft && daysLeft > 0 && daysLeft <= 14
+                  ? (isFr ? ` Dans ${daysLeft} jours.` : ` ${daysLeft} days left.`)
+                  : '';
+                const houseName = house.split(':')[0].trim();
+                return isFr
+                  ? `${lot.artist_name_raw} chez ${houseName} — maison peu visible. ${Math.round(lot.pct_below_low_estimate)}% sous estimation.${daysStr}`
+                  : `${lot.artist_name_raw} at ${houseName} — less visible house. ${Math.round(lot.pct_below_low_estimate)}% below estimate.${daysStr}`;
+              }
+              if (lot.artist?.trend === 'up' && (lot.pct_below_low_estimate || 0) > 15) {
+                const daysStr = daysLeft && daysLeft > 0 && daysLeft <= 14
+                  ? (isFr ? ` Dans ${daysLeft} jours.` : ` ${daysLeft} days left.`)
+                  : '';
+                return isFr
+                  ? `Momentum positif sur 6 mois. Prix actuel ${Math.round(lot.pct_below_low_estimate)}% sous l'estimation basse.${daysStr}`
+                  : `Positive momentum over 6 months. Current price ${Math.round(lot.pct_below_low_estimate)}% below low estimate.${daysStr}`;
+              }
+              if ((lot.deal_score || 0) >= 83 && realCost) {
+                return isFr
+                  ? `Score de conviction fort. Coût réel avec frais : ${fmt(realCost.cost_basis)}. Seuil de rentabilité : +${Math.round(realCost.needed_gain_pct)}%.`
+                  : `Strong conviction score. Real cost with fees: ${fmt(realCost.cost_basis)}. Break-even: +${Math.round(realCost.needed_gain_pct)}%.`;
+              }
+              return null;
+            };
+            const narrative = buildNarrative();
+            return narrative ? (
+              <p style={{ fontSize: 13, fontStyle: 'italic', color: 'rgba(255,255,255,0.45)', margin: '8px 0 0', lineHeight: 1.65 }}>
+                {narrative}
+              </p>
+            ) : null;
+          })()}
+
           {/* External link */}
           <div>
             {!hasAccess ? (
               <span onClick={() => { window.location.href = '/app/pricing'; }} style={{ cursor: 'pointer', color: '#2563EB', fontSize: 13, fontWeight: 600, letterSpacing: '0.04em' }}>🔒 {isFr ? 'Accès Investor →' : 'Investor access →'}</span>
             ) : (
               <a href={trackUrl} target="_blank" rel="noopener noreferrer"
-                onClick={() => trackEvent('lot_external_click', 'lot', lot.id, { lot_title: lot.title, artist: lot.artist_name_raw, source: lot.source, auction_house: lot.auction_house_name, deal_score: lot.deal_score, url: rawUrl })}
+                onClick={() => trackEvent('lot_external_click', 'lot', lot.id, {
+                  lot_title: lot.title,
+                  artist: lot.artist_name_raw,
+                  source: lot.source,
+                  auction_house: lot.auction_house_name,
+                  deal_score: lot.deal_score,
+                  url: rawUrl,
+                })}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: BLD, textDecoration: 'none', letterSpacing: '0.06em' }}>
                 {isFr ? 'Voir sur' : 'View on'} {sourceNames[source] || resolvedSource} ↗
               </a>
@@ -806,145 +827,304 @@ export default function OpportunityDetail() {
           </div>
         </div>
 
-        {/* COL 3 — Verdict décisionnel */}
-        <div style={{ padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: '0', background: DK4 }}>
+        {/* COL 3 — Conviction stack */}
+        <div style={{ padding: '28px 16px', display: 'flex', flexDirection: 'column', gap: '8px', background: DK4 }}>
 
-          {/* Badge verdict */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', marginBottom: '18px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: badgeC.dot, display: 'inline-block', flexShrink: 0 }} />
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: badgeC.color, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
-              {scoreBadgeLabel(dealScore)}
-            </span>
+          {/* Block 1 — SCORE */}
+          <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>SCORE</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '42px', fontWeight: 700, color: 'white', lineHeight: 1 }}>{Math.round(dealScore)}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>/100</span>
+            </div>
+            <div style={{ marginTop: '6px', height: '3px', background: DKB, borderRadius: '1px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: '1px', width: `${dealScore}%`, background: GOLD }} />
+            </div>
+            {lot.fair_value_nautilus && price && (
+              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', marginTop: '6px', fontFamily: 'var(--font-mono)' }}>
+                -{Math.round((1 - price / (lot.fair_value_nautilus as number)) * 100)}% vs comparables
+              </div>
+            )}
           </div>
 
-          {/* Score + human label */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '4px' }}>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '52px', fontWeight: 700, color: '#F0EDE6', lineHeight: 1 }}>{Math.round(dealScore)}</span>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', color: 'rgba(255,255,255,0.3)' }}>/100</span>
+          {/* Block 2 — SIGNAL */}
+          <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>SIGNAL</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: verdict.dk, lineHeight: 1 }}>{verdict.icon} {verdict.label}</div>
           </div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600, color: badgeC.color, marginBottom: '12px', letterSpacing: '0.04em' }}>
-            {humanLabel}
-          </div>
-          {topPct && (
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', marginBottom: '16px' }}>
-              <span style={{ color: GD, fontWeight: 700 }}>TOP {topPct}%</span> {isFr ? 'DES OPPORTUNITÉS NAUTILUS' : 'OF NAUTILUS OPPORTUNITIES'}
+
+          {/* Block 2b — SIGNAUX MARCHÉ VIVANT (mobile only) */}
+          {(() => {
+            const signals: string[] = [];
+            const wcount = (lot as any).wishlist_count || (lot as any).watchlist_count;
+            if (wcount) signals.push(isFr ? `👁 ${wcount} suivis` : `👁 ${wcount} watching`);
+            const artistTrend = lot.artist?.trend;
+            if (artistTrend) {
+              const isUp = artistTrend === 'up' || artistTrend === 'rising';
+              const isDown = artistTrend === 'down' || artistTrend === 'falling';
+              signals.push(isUp
+                ? (isFr ? '↑ Artiste en hausse' : '↑ Rising artist')
+                : isDown
+                ? (isFr ? '↓ Artiste en baisse' : '↓ Falling artist')
+                : (isFr ? '→ Artiste stable' : '→ Stable artist'));
+            }
+            if (signals.length === 0) return null;
+            return (
+              <div className="lot-mobile-only" style={{ padding: '10px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', gap: '14px', flexWrap: 'wrap' as const }}>
+                {signals.map((s, i) => (
+                  <span key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.04em' }}>{s}</span>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* Block 3 — VS COMPARABLES */}
+          {lot.fair_value_nautilus && price > 0 && (() => {
+            const heroGapPct = Math.round((1 - price / (lot.fair_value_nautilus as number)) * 100);
+            return (
+              <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? 'VS COMPARABLES' : 'VS COMPARABLES'}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: '#34D399', lineHeight: 1 }}>{heroGapPct > 0 ? '-' : '+'}{Math.abs(heroGapPct)}%</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>{isFr ? `Médiane : ${fmt(lot.fair_value_nautilus)}` : `Median: ${fmt(lot.fair_value_nautilus)}`}</div>
+              </div>
+            );
+          })()}
+
+          {/* Block 4 — MAX BID */}
+          {!isGallery && maxBidIsReliable && (
+            <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? (isGallery ? 'PRIX MAXIMUM RECOMMANDÉ' : 'MAX BID RENTABLE') : (isGallery ? 'RECOMMENDED MAX PRICE' : 'MAX PROFITABLE BID')}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>{fmtExact(avoidAbove)}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
+                {maxBidSource === 'comparables_proches'
+                  ? (isFr ? 'Ventes même technique + taille — marge 10%' : 'Same medium & size sales — 10% margin')
+                  : maxBidSource === 'comparables_meme_technique'
+                  ? (isFr ? 'Ventes même technique — marge 10%' : 'Same medium sales — 10% margin')
+                  : (isFr ? 'Techniques proches (2D) — marge 10%' : 'Similar medium (2D) — 10% margin')}
+              </div>
+            </div>
+          )}
+          {!isGallery && avoidAbove && !maxBidIsReliable && (
+            <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>MAX BID</div>
+              <div style={{ color: '#64748B', fontSize: '13px', fontStyle: 'italic' }}>
+                {isFr ? 'Données insuffisantes pour un prix max fiable' : 'Insufficient data for a reliable max bid'}
+              </div>
+            </div>
+          )}
+          {!isGallery && !avoidAbove && (
+            <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? 'MAX BID' : 'MAX BID'}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>
+                {isFr ? 'Données insuffisantes' : 'Insufficient data'}
+              </div>
+              {estLow > 0 && (
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.25)', marginTop: '2px' }}>
+                  {isFr ? `Basez-vous sur ${fmtExact(estLow)}–${fmtExact(estHigh)}` : `Refer to ${fmtExact(estLow)}–${fmtExact(estHigh)}`}
+                </div>
+              )}
             </div>
           )}
 
-          <div style={{ height: '0.5px', background: DKB, marginBottom: '14px' }} />
-
-          {/* Confiance */}
-          <div style={{ marginBottom: '14px' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: confP.color, marginBottom: '3px' }}>{confP.label}</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.04em' }}>
-              {isFr ? `Basée sur ${compCount > 0 ? compCount : '—'} ventes comparables` : `Based on ${compCount > 0 ? compCount : '—'} comparable sales`}
-            </div>
-          </div>
-
-          <div style={{ height: '0.5px', background: DKB, marginBottom: '14px' }} />
-
-          {/* Notre lecture */}
-          <div style={{ flex: 1, marginBottom: '18px' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '8px' }}>
-              {isFr ? 'NOTRE LECTURE' : 'OUR TAKE'}
-            </div>
-            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.7, margin: 0 }}>
-              {narrativeReading}
-            </p>
-          </div>
-
-          {/* CTA shortlist */}
+          {/* Follow */}
           <button
             onClick={async () => {
               if (!getToken()) { window.location.href = '/app/login'; return; }
               setSubLoading(true);
               try {
-                const r = await fetch(`${BACKEND}/api/wishlist/${id}`, { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } });
-                if (r.status === 403) setUpgradeModal('wishlist');
-                else if (r.ok) { setSubscribed(true); setSubId(id); trackEvent('lot_watchlist_add', 'lot', lot.id, { lot_title: lot.title, artist: lot.artist_name_raw, deal_score: lot.deal_score, source: 'hero_cta' }); }
-              } finally { setSubLoading(false); }
-            }}
-            disabled={subLoading}
-            style={{ padding: '11px 16px', background: subscribed ? 'rgba(82,201,127,0.12)' : 'rgba(198,168,90,0.1)', border: `0.5px solid ${subscribed ? GD : GOLD}`, color: subscribed ? GD : GOLD, cursor: subLoading ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.1em', borderRadius: '4px', textTransform: 'uppercase', marginBottom: '8px', width: '100%' }}
-          >
-            {subLoading ? '...' : subscribed ? (isFr ? '✓ AJOUTÉ À VOTRE SHORTLIST' : '✓ ADDED TO SHORTLIST') : ctaLabel(dealScore).toUpperCase()}
-          </button>
-
-          {/* Follow / Purchase (compact row) */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-            <button
-            onClick={async () => {
-              if (!getToken()) { window.location.href = '/app/login'; return; }
-              setSubLoading(true);
-              try {
                 if (subscribed && subId) {
-                  await fetch(`${BACKEND}/api/wishlist/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } });
-                  setSubscribed(false); setSubId(null);
+                  await fetch(`${BACKEND}/api/wishlist/${id}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${getToken()}` },
+                  });
+                  setSubscribed(false);
+                  setSubId(null);
                 } else {
-                  const r = await fetch(`${BACKEND}/api/wishlist/${id}`, { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } });
-                  if (r.status === 403) { setUpgradeModal('wishlist'); }
-                  else if (r.ok) {
-                    setSubscribed(true); setSubId(id);
-                    trackEvent('lot_watchlist_add', 'lot', lot.id, { lot_title: lot.title, artist: lot.artist_name_raw, deal_score: lot.deal_score });
+                  const r = await fetch(`${BACKEND}/api/wishlist/${id}`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${getToken()}` },
+                  });
+                  if (r.status === 403) {
+                    setUpgradeModal('wishlist');
+                  } else if (r.ok) {
+                    setSubscribed(true);
+                    setSubId(id);
+                    trackEvent('lot_watchlist_add', 'lot', lot.id, {
+                      lot_title: lot.title,
+                      artist: lot.artist_name_raw,
+                      deal_score: lot.deal_score,
+                    });
                   }
                 }
-              } finally { setSubLoading(false); }
+              } finally {
+                setSubLoading(false);
+              }
             }}
             disabled={subLoading}
-            onClick={async () => {
-              if (!getToken()) { window.location.href = '/app/login'; return; }
-              setSubLoading(true);
-              try {
-                if (subscribed && subId) {
-                  await fetch(`${BACKEND}/api/wishlist/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } });
-                  setSubscribed(false); setSubId(null);
-                } else {
-                  const r = await fetch(`${BACKEND}/api/wishlist/${id}`, { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } });
-                  if (r.status === 403) setUpgradeModal('wishlist');
-                  else if (r.ok) { setSubscribed(true); setSubId(id); trackEvent('lot_watchlist_add', 'lot', lot.id, { lot_title: lot.title, artist: lot.artist_name_raw, deal_score: lot.deal_score }); }
-                }
-              } finally { setSubLoading(false); }
+            style={{
+              marginTop: 'auto',
+              background: subscribed ? 'rgba(82,201,127,0.1)' : 'none',
+              border: `0.5px solid ${subscribed ? GD : DKB}`,
+              color: subscribed ? GD : '#9CA3AF',
+              cursor: subLoading ? 'default' : 'pointer',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '10px',
+              letterSpacing: '0.08em',
+              padding: '8px 14px',
+              borderRadius: '4px',
+              width: '100%',
             }}
-            style={{ flex: 1, background: 'none', border: `0.5px solid ${DKB}`, color: '#6B7280', cursor: subLoading ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.08em', padding: '7px 10px', borderRadius: '4px' }}
           >
-            {subscribed ? (isFr ? '✓ Suivi' : '✓ Following') : (isFr ? '🔔 Suivre' : '🔔 Follow')}
+            {subLoading ? '...' : subscribed ? (isFr ? '✓ Suivi' : '✓ Following') : (isFr ? '🔔 Suivre ce lot' : '🔔 Follow this lot')}
           </button>
-            <button onClick={() => setShowPurchaseForm(v => !v)} style={{ flex: 1, background: showPurchaseForm ? 'rgba(26,107,60,0.1)' : 'none', border: `0.5px solid ${showPurchaseForm ? '#1A6B3C' : '#2A3B4C'}`, color: showPurchaseForm ? '#52C97F' : '#6B7280', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.08em', padding: '7px 10px', borderRadius: '4px' }}>
-              {isFr ? '✓ Acheté' : '✓ Bought'}
-            </button>
-          </div>
+
+          {/* ── J'ai acheté ce lot ── */}
           {!purchaseDone ? (
             <>
-              <div style={{ display: 'none' }}> {/* placeholder to keep structure */}
-              </div>
+              <button
+                onClick={() => setShowPurchaseForm(v => !v)}
+                style={{
+                  marginTop: '8px',
+                  background: showPurchaseForm ? 'rgba(26,107,60,0.1)' : 'none',
+                  border: `0.5px solid ${showPurchaseForm ? '#1A6B3C' : '#2A3B4C'}`,
+                  color: showPurchaseForm ? '#52C97F' : '#6B7280',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '10px',
+                  letterSpacing: '0.08em',
+                  padding: '8px 14px',
+                  borderRadius: '4px',
+                  width: '100%',
+                }}
+              >
+                {isFr ? '✓ J\'ai acheté ce lot' : '✓ I bought this lot'}
+              </button>
               {showPurchaseForm && (
                 <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <input type="number" placeholder={isFr ? 'Prix marteau payé (€)' : 'Hammer price paid (€)'} value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid #2A3B4C', color: '#E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', padding: '7px 10px', borderRadius: '4px', width: '100%', boxSizing: 'border-box' as const, outline: 'none' }} />
-                  <input type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid #2A3B4C', color: '#E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', padding: '7px 10px', borderRadius: '4px', width: '100%', boxSizing: 'border-box' as const, outline: 'none' }} />
-                  <select value={purchaseSource} onChange={e => setPurchaseSource(e.target.value as 'auction' | 'gallery' | 'private')} style={{ background: '#0D1F35', border: '0.5px solid #2A3B4C', color: '#E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', padding: '7px 10px', borderRadius: '4px', width: '100%' }}>
+                  <input
+                    type="number"
+                    placeholder={isFr ? 'Prix marteau payé (€)' : 'Hammer price paid (€)'}
+                    value={purchasePrice}
+                    onChange={e => setPurchasePrice(e.target.value)}
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '0.5px solid #2A3B4C',
+                      color: '#E8E4DC',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '11px',
+                      padding: '7px 10px',
+                      borderRadius: '4px',
+                      width: '100%',
+                      boxSizing: 'border-box' as const,
+                      outline: 'none',
+                    }}
+                  />
+                  <input
+                    type="date"
+                    value={purchaseDate}
+                    onChange={e => setPurchaseDate(e.target.value)}
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '0.5px solid #2A3B4C',
+                      color: '#E8E4DC',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '11px',
+                      padding: '7px 10px',
+                      borderRadius: '4px',
+                      width: '100%',
+                      boxSizing: 'border-box' as const,
+                      outline: 'none',
+                    }}
+                  />
+                  <select
+                    value={purchaseSource}
+                    onChange={e => setPurchaseSource(e.target.value as 'auction' | 'gallery' | 'private')}
+                    style={{
+                      background: '#0D1F35',
+                      border: '0.5px solid #2A3B4C',
+                      color: '#E8E4DC',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '11px',
+                      padding: '7px 10px',
+                      borderRadius: '4px',
+                      width: '100%',
+                    }}
+                  >
                     <option value="auction">{isFr ? 'Enchères' : 'Auction'}</option>
                     <option value="gallery">{isFr ? 'Galerie' : 'Gallery'}</option>
                     <option value="private">{isFr ? 'Privé' : 'Private sale'}</option>
                   </select>
-                  <button onClick={async () => { if (!purchasePrice || !getToken()) return; setPurchaseLoading(true); try { const r = await fetch(`${BACKEND}/api/lots/${id}/confirm-purchase`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` }, body: JSON.stringify({ purchase_price: parseFloat(purchasePrice), purchase_date: purchaseDate, purchase_source: purchaseSource }) }); if (r.ok) { setPurchaseDone(true); setShowPurchaseForm(false); } } finally { setPurchaseLoading(false); } }} disabled={purchaseLoading || !purchasePrice} style={{ background: !purchasePrice ? 'rgba(26,107,60,0.3)' : '#1A6B3C', border: 'none', color: '#fff', cursor: purchaseLoading || !purchasePrice ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.08em', padding: '8px 14px', borderRadius: '4px', width: '100%' }}>
+                  <button
+                    onClick={async () => {
+                      if (!purchasePrice || !getToken()) return;
+                      setPurchaseLoading(true);
+                      try {
+                        const r = await fetch(`${BACKEND}/api/lots/${id}/confirm-purchase`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${getToken()}`,
+                          },
+                          body: JSON.stringify({
+                            purchase_price: parseFloat(purchasePrice),
+                            purchase_date: purchaseDate,
+                            purchase_source: purchaseSource,
+                          }),
+                        });
+                        if (r.ok) {
+                          setPurchaseDone(true);
+                          setShowPurchaseForm(false);
+                        }
+                      } finally {
+                        setPurchaseLoading(false);
+                      }
+                    }}
+                    disabled={purchaseLoading || !purchasePrice}
+                    style={{
+                      background: !purchasePrice ? 'rgba(26,107,60,0.3)' : '#1A6B3C',
+                      border: 'none',
+                      color: '#fff',
+                      cursor: purchaseLoading || !purchasePrice ? 'default' : 'pointer',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '10px',
+                      letterSpacing: '0.08em',
+                      padding: '8px 14px',
+                      borderRadius: '4px',
+                      width: '100%',
+                    }}
+                  >
                     {purchaseLoading ? '...' : (isFr ? 'Enregistrer l\'achat' : 'Save purchase')}
                   </button>
                 </div>
               )}
             </>
           ) : (
-            <div style={{ marginTop: '8px', border: '0.5px solid #1A6B3C', color: '#52C97F', fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.08em', padding: '8px 14px', borderRadius: '4px', width: '100%', textAlign: 'center' as const, boxSizing: 'border-box' as const }}>
+            <div style={{
+              marginTop: '8px',
+              border: '0.5px solid #1A6B3C',
+              color: '#52C97F',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '10px',
+              letterSpacing: '0.08em',
+              padding: '8px 14px',
+              borderRadius: '4px',
+              width: '100%',
+              textAlign: 'center' as const,
+              boxSizing: 'border-box' as const,
+            }}>
               {isFr ? '✓ Achat enregistré dans votre archive' : '✓ Purchase saved to your archive'}
             </div>
           )}
+
         </div>
       </div>
 
-      {/* ═══ LIGHT ZONE — DECISION COPILOT ═══ */}
+      {/* ═══ LIGHT ZONE ═══ */}
       <div className="lot-light-zone" style={{ background: '#F5F4F0' }}>
 
-        {/* ── SIGNAL STRIP (existing — preserved) ── */}
         <div style={{ background: '#fff', borderBottom: '0.5px solid #E8E4DC', overflow: 'hidden' }}>
+
+          {/* Signal strip */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 20px', background: 'rgba(26,107,60,0.04)', borderBottom: '0.5px solid rgba(26,107,60,0.1)' }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#1A6B3C', flexShrink: 0 }} />
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: '#1A6B3C', letterSpacing: '1.5px' }}>
@@ -958,15 +1138,19 @@ export default function OpportunityDetail() {
             </div>
           </div>
 
-          {/* Price metrics strip — preserved */}
+          {/* Grille 160 | divider | 160 | divider | 1fr */}
           <div style={{ display: 'grid', gridTemplateColumns: isGallery ? '1fr 2fr' : '1fr 0.5px 1fr 0.5px 2fr' }}>
+
+            {/* Prix */}
             <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '2px', textTransform: 'uppercase' as const }}>
                 {lot.current_price ? (isFr ? (isGallery ? 'PRIX DEMANDÉ' : 'MISE À PRIX') : (isGallery ? 'ASKING PRICE' : 'STARTING BID')) : (isFr ? 'ESTIMATION' : 'ESTIMATE')}
               </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '26px', fontWeight: 800, color: '#0D1F35', lineHeight: 1 }}>{fmtExact(price)}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '26px', fontWeight: 800, color: '#0D1F35', lineHeight: 1 }}>
+                {fmtExact(price)}
+              </div>
               {(upsidePct >= 5 && dealScore >= 70) && (
-                <div style={{ display: 'inline-block', fontSize: '8px', fontWeight: 700, color: '#166534', background: '#F0FDF4', border: '0.5px solid #BBF7D0', padding: '2px 6px', borderRadius: '2px', fontFamily: 'var(--font-mono)', letterSpacing: '0.5px' }}>
+                <div style={{ display: 'inline-block', fontSize: '8px', fontWeight: 700, color: '#166534', background: '#F0FDF4', border: '0.5px solid #BBF7D0', padding: '2px 6px', borderRadius: '2px', fontFamily: 'var(--font-mono)', letterSpacing: '0.5px', width: 'auto' }}>
                   {isFr ? 'BONNE ENTRÉE' : 'GOOD ENTRY'}
                 </div>
               )}
@@ -974,7 +1158,10 @@ export default function OpportunityDetail() {
                 {isFr ? (isGallery ? 'Prix fixe' : 'Point de départ') : (isGallery ? 'Fixed price' : 'Starting point')}
               </div>
             </div>
+
             {!isGallery && <div style={{ background: '#E8E4DC' }} />}
+
+            {/* À ne pas dépasser */}
             {!isGallery && <div style={{ padding: '12px 14px', background: '#FFFBEB', display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
               {maxBidIsReliable ? (
                 <>
@@ -983,27 +1170,65 @@ export default function OpportunityDetail() {
                       ? (isFr ? 'MAX BID INDICATIF' : 'INDICATIVE MAX BID')
                       : (isFr ? (isGallery ? 'VALEUR MARCHÉ ESTIMÉE' : 'À NE PAS DÉPASSER') : (isGallery ? 'ESTIMATED MARKET VALUE' : 'DO NOT EXCEED'))}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '26px', fontWeight: 800, color: AMB, lineHeight: 1 }}>{fmtExact(avoidAbove)}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '26px', fontWeight: 800, color: AMB, lineHeight: 1 }}>
+                    {fmtExact(avoidAbove)}
+                  </div>
                   <div style={{ fontSize: '10px', color: '#B45309', fontWeight: 500 }}>
-                    {maxBidSource === 'ventes_meme_technique_limite' ? (isFr ? 'Peu de ventes — données limitées' : 'Few sales — limited data') : maxBidSource === 'comparables_2d_limite' ? (isFr ? 'Technique 2D proche — données limitées' : 'Adjacent 2D medium — limited data') : maxBidSource === 'ventes_artiste_sans_medium' ? (isFr ? 'Technique inconnue — indicatif seulement' : 'Medium unknown — indicative only') : (isFr ? (isGallery ? 'Au-dessus de la valeur marché' : 'Perte garantie au-delà') : (isGallery ? 'Above market value' : 'Loss guaranteed above'))}
+                    {maxBidSource === 'ventes_meme_technique_limite'
+                      ? (isFr ? 'Peu de ventes — données limitées' : 'Few sales — limited data')
+                      : maxBidSource === 'comparables_2d_limite'
+                      ? (isFr ? 'Technique 2D proche — données limitées' : 'Adjacent 2D medium — limited data')
+                      : maxBidSource === 'ventes_artiste_sans_medium'
+                      ? (isFr ? 'Technique inconnue — indicatif seulement' : 'Medium unknown — indicative only')
+                      : (isFr ? (isGallery ? 'Au-dessus de la valeur marché' : 'Perte garantie au-delà') : (isGallery ? 'Above market value' : 'Loss guaranteed above'))}
                   </div>
                 </>
               ) : (
                 <>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#92400E', letterSpacing: '2px', textTransform: 'uppercase' as const }}>{isFr ? 'BUDGET MAX' : 'MAX BUDGET'}</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: '#B45309', lineHeight: 1.3, textAlign: 'center' as const }}>{isFr ? 'Données insuffisantes' : 'Insufficient data'}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#92400E', letterSpacing: '2px', textTransform: 'uppercase' as const }}>
+                    {isFr ? 'BUDGET MAX' : 'MAX BUDGET'}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: '#B45309', lineHeight: 1.3, textAlign: 'center' as const }}>
+                    {isFr ? 'Données insuffisantes' : 'Insufficient data'}
+                  </div>
                   <div style={{ fontSize: '10px', color: '#B45309', textAlign: 'center' as const }}>
-                    {estLow > 0 ? (isFr ? `Basez-vous sur ${fmtExact(estLow)}–${fmtExact(estHigh)}` : `Refer to ${fmtExact(estLow)}–${fmtExact(estHigh)}`) : (isFr ? 'Estimation non disponible' : 'No estimate available')}
+                    {estLow > 0
+                      ? (isFr ? `Basez-vous sur ${fmtExact(estLow)}–${fmtExact(estHigh)}` : `Refer to ${fmtExact(estLow)}–${fmtExact(estHigh)}`)
+                      : (isFr ? 'Estimation non disponible' : 'No estimate available')}
                   </div>
                 </>
               )}
             </div>}
+
             {!isGallery && <div style={{ background: '#E8E4DC' }} />}
+
+            {/* 3 métriques */}
             <div style={{ padding: '10px 14px 10px 16px', display: 'flex', flexDirection: 'column' as const, justifyContent: 'space-between', gap: '7px', minWidth: 0, overflow: 'hidden' }}>
               {[
-                { lbl: isFr ? 'ARTISTE' : 'ARTIST', val: lot.artist?.trend === 'up' ? '↑ EN HAUSSE' : lot.artist?.trend === 'down' ? '↓ EN BAISSE' : '→ STABLE', color: lot.artist?.trend === 'up' ? GL : lot.artist?.trend === 'down' ? RED : LTT2, pct: Math.min(100, Math.round(lot.artist?.liquidity_score ?? 0)), barColor: '#1A6B3C', num: `${Math.round(lot.artist?.liquidity_score ?? 0)}/100` },
-                { lbl: 'CONVICTION', val: `${dealScore.toFixed(0)}/100`, color: dealScore >= 83 ? AMB : dealScore >= 60 ? AMB : RED, pct: Math.min(100, dealScore), barColor: '#C6A85A', num: dealScore >= 83 ? 'top 1%' : dealScore >= 77 ? 'top 5%' : dealScore >= 60 ? (isFr ? 'bon' : 'good') : (isFr ? 'modéré' : 'moderate') },
-                { lbl: isFr ? 'DÉCOTE' : 'DISCOUNT', val: upside > 0 ? `− ${Math.round(upside)}%` : '—', color: upside > 0 ? GL : LTT3, pct: Math.min(100, Math.max(0, Math.round(upside))), barColor: '#34D399', num: estLow > 0 ? `vs ${fmtExact(estLow)}` : '—' },
+                {
+                  lbl: isFr ? 'ARTISTE' : 'ARTIST',
+                  val: lot.artist?.trend === 'up' ? '↑ EN HAUSSE' : lot.artist?.trend === 'down' ? '↓ EN BAISSE' : '→ STABLE',
+                  color: lot.artist?.trend === 'up' ? GL : lot.artist?.trend === 'down' ? RED : LTT2,
+                  pct: Math.min(100, Math.round(lot.artist?.liquidity_score ?? 0)),
+                  barColor: '#1A6B3C',
+                  num: `${Math.round(lot.artist?.liquidity_score ?? 0)}/100`,
+                },
+                {
+                  lbl: 'CONVICTION',
+                  val: `${dealScore.toFixed(0)}/100`,
+                  color: dealScore >= 83 ? AMB : dealScore >= 60 ? AMB : RED,
+                  pct: Math.min(100, dealScore),
+                  barColor: '#C6A85A',
+                  num: dealScore >= 83 ? 'top 1%' : dealScore >= 77 ? 'top 5%' : dealScore >= 60 ? (isFr ? 'bon' : 'good') : (isFr ? 'modéré' : 'moderate'),
+                },
+                {
+                  lbl: isFr ? 'DÉCOTE' : 'DISCOUNT',
+                  val: upside > 0 ? `− ${Math.round(upside)}%` : '—',
+                  color: upside > 0 ? GL : LTT3,
+                  pct: Math.min(100, Math.max(0, Math.round(upside))),
+                  barColor: '#34D399',
+                  num: estLow > 0 ? `vs ${fmtExact(estLow)}` : '—',
+                },
               ].map((m, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '1px', textTransform: 'uppercase' as const, width: '60px', flexShrink: 0 }}>{m.lbl}</div>
@@ -1017,7 +1242,7 @@ export default function OpportunityDetail() {
             </div>
           </div>
 
-          {/* Cost strip */}
+          {/* Coût réel strip */}
           <div style={{ display: 'flex', alignItems: 'center', padding: '7px 20px', background: '#F5F4F0', borderTop: '0.5px solid #E8E4DC' }}>
             {[
               { lbl: isFr ? 'COÛT RÉEL' : 'REAL COST', val: totalCost ? fmtExact(totalCost) : '—', color: LTT1 },
@@ -1031,91 +1256,157 @@ export default function OpportunityDetail() {
               </div>
             ))}
           </div>
+
         </div>
 
-        {/* ═══ ZONE ÉDITORIALE ═══ */}
-        <div style={{ padding: '40px 40px 8px' }}>
-
-          {/* Lecture Nautilus (score_rationale) */}
-          {hasAccess && analysisText && (
-            <div style={{ borderLeft: '3px solid rgba(198,168,90,0.4)', paddingLeft: '16px', marginBottom: '36px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '8px' }}>LECTURE NAUTILUS</div>
+        {/* ── ANALYSE NAUTILUS (score_rationale) ──────────────────────────── */}
+        {hasAccess && analysisText && (
+          <div style={{ padding: '24px 40px', background: '#fff', borderBottom: '0.5px solid #E8E4DC' }}>
+            <div style={{ borderLeft: '3px solid rgba(198,168,90,0.5)', paddingLeft: '16px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '10px' }}>LECTURE NAUTILUS</div>
               <p style={{ fontSize: '13px', color: LTT2, lineHeight: 1.75, fontStyle: 'italic', margin: 0 }}>{analysisText}</p>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* ── OPTIMISME ── */}
-          {optimismSigs.length > 0 && (
-            <EdSection title={isFr ? 'Pourquoi nous sommes optimistes' : 'Why we are optimistic'}>
-              {optimismSigs.map((s, i) => <EdItem key={i} icon="✓" iconColor={GL2}>{s}</EdItem>)}
-            </EdSection>
-          )}
+        {/* ── ZONE DÉCISIONNELLE ───────────────────────────────────────────── */}
+        <div style={{ padding: '40px 40px 0', background: '#F5F4F0' }}>
 
-          {/* ── VIGILANCE ── */}
-          {vigilanceSigs.length > 0 && (
-            <EdSection title={isFr ? 'Points de vigilance' : 'Points of caution'}>
-              {vigilanceSigs.map((s, i) => <EdItem key={i} icon="▲" iconColor={AMB}>{s}</EdItem>)}
-            </EdSection>
-          )}
-
-          {/* ── CE QUI POURRAIT CHANGER D'AVIS ── */}
-          <EdSection title={isFr ? "Ce qui pourrait nous faire changer d'avis" : 'What could change our mind'}>
-            {changeOfMind.map((s, i) => <EdItem key={i} icon="↺" iconColor={LTT3}>{s}</EdItem>)}
-          </EdSection>
-
-          {/* ── POURQUOI PAS MIEUX NOTÉ ── */}
-          {whyNotHigher.length > 0 && (
-            <EdSection title={isFr ? "Pourquoi cette œuvre n'est-elle pas mieux notée ?" : "Why isn't this work rated higher?"}>
-              {whyNotHigher.map((s, i) => <EdItem key={i} icon="ℹ" iconColor={LTT3}>{s}</EdItem>)}
-            </EdSection>
-          )}
-
-          {/* ── POURQUOI MAINTENANT ── */}
-          {timingReasons.length > 0 && (
-            <EdSection title={isFr ? 'Pourquoi maintenant ?' : 'Why now?'}>
-              {timingReasons.map((s, i) => (
-                <div key={i} style={{ fontSize: '14px', color: LTT2, lineHeight: 1.6, paddingBottom: '8px', marginBottom: i < timingReasons.length - 1 ? '8px' : 0, borderBottom: i < timingReasons.length - 1 ? `0.5px solid ${LTB}` : 'none' }}>{s}</div>
-              ))}
-            </EdSection>
-          )}
-
-          {/* ── RECOMMANDATION FINALE ── */}
-          <div style={{ background: 'rgba(26,107,60,0.05)', border: `0.5px solid rgba(26,107,60,0.15)`, borderRadius: '12px', padding: '24px 28px', marginBottom: '36px' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '10px' }}>
-              ◆ {isFr ? 'NOTRE RECOMMANDATION' : 'OUR RECOMMENDATION'}
+          {/* Score + confiance + lecture */}
+          <div style={{ marginBottom: '36px' }}>
+            {/* Badge + score */}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '42px', fontWeight: 700, color: LTT1, lineHeight: 1 }}>{Math.round(dealScore)}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', color: LTT3 }}>/100</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: verdict.gl, letterSpacing: '0.04em', marginLeft: '6px' }}>{humanLabel}</span>
             </div>
-            <div style={{ fontSize: '17px', fontWeight: 500, color: GL2, marginBottom: '6px' }}>{recoText}</div>
-            <div style={{ fontSize: '13px', color: LTT2, lineHeight: 1.6, marginBottom: '16px' }}>
-              {isFr ? "Les signaux disponibles sont suffisamment solides pour l'analyser avant la clôture." : 'The available signals are solid enough to analyze before the closing.'}
+            {topPct && (
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, letterSpacing: '0.1em', marginBottom: '10px' }}>
+                <span style={{ color: GL, fontWeight: 700 }}>TOP {topPct}%</span> {isFr ? 'DES OPPORTUNITÉS NAUTILUS' : 'OF NAUTILUS OPPORTUNITIES'}
+              </div>
+            )}
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: confP.color, marginBottom: '2px' }}>{confP.label}</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, marginBottom: '20px' }}>
+              {isFr ? `Basée sur ${compCount > 0 ? compCount : '—'} ventes comparables` : `Based on ${compCount > 0 ? compCount : '—'} comparable sales`}
             </div>
-            <button
-              onClick={async () => {
-                if (!getToken()) { window.location.href = '/app/login'; return; }
-                setSubLoading(true);
-                try {
-                  const r = await fetch(`${BACKEND}/api/wishlist/${id}`, { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } });
-                  if (r.status === 403) setUpgradeModal('wishlist');
-                  else if (r.ok) { setSubscribed(true); setSubId(id); trackEvent('lot_watchlist_add', 'lot', lot.id, { lot_title: lot.title, artist: lot.artist_name_raw, deal_score: lot.deal_score, source: 'cta_reco' }); }
-                } finally { setSubLoading(false); }
-              }}
-              style={{ padding: '11px 24px', background: subscribed ? 'rgba(26,107,60,0.1)' : GL2, border: 'none', color: subscribed ? GL2 : '#fff', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.1em', borderRadius: '4px', textTransform: 'uppercase', fontWeight: 600 }}
-            >
-              {subscribed ? (isFr ? '✓ AJOUTÉ À VOTRE SHORTLIST' : '✓ ADDED TO SHORTLIST') : ctaLabel(dealScore).toUpperCase()}
-            </button>
+            <div style={{ height: '0.5px', background: '#E8E4DC', marginBottom: '20px' }} />
+            {/* Notre lecture */}
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '8px' }}>
+              {isFr ? 'NOTRE LECTURE' : 'OUR TAKE'}
+            </div>
+            <p style={{ fontSize: '14px', color: LTT2, lineHeight: 1.75, margin: 0, fontStyle: 'italic', borderLeft: '2px solid rgba(198,168,90,0.3)', paddingLeft: '14px' }}>
+              {narrative}
+            </p>
           </div>
 
-          {/* ── DISCLAIMER ── */}
-          <div style={{ fontSize: '11px', color: LTT3, lineHeight: 1.6, marginBottom: '36px', paddingBottom: '36px', borderBottom: `0.5px solid ${LTB}` }}>
+          {/* Signaux positifs */}
+          {optimismSigs.length > 0 && (
+            <div style={{ marginBottom: '28px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '12px' }}>
+                {isFr ? 'POURQUOI NOUS SOMMES OPTIMISTES' : 'WHY WE ARE OPTIMISTIC'}
+              </div>
+              {optimismSigs.map((s, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px', fontSize: '14px', color: LTT2, lineHeight: 1.6 }}>
+                  <span style={{ color: GL, flexShrink: 0, marginTop: '1px', fontSize: '12px' }}>✓</span>
+                  <span>{s}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Points de vigilance */}
+          {vigilanceSigs.length > 0 && (
+            <div style={{ marginBottom: '28px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '12px' }}>
+                {isFr ? 'POINTS DE VIGILANCE' : 'POINTS OF CAUTION'}
+              </div>
+              {vigilanceSigs.map((s, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px', fontSize: '14px', color: LTT2, lineHeight: 1.6 }}>
+                  <span style={{ color: AMB, flexShrink: 0, marginTop: '1px', fontSize: '12px' }}>▲</span>
+                  <span>{s}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Ce qui pourrait nous faire changer d'avis */}
+          <div style={{ marginBottom: '28px' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '12px' }}>
+              {isFr ? "CE QUI POURRAIT NOUS FAIRE CHANGER D'AVIS" : 'WHAT COULD CHANGE OUR MIND'}
+            </div>
+            {changeOfMind.map((s, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px', fontSize: '14px', color: LTT2, lineHeight: 1.6 }}>
+                <span style={{ color: LTT3, flexShrink: 0, marginTop: '1px', fontSize: '12px' }}>—</span>
+                <span>{s}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Pourquoi pas mieux notée */}
+          {whyNotHigher.length > 0 && (
+            <div style={{ marginBottom: '28px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '12px' }}>
+                {isFr ? "POURQUOI CETTE ŒUVRE N'EST-ELLE PAS MIEUX NOTÉE ?" : "WHY ISN'T THIS WORK RATED HIGHER?"}
+              </div>
+              {whyNotHigher.map((s, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px', fontSize: '14px', color: LTT2, lineHeight: 1.6 }}>
+                  <span style={{ color: LTT3, flexShrink: 0, marginTop: '1px', fontSize: '12px' }}>—</span>
+                  <span>{s}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Pourquoi maintenant */}
+          {timingReasons.length > 0 && (
+            <div style={{ marginBottom: '28px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '12px' }}>
+                {isFr ? 'POURQUOI MAINTENANT ?' : 'WHY NOW?'}
+              </div>
+              {timingReasons.map((s, i) => (
+                <div key={i} style={{ fontSize: '14px', color: LTT2, lineHeight: 1.6, paddingBottom: i < timingReasons.length - 1 ? '8px' : 0, marginBottom: i < timingReasons.length - 1 ? '8px' : 0, borderBottom: i < timingReasons.length - 1 ? '0.5px solid #E8E4DC' : 'none' }}>{s}</div>
+              ))}
+            </div>
+          )}
+
+          {/* Recommandation */}
+          <div style={{ marginBottom: '36px', paddingTop: '4px', borderTop: '0.5px solid #E8E4DC' }}>
+            <div style={{ paddingTop: '28px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '10px' }}>
+                ◆ {isFr ? 'NOTRE RECOMMANDATION' : 'OUR RECOMMENDATION'}
+              </div>
+              <div style={{ fontSize: '17px', fontWeight: 600, color: LTT1, marginBottom: '6px', fontFamily: "'Playfair Display', Georgia, serif" }}>{recoText}</div>
+              <div style={{ fontSize: '13px', color: LTT3, lineHeight: 1.6, marginBottom: '20px' }}>
+                {isFr ? "Les signaux disponibles sont suffisamment solides pour l'analyser avant la clôture." : 'The available signals are solid enough to analyze before the closing.'}
+              </div>
+              <button
+                onClick={async () => {
+                  if (!getToken()) { window.location.href = '/app/login'; return; }
+                  setSubLoading(true);
+                  try {
+                    const r = await fetch(`${BACKEND}/api/wishlist/${id}`, { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } });
+                    if (r.status === 403) setUpgradeModal('wishlist');
+                    else if (r.ok) { setSubscribed(true); setSubId(id); trackEvent('lot_watchlist_add', 'lot', lot.id, { lot_title: lot.title, artist: lot.artist_name_raw, deal_score: lot.deal_score, source: 'reco_cta' }); }
+                  } finally { setSubLoading(false); }
+                }}
+                style={{ padding: '10px 24px', background: subscribed ? 'rgba(26,127,75,0.08)' : DK, border: `0.5px solid ${subscribed ? GL : DK}`, color: subscribed ? GL : '#F0EDE6', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.12em', borderRadius: '4px', textTransform: 'uppercase', fontWeight: 600, transition: 'all 0.15s' }}
+              >
+                {subscribed ? (isFr ? '✓ AJOUTÉ À VOTRE SHORTLIST' : '✓ ADDED TO SHORTLIST') : ctaWishlist.toUpperCase()}
+              </button>
+            </div>
+          </div>
+
+          {/* Disclaimer */}
+          <div style={{ fontSize: '11px', color: LTT3, lineHeight: 1.6, paddingBottom: '36px', borderBottom: '0.5px solid #E8E4DC' }}>
             {isFr
               ? "Cette analyse repose sur les données disponibles aujourd'hui. Le marché de l'art peut évoluer et aucune performance future ne peut être garantie. Nautilus est un outil d'aide à la décision — pas un conseil financier réglementé."
               : 'This analysis is based on data available today. The art market may evolve and no future performance can be guaranteed. Nautilus is a decision support tool — not regulated financial advice.'}
           </div>
         </div>
 
-        {/* ─────────────────────────────────────────────
-            DÉTAILS + COÛT RÉEL
-            ───────────────────────────────────────────── */}
-        <div className="lot-details-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#fff', borderBottom: '0.5px solid #E8E4DC', borderTop: '0.5px solid #E8E4DC' }}>
+        {/* ── DÉTAILS + COÛT RÉEL ───────────────────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#fff', borderBottom: '0.5px solid #E8E4DC' }}>
+          {/* Col gauche — DÉTAILS DU LOT */}
           <div style={{ padding: '28px 24px 28px 40px', borderRight: '0.5px solid #E8E4DC' }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '16px' }}>DÉTAILS DU LOT</div>
             {([
@@ -1136,15 +1427,14 @@ export default function OpportunityDetail() {
               </div>
             ))}
           </div>
+          {/* Col droite — COÛT RÉEL DÉTAILLÉ */}
           <div style={{ padding: '28px 40px 28px 24px' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '16px' }}>
-              {isFr ? 'COMBIEN ALLEZ-VOUS RÉELLEMENT PAYER ?' : 'HOW MUCH WILL YOU ACTUALLY PAY?'}
-            </div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '16px' }}>COÛT RÉEL DÉTAILLÉ</div>
             <div style={{ background: '#F5F4F0', borderRadius: '10px', padding: '16px 18px' }}>
               {([
                 { k: isFr ? 'Prix de départ' : 'Starting price', v: realCost?.ref_price || price },
-                { k: `${isFr ? 'Frais acheteur' : 'Buyer\'s premium'} (${buyerPremiumPct}%)`, v: realCost ? realCost.cost_basis - (realCost.ref_price || price) : Math.round(price * (premiumMultiplier - 1)) },
-                { k: isFr ? 'Coût de détention (3 ans)' : 'Holding cost (3 years)', v: realCost?.holding_cost_3y || 0 },
+                { k: `Frais acheteur (${buyerPremiumPct}%)`, v: realCost ? realCost.cost_basis - (realCost.ref_price || price) : Math.round(price * (premiumMultiplier - 1)) },
+                { k: 'Coût de détention (3 ans)', v: realCost?.holding_cost_3y || 0 },
               ] as { k: string; v: number }[]).filter(r => r.v > 0).map((r, i, arr) => (
                 <div key={r.k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: i < arr.length - 1 ? '0.5px solid #E8E4DC' : 'none' }}>
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: LTT2 }}>{r.k}</span>
@@ -1156,10 +1446,12 @@ export default function OpportunityDetail() {
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', color: GOLD, fontWeight: 700 }}>{totalCost ? fmt(totalCost) : '—'}</span>
               </div>
               {realCost && breakEvenGain != null && (
-                <div style={{ marginTop: '12px', borderTop: '0.5px solid #E8E4DC', paddingTop: '10px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, marginBottom: '4px' }}>Nécessite +{breakEvenGain.toFixed(1)}% pour rentabiliser</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: GOLD, fontWeight: 600 }}>Seuil : {fmt(realCost.breakeven_hammer)}</div>
-                </div>
+                <>
+                  <div style={{ marginTop: '12px', borderTop: '0.5px solid #E8E4DC', paddingTop: '10px' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, marginBottom: '4px' }}>Nécessite +{breakEvenGain.toFixed(1)}% pour rentabiliser</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: GOLD, fontWeight: 600 }}>Seuil : {fmt(realCost.breakeven_hammer)}</div>
+                  </div>
+                </>
               )}
               <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '0.5px solid #E8E4DC' }}>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>
@@ -1170,400 +1462,745 @@ export default function OpportunityDetail() {
           </div>
         </div>
 
-        {/* ─────────────────────────────────────────────
-            CE QUE MONTRE LE MARCHÉ (narrative version of market intel)
-            ───────────────────────────────────────────── */}
-        {(formatMatrix?.formats?.length > 0 || timingData?.best_house || hammerHistory?.total_sales > 0) && (
-          <div style={{ padding: '36px 40px 0' }}>
-            <EdSection title={isFr ? 'Ce que montre le marché' : 'What the market shows'}>
-              {/* Narrative from hammer history */}
-              {hammerHistory?.total_sales > 0 && hammerHistory?.median_eur && (
-                <p style={{ fontSize: '14px', color: LTT2, lineHeight: 1.7, margin: '0 0 10px' }}>
-                  {isFr
-                    ? `Les œuvres similaires de ${lot.artist_name_raw || 'cet artiste'} se sont vendues avec une médiane de ${fmtExact(hammerHistory.median_eur)} — sur ${hammerHistory.total_sales} ventes enregistrées.`
-                    : `Similar works by ${lot.artist_name_raw || 'this artist'} have sold with a median of ${fmtExact(hammerHistory.median_eur)} — across ${hammerHistory.total_sales} recorded sales.`}
-                </p>
-              )}
-              {/* Best medium */}
-              {formatMatrix?.formats?.length > 0 && (() => {
-                const best = [...formatMatrix.formats].sort((a: any, b: any) => b.avg_price - a.avg_price)[0];
-                return (
-                  <p style={{ fontSize: '14px', color: LTT2, lineHeight: 1.7, margin: '0 0 10px' }}>
-                    {isFr
-                      ? `Les ${best.format.toLowerCase()}s obtiennent les meilleurs résultats pour cet artiste — moyenne €${Math.round(best.avg_price).toLocaleString()} sur ${best.count} ventes.`
-                      : `${best.format}s achieve the best results for this artist — average €${Math.round(best.avg_price).toLocaleString()} across ${best.count} sales.`}
-                  </p>
-                );
-              })()}
-              {/* Timing */}
-              {timingData?.best_month && (
-                <p style={{ fontSize: '14px', color: LTT2, lineHeight: 1.7, margin: 0 }}>
-                  {isFr
-                    ? `La meilleure période observée est ${timingData.best_month}${timingData.best_season ? ` (${timingData.best_season})` : ''}.`
-                    : `The best observed timing is ${timingData.best_month}${timingData.best_season ? ` (${timingData.best_season})` : ''}.`}
-                </p>
-              )}
-              {/* Sell-through */}
-              {(lot.artist?.sell_through_rate || 0) > 0 && (
-                <p style={{ fontSize: '14px', color: LTT2, lineHeight: 1.7, margin: '10px 0 0' }}>
-                  {isFr
-                    ? `${Math.round(lot.artist.sell_through_rate * 100)}% des œuvres de cet artiste trouvent acheteur en première présentation.`
-                    : `${Math.round(lot.artist.sell_through_rate * 100)}% of this artist's works find a buyer at first auction.`}
-                </p>
-              )}
-            </EdSection>
-          </div>
-        )}
-
-        {/* ── MINI ARTIST CARD (unchanged) ── */}
-        {lot.artist_name_raw && (
-          <div style={{ padding: '20px 40px 0' }}>
-            <div
-              onClick={() => navigate(`/app/artists/${encodeURIComponent(lot.artist_name_raw || '')}`)}
-              className="comp-card-light"
-              style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '10px', padding: '14px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px' }}
-            >
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: DK, border: `0.5px solid ${DKB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: '16px', opacity: 0.4, color: '#F0EDE6' }}>◎</span>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px', flexWrap: 'wrap' as const }}>
-                  <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', fontWeight: 600, color: LTT1 }}>{lot.artist_name_raw}</span>
-                  {lot.artist_profile?.investment_tier && (
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, padding: '2px 7px', borderRadius: '3px', color: lot.artist_profile.investment_tier === 'blue_chip' ? BL : lot.artist_profile.investment_tier === 'emerging' ? GL : AMB, background: lot.artist_profile.investment_tier === 'blue_chip' ? '#EFF6FF' : lot.artist_profile.investment_tier === 'emerging' ? '#F0FDF4' : '#FFFBEB' }}>
-                      {isFr ? (lot.artist_profile.investment_tier === 'emerging' ? 'émergent' : lot.artist_profile.investment_tier === 'mid_career' ? 'mi-carrière' : lot.artist_profile.investment_tier.replace('_', ' ')) : lot.artist_profile.investment_tier.replace('_', ' ')}
-                    </span>
-                  )}
-                  {lot.artist?.trend && (
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.08em', padding: '2px 7px', borderRadius: '3px', color: lot.artist.trend === 'up' ? GL : lot.artist.trend === 'down' ? RED : LTT3, background: lot.artist.trend === 'up' ? '#F0FDF4' : lot.artist.trend === 'down' ? '#FEF2F2' : LT }}>
-                      {lot.artist.trend === 'up' ? (isFr ? '↑ EN HAUSSE' : '↑ RISING') : lot.artist.trend === 'down' ? (isFr ? '↓ EN BAISSE' : '↓ FALLING') : (isFr ? '→ STABLE' : '→ STABLE')}
-                    </span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' as const }}>
-                  {lot.artist?.liquidity_score != null && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>{isFr ? 'Liquidité' : 'Liquidity'} <strong style={{ color: LTT2 }}>{Math.round(lot.artist.liquidity_score)}/100</strong></span>}
-                  {lot.artist?.sell_through_rate != null && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>{isFr ? 'Taux de vente' : 'Sell-thru'} <strong style={{ color: LTT2 }}>{Math.round(lot.artist.sell_through_rate * 100)}%</strong></span>}
-                  {lot.artist?.total_lots_sold != null && lot.artist.total_lots_sold > 0 && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}><strong style={{ color: LTT2 }}>{lot.artist.total_lots_sold.toLocaleString()}</strong> {isFr ? 'lots suivis' : 'lots tracked'}</span>}
-                </div>
-              </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: GOLD, fontWeight: 700, letterSpacing: '0.08em', flexShrink: 0 }}>{t('lot.fullAnalysis')}</div>
-            </div>
-          </div>
-        )}
-
-        {/* ── VENTES COMPARABLES (unchanged) ── */}
+        {/* ── VENTES COMPARABLES ───────────────────────────────────────────── */}
         {hasAccess && (
-          <div style={{ padding: '24px 40px', background: '#F5F4F0', borderBottom: '0.5px solid #E8E4DC' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '16px' }}>{isHistorical ? '◆ VENTES RÉALISÉES AUX ENCHÈRES' : '◆ LOTS COMPARABLES ACTIFS'}</div>
-            {comparables.length === 0 ? (
-              <div style={{ background: '#fff', borderRadius: '12px', padding: '48px 24px', textAlign: 'center' as const }}>
-                <div style={{ fontSize: '28px', opacity: 0.12, marginBottom: '12px' }}>◎</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, letterSpacing: '0.1em' }}>Aucune vente comparable trouvée pour ce lot.</div>
-              </div>
-            ) : (() => {
-              const compPrices = comparables.map((c: any) => c.current_price || 0).filter((v: number) => v > 0);
-              const minComp = compPrices.length > 0 ? Math.min(...compPrices) : 0;
-              const maxComp = compPrices.length > 0 ? Math.max(...compPrices) : 0;
-              const fmtK = (v: number) => v >= 1000 ? `€${(v / 1000).toFixed(0)}k` : `€${v}`;
-              const isHistoricalComps = comparables.length > 0 && comparables[0].is_historical === true;
-              return (
-                <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '20px' }}>
-                  <div style={{ background: '#0F3828', borderRadius: '12px', padding: '22px 20px', display: 'flex', flexDirection: 'column' as const, justifyContent: 'space-between' }}>
-                    <div>
-                      <div style={{ fontFamily: 'Georgia, serif', fontSize: '28px', fontWeight: 700, color: '#4ADE80', lineHeight: 1.1, marginBottom: '14px' }}>{fmtK(minComp)} – {fmtK(maxComp)}</div>
-                      <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.6, margin: 0 }}>
-                        Des œuvres de <strong>{lot.artist_name_raw}</strong> {isHistoricalComps ? `ont réalisé entre ${fmtK(minComp)} et ${fmtK(maxComp)} aux enchères sur ${comparables.length} ventes historiques.` : `sont actuellement listées entre ${fmtK(minComp)} et ${fmtK(maxComp)} — prix demandés, pas encore réalisés.`}
-                      </p>
+        <div style={{ padding: '24px 40px', background: '#F5F4F0', borderBottom: '0.5px solid #E8E4DC' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '16px' }}>{isHistorical ? '◆ VENTES RÉALISÉES AUX ENCHÈRES' : '◆ LOTS COMPARABLES ACTIFS'}</div>
+          {comparables.length === 0 ? (
+            <div style={{ background: '#fff', borderRadius: '12px', padding: '48px 24px', textAlign: 'center' as const }}>
+              <div style={{ fontSize: '28px', opacity: 0.12, marginBottom: '12px' }}>◎</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, letterSpacing: '0.1em' }}>Aucune vente comparable trouvée pour ce lot.</div>
+            </div>
+          ) : (() => {
+            const compPrices = comparables.map((c: any) => c.current_price || 0).filter((v: number) => v > 0);
+            const minComp = compPrices.length > 0 ? Math.min(...compPrices) : 0;
+            const maxComp = compPrices.length > 0 ? Math.max(...compPrices) : 0;
+            const fmtK = (v: number) => v >= 1000 ? `€${(v / 1000).toFixed(0)}k` : `€${v}`;
+            const isHistorical = comparables.length > 0 && comparables[0].is_historical === true;
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '20px' }}>
+                {/* Story card */}
+                <div style={{ background: '#0F3828', borderRadius: '12px', padding: '22px 20px', display: 'flex', flexDirection: 'column' as const, justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontFamily: 'Georgia, serif', fontSize: '28px', fontWeight: 700, color: '#4ADE80', lineHeight: 1.1, marginBottom: '14px' }}>
+                      {fmtK(minComp)} – {fmtK(maxComp)}
                     </div>
-                    <div style={{ marginTop: '16px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>{isHistoricalComps ? `${comparables.length} ventes réalisées` : `${comparables.length} lots actifs`}</div>
+                    <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.6, margin: 0 }}>
+                      Des œuvres de <strong>{lot.artist_name_raw}</strong> {isHistorical
+                        ? `ont réalisé entre ${fmtK(minComp)} et ${fmtK(maxComp)} aux enchères sur ${comparables.length} ventes historiques.`
+                        : `sont actuellement listées entre ${fmtK(minComp)} et ${fmtK(maxComp)} — prix demandés, pas encore réalisés.`}
+                    </p>
                   </div>
-                  <div style={{ background: '#fff', borderRadius: '12px', padding: '16px 20px' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
-                      <thead>
-                        <tr>{['Artiste', 'Titre', '', 'Prix', isHistoricalComps ? 'Premium' : 'Score', 'Date'].map((col, ci) => (
+                  <div style={{ marginTop: '16px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>
+                    {isHistorical ? `${comparables.length} ventes réalisées` : `${comparables.length} lots actifs`}
+                  </div>
+                </div>
+                {/* Table card */}
+                <div style={{ background: '#fff', borderRadius: '12px', padding: '16px 20px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
+                    <thead>
+                      <tr>
+                        {['Artiste', 'Titre', '', 'Prix', isHistorical ? 'Premium' : 'Score', 'Date'].map((col, ci) => (
                           <th key={ci} style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: LTT3, textAlign: 'left' as const, padding: '8px 10px 8px 0', borderBottom: '0.5px solid #E8E4DC' }}>{col}</th>
-                        ))}</tr>
-                      </thead>
-                      <tbody>
-                        {comparables.map((comp: any) => {
-                          const compPrice = comp.current_price || comp.estimate_low || 0;
-                          const compDate = comp.auction_date ? new Date(comp.auction_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
-                          return (
-                            <tr key={comp.id} onClick={() => navigate(`/app/opportunities/${comp.id}`)} style={{ cursor: 'pointer' }} onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = '#F5F4F0'; }} onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}>
-                              <td style={{ padding: '9px 10px 9px 0', borderBottom: '0.5px solid #E8E4DC', fontSize: '12px', color: LTT2, maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{comp.artist_name_raw || '—'}</td>
-                              <td style={{ padding: '9px 10px 9px 0', borderBottom: '0.5px solid #E8E4DC', fontSize: '12px', color: LTT1, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{comp.title || 'Untitled'}</td>
-                              <td style={{ width: '100px', padding: '0 8px', borderBottom: '0.5px solid #E8E4DC' }}><div style={{ height: '2px', background: '#E8E4DC', borderRadius: '1px' }}><div style={{ height: '100%', width: `${maxCompPrice > 0 ? (compPrice / maxCompPrice) * 100 : 0}%`, background: GOLD, borderRadius: '1px' }} /></div></td>
-                              <td style={{ padding: '9px 10px 9px 0', borderBottom: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600, color: GOLD, whiteSpace: 'nowrap' as const }}>{fmt(compPrice)}</td>
-                              <td style={{ padding: '9px 10px 9px 0', borderBottom: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, whiteSpace: 'nowrap' as const }}>{isHistoricalComps ? (comp.premium_ratio ? `${((comp.premium_ratio - 1) * 100).toFixed(0)}%` : '—') : (comp.deal_score ? `${comp.deal_score.toFixed(0)}/100` : '—')}</td>
-                              <td style={{ padding: '9px 0', borderBottom: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, whiteSpace: 'nowrap' as const }}>{compDate}</td>
-                            </tr>
-                          );
-                        })}
-                        <tr style={{ background: 'rgba(52,211,153,0.04)' }}>
-                          <td style={{ padding: '9px 10px 9px 0', borderTop: '0.5px solid #E8E4DC', fontSize: '12px', color: '#16A34A', fontWeight: 600 }}>Votre lot</td>
-                          <td style={{ padding: '9px 10px 9px 0', borderTop: '0.5px solid #E8E4DC', fontSize: '12px', color: LTT1 }}>{lot.auction_house_name || '—'}</td>
-                          <td style={{ width: '100px', padding: '0 8px', borderTop: '0.5px solid #E8E4DC' }}><div style={{ height: '2px', background: 'rgba(52,211,153,0.2)', borderRadius: '1px' }}><div style={{ height: '100%', width: `${maxCompPrice > 0 ? (price / maxCompPrice) * 100 : 0}%`, background: '#34D399', borderRadius: '1px' }} /></div></td>
-                          <td style={{ padding: '9px 10px 9px 0', borderTop: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: '#34D399', whiteSpace: 'nowrap' as const }}>{fmt(price)}</td>
-                          <td style={{ padding: '9px 10px 9px 0', borderTop: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>—</td>
-                          <td style={{ padding: '9px 0', borderTop: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>—</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    <div style={{ marginTop: '10px', padding: '7px 10px', background: '#FFFBEB', border: '0.5px solid #FDE68A', borderRadius: '5px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: AMB }}>
-                      {isHistoricalComps ? "⚠ Ces ventes peuvent inclure différents médiums. Vérifiez la technique avant d'acheter." : '⚠ Ces lots sont des prix demandés, pas des prix réalisés. Les ventes réelles peuvent différer.'}
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {comparables.map((comp: any) => {
+                        const compPrice = comp.current_price || comp.estimate_low || 0;
+                        const compDate = comp.auction_date
+                          ? new Date(comp.auction_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                          : '—';
+                        return (
+                          <tr key={comp.id} onClick={() => navigate(`/app/opportunities/${comp.id}`)} style={{ cursor: 'pointer' }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = '#F5F4F0'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
+                          >
+                            <td style={{ padding: '9px 10px 9px 0', borderBottom: '0.5px solid #E8E4DC', fontSize: '12px', color: LTT2, maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{comp.artist_name_raw || '—'}</td>
+                            <td style={{ padding: '9px 10px 9px 0', borderBottom: '0.5px solid #E8E4DC', fontSize: '12px', color: LTT1, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{comp.title || 'Untitled'}</td>
+                            <td style={{ width: '100px', padding: '0 8px', borderBottom: '0.5px solid #E8E4DC' }}>
+                              <div style={{ height: '2px', background: '#E8E4DC', borderRadius: '1px' }}>
+                                <div style={{ height: '100%', width: `${maxCompPrice > 0 ? (compPrice / maxCompPrice) * 100 : 0}%`, background: GOLD, borderRadius: '1px' }} />
+                              </div>
+                            </td>
+                            <td style={{ padding: '9px 10px 9px 0', borderBottom: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600, color: GOLD, whiteSpace: 'nowrap' as const }}>{fmt(compPrice)}</td>
+                            <td style={{ padding: '9px 10px 9px 0', borderBottom: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, whiteSpace: 'nowrap' as const }}>{isHistorical ? (comp.premium_ratio ? `${((comp.premium_ratio - 1) * 100).toFixed(0)}%` : '—') : (comp.deal_score ? `${comp.deal_score.toFixed(0)}/100` : '—')}</td>
+                            <td style={{ padding: '9px 0', borderBottom: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, whiteSpace: 'nowrap' as const }}>{compDate}</td>
+                          </tr>
+                        );
+                      })}
+                      {/* Votre lot row */}
+                      <tr style={{ background: 'rgba(52,211,153,0.04)' }}>
+                        <td style={{ padding: '9px 10px 9px 0', borderTop: '0.5px solid #E8E4DC', fontSize: '12px', color: '#16A34A', fontWeight: 600 }}>Votre lot</td>
+                        <td style={{ padding: '9px 10px 9px 0', borderTop: '0.5px solid #E8E4DC', fontSize: '12px', color: LTT1 }}>{lot.auction_house_name || '—'}</td>
+                        <td style={{ width: '100px', padding: '0 8px', borderTop: '0.5px solid #E8E4DC' }}>
+                          <div style={{ height: '2px', background: 'rgba(52,211,153,0.2)', borderRadius: '1px' }}>
+                            <div style={{ height: '100%', width: `${maxCompPrice > 0 ? (price / maxCompPrice) * 100 : 0}%`, background: '#34D399', borderRadius: '1px' }} />
+                          </div>
+                        </td>
+                        <td style={{ padding: '9px 10px 9px 0', borderTop: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: '#34D399', whiteSpace: 'nowrap' as const }}>{fmt(price)}</td>
+                        <td style={{ padding: '9px 10px 9px 0', borderTop: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>—</td>
+                        <td style={{ padding: '9px 0', borderTop: '0.5px solid #E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>—</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div style={{ marginTop: '10px', padding: '7px 10px', background: '#FFFBEB', border: '0.5px solid #FDE68A', borderRadius: '5px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: AMB }}>
+                    {isHistorical
+                      ? "⚠ Ces ventes peuvent inclure différents médiums. Vérifiez la technique avant d'acheter."
+                      : '⚠ Ces lots sont des prix demandés, pas des prix réalisés. Les ventes réelles peuvent différer.'}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+        )}
+
+        {/* ── MINI ARTIST CARD ────────────────────────────────────────────── */}
+            {lot.artist_name_raw && (
+              <div style={{ padding: '20px 40px 0' }}>
+                <div
+                  onClick={() => navigate(`/app/artists/${encodeURIComponent(lot.artist_name_raw || '')}`)}
+                  className="comp-card-light"
+                  style={{
+                    background: LTC, border: `1px solid ${LTB}`, borderRadius: '10px',
+                    padding: '14px 20px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '16px',
+                  }}
+                >
+                  {/* Left: avatar placeholder */}
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: DK, border: `0.5px solid ${DKB}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: '16px', opacity: 0.4, color: '#F0EDE6' }}>◎</span>
+                  </div>
+                  {/* Center: name + metrics */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px', flexWrap: 'wrap' as const }}>
+                      <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', fontWeight: 600, color: LTT1 }}>{lot.artist_name_raw}</span>
+                      {lot.artist_profile?.investment_tier && (
+                        <span style={{
+                          fontFamily: 'var(--font-mono)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, padding: '2px 7px', borderRadius: '3px',
+                          color: lot.artist_profile.investment_tier === 'blue_chip' ? BL : lot.artist_profile.investment_tier === 'emerging' ? GL : AMB,
+                          background: lot.artist_profile.investment_tier === 'blue_chip' ? '#EFF6FF' : lot.artist_profile.investment_tier === 'emerging' ? '#F0FDF4' : '#FFFBEB',
+                        }}>{isFr ? (lot.artist_profile.investment_tier === 'emerging' ? 'émergent' : lot.artist_profile.investment_tier === 'mid_career' ? 'mi-carrière' : lot.artist_profile.investment_tier.replace('_', ' ')) : lot.artist_profile.investment_tier.replace('_', ' ')}</span>
+                      )}
+                      {lot.artist?.trend && (
+                        <span style={{
+                          fontFamily: 'var(--font-mono)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.08em', padding: '2px 7px', borderRadius: '3px',
+                          color: lot.artist.trend === 'up' ? GL : lot.artist.trend === 'down' ? RED : LTT3,
+                          background: lot.artist.trend === 'up' ? '#F0FDF4' : lot.artist.trend === 'down' ? '#FEF2F2' : LT,
+                        }}>{lot.artist.trend === 'up' ? (isFr ? '↑ EN HAUSSE' : '↑ RISING') : lot.artist.trend === 'down' ? (isFr ? '↓ EN BAISSE' : '↓ FALLING') : (isFr ? '→ STABLE' : '→ STABLE')}</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' as const }}>
+                      {lot.artist?.liquidity_score != null && (
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>
+                          {isFr ? 'Liquidité' : 'Liquidity'} <strong style={{ color: LTT2 }}>{Math.round(lot.artist.liquidity_score)}/100</strong>
+                        </span>
+                      )}
+                      {lot.artist?.sell_through_rate != null && (
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>
+                          {isFr ? 'Taux de vente' : 'Sell-thru'} <strong style={{ color: LTT2 }}>{Math.round(lot.artist.sell_through_rate * 100)}%</strong>
+                        </span>
+                      )}
+                      {lot.artist?.total_lots_sold != null && lot.artist.total_lots_sold > 0 && (
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>
+                          <strong style={{ color: LTT2 }}>{lot.artist.total_lots_sold.toLocaleString()}</strong> {isFr ? 'lots suivis' : 'lots tracked'}
+                        </span>
+                      )}
+                      {lot.artist?.avg_auction_price != null && lot.artist.avg_auction_price > 0 && (
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>
+                          Avg <strong style={{ color: LTT2 }}>{lot.artist.avg_auction_price >= 1000 ? `€${(lot.artist.avg_auction_price / 1000).toFixed(0)}K` : `€${Math.round(lot.artist.avg_auction_price)}`}</strong>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Right: CTA */}
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: GOLD, fontWeight: 700, letterSpacing: '0.08em', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {t('lot.fullAnalysis')}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {hammerLoading && (
+              <div style={{ padding: '0 40px 24px' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--gold)', letterSpacing: '0.16em' }}>
+                  ◆ CHARGEMENT HISTORIQUE…
+                </div>
+              </div>
+            )}
+            {isInvestor && (formatMatrix?.formats?.length > 0 || timingData?.best_house) && (
+              <div style={{ padding: '0 40px 24px' }}>
+                <div style={{ border: '0.5px solid rgba(232,228,220,0.4)', borderRadius: '10px', padding: '20px 24px', background: 'rgba(255,255,255,0.02)' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '20px' }}>
+                    ◆ {isFr ? 'INTELLIGENCE MARCHÉ · ' : 'MARKET INTELLIGENCE · '}{lot.artist_name_raw?.toUpperCase()}
+                  </div>
+                  <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' as const }}>
+
+                    {/* Medium optimal */}
+                    {formatMatrix?.formats?.length > 0 && (() => {
+                      const best = [...formatMatrix.formats].sort((a: any, b: any) => b.avg_price - a.avg_price)[0];
+                      const current = formatMatrix.formats.find((f: any) =>
+                        f.format.toLowerCase().includes((lot.medium || '').toLowerCase().split(' ')[0])
+                      );
+                      return (
+                        <div style={{ flex: 1, minWidth: '140px' }}>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.1em', marginBottom: '6px' }}>
+                            {isFr ? 'MEDIUM LE PLUS VALORISÉ' : 'TOP MEDIUM'}
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: 'var(--navy)', marginBottom: '2px' }}>
+                            {best.format}
+                          </div>
+                          <div style={{ fontSize: '12px', color: LTT3 }}>
+                            Moy. €{Math.round(best.avg_price).toLocaleString()} · {best.count} ventes
+                          </div>
+                          {current && current.format !== best.format && (
+                            <div style={{ marginTop: '6px', fontSize: '11px', color: AMB }}>
+                              {isFr ? `Ce lot (${current.format}) : moy. €${Math.round(current.avg_price).toLocaleString()}` : `This lot (${current.format}): avg €${Math.round(current.avg_price).toLocaleString()}`}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Maison optimale */}
+                    {timingData?.best_house && (
+                      <div style={{ flex: 1, minWidth: '140px' }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.1em', marginBottom: '6px' }}>
+                          {isFr ? 'MAISON OPTIMALE' : 'BEST AUCTION HOUSE'}
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: 'var(--navy)', marginBottom: '2px' }}>
+                          {timingData.best_house}
+                        </div>
+                        {timingData.best_avg_price && (
+                          <div style={{ fontSize: '12px', color: LTT3 }}>
+                            Moy. €{Math.round(timingData.best_avg_price).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Meilleure période */}
+                    {timingData?.best_month && (
+                      <div style={{ flex: 1, minWidth: '140px' }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.1em', marginBottom: '6px' }}>
+                          {isFr ? 'MEILLEURE PÉRIODE' : 'BEST TIMING'}
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: 'var(--navy)', marginBottom: '2px' }}>
+                          {timingData.best_month}
+                        </div>
+                        {timingData.best_season && (
+                          <div style={{ fontSize: '12px', color: LTT3 }}>
+                            {timingData.best_season}
+                            {timingData.best_avg_price && ` · €${Math.round(timingData.best_avg_price).toLocaleString()} moy.`}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* ── HISTORIQUE DES VENTES RÉELLES ── */}
+            {hammerHistory?.locked ? (
+              <div style={{ padding: '0 40px 24px' }}>
+                <div style={{ border: '0.5px solid rgba(232,228,220,0.4)', borderRadius: '10px', padding: '20px 24px', background: 'rgba(255,255,255,0.02)' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '12px' }}>
+                    ◆ {isFr ? 'HISTORIQUE DES VENTES RÉELLES' : 'REALIZED PRICES HISTORY'}
+                  </div>
+                  <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none', opacity: 0.5 }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: 'var(--navy)' }}>€ 48 500</div>
+                    <div style={{ fontSize: '12px', color: LTT3, marginTop: '4px' }}>124 ventes · Médiane €32 000</div>
+                  </div>
+                  <div style={{ marginTop: '12px', fontFamily: 'var(--font-mono)', fontSize: '9px', color: BL, letterSpacing: '0.1em' }}>
+                    <span style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', padding: '3px 8px', borderRadius: '3px' }}>INVESTOR+</span>
+                    <span style={{ marginLeft: '10px', color: LTT3 }}>{isFr ? 'Accédez à l\'historique complet des prix réalisés' : 'Access full realized price history'}</span>
+                  </div>
+                </div>
+              </div>
+            ) : hammerHistory && hammerHistory.total_sales > 0 ? (
+              <div style={{ padding: '0 40px 24px' }}>
+                <div style={{ border: '0.5px solid rgba(232,228,220,0.4)', borderRadius: '10px', padding: '20px 24px', background: 'rgba(255,255,255,0.02)' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '16px' }}>
+                    ◆ {isFr ? 'HISTORIQUE DES VENTES RÉELLES' : 'REALIZED PRICES HISTORY'} · {hammerHistory.total_sales} {isFr ? 'VENTES' : 'SALES'}
+                  </div>
+                  <div style={{ display: 'flex', gap: '32px', marginBottom: '20px' }}>
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.1em', marginBottom: '4px' }}>{isFr ? 'MÉDIANE' : 'MEDIAN'}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: 'var(--navy)' }}>
+                        {hammerHistory.median_eur ? `€${Math.round(hammerHistory.median_eur).toLocaleString()}` : '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.1em', marginBottom: '4px' }}>{isFr ? 'MOYENNE' : 'AVERAGE'}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: 'var(--navy)' }}>
+                        {hammerHistory.avg_eur ? `€${Math.round(hammerHistory.avg_eur).toLocaleString()}` : '—'}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {hammerHistory.sales.slice(0, 5).map((s: any, i: number) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderTop: i === 0 ? 'none' : '0.5px solid rgba(232,228,220,0.3)' }}>
+                        <div>
+                          <div style={{ fontSize: '12px', color: 'var(--navy)', fontWeight: 500, marginBottom: '2px' }}>
+                            {s.artwork_title || (isFr ? 'Sans titre' : 'Untitled')}
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>
+                            {s.auction_house} · {s.sale_date} {s.medium_category ? `· ${s.medium_category}` : ''}
+                          </div>
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: GOLD, textAlign: 'right' }}>
+                          {s.hammer_price_eur ? `€${Math.round(s.hammer_price_eur).toLocaleString()}` : '—'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {lot?.artist_name_raw && (
+                    <div
+                      onClick={() => window.location.href = `/artists/${encodeURIComponent(lot.artist_name_raw)}`}
+                      style={{ marginTop: '16px', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: GOLD, cursor: 'pointer', letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', display: 'inline-block' }}
+                    >
+                      {isFr ? '◆ VOIR L\'ANALYSE ARTISTE COMPLÈTE →' : '◆ VIEW FULL ARTIST ANALYSIS →'}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
+            {/* ── SCÉNARIOS DE VALORISATION ───────────────────────────────────── */}
+            {!hasAccess ? null : !hasAccess ? (
+              <div style={{ padding: '0 40px 24px' }}>
+                <LockedBlock
+                  title="Scénarios de valorisation"
+                  teaser=""
+                  ctaText={isFr ? 'Passer Investor pour débloquer →' : 'INVESTOR+ · UNLOCK →'}
+                  ctaPrice="Investor"
+                  planId="investor"
+                  preview={<div style={{ height:'220px', background:LT, borderRadius:'8px' }}/>}
+                />
+              </div>
+            ) : canSeeAnalysis && visibleYears.length > 0 && hasProjection && (
+              <div style={{ padding: '0 40px 24px' }}>
+                <div style={wCard}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'SCÉNARIOS DE VALORISATION' : 'VALUATION SCENARIOS'} · {projCagr.toFixed(1)}% CAGR</div>
+                    {lot.projection?.artist_tier && (
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>{lot.projection.artist_tier.replace('_', ' ')}</span>
+                    )}
+                  </div>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                      <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                      <YAxis tickFormatter={(v: number) => `€${v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v}`} tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} width={48} />
+                      <Tooltip formatter={(val: number, name: string) => [`€${Number(val).toLocaleString()}`, name === 'optimistic' ? (isFr ? '🟢 Marché fort' : '🟢 Bull market') : name === 'value' ? (isFr ? '🟡 Marché stable' : '🟡 Stable market') : (isFr ? '🔴 Marché faible' : '🔴 Bear market')]} contentStyle={{ background: '#1A2A44', border: 'none', borderRadius: 8, fontSize: 12, color: 'white' }} />
+                      <ReferenceLine y={price} stroke="#E8E4DC" strokeDasharray="4 2" />
+                      <Line type="monotone" dataKey="optimistic" stroke="#16A34A" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="value" stroke="#B8922A" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="conservative" stroke="#DC2626" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 8 }}>
+                    <span style={{ fontSize: 11, color: '#16A34A' }}>● {isFr ? 'Marché fort' : 'Bull market'}</span>
+                    <span style={{ fontSize: 11, color: '#B8922A' }}>● {isFr ? 'Marché stable' : 'Stable market'}</span>
+                    <span style={{ fontSize: 11, color: '#DC2626' }}>● {isFr ? 'Marché faible' : 'Bear market'}</span>
+                  </div>
+                  {lot.projection?.sell_recommendation && (
+                    <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '6px', padding: '8px 12px', marginTop: '6px' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GL, letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>{isFr ? 'SORTIE OPTIMALE' : 'OPTIMAL EXIT'} · </span>
+                      <span style={{ fontSize: '12px', color: LTT2 }}>{lot.projection.sell_recommendation}</span>
+                    </div>
+                  )}
+                  <p style={{ fontSize: '11px', fontStyle: 'italic', color: LTT3, marginTop: '10px', lineHeight: 1.6 }}>
+                    {isFr ? "Projections basées sur les données historiques des enchères et la modélisation statistique. Les performances passées ne garantissent pas les résultats futurs. Nautilus n'est pas un conseiller financier." : "Projections based on historical auction data and statistical modeling, capped at 15% to reflect long-term market realism. Past performance does not guarantee future returns. Nautilus is not a financial advisor — this is not financial advice."}
+                  </p>
+                </div>
+              </div>
+            )}
+
+
+            {/* ── MOBILE FREE: LECTURE NAUTILUS + PAYWALL ── */}
+            {!hasAccess && (() => {
+              const aiText = typeof lot.score_rationale === 'string' && lot.score_rationale.trim() ? lot.score_rationale.trim() : null;
+              const sentences = aiText ? (aiText.match(/[^.!?]+[.!?]+/g) || []) : [];
+              const excerpt = sentences.slice(0, 3).join(' ').trim() || (aiText ? aiText.slice(0, 300) : null);
+              return (
+                <div className="lot-mobile-only" style={{ padding: '0 16px 8px' }}>
+                  {excerpt && (
+                    <div style={{ background: LTC, border: `1px solid ${LTB}`, borderRadius: '12px', padding: '16px 18px', marginBottom: '12px' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
+                        ◆ {isFr ? 'LECTURE NAUTILUS' : 'NAUTILUS READ'}
+                      </div>
+                      <p style={{ fontSize: '13px', color: LTT2, lineHeight: 1.7, margin: 0 }}>{excerpt}</p>
+                    </div>
+                  )}
+                  <div style={{ borderRadius: '12px', background: '#0F1824', border: '1px solid rgba(198,168,90,0.18)', marginBottom: '24px' }}>
+                    <div style={{ padding: '24px 24px 20px' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>
+                        ◆ NAUTILUS INVESTOR
+                      </div>
+                      <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 600, color: '#FFFFFF', marginBottom: '16px', lineHeight: 1.3 }}>
+                        {isFr ? 'Débloquez la conviction complète' : 'Unlock full conviction'}
+                      </div>
+                      {comparables.length > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '14px' }}>
+                          <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>{isFr ? 'Ventes comparables' : 'Comparable sales'}</span>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: 'rgba(255,255,255,0.15)', letterSpacing: '0.04em' }}>{'████ ████'}</span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px', marginBottom: '20px' }}>
+                        {[
+                          isFr ? '✓ Toutes les ventes comparables' : '✓ All comparable sales',
+                          isFr ? '✓ Valeur de référence Nautilus' : '✓ Nautilus reference value',
+                          isFr ? '✓ Scénarios de valorisation' : '✓ Valuation scenarios',
+                          isFr ? '✓ Intelligence Nautilus complète' : '✓ Full Nautilus intelligence',
+                          isFr ? '✓ Alertes et suivi de portefeuille' : '✓ Alerts & portfolio tracking',
+                        ].map((b, i) => (
+                          <div key={i} style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)' }}>{b}</div>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', marginBottom: '16px', fontStyle: 'italic' }}>
+                        {isFr ? '🔒 Réservé aux membres Investor' : '🔒 Investor members only'}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <button
+                          onClick={() => { navigate('/app/pricing'); window.scrollTo(0, 0); }}
+                          style={{ maxWidth: '280px', width: '100%', padding: '14px 0', background: GOLD, color: '#0C1622', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                        >
+                          {isFr ? 'Passer Investor →' : 'Go Investor →'}
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '14px 24px' }}>
+                      <button
+                        onClick={() => navigate('/app/pricing')}
+                        style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '12px', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}
+                      >
+                        {isFr ? 'Analyse institutionnelle disponible avec Pro →' : 'Institutional analysis available with Pro →'}
+                      </button>
                     </div>
                   </div>
                 </div>
               );
             })()}
-          </div>
-        )}
 
         {/* ── POURQUOI POUVONS-NOUS ÊTRE CONFIANTS ── */}
-        <div style={{ padding: '36px 40px 0' }}>
-          <EdSection title={isFr ? 'Pourquoi pouvons-nous être confiants ?' : 'Why can we be confident?'}>
-            {[
-              compCount > 0 ? (isFr ? `${compCount} ventes comparables analysées` : `${compCount} comparable sales analyzed`) : null,
-              hammerHistory?.total_sales > 0 ? (isFr ? `Historique de ventes réelles : ${hammerHistory.total_sales} transactions` : `Realized price history: ${hammerHistory.total_sales} transactions`) : null,
-              isFr ? 'Données mises à jour quotidiennement' : 'Data updated daily',
-            ].filter(Boolean).map((item, i) => (
-              <EdItem key={i} icon="✓" iconColor={GL2}>{item}</EdItem>
-            ))}
-          </EdSection>
-        </div>
-
-        {/* ═══ ANALYSE AVANCÉE (accordion) ═══ */}
-        <div style={{ padding: '12px 40px 0' }}>
-          <Accordion label={isFr ? 'Analyse avancée' : 'Advanced analysis'}>
-            {/* Hammer history */}
-            {hammerLoading && <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '0.16em', marginBottom: '16px' }}>◆ CHARGEMENT HISTORIQUE…</div>}
-            {isInvestor && (formatMatrix?.formats?.length > 0 || timingData?.best_house) && (
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '16px' }}>
-                  {isFr ? 'INTELLIGENCE MARCHÉ · ' : 'MARKET INTELLIGENCE · '}{lot.artist_name_raw?.toUpperCase()}
-                </div>
-                <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' as const }}>
-                  {formatMatrix?.formats?.length > 0 && (() => {
-                    const best = [...formatMatrix.formats].sort((a: any, b: any) => b.avg_price - a.avg_price)[0];
-                    const current = formatMatrix.formats.find((f: any) => f.format.toLowerCase().includes((lot.medium || '').toLowerCase().split(' ')[0]));
-                    return (
-                      <div style={{ flex: 1, minWidth: '140px' }}>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.1em', marginBottom: '6px' }}>{isFr ? 'MEDIUM LE PLUS VALORISÉ' : 'TOP MEDIUM'}</div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: 'var(--navy)', marginBottom: '2px' }}>{best.format}</div>
-                        <div style={{ fontSize: '12px', color: LTT3 }}>Moy. €{Math.round(best.avg_price).toLocaleString()} · {best.count} ventes</div>
-                        {current && current.format !== best.format && <div style={{ marginTop: '6px', fontSize: '11px', color: AMB }}>{isFr ? `Ce lot (${current.format}) : moy. €${Math.round(current.avg_price).toLocaleString()}` : `This lot (${current.format}): avg €${Math.round(current.avg_price).toLocaleString()}`}</div>}
-                      </div>
-                    );
-                  })()}
-                  {timingData?.best_house && (
-                    <div style={{ flex: 1, minWidth: '140px' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.1em', marginBottom: '6px' }}>{isFr ? 'MAISON OPTIMALE' : 'BEST AUCTION HOUSE'}</div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: 'var(--navy)', marginBottom: '2px' }}>{timingData.best_house}</div>
-                      {timingData.best_avg_price && <div style={{ fontSize: '12px', color: LTT3 }}>Moy. €{Math.round(timingData.best_avg_price).toLocaleString()}</div>}
-                    </div>
-                  )}
-                  {timingData?.best_month && (
-                    <div style={{ flex: 1, minWidth: '140px' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.1em', marginBottom: '6px' }}>{isFr ? 'MEILLEURE PÉRIODE' : 'BEST TIMING'}</div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: 'var(--navy)', marginBottom: '2px' }}>{timingData.best_month}</div>
-                      {timingData.best_season && <div style={{ fontSize: '12px', color: LTT3 }}>{timingData.best_season}{timingData.best_avg_price && ` · €${Math.round(timingData.best_avg_price).toLocaleString()} moy.`}</div>}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            {/* Hammer history */}
-            {hammerHistory?.locked ? (
-              <div style={{ border: '0.5px solid rgba(232,228,220,0.4)', borderRadius: '10px', padding: '20px 24px', marginBottom: '16px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '12px' }}>◆ {isFr ? 'HISTORIQUE DES VENTES RÉELLES' : 'REALIZED PRICES HISTORY'}</div>
-                <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none', opacity: 0.5 }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: 'var(--navy)' }}>€ 48 500</div>
-                  <div style={{ fontSize: '12px', color: LTT3, marginTop: '4px' }}>124 ventes · Médiane €32 000</div>
-                </div>
-                <div style={{ marginTop: '12px', fontFamily: 'var(--font-mono)', fontSize: '9px', color: BL, letterSpacing: '0.1em' }}>
-                  <span style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', padding: '3px 8px', borderRadius: '3px' }}>INVESTOR+</span>
-                  <span style={{ marginLeft: '10px', color: LTT3 }}>{isFr ? 'Accédez à l\'historique complet des prix réalisés' : 'Access full realized price history'}</span>
-                </div>
-              </div>
-            ) : hammerHistory && hammerHistory.total_sales > 0 ? (
-              <div style={{ border: '0.5px solid rgba(232,228,220,0.4)', borderRadius: '10px', padding: '20px 24px', marginBottom: '16px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '16px' }}>
-                  ◆ {isFr ? 'HISTORIQUE DES VENTES RÉELLES' : 'REALIZED PRICES HISTORY'} · {hammerHistory.total_sales} {isFr ? 'VENTES' : 'SALES'}
-                </div>
-                <div style={{ display: 'flex', gap: '32px', marginBottom: '20px' }}>
-                  {hammerHistory.median_eur && <div><div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.1em', marginBottom: '4px' }}>{isFr ? 'MÉDIANE' : 'MEDIAN'}</div><div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: 'var(--navy)' }}>€{Math.round(hammerHistory.median_eur).toLocaleString()}</div></div>}
-                </div>
-              </div>
-            ) : null}
-            {/* Liquidity / sell-through details */}
-            {(lot.artist?.liquidity_score != null || lot.artist?.sell_through_rate != null) && (
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.1em', marginBottom: '8px', textTransform: 'uppercase' }}>LIQUIDITÉ & DEMANDE</div>
-                {lot.artist?.liquidity_score != null && (
-                  <div style={{ fontSize: '13px', color: LTT2, marginBottom: '6px', lineHeight: 1.6 }}>
-                    <strong style={{ color: LTT1 }}>{isFr ? 'Liquidité' : 'Liquidity'}</strong> — {isFr ? 'Les œuvres de cet artiste trouvent régulièrement acheteur.' : 'This artist\'s works regularly find buyers.'} {isFr ? 'Score' : 'Score'} : {Math.round(lot.artist.liquidity_score)}/100
-                  </div>
-                )}
-                {lot.artist?.sell_through_rate != null && (
-                  <div style={{ fontSize: '13px', color: LTT2, marginBottom: '6px', lineHeight: 1.6 }}>
-                    <strong style={{ color: LTT1 }}>{isFr ? 'Demande' : 'Demand'}</strong> — {Math.round(lot.artist.sell_through_rate * 100)}% {isFr ? 'des œuvres similaires trouvent acheteur en première présentation.' : 'of similar works find a buyer at first auction.'}
-                  </div>
-                )}
-                {estBias != null && (
-                  <div style={{ fontSize: '13px', color: LTT2, lineHeight: 1.6 }}>
-                    <strong style={{ color: LTT1 }}>{isFr ? 'Biais d\'estimation' : 'Estimation bias'}</strong> — {isFr ? 'Les œuvres comparables dépassent souvent leur estimation.' : 'Comparable works often exceed their estimate.'}
-                  </div>
-                )}
-              </div>
-            )}
-          </Accordion>
-        </div>
-
-        {/* ═══ COMMENT LE SCORE EST CALCULÉ (accordion — tout en bas) ═══ */}
-        <div style={{ padding: '0 40px' }}>
-          <Accordion label={isFr ? 'Comment est calculé ce score ?' : 'How is this score calculated?'}>
-            {[
-              { label: isFr ? 'Prix observé / comparables' : 'Observed price / comparables', pct: 40 },
-              { label: isFr ? 'Demande artiste' : 'Artist demand', pct: 30 },
-              { label: isFr ? 'Qualité des données' : 'Data quality', pct: 20 },
-              { label: isFr ? 'Liquidité' : 'Liquidity', pct: 10 },
-            ].map((row, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '6px 0' }}>
-                <span style={{ fontSize: '13px', color: LTT2, width: '200px', flexShrink: 0 }}>{row.label}</span>
-                <div style={{ flex: 1, height: '4px', background: LTB, borderRadius: '2px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${row.pct}%`, background: GOLD, borderRadius: '2px' }} />
-                </div>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3, width: '32px', textAlign: 'right' }}>{row.pct}%</span>
-              </div>
-            ))}
-          </Accordion>
-        </div>
-
-        {/* ═══ MÉMO D'INVESTISSEMENT + DOSSIER ═══ */}
-        <div style={{ padding: '0 40px 24px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '8px' }}>
-            {/* Memo card */}
-            <div style={{ background: isInvestor ? DK : '#F9F8F5', border: `1px solid ${isInvestor ? DKB : LTB}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: isInvestor ? '#F0EDE6' : LTT1, fontWeight: 500 }}>{isFr ? "Mémo d'investissement" : 'Investment Memo'}</span>
-              </div>
-              <div style={{ fontSize: '12px', color: isInvestor ? '#6B7280' : LTT3, marginBottom: '16px', lineHeight: 1.5 }}>
-                {isFr ? 'Analyse advisor complète — prix justifié, liquidité, timing, verdict.' : 'Full advisor analysis — price, liquidity, timing, verdict.'}
-              </div>
-              {!isInvestor && <div style={{ marginBottom: '12px' }}><span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D6EBF', padding: '3px 8px', borderRadius: '3px' }}>INVESTOR+</span></div>}
-              {isInvestor ? (
-                <button onClick={generateMemo} disabled={memoLoading} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: GOLD, letterSpacing: '0.08em', background: 'none', border: `0.5px solid rgba(198,168,90,0.4)`, padding: '7px 14px', borderRadius: '4px', cursor: memoLoading ? 'default' : 'pointer', opacity: memoLoading ? 0.6 : 1 }}>
-                  {memoLoading ? '...' : (memo ? (isFr ? '◆ MÉMO GÉNÉRÉ →' : '◆ MEMO READY →') : (isFr ? '◆ GÉNÉRER LE MÉMO →' : '◆ GENERATE MEMO →'))}
-                </button>
-              ) : (
-                <div>
-                  <div style={{ fontSize: '12px', color: LTT3, marginBottom: '12px', lineHeight: 1.5 }}>
-                    {isFr ? 'Verdict advisor · Conviction · Recommandation complète' : 'Advisor verdict · Conviction · Full recommendation'}
-                  </div>
-                  <button onClick={() => setUpgradeModal('investor')} style={{ background: '#C6A85A', color: '#0C1622', border: 'none', borderRadius: '5px', padding: '10px 24px', fontSize: '11px', fontWeight: 700, fontFamily: 'var(--font-mono)', letterSpacing: '1px', cursor: 'pointer' }}>
-                    {isFr ? 'GÉNÉRER LE MÉMO COMPLET →' : 'GENERATE FULL MEMO →'}
-                  </button>
-                  <div style={{ fontSize: '10px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', marginTop: '8px' }}>
-                    {isFr ? `Investor · 19€/mois${isTrialActive() ? ` · ${getTrialDaysLeft()} jours restants` : ' · 7 jours gratuits'}` : `Investor · €19/mo${isTrialActive() ? ` · ${getTrialDaysLeft()} days left` : ' · 7 days free'}`}
-                  </div>
-                </div>
-              )}
+        <div style={{ padding: '32px 40px 0', background: '#F5F4F0' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '12px' }}>
+            {isFr ? 'POURQUOI POUVONS-NOUS ÊTRE CONFIANTS ?' : 'WHY CAN WE BE CONFIDENT?'}
+          </div>
+          {[
+            compCount > 0 ? (isFr ? `${compCount} ventes comparables analysées` : `${compCount} comparable sales analyzed`) : null,
+            hammerHistory?.total_sales > 0 ? (isFr ? `Historique de ventes réelles : ${hammerHistory.total_sales} transactions` : `Realized price history: ${hammerHistory.total_sales} transactions`) : null,
+            isFr ? 'Données mises à jour quotidiennement' : 'Data updated daily',
+          ].filter(Boolean).map((item, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px', fontSize: '14px', color: LTT2, lineHeight: 1.6 }}>
+              <span style={{ color: GL, flexShrink: 0, marginTop: '1px', fontSize: '12px' }}>✓</span>
+              <span>{item}</span>
             </div>
-            {/* Dossier card */}
-            <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}><circle cx="8" cy="8" r="7" stroke="#9CA3AF" strokeWidth="1.2"/><circle cx="8" cy="8" r="4" stroke="#9CA3AF" strokeWidth="1.2"/><circle cx="8" cy="8" r="1.5" fill="#9CA3AF"/></svg>
-                <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1, fontWeight: 500 }}>{isFr ? "Dossier d'investissement" : 'Investment Dossier'}</span>
+          ))}
+        </div>
+
+        {/* ──────────────── ANALYSIS ──────────────── */}
+        <div style={{ padding: '16px 40px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+            {/* AI Intelligence cards */}
+            <div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '16px' }}>◆ {isFr ? 'INTELLIGENCE IA' : 'AI INTELLIGENCE'}</div>
+              <div className="lot-ai-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+
+                {/* Investment Memo card */}
+                <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <span style={{ color: GOLD, fontSize: '13px', lineHeight: 1 }}>◆</span>
+                    <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1, fontWeight: 500 }}>{isFr ? "Mémo d'investissement" : 'Investment Memo'}</span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: LTT3, marginBottom: '16px', lineHeight: 1.5 }}>
+                    {isFr ? "Analyse générée par IA du potentiel d'investissement de ce lot." : "AI-generated analysis of this lot's investment potential."}
+                    <span style={{ color: LTT3, marginLeft: '4px' }}>· PDF · ~5 min</span>
+                  </div>
+                  <div style={{ marginBottom: '16px' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#EFF6FF', border: '1px solid #BFDBFE', color: BL, padding: '3px 8px', borderRadius: '3px' }}>INVESTOR+</span>
+                  </div>
+                  {isInvestor ? (
+                    <>
+                      <div
+                        onClick={memo ? () => setShowMemo(true) : generateMemo}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: memoLoading ? 'rgba(198,168,90,0.4)' : GOLD, cursor: memoLoading ? 'not-allowed' : 'pointer', letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', marginTop: '12px' }}
+                      >
+                        {memoLoading ? (isFr ? '◆ GÉNÉRATION…' : '◆ GENERATING…') : memo ? (isFr ? '◆ VOIR LE MÉMO →' : '◆ VIEW MEMO →') : (isFr ? '◆ GÉNÉRER LE MÉMO →' : '◆ GENERATE MEMO →')}
+                      </div>
+                      {memo && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
+                          <span style={{ padding: '3px 10px', background: memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.08)' : 'rgba(217,119,6,0.08)', border: `1px solid ${memo.recommendation === 'BUY' ? 'rgba(26,127,75,0.25)' : 'rgba(217,119,6,0.25)'}`, fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: memo.recommendation === 'BUY' ? GL : AMB, borderRadius: '4px' }}>{memo.recommendation}</span>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>Conviction {memo.conviction}/100</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ border: '0.5px solid #E8E4DC', borderRadius: '10px', overflow: 'hidden', marginTop: '4px' }}>
+                      <div style={{ padding: '18px 20px', background: '#fff' }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#C6A85A', letterSpacing: '2px', textTransform: 'uppercase' as const, marginBottom: '14px' }}>
+                          {isFr ? 'APERÇU MÉMO' : 'MEMO PREVIEW'}
+                        </div>
+                        <div style={{ marginBottom: '14px' }}>
+                          <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: '#B0A898', letterSpacing: '1.5px', textTransform: 'uppercase' as const, marginBottom: '6px' }}>
+                            {isFr ? 'POURQUOI CE LOT' : 'WHY THIS LOT'}
+                          </div>
+                          <div style={{ fontSize: '13px', color: '#0D1F35', lineHeight: 1.6 }}>
+                            {isFr
+                              ? `${lot.title || lot.artist_name_raw || 'Ce lot'} — mise à prix ${fmtExact(price)}. ${upside > 0 ? `${Math.round(upside)}% sous estimation` : 'Prix attractif'}${lot.artist?.trend === 'up' ? ', artiste en hausse' : ''}.`
+                              : `${lot.title || lot.artist_name_raw || 'This lot'} — starting bid ${fmtExact(price)}. ${upside > 0 ? `${Math.round(upside)}% below estimate` : 'Attractive price'}${lot.artist?.trend === 'up' ? ', rising artist' : ''}.`
+                            }
+                          </div>
+                        </div>
+                        <div style={{ marginBottom: '16px' }}>
+                          <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: '#B0A898', letterSpacing: '1.5px', textTransform: 'uppercase' as const, marginBottom: '6px' }}>
+                            {isFr ? 'PRIX JUSTIFIÉ ?' : 'PRICE JUSTIFIED?'}
+                          </div>
+                          <div style={{ fontSize: '13px', color: '#0D1F35', lineHeight: 1.6 }}>
+                            {isFr
+                              ? `Coût réel avec frais : ${fmtExact(realCost?.cost_basis || Math.round(price * premiumMultiplier))}. Seuil de rentabilité : ${fmtExact(realCost?.breakeven_hammer || Math.round(price * premiumMultiplier * 1.5))}.`
+                              : `Real cost with fees: ${fmtExact(realCost?.cost_basis || Math.round(price * premiumMultiplier))}. Break-even: ${fmtExact(realCost?.breakeven_hammer || Math.round(price * premiumMultiplier * 1.5))}.`
+                            }
+                          </div>
+                        </div>
+                        {comparables.length > 0 && (() => {
+                          const comp = comparables[0];
+                          const compPrice = comp.current_price || comp.hammer_price || comp.estimate_low;
+                          const compDate = comp.auction_date
+                            ? new Date(comp.auction_date).toLocaleDateString(isFr ? 'fr-FR' : 'en-GB', { month: 'short', year: 'numeric' })
+                            : null;
+                          const hiddenCount = (marketAnalysis?.comparable_count ?? 0) - 1;
+                          return (
+                            <div style={{ marginBottom: '16px' }}>
+                              <div style={{ fontSize: '14px', fontWeight: 600, color: '#0D1F35', marginBottom: '4px' }}>
+                                {isFr ? 'Pourquoi ce score ?' : 'Why this score?'}
+                              </div>
+                              <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: '#B0A898', letterSpacing: '1.5px', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
+                                {isFr ? 'VENTE COMPARABLE RÉCENTE' : 'RECENT COMPARABLE SALE'}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
+                                <span style={{ fontSize: '16px', fontWeight: 600, color: '#0D1F35', fontFamily: 'var(--font-mono)' }}>
+                                  {compPrice ? fmtExact(compPrice) : '—'}
+                                </span>
+                                {(comp.auction_house_name || compDate) && (
+                                  <span style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                                    {[comp.auction_house_name, compDate].filter(Boolean).join(' · ')}
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '10px', lineHeight: 1.5 }}>
+                                {hiddenCount > 0
+                                  ? (isFr
+                                    ? `+ ${hiddenCount} vente${hiddenCount > 1 ? 's' : ''} utilisée${hiddenCount > 1 ? 's' : ''} pour calculer ce score`
+                                    : `+ ${hiddenCount} sale${hiddenCount > 1 ? 's' : ''} used to calculate this score`)
+                                  : (isFr ? 'Basé sur une vente comparable récente' : 'Based on one recent comparable sale')
+                                }
+                              </div>
+                              <button
+                                onClick={() => setUpgradeModal('investor')}
+                                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#C6A85A', fontWeight: 700, letterSpacing: '0.04em' }}
+                              >
+                                {isFr ? 'Voir notre prix maximum →' : 'See our maximum price →'}
+                              </button>
+                            </div>
+                          );
+                        })()}
+                        <div style={{ position: 'relative' }}>
+                          <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none' as const, opacity: 0.6 }}>
+                            <div style={{ marginBottom: '14px' }}>
+                              <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: '#B0A898', letterSpacing: '1.5px', textTransform: 'uppercase' as const, marginBottom: '6px' }}>
+                                {isFr ? 'LIQUIDITÉ' : 'LIQUIDITY'}
+                              </div>
+                              <div style={{ fontSize: '13px', color: '#0D1F35', lineHeight: 1.6 }}>
+                                {isFr ? 'Analyse de la liquidité et probabilité de revente dans 3–5 ans...' : 'Liquidity analysis and resale probability over 3–5 years...'}
+                              </div>
+                            </div>
+                            <div style={{ marginBottom: '14px' }}>
+                              <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: '#B0A898', letterSpacing: '1.5px', textTransform: 'uppercase' as const, marginBottom: '6px' }}>
+                                {isFr ? 'VERDICT ADVISOR' : 'ADVISOR VERDICT'}
+                              </div>
+                              <div style={{ fontSize: '13px', fontWeight: 600, color: '#0D1F35' }}>
+                                {isFr
+                                  ? `ACHETER si ≤ ${fmtExact(avoidAbove ?? Math.round(price * 1.3))} — analyse complète`
+                                  : `BUY if ≤ ${fmtExact(avoidAbove ?? Math.round(price * 1.3))} — full analysis`
+                                }
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: '10px', background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.97) 65%)' }}>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#0D1F35', fontWeight: 600, textAlign: 'center' as const, marginTop: '40px' }}>
+                              {isFr ? 'Verdict advisor · Conviction · Recommandation complète' : 'Advisor verdict · Conviction · Full recommendation'}
+                            </div>
+                            <button
+                              onClick={() => setUpgradeModal('investor')}
+                              style={{ background: '#C6A85A', color: '#0C1622', border: 'none', borderRadius: '5px', padding: '10px 24px', fontSize: '11px', fontWeight: 700, fontFamily: 'var(--font-mono)', letterSpacing: '1px', cursor: 'pointer' }}
+                            >
+                              {isFr ? 'GÉNÉRER LE MÉMO COMPLET →' : 'GENERATE FULL MEMO →'}
+                            </button>
+                            <div style={{ fontSize: '10px', color: '#9CA3AF', fontFamily: 'var(--font-mono)' }}>
+                              {isFr
+                                ? `Investor · 19€/mois${isTrialActive() ? ` · ${getTrialDaysLeft()} jours restants` : ' · 7 jours gratuits'}`
+                                : `Investor · €19/mo${isTrialActive() ? ` · ${getTrialDaysLeft()} days left` : ' · 7 days free'}`
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Dossier d'investissement card — coming soon */}
+                <div style={{ background: 'var(--bg-subtle)', border: `1px solid ${LTB}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                      <circle cx="8" cy="8" r="7" stroke="#9CA3AF" strokeWidth="1.2"/>
+                      <circle cx="8" cy="8" r="4" stroke="#9CA3AF" strokeWidth="1.2"/>
+                      <circle cx="8" cy="8" r="1.5" fill="#9CA3AF"/>
+                    </svg>
+                    <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '15px', color: LTT1, fontWeight: 500 }}>{isFr ? "Dossier d'investissement" : 'Investment Dossier'}</span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: LTT3, marginBottom: '16px', lineHeight: 1.5 }}>
+                    {isFr ? "Analyse complète — projections 5/10/20 ans, valorisation artiste & verdict IA." : "Full analysis — 5/10/20yr projections, artist valuation & AI verdict."}
+                    <span style={{ color: LTT3, marginLeft: '4px' }}>· PDF · Analyse complète</span>
+                  </div>
+                  <div style={{ marginBottom: '16px' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#F0F0FF', border: '1px solid #C7C7F0', color: '#5B5BD6', padding: '3px 8px', borderRadius: '3px' }}>PRO+</span>
+                  </div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: GOLD, opacity: 0.4, letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', marginTop: '12px', cursor: 'default' }}>
+                    ◆ BIENTÔT DISPONIBLE
+                  </div>
+                </div>
+
               </div>
-              <div style={{ fontSize: '12px', color: LTT3, marginBottom: '16px', lineHeight: 1.5 }}>
-                {isFr ? "Analyse complète — projections 5/10/20 ans, valorisation artiste & verdict IA." : "Full analysis — 5/10/20yr projections, artist valuation & AI verdict."}<span style={{ color: LTT3, marginLeft: '4px' }}>· PDF · Analyse complète</span>
-              </div>
-              <div style={{ marginBottom: '16px' }}><span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', background: '#F0F0FF', border: '1px solid #C7C7F0', color: '#5B5BD6', padding: '3px 8px', borderRadius: '3px' }}>PRO+</span></div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: GOLD, opacity: 0.4, letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', marginTop: '12px', cursor: 'default' }}>◆ BIENTÔT DISPONIBLE</div>
             </div>
           </div>
-        </div>
 
-        {/* ── AI ANALYST ── */}
-        {canSeeAI && lot && <div style={{ padding: '0 40px 24px' }}><AIAnalyst lotId={lot.id} artistName={lot.artist_name_raw} lotTitle={lot.title} dealScore={lot.deal_score} currentPrice={price} /></div>}
-
-        {/* ── SOURCES ── */}
+        {/* ──────────────── DOCUMENTS ──────────────── */}
         <div style={{ padding: '16px 40px 24px' }}>
-          {!hasAccess ? null : (
-            <>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ SOURCES</div>
+            {!hasAccess ? null : !hasAccess ? (
+              <LockedBlock
+                title="Documents & Sources"
+                teaser="Unlock lot source, artist search, and auction house details with an Investor plan."
+                ctaText="Unlock Documents"
+                ctaPrice="Investor plan"
+                planId="investor"
+                preview={
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {[1, 2, 3].map(i => (
+                      <div key={i} style={{ height: '44px', background: LT, borderRadius: '8px' }} />
+                    ))}
+                  </div>
+                }
+              />
+            ) : (
+              <>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ {isFr ? 'SOURCES' : 'SOURCES'}</div>
               <div style={{ ...wCard, padding: '12px 20px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '0' }}>
+
+                  {/* Lot source */}
                   {trackUrl && (
                     <div style={{ ...dRow, paddingTop: '8px', paddingBottom: '8px' }}>
                       <div>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '2px' }}>{isFr ? 'SOURCE DU LOT' : 'LOT SOURCE'}</div>
                         <div style={{ fontSize: '12px', color: LTT2 }}>{lot.auction_house_name || resolvedSource || 'Auction'}</div>
                       </div>
-                      <a href={trackUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: BL, textDecoration: 'none', fontWeight: 600 }}>
+                      <a
+                        href={trackUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: BL, textDecoration: 'none', fontWeight: 600 }}
+                      >
                         {isFr ? 'Voir le lot ↗' : 'View lot ↗'}
                       </a>
                     </div>
                   )}
+
+                  {/* Artist search */}
                   {lot.artist_name_raw && (
                     <div style={{ ...dRow, paddingTop: '8px', paddingBottom: '8px' }}>
                       <div>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '2px' }}>{isFr ? 'RECHERCHE ARTISTE' : 'ARTIST SEARCH'}</div>
                         <div style={{ fontSize: '12px', color: LTT2 }}>{lot.artist_name_raw}</div>
                       </div>
-                      <a href={sourceSearch[source] || `https://www.google.com/search?q=${artistEnc}+auction+results`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: BL, textDecoration: 'none', fontWeight: 600 }}>
+                      <a
+                        href={sourceSearch[source] || `https://www.google.com/search?q=${artistEnc}+auction+results`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: BL, textDecoration: 'none', fontWeight: 600 }}
+                      >
                         {isFr ? 'Rechercher l\'artiste ↗' : 'Search artist ↗'}
                       </a>
                     </div>
                   )}
+
+                  {/* Auction house */}
                   {lot.auction_house_name && (
                     <div style={{ ...dRow, paddingTop: '8px', paddingBottom: '8px', borderBottom: 'none' }}>
                       <div>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.12em', color: LTT3, textTransform: 'uppercase' as const, marginBottom: '2px' }}>{isFr ? 'MAISON DE VENTE' : 'AUCTION HOUSE'}</div>
                         <div style={{ fontSize: '12px', color: LTT2 }}>{lot.auction_house_name}</div>
                       </div>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>{sourceLabel}</span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: LTT3 }}>
+                        {sourceLabel}
+                      </span>
                     </div>
                   )}
+
                 </div>
+
                 <p style={{ fontSize: '11px', color: LTT3, margin: '10px 0 0', lineHeight: 1.5 }}>
                   {isFr
                     ? `Les liens sources peuvent rediriger via le tracking Nautilus avant d'accéder à la plateforme de vente.${lot.auction_house_name ? ` Ce lot est proposé par ${lot.auction_house_name.split('—')[0].trim()}.` : ''}`
-                    : `Source links may redirect via Nautilus tracking before landing on the auction platform.${lot.auction_house_name ? ` This lot is listed by ${lot.auction_house_name.split('—')[0].trim()}.` : ''}`}
+                    : `Source links may redirect via Nautilus tracking before landing on the auction platform.${lot.auction_house_name ? ` This lot is listed by ${lot.auction_house_name.split('—')[0].trim()}.` : ''}`
+                  }
                 </p>
               </div>
-            </>
-          )}
-        </div>
+              </>
+            )}
+          </div>
+
       </div>
 
-      {/* ── IMAGE LIGHTBOX ── */}
+
+      {/* ── IMAGE LIGHTBOX ───────────────────────────────────────────────────── */}
       {showLightbox && lot.image_url && (
-        <div onClick={() => setShowLightbox(false)} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div
+          onClick={() => setShowLightbox(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
           <div style={{ position: 'absolute', top: 0, right: 0, padding: '20px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#6B7280', pointerEvents: 'none' }}>✕ ESC</div>
           <img src={lot.image_url} alt={lot.title} style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain' }} />
         </div>
       )}
 
-      {/* ── INVESTMENT MEMO MODAL (unchanged) ── */}
+      {/* ── INVESTMENT MEMO MODAL ─────────────────────────────────────────────── */}
       {showMemo && memo && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(12,22,34,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }} onClick={e => { if (e.target === e.currentTarget) setShowMemo(false); }}>
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(12,22,34,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowMemo(false); }}
+        >
           <div style={{ background: LTC, borderRadius: '12px', width: '100%', maxWidth: '680px', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.25)' }}>
             <div style={{ background: DK, padding: '24px 32px', borderRadius: '12px 12px 0 0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '8px' }}>NAUTILUS · INVESTMENT MEMO</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '8px' }}>
+                    NAUTILUS · INVESTMENT MEMO
+                  </div>
                   <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', color: '#F0EDE6', marginBottom: '4px' }}>{memo.title}</div>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{memo.artist}</div>
                 </div>
                 <button onClick={() => setShowMemo(false)} style={{ background: 'none', border: 'none', color: '#6B7280', fontSize: '20px', cursor: 'pointer', padding: '0', lineHeight: 1 }}>×</button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginTop: '20px' }}>
+              <div className="lot-memo-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginTop: '20px' }}>
                 {[
                   { label: 'CURRENT PRICE', value: memo.current_price >= 1000 ? `€${(memo.current_price / 1000).toFixed(0)}K` : `€${memo.current_price}` },
-                  { label: 'TARGET LOW', value: memo.target_price?.low ? `€${(memo.target_price.low / 1000).toFixed(0)}K` : 'N/A' },
-                  { label: 'TARGET HIGH', value: memo.target_price?.high ? `€${(memo.target_price.high / 1000).toFixed(0)}K` : 'N/A' },
-                  { label: 'CONVICTION', value: memo.conviction >= 75 ? 'Conviction forte' : memo.conviction >= 55 ? 'Conviction modérée' : 'Conviction faible' },
+                  { label: 'TARGET LOW',    value: memo.target_price?.low  ? `€${(memo.target_price.low  / 1000).toFixed(0)}K` : 'N/A' },
+                  { label: 'TARGET HIGH',   value: memo.target_price?.high ? `€${(memo.target_price.high / 1000).toFixed(0)}K` : 'N/A' },
+                  { label: 'CONVICTION',    value: memo.conviction >= 75 ? 'Conviction forte' : memo.conviction >= 55 ? 'Conviction modérée' : 'Conviction faible' },
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#6B7280', letterSpacing: '0.12em', marginBottom: '4px' }}>{label}</div>
@@ -1574,22 +2211,76 @@ export default function OpportunityDetail() {
             </div>
             <div style={{ padding: '28px 32px' }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', padding: '14px 16px', background: memo.recommendation === 'ACHETER' ? 'rgba(26,127,75,0.06)' : memo.recommendation === 'INTÉRESSANT' ? 'rgba(217,119,6,0.06)' : LT, borderRadius: '8px', border: `1px solid ${memo.recommendation === 'ACHETER' ? 'rgba(26,127,75,0.2)' : memo.recommendation === 'INTÉRESSANT' ? 'rgba(217,119,6,0.2)' : LTB}` }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: memo.recommendation === 'ACHETER' ? GL : memo.recommendation === 'INTÉRESSANT' ? AMB : LTT3 }}>{memo.recommendation}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: memo.recommendation === 'ACHETER' ? GL : memo.recommendation === 'INTÉRESSANT' ? AMB : LTT3 }}>
+                  {memo.recommendation}
+                </div>
               </div>
-              {memo.hook && <div style={{ marginBottom: '20px' }}><div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>◆ POURQUOI CE LOT</div><p style={{ fontSize: '14px', color: LTT1, lineHeight: 1.8, margin: 0, fontStyle: 'italic' }}>{memo.hook}</p></div>}
-              {memo.prix_justifie && <div style={{ marginBottom: '20px' }}><div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>① LE PRIX EST-IL JUSTIFIÉ ?</div><p style={{ fontSize: '14px', color: LTT1, lineHeight: 1.8, margin: 0 }}>{memo.prix_justifie}</p></div>}
-              {memo.liquidite && <div style={{ marginBottom: '20px' }}><div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>② POURREZ-VOUS REVENDRE ?</div><p style={{ fontSize: '14px', color: LTT1, lineHeight: 1.8, margin: 0 }}>{memo.liquidite}</p></div>}
-              {memo.timing && <div style={{ marginBottom: '20px' }}><div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>③ EST-CE LE BON MOMENT ?</div><p style={{ fontSize: '14px', color: LTT1, lineHeight: 1.8, margin: 0 }}>{memo.timing}</p></div>}
-              {memo.prudence && memo.prudence.length > 0 && <div style={{ marginBottom: '20px' }}><div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>◆ CE QUI NOUS REND PRUDENTS</div>{memo.prudence.map((item: string, i: number) => (<div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '6px' }}><span style={{ color: RED, fontSize: '12px', marginTop: '2px', flexShrink: 0 }}>▲</span><span style={{ fontSize: '13px', color: LTT2, lineHeight: 1.6 }}>{item}</span></div>))}</div>}
-              {memo.advisor_verdict && <div style={{ marginBottom: '20px', padding: '16px', background: LT, borderRadius: '8px', border: `1px solid ${LTB}` }}><div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ CE QU'UN ADVISOR FERAIT</div><div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: LTT1, marginBottom: '6px' }}>{memo.advisor_verdict.action}</div>{memo.advisor_verdict.horizon && <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, marginBottom: '8px' }}>Horizon · {memo.advisor_verdict.horizon}</div>}{memo.advisor_verdict.rationale && <p style={{ fontSize: '13px', color: LTT2, lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>{memo.advisor_verdict.rationale}</p>}</div>}
+
+              {memo.hook && (
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>◆ POURQUOI CE LOT</div>
+                  <p style={{ fontSize: '14px', color: LTT1, lineHeight: 1.8, margin: 0, fontStyle: 'italic' }}>{memo.hook}</p>
+                </div>
+              )}
+
+              {memo.prix_justifie && (
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>① LE PRIX EST-IL JUSTIFIÉ ?</div>
+                  <p style={{ fontSize: '14px', color: LTT1, lineHeight: 1.8, margin: 0 }}>{memo.prix_justifie}</p>
+                </div>
+              )}
+
+              {memo.liquidite && (
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>② POURREZ-VOUS REVENDRE ?</div>
+                  <p style={{ fontSize: '14px', color: LTT1, lineHeight: 1.8, margin: 0 }}>{memo.liquidite}</p>
+                </div>
+              )}
+
+              {memo.timing && (
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>③ EST-CE LE BON MOMENT ?</div>
+                  <p style={{ fontSize: '14px', color: LTT1, lineHeight: 1.8, margin: 0 }}>{memo.timing}</p>
+                </div>
+              )}
+
+              {memo.prudence && memo.prudence.length > 0 && (
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: LTT3, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '8px' }}>◆ CE QUI NOUS REND PRUDENTS</div>
+                  {memo.prudence.map((item: string, i: number) => (
+                    <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '6px' }}>
+                      <span style={{ color: RED, fontSize: '12px', marginTop: '2px', flexShrink: 0 }}>▲</span>
+                      <span style={{ fontSize: '13px', color: LTT2, lineHeight: 1.6 }}>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {memo.advisor_verdict && (
+                <div style={{ marginBottom: '20px', padding: '16px', background: LT, borderRadius: '8px', border: `1px solid ${LTB}` }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' as const, marginBottom: '12px' }}>◆ CE QU'UN ADVISOR FERAIT</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: LTT1, marginBottom: '6px' }}>{memo.advisor_verdict.action}</div>
+                  {memo.advisor_verdict.horizon && (
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, marginBottom: '8px' }}>Horizon · {memo.advisor_verdict.horizon}</div>
+                  )}
+                  {memo.advisor_verdict.rationale && (
+                    <p style={{ fontSize: '13px', color: LTT2, lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>{memo.advisor_verdict.rationale}</p>
+                  )}
+                </div>
+              )}
               <div style={{ borderTop: `1px solid ${LTB}`, paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>Nautilus Intelligence · {new Date(memo.generated_at).toLocaleDateString('en-GB')}</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>NOT FINANCIAL ADVICE · FOR INFORMATIONAL PURPOSES ONLY</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>
+                  Nautilus Intelligence · {new Date(memo.generated_at).toLocaleDateString('en-GB')}
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>
+                  NOT FINANCIAL ADVICE · FOR INFORMATIONAL PURPOSES ONLY
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }
