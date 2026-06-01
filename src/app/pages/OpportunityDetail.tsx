@@ -118,7 +118,6 @@ export default function OpportunityDetail() {
   const [purchaseDone, setPurchaseDone]         = useState(false);
   const [hammerHistory, setHammerHistory] = useState<any>(null);
   const [hammerLoading, setHammerLoading] = useState(false);
-  const [showCostDetail, setShowCostDetail] = useState(false);
   const [purchasePrice, setPurchasePrice]       = useState('');
   const [purchaseDate, setPurchaseDate]         = useState(() => new Date().toISOString().split('T')[0]);
   const [purchaseSource, setPurchaseSource]     = useState<'auction' | 'gallery' | 'private'>('auction');
@@ -195,14 +194,15 @@ export default function OpportunityDetail() {
       setMaxBidFromApi(data.max_bid ?? null);
       setMaxBidSource(data.max_bid_source ?? null);
     }).catch(() => {});
-    if (getToken()) {
+    const token = getToken();
+    if (token && id) {
       setHammerLoading(true);
       fetch(`${BACKEND}/api/lots/${id}/hammer-history`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
+        headers: { Authorization: `Bearer ${token}` },
       })
-        .then(r => r.json())
+        .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
         .then(data => { setHammerHistory(data); setHammerLoading(false); })
-        .catch(() => setHammerLoading(false));
+        .catch((e) => { console.error('hammer-history fetch failed:', e); setHammerLoading(false); });
     }
   }, [id]);
 
@@ -650,7 +650,7 @@ export default function OpportunityDetail() {
             );
           })()}
 
-          {/* Market narrative — context only (small house / artist momentum) */}
+          {/* Market narrative */}
           {(() => {
             const buildNarrative = () => {
               const house = lot.auction_house_name || '';
@@ -677,6 +677,11 @@ export default function OpportunityDetail() {
                   ? `Momentum positif sur 6 mois. Prix actuel ${Math.round(lot.pct_below_low_estimate)}% sous l'estimation basse.${daysStr}`
                   : `Positive momentum over 6 months. Current price ${Math.round(lot.pct_below_low_estimate)}% below low estimate.${daysStr}`;
               }
+              if ((lot.deal_score || 0) >= 83 && realCost) {
+                return isFr
+                  ? `Score de conviction fort. Coût réel avec frais : ${fmt(realCost.cost_basis)}. Seuil de rentabilité : +${Math.round(realCost.needed_gain_pct)}%.`
+                  : `Strong conviction score. Real cost with fees: ${fmt(realCost.cost_basis)}. Break-even: +${Math.round(realCost.needed_gain_pct)}%.`;
+              }
               return null;
             };
             const narrative = buildNarrative();
@@ -686,104 +691,6 @@ export default function OpportunityDetail() {
               </p>
             ) : null;
           })()}
-
-          {/* ── AIDE À LA DÉCISION ── plain-language financial cards */}
-          {(totalCost || breakEvenGain != null) && (
-            <div style={{ marginTop: '4px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-
-                {/* Card 1 — Gain potentiel après frais */}
-                {netGain !== null && (
-                  <div style={{
-                    background: netGain > 0 ? 'rgba(82,201,127,0.08)' : 'rgba(248,113,113,0.06)',
-                    border: `0.5px solid ${netGain > 0 ? 'rgba(82,201,127,0.22)' : 'rgba(248,113,113,0.2)'}`,
-                    borderRadius: '10px', padding: '14px 12px',
-                  }}>
-                    <div style={{ fontSize: '13px', marginBottom: '6px' }}>🟢</div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: 'rgba(255,255,255,0.38)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px', lineHeight: 1.5 }}>
-                      {isFr ? 'Gain potentiel après frais' : 'Potential gain after fees'}
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: netGain > 0 ? '#52C97F' : '#F87171', lineHeight: 1 }}>
-                      {netGain > 0 ? '+' : ''}{Math.round(netGain)}%
-                    </div>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.28)', marginTop: '7px', lineHeight: 1.5 }}>
-                      {isFr ? 'Si le marché rejoint notre estimation' : 'If market reaches our estimate'}
-                    </div>
-                  </div>
-                )}
-
-                {/* Card 2 — Vous paierez environ */}
-                {totalCost && (
-                  <div style={{
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '0.5px solid rgba(255,255,255,0.08)',
-                    borderRadius: '10px', padding: '14px 12px',
-                  }}>
-                    <div style={{ fontSize: '13px', marginBottom: '6px' }}>💰</div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: 'rgba(255,255,255,0.38)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px', lineHeight: 1.5 }}>
-                      {isFr ? 'Vous paierez environ' : "You'll pay around"}
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: 'white', lineHeight: 1 }}>
-                      {fmt(totalCost)}
-                    </div>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.28)', marginTop: '7px', lineHeight: 1.5 }}>
-                      {isFr ? `Frais acheteur ${buyerPremiumPct}% inclus` : `Incl. ${buyerPremiumPct}% buyer's premium`}
-                    </div>
-                  </div>
-                )}
-
-                {/* Card 3 — Pour ne pas perdre d'argent */}
-                {breakEvenGain != null && (
-                  <div style={{
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '0.5px solid rgba(255,255,255,0.08)',
-                    borderRadius: '10px', padding: '14px 12px',
-                  }}>
-                    <div style={{ fontSize: '13px', marginBottom: '6px' }}>📈</div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: 'rgba(255,255,255,0.38)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px', lineHeight: 1.5 }}>
-                      {isFr ? "Pour ne pas perdre d'argent" : 'To break even'}
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, lineHeight: 1,
-                      color: breakEvenGain < 30 ? '#52C97F' : breakEvenGain < 50 ? '#FBBF24' : '#F87171',
-                    }}>
-                      +{Math.round(breakEvenGain)}%
-                    </div>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.28)', marginTop: '7px', lineHeight: 1.5 }}>
-                      {isFr ? 'Hausse minimale nécessaire' : 'Minimum rise needed'}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Detail toggle */}
-              <div style={{ marginTop: '6px', textAlign: 'right' as const }}>
-                <button
-                  onClick={() => setShowCostDetail(v => !v)}
-                  style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.22)', fontSize: '10px', cursor: 'pointer', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', padding: '2px 0' }}
-                >
-                  {showCostDetail
-                    ? (isFr ? '↑ Masquer le détail' : '↑ Hide detail')
-                    : (isFr ? '→ Comment c\'est calculé ?' : '→ How is this calculated?')}
-                </button>
-              </div>
-
-              {showCostDetail && (
-                <div style={{ marginTop: '4px', background: 'rgba(255,255,255,0.02)', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '11px 14px' }}>
-                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.38)', lineHeight: 1.8, fontFamily: 'var(--font-mono)' }}>
-                    {totalCost && price > 0 && (
-                      <div>{isFr ? `Coût réel : ${fmt(price)} × ${premiumMultiplier} = ${fmt(totalCost)}` : `Real cost: ${fmt(price)} × ${premiumMultiplier} = ${fmt(totalCost)}`}</div>
-                    )}
-                    {breakEvenGain != null && (
-                      <div>{isFr ? `Seuil : frais achat ${buyerPremiumPct}% + commission vente ~20%` : `Break-even: ${buyerPremiumPct}% buyer fee + ~20% seller commission`}</div>
-                    )}
-                    {netGain != null && breakEvenGain != null && (
-                      <div>{isFr ? `Gain net : upside ${Math.round(upsidePct)}% − seuil ${Math.round(breakEvenGain)}% = ${Math.round(netGain)}%` : `Net gain: upside ${Math.round(upsidePct)}% − break-even ${Math.round(breakEvenGain)}% = ${Math.round(netGain)}%`}</div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* External link */}
           <div>
@@ -1462,6 +1369,13 @@ export default function OpportunityDetail() {
               </div>
             )}
 
+            {hammerLoading && (
+              <div style={{ padding: '0 40px 24px' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--gold)', letterSpacing: '0.16em' }}>
+                  ◆ CHARGEMENT HISTORIQUE…
+                </div>
+              </div>
+            )}
             {/* ── HISTORIQUE DES VENTES RÉELLES ── */}
             {hammerHistory?.locked ? (
               <div style={{ padding: '0 40px 24px' }}>
