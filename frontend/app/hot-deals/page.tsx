@@ -227,7 +227,7 @@ export default function HotDealsPage() {
               </div>
             )}
             <div className="ml-auto text-xs text-stone-400">
-              Mis à jour à chaque ingest scraper
+              Données mises à jour en continu
             </div>
           </div>
         )}
