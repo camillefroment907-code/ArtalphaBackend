@@ -116,6 +116,8 @@ export default function OpportunityDetail() {
   const [showPurchaseForm, setShowPurchaseForm] = useState(false);
   const [purchaseLoading, setPurchaseLoading]   = useState(false);
   const [purchaseDone, setPurchaseDone]         = useState(false);
+  const [hammerHistory, setHammerHistory] = useState<any>(null);
+  const [hammerLoading, setHammerLoading] = useState(false);
   const [purchasePrice, setPurchasePrice]       = useState('');
   const [purchaseDate, setPurchaseDate]         = useState(() => new Date().toISOString().split('T')[0]);
   const [purchaseSource, setPurchaseSource]     = useState<'auction' | 'gallery' | 'private'>('auction');
@@ -192,6 +194,15 @@ export default function OpportunityDetail() {
       setMaxBidFromApi(data.max_bid ?? null);
       setMaxBidSource(data.max_bid_source ?? null);
     }).catch(() => {});
+    if (getToken()) {
+      setHammerLoading(true);
+      fetch(`${BACKEND}/api/lots/${id}/hammer-history`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      })
+        .then(r => r.json())
+        .then(data => { setHammerHistory(data); setHammerLoading(false); })
+        .catch(() => setHammerLoading(false));
+    }
   }, [id]);
 
   useEffect(() => {
@@ -1356,6 +1367,72 @@ export default function OpportunityDetail() {
                 </div>
               </div>
             )}
+
+            {/* ── HISTORIQUE DES VENTES RÉELLES ── */}
+            {hammerHistory?.locked ? (
+              <div style={{ padding: '0 40px 24px' }}>
+                <div style={{ border: '0.5px solid rgba(232,228,220,0.4)', borderRadius: '10px', padding: '20px 24px', background: 'rgba(255,255,255,0.02)' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '12px' }}>
+                    ◆ {isFr ? 'HISTORIQUE DES VENTES RÉELLES' : 'REALIZED PRICES HISTORY'}
+                  </div>
+                  <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none', opacity: 0.5 }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: 'var(--navy)' }}>€ 48 500</div>
+                    <div style={{ fontSize: '12px', color: LTT3, marginTop: '4px' }}>124 ventes · Médiane €32 000</div>
+                  </div>
+                  <div style={{ marginTop: '12px', fontFamily: 'var(--font-mono)', fontSize: '9px', color: BL, letterSpacing: '0.1em' }}>
+                    <span style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', padding: '3px 8px', borderRadius: '3px' }}>INVESTOR+</span>
+                    <span style={{ marginLeft: '10px', color: LTT3 }}>{isFr ? 'Accédez à l\'historique complet des prix réalisés' : 'Access full realized price history'}</span>
+                  </div>
+                </div>
+              </div>
+            ) : hammerHistory && hammerHistory.total_sales > 0 ? (
+              <div style={{ padding: '0 40px 24px' }}>
+                <div style={{ border: '0.5px solid rgba(232,228,220,0.4)', borderRadius: '10px', padding: '20px 24px', background: 'rgba(255,255,255,0.02)' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '16px' }}>
+                    ◆ {isFr ? 'HISTORIQUE DES VENTES RÉELLES' : 'REALIZED PRICES HISTORY'} · {hammerHistory.total_sales} {isFr ? 'VENTES' : 'SALES'}
+                  </div>
+                  <div style={{ display: 'flex', gap: '32px', marginBottom: '20px' }}>
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.1em', marginBottom: '4px' }}>{isFr ? 'MÉDIANE' : 'MEDIAN'}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: 'var(--navy)' }}>
+                        {hammerHistory.median_eur ? `€${Math.round(hammerHistory.median_eur).toLocaleString()}` : '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.1em', marginBottom: '4px' }}>{isFr ? 'MOYENNE' : 'AVERAGE'}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: 'var(--navy)' }}>
+                        {hammerHistory.avg_eur ? `€${Math.round(hammerHistory.avg_eur).toLocaleString()}` : '—'}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {hammerHistory.sales.slice(0, 5).map((s: any, i: number) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderTop: i === 0 ? 'none' : '0.5px solid rgba(232,228,220,0.3)' }}>
+                        <div>
+                          <div style={{ fontSize: '12px', color: 'var(--navy)', fontWeight: 500, marginBottom: '2px' }}>
+                            {s.artwork_title || (isFr ? 'Sans titre' : 'Untitled')}
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3 }}>
+                            {s.auction_house} · {s.sale_date} {s.medium_category ? `· ${s.medium_category}` : ''}
+                          </div>
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: GOLD, textAlign: 'right' }}>
+                          {s.hammer_price_eur ? `€${Math.round(s.hammer_price_eur).toLocaleString()}` : '—'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {lot?.artist_name_raw && (
+                    <div
+                      onClick={() => window.location.href = `/artists/${encodeURIComponent(lot.artist_name_raw)}`}
+                      style={{ marginTop: '16px', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: GOLD, cursor: 'pointer', letterSpacing: '0.08em', borderBottom: '1px solid rgba(198,168,90,0.3)', paddingBottom: '1px', display: 'inline-block' }}
+                    >
+                      {isFr ? '◆ VOIR L\'ANALYSE ARTISTE COMPLÈTE →' : '◆ VIEW FULL ARTIST ANALYSIS →'}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
 
             {/* ── SCÉNARIOS DE VALORISATION ───────────────────────────────────── */}
             {!hasAccess ? null : !hasAccess ? (
