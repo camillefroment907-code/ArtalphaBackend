@@ -767,8 +767,12 @@ export default function OpportunityDetail() {
                   ? (isFr ? 'Ventes même technique — marge 10%' : 'Same medium sales — 10% margin')
                   : maxBidSource === 'comparables_technique_proche'
                   ? (isFr ? 'Techniques proches (2D) — marge 10%' : 'Similar medium (2D) — 10% margin')
-                  : maxBidSource === 'ventes_artiste_ajuste'
-                  ? (isFr ? 'Ventes artiste, coefficient technique appliqué — indicatif' : 'Artist sales, medium coefficient applied — indicative')
+                  : maxBidSource === 'ventes_meme_technique_limite'
+                  ? (isFr ? '1–2 ventes même technique — peu de données' : '1–2 same-medium sales — limited data')
+                  : maxBidSource === 'comparables_2d_limite'
+                  ? (isFr ? '1–2 ventes technique 2D proche — peu de données' : '1–2 adjacent 2D sales — limited data')
+                  : maxBidSource === 'ventes_artiste_sans_medium'
+                  ? (isFr ? 'Ventes artiste (technique inconnue) — indicatif' : 'Artist sales (medium unknown) — indicative')
                   : (isFr ? 'Au-delà : perte garantie' : 'Beyond this: guaranteed loss')}
               </div>
             </div>
@@ -1027,7 +1031,7 @@ export default function OpportunityDetail() {
               {avoidAbove && maxBidSource !== 'estimate' ? (
                 <>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#92400E', letterSpacing: '2px', textTransform: 'uppercase' as const }}>
-                    {maxBidSource === 'ventes_artiste_ajuste'
+                    {(maxBidSource === 'ventes_meme_technique_limite' || maxBidSource === 'comparables_2d_limite' || maxBidSource === 'ventes_artiste_sans_medium')
                       ? (isFr ? 'MAX BID INDICATIF' : 'INDICATIVE MAX BID')
                       : (isFr ? 'À NE PAS DÉPASSER' : 'DO NOT EXCEED')}
                   </div>
@@ -1035,8 +1039,12 @@ export default function OpportunityDetail() {
                     {fmtExact(avoidAbove)}
                   </div>
                   <div style={{ fontSize: '10px', color: '#B45309', fontWeight: 500 }}>
-                    {maxBidSource === 'ventes_artiste_ajuste'
-                      ? (isFr ? 'Basé sur autres œuvres — coefficient technique' : 'Based on other works — medium coefficient')
+                    {maxBidSource === 'ventes_meme_technique_limite'
+                      ? (isFr ? 'Peu de ventes — données limitées' : 'Few sales — limited data')
+                      : maxBidSource === 'comparables_2d_limite'
+                      ? (isFr ? 'Technique 2D proche — données limitées' : 'Adjacent 2D medium — limited data')
+                      : maxBidSource === 'ventes_artiste_sans_medium'
+                      ? (isFr ? 'Technique inconnue — indicatif seulement' : 'Medium unknown — indicative only')
                       : (isFr ? 'Perte garantie au-delà' : 'Loss guaranteed above')}
                   </div>
                 </>

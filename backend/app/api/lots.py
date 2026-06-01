@@ -1950,10 +1950,6 @@ _MEDIUM_CATEGORIES: dict[str, list[str]] = {
     "watercolor": ["aquarelle", "watercolor", "watercolour"],
 }
 
-_MEDIUM_DISCOUNT: dict[str, float] = {
-    "print": 0.20, "photo": 0.20, "drawing": 0.40,
-    "sculpture": 0.30, "watercolor": 0.60, "painting": 1.00,
-}
 
 _HOUSE_TIERS: dict[int, list[str]] = {
     1: ["christies", "sotheby", "phillips", "bonhams"],
@@ -2150,15 +2146,28 @@ async def _compute_weighted_max_bid(lot, db) -> dict:
         return {"market_value": _wavg(l3), "comp_count": len(l3),
                 "comp_level": 3, "max_bid_source": "comparables_technique_proche"}
 
-    # Level 4 — ≥5 all artist sales with empirical medium discount.
-    # Coefficients in _MEDIUM_DISCOUNT are industry approximations (not calibrated
-    # on this DB). Marked "ajuste" so the UI warns it is indicative only.
-    l4 = _eval(all_scored, min_count=5)
-    if l4:
-        discount = _MEDIUM_DISCOUNT.get(lot_medium_cat or "", 1.0)
-        return {"market_value": _wavg(l4) * discount, "comp_count": len(l4),
-                "comp_level": 4, "max_bid_source": "ventes_artiste_ajuste"}
+    # Level 4 — 1–2 exact-medium sales (real data but below L2 threshold).
+    # Use simple average — no coefficient applied, it's actual same-medium data.
+    if same_medium:
+        avg = sum(p for _, p in same_medium) / len(same_medium)
+        return {"market_value": avg, "comp_count": len(same_medium),
+                "comp_level": 4, "max_bid_source": "ventes_meme_technique_limite"}
 
+    # Level 5 — 1–2 cross-2D sales (adjacent medium, real data).
+    if cross_2d:
+        avg = sum(p for _, p in cross_2d) / len(cross_2d)
+        return {"market_value": avg, "comp_count": len(cross_2d),
+                "comp_level": 5, "max_bid_source": "comparables_2d_limite"}
+
+    # Level 6 — medium unknown for this lot: no discount can be computed,
+    # use all-artist sales as a raw proxy (only when lot medium is unidentified).
+    if not lot_medium_cat:
+        l6 = _eval(all_scored, min_count=5)
+        if l6:
+            return {"market_value": _wavg(l6), "comp_count": len(l6),
+                    "comp_level": 6, "max_bid_source": "ventes_artiste_sans_medium"}
+
+    # No usable same-medium or adjacent data — refuse to fabricate a value.
     return {}
 
 
