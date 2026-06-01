@@ -123,18 +123,53 @@ def normalize_category(raw: str) -> str:
 
 
 def normalize_artist_name(name: str) -> str:
-    """Lowercase, remove accents, strip punctuation, collapse spaces."""
+    """
+    Normalize artist name for stable cross-source matching.
+
+    Handles:
+    - Parenthetical dates/info: "Bernard Buffet (1928-1999)" → "bernard buffet"
+    - "Lastname, Firstname" (comma format):  "PICASSO, Pablo" → "pablo picasso"
+    - "SURNAME Firstname" (catalog format):  "PICASSO Pablo"  → "pablo picasso"
+    - "SURNAME FIRSTNAME" (all-caps):        "ANDY WARHOL"    → "andy warhol"
+    - Accents, punctuation, extra spaces
+    """
     if not name:
         return ""
-    name = unicodedata.normalize("NFD", name)
-    name = "".join(c for c in name if unicodedata.category(c) != "Mn")
-    name = re.sub(r"[^\w\s]", " ", name)
-    name = re.sub(r"\s+", " ", name).strip().lower()
-    # Normalize "lastname, firstname" → "firstname lastname"
+
+    # 1. Strip parenthetical content (dates, birth/death years, qualifiers)
+    name = re.sub(r"\([^)]*\)", " ", name)
+    name = re.sub(r"\[[^\]]*\]", " ", name)
+    name = re.sub(r"\s+", " ", name).strip()
+
+    # 2. Handle "Lastname, Firstname" → "Firstname Lastname"
+    #    Must happen BEFORE punctuation removal strips the comma.
     if "," in name:
         parts = [p.strip() for p in name.split(",", 1)]
-        if len(parts) == 2:
-            name = f"{parts[1]} {parts[0]}"
+        if len(parts) == 2 and parts[1].strip():
+            name = f"{parts[1].strip()} {parts[0].strip()}"
+
+    # 3. Detect "SURNAME Firstname" auction-catalog format (before lowercasing).
+    #    Rule: first token is all-uppercase (len ≥ 3) AND every remaining token
+    #    is NOT all-uppercase → move first token to the end.
+    #    Examples: "PICASSO Pablo" → "Pablo PICASSO"
+    #              "NARA Yoshitomo" → "Yoshitomo NARA"
+    #    Does NOT trigger for "ANDY WARHOL" (all tokens uppercase) or
+    #    "VAN GOGH Vincent" (first two tokens uppercase).
+    tokens = name.strip().split()
+    if (len(tokens) >= 2
+            and len(tokens[0]) >= 3
+            and tokens[0].isupper()
+            and all(not t.isupper() for t in tokens[1:])):
+        name = " ".join(tokens[1:] + [tokens[0]])
+
+    # 4. Remove accents
+    name = unicodedata.normalize("NFD", name)
+    name = "".join(c for c in name if unicodedata.category(c) != "Mn")
+
+    # 5. Lowercase, remove remaining punctuation, collapse spaces
+    name = re.sub(r"[^\w\s]", " ", name)
+    name = re.sub(r"\s+", " ", name).strip().lower()
+
     return name
 
 

@@ -535,6 +535,36 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                                 auction_date=lot_data.auction_date,
                             )
 
+                    # Save sold lot to hammer_prices immediately so it's available
+                    # for HammerArtistStats without waiting for the Artsy historical job.
+                    if _lot_status == LotStatus.SOLD and lot_data.current_price and lot_data.current_price > 0:
+                        try:
+                            from app.scrapers.hammer_price_saver import save_hammer_prices
+                            from app.jobs.quality_filter import normalize_artist_name as _norm_name_hp
+                            _currency = (lot_data.currency or "EUR").upper()
+                            _fx = {"USD": 0.92, "GBP": 1.17, "EUR": 1.0, "CHF": 1.05,
+                                   "HKD": 0.12, "AUD": 0.60, "CAD": 0.68, "JPY": 0.0062}
+                            _eur = round(lot_data.current_price * _fx.get(_currency, 0.92), 2)
+                            _src = str(lot_data.source.value if hasattr(lot_data.source, "value") else lot_data.source)
+                            await save_hammer_prices([{
+                                "external_id": f"lot-{lot_data.external_id}",
+                                "artist_name": artist_name or lot_data.artist_name_raw,
+                                "artist_name_normalized": _norm_name_hp(artist_name or lot_data.artist_name_raw or ""),
+                                "artwork_title": lot_data.title,
+                                "sale_date": lot_data.auction_date,
+                                "hammer_price": lot_data.current_price,
+                                "currency": _currency,
+                                "hammer_price_eur": _eur,
+                                "estimate_low": lot_data.estimate_low,
+                                "estimate_high": lot_data.estimate_high,
+                                "auction_house": lot_data.auction_house_name,
+                                "lot_number": lot_data.lot_number,
+                                "source": _src,
+                                "image_url": lot_data.image_url,
+                            }], session)
+                        except Exception as _hp_err:
+                            logger.debug("hammer_price_save_skipped", error=str(_hp_err))
+
                     # Batch commit every 100 lots — avoids single huge transaction
                     if processed % 100 == 0:
                         await session.commit()
