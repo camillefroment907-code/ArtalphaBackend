@@ -796,8 +796,9 @@ class HammerPrice(Base):
 
     id               = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     external_id      = Column(String(500), unique=True, nullable=True, index=True)
-    artist_name      = Column(String(500), index=True, nullable=False)
-    artwork_title    = Column(String(1000), nullable=True)
+    artist_name            = Column(String(500), index=True, nullable=False)
+    artist_name_normalized = Column(String(500), nullable=True, index=True)
+    artwork_title          = Column(String(1000), nullable=True)
     year_created     = Column(Integer, nullable=True)
     medium           = Column(String(300), nullable=True)
     medium_category  = Column(String(20),  nullable=True, index=True)
