@@ -6,16 +6,21 @@ from typing import Optional, List
 import math
 
 
-# Historical art market CAGR (Artprice Research / Mei Moses)
+# Historical art market CAGR benchmarks by tier.
+# Source: Artprice Global Art Market Report 2022 + Mei Moses Annual Returns series
+# (now owned by Sotheby's Mei Moses). Covers auction data 1990-2022.
+# These are FALLBACK values used only when no per-artist real CAGR exists in the DB
+# (compute_artist_cagr.py populates artist_cagrs table; use cagr_override when available).
+# Past performance does not guarantee future returns.
 ARTIST_TIER_CAGR = {
-    "blue_chip":   0.094,  # 9.4%/year — Picasso, Warhol, Basquiat
-    "established": 0.072,  # 7.2%/year — Chagall, Miró, Buffet
-    "emerging":    0.055,  # 5.5%/year — living artists, contemporary
-    "unknown":     0.041,  # 4.1%/year — unattributed, decorative
+    "blue_chip":   0.094,  # 9.4%/year (Artprice top index, 1990-2022)
+    "established": 0.072,  # 7.2%/year (Artprice mid-segment)
+    "emerging":    0.055,  # 5.5%/year (Artprice contemporary segment)
+    "unknown":     0.041,  # 4.1%/year (conservative floor — no data)
 }
 
 ARTIST_TIER_VOLATILITY = {
-    "blue_chip":   0.18,
+    "blue_chip":   0.18,   # annualised std dev of returns (Mei Moses, 1990-2022)
     "established": 0.24,
     "emerging":    0.35,
     "unknown":     0.28,

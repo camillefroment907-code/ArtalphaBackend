@@ -125,6 +125,11 @@ async def analyze_lot_for_alert(
         if result["verdict"] not in ("STRONG_BUY", "BUY", "WATCH", "PASS"):
             result["verdict"] = "WATCH"
 
+        # Clamp return projection to realistic bounds — prevents GPT hallucinating
+        # extreme figures that could mislead users into financial decisions.
+        if result.get("estimated_return_pct") is not None:
+            result["estimated_return_pct"] = max(-80.0, min(300.0, float(result["estimated_return_pct"])))
+
         return result
 
     except json.JSONDecodeError as e:

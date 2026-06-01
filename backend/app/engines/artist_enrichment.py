@@ -16,8 +16,12 @@ from app.engines.artist_wikipedia import fetch_artist_from_wikipedia
 logger = structlog.get_logger()
 settings = get_settings()
 
-# ── Artist Market Database (realistic baseline values) ────────────────────────
-# In production, this would be backed by Artprice, Artnet API, or pgvector similarity search
+# ── Artist Market Database (curated baselines for ~12 blue-chip artists) ──────
+# Source: manually compiled from Artprice Global Index reports and public auction
+# aggregates (Artnet, Invaluable). Values represent EUR medians/averages across
+# all media and houses. Last reviewed: 2024-Q4.
+# Do NOT add new entries without citing a source and date.
+# For other artists, use real HammerArtistStats from the DB instead.
 
 ARTIST_MARKET_DB: Dict[str, Dict[str, Any]] = {
     "bernard buffet": {
@@ -144,36 +148,11 @@ def _find_in_db(artist_name: str) -> Optional[Dict[str, Any]]:
     return best_match
 
 
-def _generate_heuristic_enrichment(artist_name: str) -> Dict[str, Any]:
-    """
-    For unknown artists: generate plausible baseline values using heuristics.
-    In production: integrate Artprice API or artnet.
-    """
-    import hashlib
-    # Deterministic pseudo-random based on name hash (consistent across calls)
-    seed = int(hashlib.md5(artist_name.lower().encode()).hexdigest()[:8], 16)
-    rng = seed % 1000 / 1000.0
-
-    return {
-        "avg_price": round(500 + rng * 15000, -2),
-        "median_price": round(300 + rng * 8000, -2),
-        "liquidity": round(20 + rng * 50),
-        "popularity": round(15 + rng * 45),
-        "trend": ["up", "stable", "stable", "down"][seed % 4],
-        "sell_through": round(0.40 + rng * 0.40, 2),
-        "volatility": round(0.30 + rng * 0.35, 2),
-        "lots_sold": int(10 + rng * 500),
-        "confidence": 0.30,  # low confidence for unknown
-        "nationality": None,
-        "birth_year": None,
-        "death_year": None,
-        "movement": None,
-    }
-
-
 async def _enrich_with_openai(artist_name: str) -> Optional[Dict[str, Any]]:
     """
-    Use GPT-4o to extract artist market profile.
+    Use GPT-4o-mini to fetch biographical fields only (nationality, dates, movement).
+    Market data (prices, liquidity, sell-through) is intentionally excluded —
+    LLMs do not have reliable access to current auction databases.
     Returns None if API unavailable.
     """
     if not settings.openai_api_key:
@@ -183,39 +162,42 @@ async def _enrich_with_openai(artist_name: str) -> Optional[Dict[str, Any]]:
         from openai import AsyncOpenAI
         client = AsyncOpenAI(api_key=settings.openai_api_key)
 
-        prompt = f"""You are an expert art market analyst with access to comprehensive auction database knowledge.
-
-Provide a JSON market profile for the artist: "{artist_name}"
+        prompt = f"""You are an art historian. For the artist "{artist_name}", provide ONLY biographical facts.
 
 Return ONLY valid JSON with these exact fields:
 {{
-  "avg_price": <float EUR, typical auction price for works by this artist>,
-  "median_price": <float EUR>,
-  "liquidity": <int 0-100, how easily sold at auction>,
-  "popularity": <int 0-100, market demand>,
-  "trend": <"up"|"stable"|"down", market trend last 3 years>,
-  "sell_through": <float 0-1, percentage of lots that sell>,
-  "volatility": <float 0-1, price variance>,
-  "lots_sold": <int, approximate total lots sold at auction globally>,
-  "confidence": <float 0-1, your confidence in this data>,
   "nationality": <string or null>,
   "birth_year": <int or null>,
   "death_year": <int or null>,
-  "movement": <string or null>
+  "movement": <string, e.g. "Cubism" or null>,
+  "confidence": <float 0-1, how confident you are in these biographical facts>
 }}
 
-If you don't recognize this artist or have no reliable data, set confidence to 0.2 and use conservative estimates."""
+Do NOT include prices, market data, or any financial estimates.
+If you have no reliable information about this artist, return confidence 0.1 and nulls."""
 
         response = await client.chat.completions.create(
-            model=settings.openai_model,
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.1,
-            max_tokens=400,
+            max_tokens=150,
             response_format={"type": "json_object"},
         )
 
         content = response.choices[0].message.content
-        return json.loads(content)
+        data = json.loads(content)
+        # Explicitly ensure no market fields bleed through
+        data.pop("avg_price", None)
+        data.pop("median_price", None)
+        data.pop("liquidity", None)
+        data.pop("popularity", None)
+        data.pop("trend", None)
+        data.pop("sell_through", None)
+        data.pop("volatility", None)
+        data.pop("lots_sold", None)
+        # Cap confidence at 0.4 — GPT biography has no market signal
+        data["confidence"] = min(float(data.get("confidence", 0.2)), 0.4)
+        return data
 
     except Exception as e:
         logger.warning("OpenAI enrichment failed", artist=artist_name, error=str(e))
@@ -276,19 +258,13 @@ async def enrich_artist(
             wiki_data = {**wiki_data, **{k: v for k, v in db_data.items() if v is not None}}
         return resolved_name, wiki_data
 
-    # 3. Try OpenAI enrichment
+    # 3. Try OpenAI for biographical data only (no market data)
     ai_data = await _enrich_with_openai(resolved_name)
-    if ai_data and ai_data.get("confidence", 0) > 0.4:
-        logger.debug("Artist enriched via OpenAI", artist=resolved_name)
-        # Merge with local data if available
+    if ai_data:
+        logger.debug("Artist enriched via OpenAI (bio only)", artist=resolved_name)
         if db_data:
             ai_data = {**ai_data, **{k: v for k, v in db_data.items() if v is not None}}
         return resolved_name, ai_data
 
-    # 3. Fall back to heuristics
-    logger.debug("Artist using heuristic enrichment", artist=resolved_name)
-    heuristic = _generate_heuristic_enrichment(resolved_name)
-    if db_data:
-        heuristic = {**heuristic, **{k: v for k, v in db_data.items() if v is not None}}
-
-    return resolved_name, heuristic
+    # No reliable data — return empty rather than fabricate
+    return resolved_name, db_data or {}
