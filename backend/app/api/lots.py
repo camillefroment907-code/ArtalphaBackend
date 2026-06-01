@@ -147,6 +147,51 @@ def parse_dimensions(dimensions_str: str) -> dict:
 
     return {"width_cm": None, "height_cm": None}
 
+
+def _extract_dimensions_from_text(text: str | None) -> str | None:
+    """
+    Extract the first artwork dimension string from free text (title or description).
+    Handles formats like:
+      - "32x44 cm"  "32 x 44 cm"  "56,5 x 40,5 cm"
+      - "Bildyta 32 x 40 cm"  "Maße: 56,5 x 40,5 cm"
+      - "32 x 46 in"
+    Skips matches preceded by frame-size keywords (rammått, frame, cadre…).
+    Returns a normalized string like "32 × 44 cm", or None.
+    """
+    if not text:
+        return None
+
+    # Normalize unicode multiplication signs
+    t = text.replace("×", "x").replace("✕", "x").replace("✗", "x")
+
+    dim_re = re.compile(
+        r"(\d+(?:[.,]\d+)?)\s*[xX]\s*(\d+(?:[.,]\d+)?)\s*(cm|mm|in\b)",
+        re.IGNORECASE,
+    )
+
+    FRAME_KW = ["rammått", "frame size", "framed", "encadrement", "cadre", "rahmen"]
+
+    for m in dim_re.finditer(t):
+        # Look at text preceding this match on the same line
+        line_start = t.rfind("\n", 0, m.start()) + 1
+        preceding = t[line_start : m.start()].lower()
+        if any(kw in preceding for kw in FRAME_KW):
+            continue
+
+        w = m.group(1).replace(",", ".")
+        h = m.group(2).replace(",", ".")
+        unit = m.group(3).lower()
+
+        # Strip trailing zeros for clean display (e.g. "32.0" → "32")
+        def _fmt(v: str) -> str:
+            f = float(v)
+            return str(int(f)) if f == int(f) else v
+
+        return f"{_fmt(w)} × {_fmt(h)} {unit}"
+
+    return None
+
+
 from app.database import get_db, AsyncSessionLocal
 from app.models.db_models import (
     Lot, Artist, LotStatus, AuctionHouse, MarketType,
@@ -1634,9 +1679,16 @@ async def get_lot(
         raise HTTPException(status_code=404, detail="Lot not found")
     lot_plan = await get_user_plan(current_user, db)
 
-    # Serialize via schema then inject parsed dimension fields
+    # Serialize via schema then inject parsed dimension fields.
+    # If the lot has no explicit dimensions, try to extract from description or title.
     lot_dict = LotOut.model_validate(lot).model_dump(mode="json")
-    dims = parse_dimensions(lot.dimensions or "")
+    effective_dims = lot.dimensions or (
+        _extract_dimensions_from_text(lot.description)
+        or _extract_dimensions_from_text(lot.title)
+    )
+    if effective_dims and not lot.dimensions:
+        lot_dict["dimensions"] = effective_dims
+    dims = parse_dimensions(effective_dims or "")
     lot_dict["width_cm"] = dims["width_cm"]
     lot_dict["height_cm"] = dims["height_cm"]
     lot_dict["dimensions_parsed"] = dims

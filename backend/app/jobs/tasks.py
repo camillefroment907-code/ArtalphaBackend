@@ -380,6 +380,14 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                 _lot_performance = (lot_data.raw_data or {}).get("lot_performance", "")
                 _lot_status = LotStatus.SOLD if _lot_performance == "sold" else LotStatus.UPCOMING
 
+                # Extract dimensions from description/title when connector didn't provide them
+                if not lot_data.dimensions:
+                    from app.api.lots import _extract_dimensions_from_text
+                    lot_data.dimensions = (
+                        _extract_dimensions_from_text(lot_data.description)
+                        or _extract_dimensions_from_text(lot_data.title)
+                    )
+
                 # Truncate long fields to prevent DB column overflow
                 if lot_data.medium:        lot_data.medium = lot_data.medium[:300]
                 if lot_data.dimensions:    lot_data.dimensions = lot_data.dimensions[:300]
