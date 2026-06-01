@@ -40,11 +40,11 @@ async def fetch_artist_from_wikipedia(artist_name: str) -> Optional[Dict[str, An
                 "birth_year": None,
                 "death_year": None,
                 "movement": None,
-                "liquidity": 50.0,
+                "liquidity": None,
                 "avg_price": None,
-                "popularity": 50.0,
-                "trend": "stable",
-                "confidence": 0.6,
+                "popularity": None,
+                "trend": None,
+                "confidence": 0.15,  # biographical data only — no market data
                 "source": "wikipedia",
             }
 
@@ -68,10 +68,6 @@ async def fetch_artist_from_wikipedia(artist_name: str) -> Optional[Dict[str, An
 
             if wiki_data:
                 result["description"] = wiki_data.get("extract", "")[:500]
-                extract = (wiki_data.get("extract") or "").lower()
-                if any(w in extract for w in ["contemporary", "contemporain", "emerging", "émergent"]):
-                    result["trend"] = "up"
-                    result["popularity"] = min(result["popularity"] + 10, 90)
 
             return result
 

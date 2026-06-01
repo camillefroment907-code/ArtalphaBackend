@@ -227,8 +227,8 @@ def generate_ai_insight(
             f"ce qui suggère une sous-estimation ou un manque d'intérêt temporaire du marché."
         )
 
-    trend = artist.get("trend", "stable")
-    liquidity = artist.get("liquidity", 50)
+    trend = artist.get("trend")
+    liquidity = artist.get("liquidity")
     if trend == "up" and liquidity and liquidity > 65:
         parts.append("L'artiste bénéficie d'une dynamique de marché positive avec une liquidité élevée.")
     elif trend == "down":
@@ -251,7 +251,7 @@ def _score_primary_lot(lot: LotNormalized, artist_data: dict) -> float:
     score = 40.0  # Base score for primary lots (curated by galleries)
 
     # Artist quality signal
-    liquidity = artist_data.get("liquidity", 50)
+    liquidity = artist_data.get("liquidity") or 50
     score += (liquidity / 100) * 20  # Max +20pts
 
     # Gallery tier bonus
@@ -302,7 +302,7 @@ def compute_deal_score(inp: ScoringInput) -> ScoringResult:
             breakdown=ScoreBreakdown(
                 below_estimate_score=0.0,
                 below_market_score=None,
-                liquidity_score=round((artist.get("liquidity", 50) / 100) * 100, 2),
+                liquidity_score=round(((artist.get("liquidity") or 50) / 100) * 100, 2),
                 house_reputation_score=0.0,
                 confidence_score=0.0,
                 weights=DEFAULT_WEIGHTS,
