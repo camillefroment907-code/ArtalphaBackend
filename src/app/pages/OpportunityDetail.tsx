@@ -278,9 +278,12 @@ export default function OpportunityDetail() {
     { year: isFr ? "Aujourd'hui" : 'Now', optimistic: price, value: price, conservative: price },
     ...[1, 3, 5, 10].map(y => ({
       year: `${y}${isFr ? 'an' : 'yr'}`,
-      optimistic:   _projMap[y]?.optimistic_eur   ?? price,
-      value:        _projMap[y]?.projected_value_eur ?? price,
-      conservative: _projMap[y]?.conservative_eur ?? price,
+      optimistic:   _projMap[y]?.optimistic_eur
+                    ?? Math.round(price * Math.pow(1 + (projCagr * 1.5) / 100, y)),
+      value:        _projMap[y]?.projected_value_eur
+                    ?? Math.round(price * Math.pow(1 + projCagr / 100, y)),
+      conservative: _projMap[y]?.conservative_eur
+                    ?? Math.round(price * Math.pow(1 + (projCagr * 0.5) / 100, y)),
     })),
   ];
 

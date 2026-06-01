@@ -1843,7 +1843,17 @@ async def get_lot(
             "alternatives":           alternatives_used,
             "recommended_hold_years": proj["recommended_hold_years"],
             "sell_recommendation":    proj["sell_recommendation"],
-            "years":                  proj["projections"],
+            "years": [
+                {
+                    "years":               y,
+                    "projected_value_eur": v["base_eur"],
+                    "optimistic_eur":      v["optimistic_eur"],
+                    "conservative_eur":    v["conservative_eur"],
+                    "gain_pct":            v["base_roi_pct"],
+                }
+                for y, v in proj["projections"].items()
+                if y in [1, 3, 5, 10]
+            ],
             # all_in_cost uses the projection price (expected acquisition price),
             # NOT the current bid — avoids misleading low values on upcoming lots.
             "all_in_cost":            round((proj_price or hammer) * (1 + (rc["premium_rate"] if rc else 0.26))),
