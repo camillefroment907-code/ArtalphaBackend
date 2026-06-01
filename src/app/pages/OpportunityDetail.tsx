@@ -118,6 +118,8 @@ export default function OpportunityDetail() {
   const [purchaseDone, setPurchaseDone]         = useState(false);
   const [hammerHistory, setHammerHistory] = useState<any>(null);
   const [hammerLoading, setHammerLoading] = useState(false);
+  const [formatMatrix, setFormatMatrix]   = useState<any>(null);
+  const [timingData, setTimingData]       = useState<any>(null);
   const [purchasePrice, setPurchasePrice]       = useState('');
   const [purchaseDate, setPurchaseDate]         = useState(() => new Date().toISOString().split('T')[0]);
   const [purchaseSource, setPurchaseSource]     = useState<'auction' | 'gallery' | 'private'>('auction');
@@ -205,6 +207,24 @@ export default function OpportunityDetail() {
         .catch((e) => { console.error('hammer-history fetch failed:', e); setHammerLoading(false); });
     }
   }, [id]);
+
+  useEffect(() => {
+    if (!lot?.artist_name_raw || !getToken()) return;
+    const token = getToken();
+    const artistEnc = encodeURIComponent(lot.artist_name_raw);
+    fetch(`${BACKEND}/api/artist-profiles/${artistEnc}/format-matrix`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(data => setFormatMatrix(data))
+      .catch(() => {});
+    fetch(`${BACKEND}/api/artist-profiles/${artistEnc}/timing-optimizer`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(data => setTimingData(data))
+      .catch(() => {});
+  }, [lot?.artist_name_raw]);
 
   useEffect(() => {
     if (!id || !getToken()) return;
@@ -1385,6 +1405,79 @@ export default function OpportunityDetail() {
               <div style={{ padding: '0 40px 24px' }}>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--gold)', letterSpacing: '0.16em' }}>
                   ◆ CHARGEMENT HISTORIQUE…
+                </div>
+              </div>
+            )}
+            {isInvestor && (formatMatrix?.formats?.length > 0 || timingData?.best_house) && (
+              <div style={{ padding: '0 40px 24px' }}>
+                <div style={{ border: '0.5px solid rgba(232,228,220,0.4)', borderRadius: '10px', padding: '20px 24px', background: 'rgba(255,255,255,0.02)' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '20px' }}>
+                    ◆ {isFr ? 'INTELLIGENCE MARCHÉ · ' : 'MARKET INTELLIGENCE · '}{lot.artist_name_raw?.toUpperCase()}
+                  </div>
+                  <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' as const }}>
+
+                    {/* Medium optimal */}
+                    {formatMatrix?.formats?.length > 0 && (() => {
+                      const best = [...formatMatrix.formats].sort((a: any, b: any) => b.avg_price - a.avg_price)[0];
+                      const current = formatMatrix.formats.find((f: any) =>
+                        f.format.toLowerCase().includes((lot.medium || '').toLowerCase().split(' ')[0])
+                      );
+                      return (
+                        <div style={{ flex: 1, minWidth: '140px' }}>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.1em', marginBottom: '6px' }}>
+                            {isFr ? 'MEDIUM LE PLUS VALORISÉ' : 'TOP MEDIUM'}
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: 'var(--navy)', marginBottom: '2px' }}>
+                            {best.format}
+                          </div>
+                          <div style={{ fontSize: '12px', color: LTT3 }}>
+                            Moy. €{Math.round(best.avg_price).toLocaleString()} · {best.count} ventes
+                          </div>
+                          {current && current.format !== best.format && (
+                            <div style={{ marginTop: '6px', fontSize: '11px', color: AMB }}>
+                              {isFr ? `Ce lot (${current.format}) : moy. €${Math.round(current.avg_price).toLocaleString()}` : `This lot (${current.format}): avg €${Math.round(current.avg_price).toLocaleString()}`}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Maison optimale */}
+                    {timingData?.best_house && (
+                      <div style={{ flex: 1, minWidth: '140px' }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.1em', marginBottom: '6px' }}>
+                          {isFr ? 'MAISON OPTIMALE' : 'BEST AUCTION HOUSE'}
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: 'var(--navy)', marginBottom: '2px' }}>
+                          {timingData.best_house}
+                        </div>
+                        {timingData.best_avg_price && (
+                          <div style={{ fontSize: '12px', color: LTT3 }}>
+                            Moy. €{Math.round(timingData.best_avg_price).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Meilleure période */}
+                    {timingData?.best_month && (
+                      <div style={{ flex: 1, minWidth: '140px' }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.1em', marginBottom: '6px' }}>
+                          {isFr ? 'MEILLEURE PÉRIODE' : 'BEST TIMING'}
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: 'var(--navy)', marginBottom: '2px' }}>
+                          {timingData.best_month}
+                        </div>
+                        {timingData.best_season && (
+                          <div style={{ fontSize: '12px', color: LTT3 }}>
+                            {timingData.best_season}
+                            {timingData.best_avg_price && ` · €${Math.round(timingData.best_avg_price).toLocaleString()} moy.`}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                  </div>
                 </div>
               </div>
             )}
