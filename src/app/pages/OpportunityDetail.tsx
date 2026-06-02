@@ -542,7 +542,7 @@ export default function OpportunityDetail() {
   const ctaWishlist    = dealScore >= 70 ? (isFr ? 'Ajouter à ma shortlist' : 'Add to my shortlist') : (isFr ? 'Suivre cette œuvre' : 'Follow this work');
 
   return (
-    <div className="lot-detail-page" style={{ minHeight: '100vh', background: LT }}>
+    <div style={{ minHeight: '100vh', background: '#F0EDE6', fontFamily: "'DM Sans', sans-serif", color: '#1a1a2e' }}>
       {upgradeModal && (
         <UpgradeModal
           type={upgradeModal}
@@ -551,14 +551,13 @@ export default function OpportunityDetail() {
         />
       )}
       <style>{`
-        @keyframes bpulse{0%,100%{height:8px;opacity:0.3}50%{height:28px;opacity:1}}
-        @keyframes dot{0%,100%{opacity:1}50%{opacity:0.3}}
+        .hov-row:hover { background: rgba(0,0,0,0.02) !important; }
         .comp-card-light { transition: transform 0.18s ease, box-shadow 0.18s ease; }
         .comp-card-light:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
       `}</style>
 
-      {/* ═══ STICKY BAR — fixed, fades in ═══ */}
-      <div className="lot-sticky-header" style={{
+      {/* ═══ STICKY BAR ═══ */}
+      <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
         background: DK, borderBottom: `0.5px solid ${DKB}`,
         height: '46px', padding: '0 32px',
@@ -568,583 +567,265 @@ export default function OpportunityDetail() {
         transition: 'opacity 0.18s ease',
       }}>
         <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.1em', padding: '0 12px 0 0', borderRight: `0.5px solid ${DKB}`, height: '46px', display: 'flex', alignItems: 'center' }}>
-          {t('lot.back')}
+          {isFr ? '← RETOUR' : '← BACK'}
         </button>
         <div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#6B7280', letterSpacing: '0.1em', textTransform: 'uppercase', lineHeight: 1 }}>{lot.artist_name_raw || ''}</div>
           <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '13px', color: '#F0EDE6', lineHeight: 1.3, marginTop: '2px' }}>{lot.title || 'Untitled'}</div>
         </div>
-        <div className="lot-badges" style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
-          <span style={{ background: '#162040', border: '0.5px solid #2A4480', color: '#7EB0F0', fontFamily: 'var(--font-mono)', fontSize: '9px', padding: '3px 9px', borderRadius: '4px', fontWeight: 700 }}>{verdict.label}</span>
-          <span style={{ background: '#1C2E1C', border: '0.5px solid #3D6B3D', color: '#6FCF6F', fontFamily: 'var(--font-mono)', fontSize: '9px', padding: '3px 9px', borderRadius: '4px', fontWeight: 700 }}>{dealScore.toFixed(1)} / 100 · {stickyTier}</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <span style={{ background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.25)', borderRadius: 3, padding: '4px 12px', fontSize: 11, color: verdict.dk, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>{verdict.icon} {verdict.label}</span>
+          <span style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 3, padding: '4px 14px', fontSize: 11, color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-mono)' }}>{Math.round(dealScore)} / 100 · {stickyTier}</span>
         </div>
       </div>
 
-      {/* ═══ HERO — terminal 3-col ═══ */}
-      <div ref={heroRef} className="lot-hero-grid" style={{ background: DK, display: 'grid', gridTemplateColumns: '300px 1fr 280px', minHeight: '380px' }}>
+      {/* ══ HERO — dark ══ */}
+      <div ref={heroRef} style={{ background: DK }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '20px 24px 32px' }}>
 
-        {/* COL 1 — Image */}
-        <div className="lot-hero-image" style={{ background: DK4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', borderRight: `0.5px solid ${DKB}`, position: 'relative', paddingLeft: '16px' }}>
-          <button onClick={() => navigate(-1)} style={{ position: 'absolute', top: '16px', left: '16px', background: 'none', border: `0.5px solid ${DKB}`, color: '#6B7280', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.08em', padding: '5px 10px', borderRadius: '4px' }}>
-            {t('lot.back')}
-          </button>
-          {lot.image_url ? (
-            <img src={lot.image_url} alt={lot.title}
-              onLoad={() => setImgLoaded(true)}
-              onClick={() => setShowLightbox(true)}
-              style={{ width: '100%', height: 'auto', maxHeight: '380px', objectFit: 'cover', borderRadius: '8px', opacity: imgLoaded ? 1 : 0, transition: 'opacity 0.4s', cursor: 'pointer' }} />
-          ) : (
-            <div style={{ width: '140px', height: '180px', background: DK2, border: `0.5px solid ${DKB}`, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: '36px', opacity: 0.08 }}>◎</span>
-            </div>
-          )}
-        </div>
-
-        {/* COL 2 — Context */}
-        <div className="lot-hero-info" style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', gap: '14px', borderRight: `0.5px solid ${DKB}` }}>
-
-          {/* EXCEPTIONAL badge */}
-          {dealScore >= 83 && (
-            <div style={{ display: 'inline-flex', alignSelf: 'flex-start' }}>
-              <span style={{ background: 'rgba(198,168,90,0.1)', border: '0.5px solid rgba(198,168,90,0.4)', color: GOLD, fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.14em', padding: '3px 10px', borderRadius: '4px', textTransform: 'uppercase' }}>
-                {t('lot.exceptional')}
-              </span>
-            </div>
-          )}
-
-          {/* Artist / Title / Medium */}
-          <div>
-            <div
-              onClick={() => navigate(`/app/artists/${encodeURIComponent(lot.artist_name_raw || '')}`)}
-              style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px', cursor: 'pointer' }}>
-              {lot.artist_name_raw || 'Unknown artist'}
-            </div>
-            <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(20px, 2vw, 26px)', color: '#F0EDE6', fontWeight: 600, margin: '0 0 8px', lineHeight: 1.15 }}>
-              {lot.title || 'Untitled'}
-            </h1>
-            <div style={{ fontSize: '12px', color: '#6B7280', fontStyle: 'italic' }}>
-              {[lot.medium, lot.auction_house_name?.split('—')[0].trim()].filter(Boolean).join(' · ')}
-            </div>
+          <div style={{ marginBottom: 20 }}>
+            <span onClick={() => navigate(-1)} style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>← {isFr ? 'RETOUR' : 'BACK'}</span>
           </div>
 
-          {/* Urgency */}
-          {daysUntilClose !== null && daysUntilClose <= 7 && (
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: daysUntilClose <= 2 ? '#EF4444' : '#FBBF24', letterSpacing: '0.08em' }}>
-              ⚡ {isFr ? `Se clôture dans ${daysUntilClose} jour${daysUntilClose > 1 ? 's' : ''}` : `Closes in ${daysUntilClose} day${daysUntilClose !== 1 ? 's' : ''}`}
+          {/* 3 colonnes : image / décision / score */}
+          <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr 220px', gap: 32, alignItems: 'start' }}>
+
+            {/* ── COL 1 : Image ── */}
+            <div>
+              <div
+                onClick={() => lot.image_url && setShowLightbox(true)}
+                style={{ background: DK4, borderRadius: 4, aspectRatio: '4/5', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 14, cursor: lot.image_url ? 'pointer' : 'default' }}
+              >
+                {lot.image_url ? (
+                  <img src={lot.image_url} alt={lot.title} onLoad={() => setImgLoaded(true)}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: imgLoaded ? 1 : 0, transition: 'opacity 0.4s' }} />
+                ) : (
+                  <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.2)' }}>
+                    <div style={{ fontSize: 36, marginBottom: 6 }}>◎</div>
+                    <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>IMAGE</div>
+                  </div>
+                )}
+              </div>
+              {/* Follow button */}
+              <button
+                onClick={async () => {
+                  if (!getToken()) { window.location.href = '/app/login'; return; }
+                  setSubLoading(true);
+                  try {
+                    if (subscribed && subId) {
+                      await fetch(`${BACKEND}/api/wishlist/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } });
+                      setSubscribed(false); setSubId(null);
+                    } else {
+                      const r = await fetch(`${BACKEND}/api/wishlist/${id}`, { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } });
+                      if (r.status === 403) setUpgradeModal('wishlist');
+                      else if (r.ok) { setSubscribed(true); setSubId(id); trackEvent('lot_watchlist_add', 'lot', lot.id, { lot_title: lot.title, artist: lot.artist_name_raw, deal_score: lot.deal_score }); }
+                    }
+                  } finally { setSubLoading(false); }
+                }}
+                disabled={subLoading}
+                style={{
+                  width: '100%', borderRadius: 4, padding: '10px 0', cursor: subLoading ? 'default' : 'pointer',
+                  background: subscribed ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.08)',
+                  border: `1px solid ${subscribed ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.16)'}`,
+                  color: subscribed ? '#4ade80' : '#fff', fontSize: 13, fontWeight: 500,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, transition: 'all 0.15s',
+                }}
+              >
+                {subLoading ? '...' : subscribed ? (isFr ? '✓ Dans ma shortlist' : '✓ In my shortlist') : (isFr ? '+ Ajouter à ma shortlist' : '+ Add to shortlist')}
+              </button>
+              {/* External link */}
+              <div style={{ marginTop: 10, textAlign: 'center' as const }}>
+                {hasAccess ? (
+                  <a href={trackUrl} target="_blank" rel="noopener noreferrer"
+                    onClick={() => trackEvent('lot_external_click', 'lot', lot.id, { lot_title: lot.title, artist: lot.artist_name_raw, source: lot.source, auction_house: lot.auction_house_name, deal_score: lot.deal_score, url: rawUrl })}
+                    style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}>
+                    {isFr ? `Voir sur ${sourceNames[source] || resolvedSource} ↗` : `View on ${sourceNames[source] || resolvedSource} ↗`}
+                  </a>
+                ) : (
+                  <span onClick={() => window.location.href = '/app/pricing'} style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}>
+                    🔒 {isFr ? 'Accès Investor →' : 'Investor access →'}
+                  </span>
+                )}
+              </div>
+              {/* Purchase tracking */}
+              {!purchaseDone ? (
+                <div style={{ marginTop: 10 }}>
+                  <button
+                    onClick={() => setShowPurchaseForm(v => !v)}
+                    style={{ width: '100%', background: showPurchaseForm ? 'rgba(26,107,60,0.1)' : 'none', border: `0.5px solid ${showPurchaseForm ? '#1A6B3C' : '#2A3B4C'}`, color: showPurchaseForm ? '#52C97F' : '#6B7280', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.08em', padding: '7px 14px', borderRadius: '4px' }}
+                  >
+                    {isFr ? "✓ J'ai acheté ce lot" : '✓ I bought this lot'}
+                  </button>
+                  {showPurchaseForm && (
+                    <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <input type="number" placeholder={isFr ? 'Prix marteau payé (€)' : 'Hammer price paid (€)'} value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)}
+                        style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid #2A3B4C', color: '#E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', padding: '7px 10px', borderRadius: '4px', width: '100%', boxSizing: 'border-box' as const, outline: 'none' }} />
+                      <input type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)}
+                        style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid #2A3B4C', color: '#E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', padding: '7px 10px', borderRadius: '4px', width: '100%', boxSizing: 'border-box' as const, outline: 'none' }} />
+                      <select value={purchaseSource} onChange={e => setPurchaseSource(e.target.value as 'auction' | 'gallery' | 'private')}
+                        style={{ background: '#0D1F35', border: '0.5px solid #2A3B4C', color: '#E8E4DC', fontFamily: 'var(--font-mono)', fontSize: '11px', padding: '7px 10px', borderRadius: '4px', width: '100%' }}>
+                        <option value="auction">{isFr ? 'Enchères' : 'Auction'}</option>
+                        <option value="gallery">{isFr ? 'Galerie' : 'Gallery'}</option>
+                        <option value="private">{isFr ? 'Privé' : 'Private sale'}</option>
+                      </select>
+                      <button
+                        onClick={async () => {
+                          if (!purchasePrice || !getToken()) return;
+                          setPurchaseLoading(true);
+                          try {
+                            const r = await fetch(`${BACKEND}/api/lots/${id}/confirm-purchase`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` }, body: JSON.stringify({ purchase_price: parseFloat(purchasePrice), purchase_date: purchaseDate, purchase_source: purchaseSource }) });
+                            if (r.ok) { setPurchaseDone(true); setShowPurchaseForm(false); }
+                          } finally { setPurchaseLoading(false); }
+                        }}
+                        disabled={purchaseLoading || !purchasePrice}
+                        style={{ background: !purchasePrice ? 'rgba(26,107,60,0.3)' : '#1A6B3C', border: 'none', color: '#fff', cursor: purchaseLoading || !purchasePrice ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.08em', padding: '8px 14px', borderRadius: '4px', width: '100%' }}
+                      >
+                        {purchaseLoading ? '...' : (isFr ? "Enregistrer l'achat" : 'Save purchase')}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ marginTop: '8px', border: '0.5px solid #1A6B3C', color: '#52C97F', fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.08em', padding: '8px 14px', borderRadius: '4px', width: '100%', textAlign: 'center' as const, boxSizing: 'border-box' as const }}>
+                  {isFr ? '✓ Achat enregistré dans votre archive' : '✓ Purchase saved to your archive'}
+                </div>
+              )}
             </div>
-          )}
 
+            {/* ── COL 2 : Décision ── */}
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
 
-          {/* WHY block */}
-          {(() => {
-            const reasons: { icon: string; color: string; bg: string; main: string; sub: string; badge?: string | null; badgeColor?: string; badgeBg?: string }[] = [];
+              {/* Identité */}
+              <div style={{ marginBottom: 22 }}>
+                <div onClick={() => navigate(`/app/artists/${encodeURIComponent(lot.artist_name_raw || '')}`)}
+                  style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', marginBottom: 7, cursor: 'pointer', textTransform: 'uppercase' as const }}>
+                  {lot.artist_name_raw || 'Unknown artist'}
+                </div>
+                <h1 style={{ fontSize: 'clamp(20px, 2.5vw, 30px)', fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 600, color: '#fff', lineHeight: 1.2, margin: '0 0 6px' }}>
+                  {lot.title || 'Untitled'}
+                </h1>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.32)' }}>
+                  {[lot.medium, lot.auction_house_name?.split('—')[0].trim()].filter(Boolean).join(' · ')}
+                </div>
+              </div>
 
-            if ((lot.pct_below_low_estimate || 0) > 10)
-              reasons.push({
-                icon: '↓', color: GD, bg: 'rgba(82,201,127,0.12)',
-                main: isFr ? `${Math.round(lot.pct_below_low_estimate)}% sous estimation basse` : `${Math.round(lot.pct_below_low_estimate)}% below low estimate`,
-                sub: isFr ? `Entrée à ${fmt(price)} · estimation ${fmt(lot.estimate_low)}–${fmt(lot.estimate_high || lot.estimate_low)}` : `Entry at ${fmt(price)} · estimate ${fmt(lot.estimate_low)}–${fmt(lot.estimate_high || lot.estimate_low)}`,
-                badge: `-${Math.round(lot.pct_below_low_estimate)}%`, badgeColor: GD, badgeBg: 'rgba(82,201,127,0.12)',
-              });
-
-            if (lot.auction_date) {
-              const daysLeft = Math.ceil((new Date(lot.auction_date).getTime() - Date.now()) / 86400000);
-              if (daysLeft > 0 && daysLeft <= 14)
-                reasons.push({
-                  icon: '◷', color: GOLD, bg: 'rgba(198,168,90,0.12)',
-                  main: isFr ? `Se clôture dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}` : `Closes in ${daysLeft} day${daysLeft > 1 ? 's' : ''}`,
-                  sub: `${lot.auction_house_name || ''} · ${new Date(lot.auction_date).toLocaleDateString(isFr ? 'fr-FR' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`,
-                  badge: daysLeft <= 3 ? (isFr ? 'Urgent' : 'Urgent') : null, badgeColor: GOLD, badgeBg: 'rgba(198,168,90,0.12)',
-                });
-            }
-
-            if (lot.artist?.trend === 'up')
-              reasons.push({
-                icon: '↑', color: GD, bg: 'rgba(82,201,127,0.15)',
-                main: isFr ? 'Artiste en hausse' : 'Rising artist',
-                sub: `${lot.artist_name_raw || ''} · ${isFr ? 'Liquidité' : 'Liquidity'} ${Math.round(lot.artist?.liquidity_score || 0)}/100 · ${isFr ? 'Taux de vente' : 'Sell-through'} ${lot.artist?.sell_through_rate ? Math.round(lot.artist.sell_through_rate * 100) + '%' : '—'}`,
-                badge: null,
-              });
-            else if ((lot.deal_score || 0) >= 83)
-              reasons.push({
-                icon: '◎', color: BLD, bg: 'rgba(96,165,250,0.12)',
-                main: isFr ? `Top des opportunités · ${Math.round(lot.deal_score)}/100` : `Top opportunity · ${Math.round(lot.deal_score)}/100`,
-                sub: isFr ? 'Parmi les scores les plus élevés cette semaine' : 'Among the highest scores this week',
-                badge: null,
-              });
-            else if ((lot.deal_score || 0) >= 70)
-              reasons.push({
-                icon: '◎', color: BLD, bg: 'rgba(96,165,250,0.12)',
-                main: isFr ? `Signal positif de conviction · ${Math.round(lot.deal_score)}/100` : `Positive conviction signal · ${Math.round(lot.deal_score)}/100`,
-                sub: isFr ? 'Au-dessus du seuil de conviction' : 'Above conviction threshold',
-                badge: null,
-              });
-
-            if (reasons.length < 3 && (lot.artist?.liquidity_score || 0) >= 70 && lot.artist?.trend !== 'up')
-              reasons.push({
-                icon: '~', color: '#2DD4BF', bg: 'rgba(45,212,191,0.10)',
-                main: isFr ? `Liquidité artiste élevée (${Math.round(lot.artist.liquidity_score)}/100)` : `High artist liquidity (${Math.round(lot.artist.liquidity_score)}/100)`,
-                sub: isFr ? `${lot.artist_name_raw || ''} · Taux de vente ${lot.artist?.sell_through_rate ? Math.round(lot.artist.sell_through_rate * 100) + '%' : 'élevé'}` : `${lot.artist_name_raw || ''} · ${lot.artist?.sell_through_rate ? Math.round(lot.artist.sell_through_rate * 100) + '% sell-through' : 'High sell-through'}`,
-                badge: null,
-              });
-
-            const isBuy = (lot.deal_score || 0) >= 70;
-            const topReasons = isBuy
-              ? reasons.slice(0, 3)
-              : reasons.filter(r => r.color !== 'GD' && r.color !== '#52C97F').slice(0, 3);
-            const showReasons = topReasons.length > 0;
-
-            const whyLabel = isBuy ? (isFr ? 'POURQUOI ACHETER' : 'WHY BUY') : (isFr ? 'POURQUOI PASSER' : 'WHY PASS');
-            const whyColor = isBuy ? GOLD : '#F87171';
-
-            if (!showReasons) {
-              if ((lot.deal_score || 0) < 45) return (
-                <div style={{ background: 'rgba(248,113,113,0.06)', border: '0.5px solid rgba(248,113,113,0.15)', borderRadius: 10, padding: '11px 16px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.15em', color: '#F87171', textTransform: 'uppercase' as const, marginBottom: 8 }}>
-                    {isFr ? 'POURQUOI PASSER' : 'WHY PASS'}
+              {/* Q1 — Verdict */}
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 16, marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: verdict.dk, flexShrink: 0 }} />
+                  <span style={{ fontSize: 15, color: verdict.dk, fontFamily: 'var(--font-mono)', fontWeight: 600, letterSpacing: '0.06em' }}>{verdict.label}</span>
+                </div>
+                {topPct != null && (
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6, paddingLeft: 16 }}>
+                    {isFr
+                      ? <>Cette œuvre fait partie des <strong style={{ color: 'rgba(255,255,255,0.75)' }}>{topPct}%</strong> d&apos;opportunités les plus attractives identifiées actuellement.</>
+                      : <>This work is among the <strong style={{ color: 'rgba(255,255,255,0.75)' }}>top {topPct}%</strong> of currently identified opportunities.</>
+                    }
                   </div>
-                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
-                    {isFr ? `Score insuffisant (${Math.round(lot.deal_score || 0)}/100) — de meilleures opportunités sont disponibles cette semaine.` : `Insufficient score (${Math.round(lot.deal_score || 0)}/100) — better opportunities available this week.`}
+                )}
+              </div>
+
+              {/* Q2 — Pourquoi optimistes */}
+              {optimismSigs.length > 0 && (
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 16, marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: 10 }}>
+                    {isFr ? 'POURQUOI NOUS SOMMES OPTIMISTES' : 'WHY WE ARE OPTIMISTIC'}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                    {optimismSigs.map((s, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
+                        <span style={{ color: '#4ade80', fontSize: 11, flexShrink: 0, lineHeight: 1.6 }}>✓</span>
+                        <span style={{ fontSize: 13, color: '#fff' }}>{s}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              );
-              return null;
-            }
+              )}
 
-            return (
-              <div style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.08)', borderRadius: 10, overflow: 'hidden' }}>
-                <div style={{ padding: '10px 16px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.15em', color: whyColor, textTransform: 'uppercase' as const }}>
-                    {whyLabel}
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>
-                    {topReasons.length} signal{topReasons.length > 1 ? 's' : ''}
-                  </div>
-                </div>
-                {topReasons.map((r, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '11px 16px', borderBottom: i < topReasons.length - 1 ? '0.5px solid rgba(255,255,255,0.05)' : 'none' }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 6, background: r.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1, fontSize: 14, color: r.color }}>
-                      {r.icon}
+              {/* Q4 — Prix actuel + max conseillé */}
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: 8 }}>
+                      {isFr ? 'PRIX ACTUEL' : 'CURRENT PRICE'}
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.88)', fontWeight: 500, lineHeight: 1.4 }}>{r.main}</div>
-                      {r.sub && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', marginTop: 2, fontFamily: 'var(--font-mono)', letterSpacing: '0.03em' }}>{r.sub}</div>}
+                    <div style={{ fontSize: 34, fontFamily: "'Playfair Display', serif", color: '#fff', fontWeight: 600, lineHeight: 1, marginBottom: 6 }}>
+                      {fmtExact(price)}
                     </div>
-                    {r.badge && (
-                      <div style={{ marginLeft: 'auto', flexShrink: 0, background: r.badgeBg, color: r.badgeColor, fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4, fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' as const }}>
-                        {r.badge}
+                    {upsidePct > 0 && (
+                      <div style={{ fontSize: 11, color: '#4ade80', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                        –{Math.round(upsidePct)}% {isFr ? 'sous estimation basse' : 'below low estimate'}
                       </div>
                     )}
                   </div>
-                ))}
-              </div>
-            );
-          })()}
-
-          {/* Market narrative */}
-          {(() => {
-            const buildNarrative = () => {
-              const house = lot.auction_house_name || '';
-              const bigHouses = ['christie', 'sotheby', 'phillips', 'bonhams', 'artcurial', 'drouot'];
-              const isSmallHouse = !bigHouses.some(h => house.toLowerCase().includes(h));
-              const daysLeft = lot.auction_date
-                ? Math.ceil((new Date(lot.auction_date).getTime() - Date.now()) / 86400000)
-                : null;
-
-              if (isSmallHouse && (lot.pct_below_low_estimate || 0) > 20) {
-                const daysStr = daysLeft && daysLeft > 0 && daysLeft <= 14
-                  ? (isFr ? ` Dans ${daysLeft} jours.` : ` ${daysLeft} days left.`)
-                  : '';
-                const houseName = house.split(':')[0].trim();
-                return isFr
-                  ? `${lot.artist_name_raw} chez ${houseName} — maison peu visible. ${Math.round(lot.pct_below_low_estimate)}% sous estimation.${daysStr}`
-                  : `${lot.artist_name_raw} at ${houseName} — less visible house. ${Math.round(lot.pct_below_low_estimate)}% below estimate.${daysStr}`;
-              }
-              if (lot.artist?.trend === 'up' && (lot.pct_below_low_estimate || 0) > 15) {
-                const daysStr = daysLeft && daysLeft > 0 && daysLeft <= 14
-                  ? (isFr ? ` Dans ${daysLeft} jours.` : ` ${daysLeft} days left.`)
-                  : '';
-                return isFr
-                  ? `Momentum positif sur 6 mois. Prix actuel ${Math.round(lot.pct_below_low_estimate)}% sous l'estimation basse.${daysStr}`
-                  : `Positive momentum over 6 months. Current price ${Math.round(lot.pct_below_low_estimate)}% below low estimate.${daysStr}`;
-              }
-              if ((lot.deal_score || 0) >= 83 && realCost) {
-                return isFr
-                  ? `Score de conviction fort. Coût réel avec frais : ${fmt(realCost.cost_basis)}. Seuil de rentabilité : +${Math.round(realCost.needed_gain_pct)}%.`
-                  : `Strong conviction score. Real cost with fees: ${fmt(realCost.cost_basis)}. Break-even: +${Math.round(realCost.needed_gain_pct)}%.`;
-              }
-              return null;
-            };
-            const narrative = buildNarrative();
-            return narrative ? (
-              <p style={{ fontSize: 13, fontStyle: 'italic', color: 'rgba(255,255,255,0.45)', margin: '8px 0 0', lineHeight: 1.65 }}>
-                {narrative}
-              </p>
-            ) : null;
-          })()}
-
-          {/* External link */}
-          <div>
-            {!hasAccess ? (
-              <span onClick={() => { window.location.href = '/app/pricing'; }} style={{ cursor: 'pointer', color: '#2563EB', fontSize: 13, fontWeight: 600, letterSpacing: '0.04em' }}>🔒 {isFr ? 'Accès Investor →' : 'Investor access →'}</span>
-            ) : (
-              <a href={trackUrl} target="_blank" rel="noopener noreferrer"
-                onClick={() => trackEvent('lot_external_click', 'lot', lot.id, {
-                  lot_title: lot.title,
-                  artist: lot.artist_name_raw,
-                  source: lot.source,
-                  auction_house: lot.auction_house_name,
-                  deal_score: lot.deal_score,
-                  url: rawUrl,
-                })}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontFamily: 'var(--font-mono)', fontSize: '10px', color: BLD, textDecoration: 'none', letterSpacing: '0.06em' }}>
-                {isFr ? 'Voir sur' : 'View on'} {sourceNames[source] || resolvedSource} ↗
-              </a>
-            )}
-          </div>
-        </div>
-
-        {/* COL 3 — Conviction stack */}
-        <div style={{ padding: '28px 16px', display: 'flex', flexDirection: 'column', gap: '8px', background: DK4 }}>
-
-          {/* Block 1 — SCORE */}
-          <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>SCORE</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '42px', fontWeight: 700, color: 'white', lineHeight: 1 }}>{Math.round(dealScore)}</span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>/100</span>
-            </div>
-            <div style={{ marginTop: '6px', height: '3px', background: DKB, borderRadius: '1px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', borderRadius: '1px', width: `${dealScore}%`, background: GOLD }} />
-            </div>
-            {lot.fair_value_nautilus && price && (
-              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', marginTop: '6px', fontFamily: 'var(--font-mono)' }}>
-                -{Math.round((1 - price / (lot.fair_value_nautilus as number)) * 100)}% vs comparables
-              </div>
-            )}
-          </div>
-
-          {/* Block 2 — SIGNAL */}
-          <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>SIGNAL</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: verdict.dk, lineHeight: 1 }}>{verdict.icon} {verdict.label}</div>
-          </div>
-
-          {/* Block 2b — SIGNAUX MARCHÉ VIVANT (mobile only) */}
-          {(() => {
-            const signals: string[] = [];
-            const wcount = (lot as any).wishlist_count || (lot as any).watchlist_count;
-            if (wcount) signals.push(isFr ? `👁 ${wcount} suivis` : `👁 ${wcount} watching`);
-            const artistTrend = lot.artist?.trend;
-            if (artistTrend) {
-              const isUp = artistTrend === 'up' || artistTrend === 'rising';
-              const isDown = artistTrend === 'down' || artistTrend === 'falling';
-              signals.push(isUp
-                ? (isFr ? '↑ Artiste en hausse' : '↑ Rising artist')
-                : isDown
-                ? (isFr ? '↓ Artiste en baisse' : '↓ Falling artist')
-                : (isFr ? '→ Artiste stable' : '→ Stable artist'));
-            }
-            if (signals.length === 0) return null;
-            return (
-              <div className="lot-mobile-only" style={{ padding: '10px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', gap: '14px', flexWrap: 'wrap' as const }}>
-                {signals.map((s, i) => (
-                  <span key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.04em' }}>{s}</span>
-                ))}
-              </div>
-            );
-          })()}
-
-          {/* Block 3 — VS COMPARABLES */}
-          {lot.fair_value_nautilus && price > 0 && (() => {
-            const heroGapPct = Math.round((1 - price / (lot.fair_value_nautilus as number)) * 100);
-            return (
-              <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? 'VS COMPARABLES' : 'VS COMPARABLES'}</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: '#34D399', lineHeight: 1 }}>{heroGapPct > 0 ? '-' : '+'}{Math.abs(heroGapPct)}%</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>{isFr ? `Médiane : ${fmt(lot.fair_value_nautilus)}` : `Median: ${fmt(lot.fair_value_nautilus)}`}</div>
-              </div>
-            );
-          })()}
-
-          {/* Block 4 — PRIX ACTUEL + MAX BID */}
-          {!isGallery && maxBidIsReliable && (
-            <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                {/* PRIX ACTUEL */}
-                <div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '6px' }}>{isFr ? 'PRIX ACTUEL' : 'CURRENT PRICE'}</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: 'white', lineHeight: 1 }}>{fmtExact(price)}</div>
-                  {(lot.pct_below_low_estimate || 0) > 0 && (
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#34D399', marginTop: '4px' }}>
-                      -{Math.round(lot.pct_below_low_estimate || 0)}% {isFr ? 'sous estim.' : 'below est.'}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>
+                        {isFr ? 'PRIX MAXIMUM CONSEILLÉ' : 'RECOMMENDED MAX BID'}
+                      </span>
+                      <span
+                        title={isFr ? 'Prix maximum recommandé par Nautilus avant que le rapport risque/opportunité ne devienne défavorable.' : 'Maximum price recommended by Nautilus before the risk/opportunity ratio becomes unfavorable.'}
+                        style={{ cursor: 'help', color: 'rgba(255,255,255,0.25)', fontSize: 9, border: '1px solid rgba(255,255,255,0.18)', borderRadius: '50%', width: 14, height: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                      >?</span>
                     </div>
-                  )}
-                </div>
-                {/* MAX BID */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>{isFr ? 'MAX BID' : 'MAX BID'}</span>
-                    <span
-                      title={isFr ? 'Prix maximum recommandé par Nautilus avant que le rapport risque/opportunité ne devienne défavorable.' : 'Maximum price recommended by Nautilus before the risk/opportunity ratio becomes unfavorable.'}
-                      style={{ cursor: 'help', color: 'rgba(255,255,255,0.25)', fontSize: '8px', border: '1px solid rgba(255,255,255,0.18)', borderRadius: '50%', width: 13, height: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                    >?</span>
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: GOLD, lineHeight: 1 }}>{fmtExact(avoidAbove)}</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
-                    {maxBidSource === 'comparables_proches'
-                      ? (isFr ? 'Marge 10% · même technique' : '10% margin · same medium')
-                      : maxBidSource === 'comparables_meme_technique'
-                      ? (isFr ? 'Marge 10% · même technique' : '10% margin · same medium')
-                      : (isFr ? 'Marge 10% · techniques proches' : '10% margin · similar medium')}
+                    {avoidAbove ? (
+                      <>
+                        <div style={{ fontSize: 34, fontFamily: "'Playfair Display', serif", color: '#b8922a', fontWeight: 600, lineHeight: 1, marginBottom: 6 }}>
+                          {fmtExact(avoidAbove)}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>
+                          {isFr ? 'perte garantie au-delà' : 'guaranteed loss beyond'}
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', fontStyle: 'italic', lineHeight: 1.4, marginTop: 4 }}>
+                        {isFr ? 'Données insuffisantes' : 'Insufficient data'}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-          {!isGallery && avoidAbove && !maxBidIsReliable && (
-            <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '6px' }}>{isFr ? 'PRIX ACTUEL' : 'CURRENT PRICE'}</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: 'white', lineHeight: 1 }}>{fmtExact(price)}</div>
+
+            </div>{/* end COL 2 */}
+
+            {/* ── COL 3 : Score + Signal ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+              {/* Score card */}
+              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, padding: '20px 18px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>SCORE</span>
+                  <span
+                    title={isFr ? "Score Nautilus calculé sur 6 critères.\nÉchelle :\n90–100 · Exceptionnel\n80–89 · Très fort\n65–79 · Intéressant\n< 65 · Neutre" : "Nautilus Score on 6 criteria.\nScale:\n90–100 · Exceptional\n80–89 · Very strong\n65–79 · Interesting\n< 65 · Neutral"}
+                    style={{ cursor: 'help', color: 'rgba(255,255,255,0.28)', fontSize: 9, border: '1px solid rgba(255,255,255,0.18)', borderRadius: '50%', width: 14, height: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                  >?</span>
                 </div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 10 }}>
+                  <span style={{ fontSize: 56, fontFamily: "'Playfair Display', serif", color: '#fff', fontWeight: 600, lineHeight: 1 }}>{Math.round(dealScore)}</span>
+                  <span style={{ fontSize: 16, color: 'rgba(255,255,255,0.25)' }}>/100</span>
+                </div>
+                <div style={{ height: 2, background: 'rgba(255,255,255,0.08)', borderRadius: 1, marginBottom: 10 }}>
+                  <div style={{ height: '100%', width: `${dealScore}%`, background: '#b8922a', borderRadius: 1 }} />
+                </div>
+                <div style={{ fontSize: 13, color: '#b8922a', fontFamily: 'var(--font-mono)', fontWeight: 600, marginBottom: 2 }}>{humanLabel}</div>
+              </div>
+
+              {/* Signal badge */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 14px', background: dealScore >= 80 ? 'rgba(74,222,128,0.07)' : 'rgba(251,191,36,0.07)', border: `1px solid ${dealScore >= 80 ? 'rgba(74,222,128,0.18)' : 'rgba(251,191,36,0.18)'}`, borderRadius: 5 }}>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: dealScore >= 80 ? '#4ade80' : '#FBBF24', flexShrink: 0 }} />
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>MAX BID</span>
-                    <span
-                      title={isFr ? 'Prix maximum recommandé par Nautilus avant que le rapport risque/opportunité ne devienne défavorable.' : 'Maximum price recommended by Nautilus before the risk/opportunity ratio becomes unfavorable.'}
-                      style={{ cursor: 'help', color: 'rgba(255,255,255,0.25)', fontSize: '8px', border: '1px solid rgba(255,255,255,0.18)', borderRadius: '50%', width: 13, height: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                    >?</span>
-                  </div>
-                  <div style={{ color: '#64748B', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.4 }}>
-                    {isFr ? 'Données insuffisantes pour un prix max fiable' : 'Insufficient data for a reliable max bid'}
+                  <div style={{ fontSize: 12, color: dealScore >= 80 ? '#4ade80' : '#FBBF24', fontFamily: 'var(--font-mono)', fontWeight: 600, letterSpacing: '0.08em' }}>{stickyTier}</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
+                    {lot.artist?.trend === 'up' ? (isFr ? '↑ Artiste en hausse' : '↑ Rising artist') : lot.artist?.trend === 'down' ? (isFr ? '↓ Artiste en recul' : '↓ Falling artist') : (isFr ? '→ Artiste stable' : '→ Stable artist')}
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-          {!isGallery && !avoidAbove && (
-            <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '6px' }}>{isFr ? 'PRIX ACTUEL' : 'CURRENT PRICE'}</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: 'white', lineHeight: 1 }}>{fmtExact(price)}</div>
-                  {estLow > 0 && (
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.25)', marginTop: '4px' }}>
-                      {isFr ? `estim. ${fmtExact(estLow)}–${fmtExact(estHigh)}` : `est. ${fmtExact(estLow)}–${fmtExact(estHigh)}`}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>MAX BID</span>
-                    <span
-                      title={isFr ? 'Prix maximum recommandé par Nautilus avant que le rapport risque/opportunité ne devienne défavorable.' : 'Maximum price recommended by Nautilus before the risk/opportunity ratio becomes unfavorable.'}
-                      style={{ cursor: 'help', color: 'rgba(255,255,255,0.25)', fontSize: '8px', border: '1px solid rgba(255,255,255,0.18)', borderRadius: '50%', width: 13, height: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                    >?</span>
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>
-                    {isFr ? 'Données insuffisantes' : 'Insufficient data'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
-          {/* Follow */}
-          <button
-            onClick={async () => {
-              if (!getToken()) { window.location.href = '/app/login'; return; }
-              setSubLoading(true);
-              try {
-                if (subscribed && subId) {
-                  await fetch(`${BACKEND}/api/wishlist/${id}`, {
-                    method: 'DELETE',
-                    headers: { Authorization: `Bearer ${getToken()}` },
-                  });
-                  setSubscribed(false);
-                  setSubId(null);
-                } else {
-                  const r = await fetch(`${BACKEND}/api/wishlist/${id}`, {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${getToken()}` },
-                  });
-                  if (r.status === 403) {
-                    setUpgradeModal('wishlist');
-                  } else if (r.ok) {
-                    setSubscribed(true);
-                    setSubId(id);
-                    trackEvent('lot_watchlist_add', 'lot', lot.id, {
-                      lot_title: lot.title,
-                      artist: lot.artist_name_raw,
-                      deal_score: lot.deal_score,
-                    });
-                  }
-                }
-              } finally {
-                setSubLoading(false);
-              }
-            }}
-            disabled={subLoading}
-            style={{
-              marginTop: 'auto',
-              background: subscribed ? 'rgba(82,201,127,0.1)' : 'none',
-              border: `0.5px solid ${subscribed ? GD : DKB}`,
-              color: subscribed ? GD : '#9CA3AF',
-              cursor: subLoading ? 'default' : 'pointer',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '10px',
-              letterSpacing: '0.08em',
-              padding: '8px 14px',
-              borderRadius: '4px',
-              width: '100%',
-            }}
-          >
-            {subLoading ? '...' : subscribed ? (isFr ? '✓ Suivi' : '✓ Following') : (isFr ? '🔔 Suivre ce lot' : '🔔 Follow this lot')}
-          </button>
+            </div>{/* end COL 3 */}
 
-          {/* ── J'ai acheté ce lot ── */}
-          {!purchaseDone ? (
-            <>
-              <button
-                onClick={() => setShowPurchaseForm(v => !v)}
-                style={{
-                  marginTop: '8px',
-                  background: showPurchaseForm ? 'rgba(26,107,60,0.1)' : 'none',
-                  border: `0.5px solid ${showPurchaseForm ? '#1A6B3C' : '#2A3B4C'}`,
-                  color: showPurchaseForm ? '#52C97F' : '#6B7280',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '10px',
-                  letterSpacing: '0.08em',
-                  padding: '8px 14px',
-                  borderRadius: '4px',
-                  width: '100%',
-                }}
-              >
-                {isFr ? '✓ J\'ai acheté ce lot' : '✓ I bought this lot'}
-              </button>
-              {showPurchaseForm && (
-                <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <input
-                    type="number"
-                    placeholder={isFr ? 'Prix marteau payé (€)' : 'Hammer price paid (€)'}
-                    value={purchasePrice}
-                    onChange={e => setPurchasePrice(e.target.value)}
-                    style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '0.5px solid #2A3B4C',
-                      color: '#E8E4DC',
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '11px',
-                      padding: '7px 10px',
-                      borderRadius: '4px',
-                      width: '100%',
-                      boxSizing: 'border-box' as const,
-                      outline: 'none',
-                    }}
-                  />
-                  <input
-                    type="date"
-                    value={purchaseDate}
-                    onChange={e => setPurchaseDate(e.target.value)}
-                    style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '0.5px solid #2A3B4C',
-                      color: '#E8E4DC',
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '11px',
-                      padding: '7px 10px',
-                      borderRadius: '4px',
-                      width: '100%',
-                      boxSizing: 'border-box' as const,
-                      outline: 'none',
-                    }}
-                  />
-                  <select
-                    value={purchaseSource}
-                    onChange={e => setPurchaseSource(e.target.value as 'auction' | 'gallery' | 'private')}
-                    style={{
-                      background: '#0D1F35',
-                      border: '0.5px solid #2A3B4C',
-                      color: '#E8E4DC',
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '11px',
-                      padding: '7px 10px',
-                      borderRadius: '4px',
-                      width: '100%',
-                    }}
-                  >
-                    <option value="auction">{isFr ? 'Enchères' : 'Auction'}</option>
-                    <option value="gallery">{isFr ? 'Galerie' : 'Gallery'}</option>
-                    <option value="private">{isFr ? 'Privé' : 'Private sale'}</option>
-                  </select>
-                  <button
-                    onClick={async () => {
-                      if (!purchasePrice || !getToken()) return;
-                      setPurchaseLoading(true);
-                      try {
-                        const r = await fetch(`${BACKEND}/api/lots/${id}/confirm-purchase`, {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                            Authorization: `Bearer ${getToken()}`,
-                          },
-                          body: JSON.stringify({
-                            purchase_price: parseFloat(purchasePrice),
-                            purchase_date: purchaseDate,
-                            purchase_source: purchaseSource,
-                          }),
-                        });
-                        if (r.ok) {
-                          setPurchaseDone(true);
-                          setShowPurchaseForm(false);
-                        }
-                      } finally {
-                        setPurchaseLoading(false);
-                      }
-                    }}
-                    disabled={purchaseLoading || !purchasePrice}
-                    style={{
-                      background: !purchasePrice ? 'rgba(26,107,60,0.3)' : '#1A6B3C',
-                      border: 'none',
-                      color: '#fff',
-                      cursor: purchaseLoading || !purchasePrice ? 'default' : 'pointer',
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '10px',
-                      letterSpacing: '0.08em',
-                      padding: '8px 14px',
-                      borderRadius: '4px',
-                      width: '100%',
-                    }}
-                  >
-                    {purchaseLoading ? '...' : (isFr ? 'Enregistrer l\'achat' : 'Save purchase')}
-                  </button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div style={{
-              marginTop: '8px',
-              border: '0.5px solid #1A6B3C',
-              color: '#52C97F',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '10px',
-              letterSpacing: '0.08em',
-              padding: '8px 14px',
-              borderRadius: '4px',
-              width: '100%',
-              textAlign: 'center' as const,
-              boxSizing: 'border-box' as const,
-            }}>
-              {isFr ? '✓ Achat enregistré dans votre archive' : '✓ Purchase saved to your archive'}
-            </div>
-          )}
-
-        </div>
-      </div>
-
+          </div>{/* end 3-col grid */}
+        </div>{/* end maxWidth container */}
+      </div>{/* end hero dark */}
       {/* ═══ LIGHT ZONE ═══ */}
       <div className="lot-light-zone" style={{ background: '#F5F4F0' }}>
 
