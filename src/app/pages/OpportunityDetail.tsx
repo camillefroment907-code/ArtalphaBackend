@@ -520,14 +520,16 @@ export default function OpportunityDetail() {
     const prices = sameArtistComps.map((c: any) => c.current_price || 0).filter(Boolean).sort((a: number, b: number) => a - b);
     return prices.length >= 2 ? prices[Math.floor(prices.length / 2)] : null;
   })();
-  // Estimation de l'œuvre : API max_bid → market analysis → médiane des comparables → mid-estimate → estimate_high
-  const avoidAbove = maxBidFromApi
+  // Estimation de l'œuvre : fair_value_nautilus (médiane réalisée) → market analysis → médiane comparables → estimate_high
+  // NB: maxBidFromApi = compute_max_bid(fair_value) ≈ 60% of fair value (profit-adjusted) — trop bas pour afficher comme "prix max"
+  const fairValueNautilus = lot.fair_value_nautilus ? Math.round(lot.fair_value_nautilus) : null;
+  const avoidAbove = fairValueNautilus
     ?? (marketAnalysis?.median_price ? Math.round(marketAnalysis.median_price) : null)
     ?? (marketAnalysis?.avg_price    ? Math.round(marketAnalysis.avg_price)    : null)
     ?? compsMedian
-    ?? estimateMid
     ?? (estHigh || null);
-  const maxBidIsReliable = !!maxBidFromApi && RELIABLE_SOURCES.includes(maxBidSource ?? '');
+  const avoidAboveIsEstimate = !fairValueNautilus && !marketAnalysis?.median_price && !marketAnalysis?.avg_price && !compsMedian;
+  const maxBidIsReliable = !!fairValueNautilus || (!!maxBidFromApi && RELIABLE_SOURCES.includes(maxBidSource ?? ''));
   const maxCompPrice = comparables.length > 0 ? Math.max(...comparables.map((c: any) => c.current_price || 0), price) : price;
   const isHistorical = comparables.length > 0 && comparables[0].is_historical === true;
 
@@ -821,14 +823,20 @@ export default function OpportunityDetail() {
                     </div>
                     {avoidAbove ? (
                       <>
-                        <div style={{ fontSize: 34, fontFamily: "'Playfair Display', serif", color: '#b8922a', fontWeight: 600, lineHeight: 1, marginBottom: 6 }}>
+                        <div style={{ fontSize: 34, fontFamily: "'Playfair Display', serif", color: avoidAbove < price ? '#f87171' : '#b8922a', fontWeight: 600, lineHeight: 1, marginBottom: 6 }}>
                           {fmtExact(avoidAbove)}
                         </div>
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>
-                          {maxBidFromApi
-                            ? (isFr ? 'perte garantie au-delà' : 'guaranteed loss beyond')
-                            : (isFr ? 'valeur estimée Nautilus' : 'Nautilus estimated value')}
-                        </div>
+                        {avoidAbove < price ? (
+                          <div style={{ fontSize: 10, color: '#f87171', fontFamily: 'var(--font-mono)', fontWeight: 600, letterSpacing: '0.04em' }}>
+                            ▲ {isFr ? 'prix actuel dépasse notre estimation' : 'current price exceeds our estimate'}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>
+                            {avoidAboveIsEstimate
+                              ? (isFr ? 'estimation haute maison de vente' : 'auction house high estimate')
+                              : (isFr ? 'valeur de marché Nautilus' : 'Nautilus market value')}
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', fontStyle: 'italic', lineHeight: 1.4, marginTop: 4 }}>
@@ -870,6 +878,30 @@ export default function OpportunityDetail() {
                   </div>
                 </div>
               </div>
+
+              {/* Oracle signal (BUY_NOW / WATCH / HOLD / AVOID) */}
+              {lot.oracle?.signal && (() => {
+                const sig = lot.oracle.signal as string;
+                const isGo   = sig === 'BUY_NOW';
+                const isStop = sig === 'AVOID';
+                const col    = isGo ? '#4ade80' : isStop ? '#f87171' : '#FBBF24';
+                const bg     = isGo ? 'rgba(74,222,128,0.07)' : isStop ? 'rgba(248,113,113,0.07)' : 'rgba(251,191,36,0.07)';
+                const bd     = isGo ? 'rgba(74,222,128,0.18)' : isStop ? 'rgba(248,113,113,0.18)' : 'rgba(251,191,36,0.18)';
+                const label  = isGo ? (isFr ? 'ORACLE · ACHETER' : 'ORACLE · BUY NOW')
+                             : isStop ? (isFr ? 'ORACLE · ÉVITER' : 'ORACLE · AVOID')
+                             : `ORACLE · ${sig}`;
+                return (
+                  <div style={{ padding: '10px 14px', background: bg, border: `1px solid ${bd}`, borderRadius: 5 }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: col, letterSpacing: '0.1em', fontWeight: 700, marginBottom: 4 }}>{label}</div>
+                    {lot.oracle.target_upside && (
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: '#fff', marginBottom: 2 }}>{lot.oracle.target_upside}</div>
+                    )}
+                    {lot.oracle.score_6m != null && (
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>Score 6m : {Number(lot.oracle.score_6m).toFixed(0)}/100</div>
+                    )}
+                  </div>
+                );
+              })()}
 
             </div>{/* end COL 3 */}
 
@@ -934,6 +966,23 @@ export default function OpportunityDetail() {
                 )}
               </div>
             ))}
+            {estBias && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: `1px solid #F0EDE6` }}>
+                <span style={{ fontSize: '13px', color: LTT3, minWidth: '80px', flexShrink: 0 }}>{isFr ? 'Biais estim.' : 'Est. bias'}</span>
+                <span style={{ fontSize: '12px', textAlign: 'right' as const, flex: 1, color: estBias.signal === 'bullish' ? GL : estBias.signal === 'bearish' ? RED : LTT2 }}>
+                  {estBias.label}
+                </span>
+              </div>
+            )}
+            {priceHistory?.statistics && (priceHistory.statistics.trend_pct != null || priceHistory.statistics.sell_above_estimate_pct != null) && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: `1px solid #F0EDE6` }}>
+                <span style={{ fontSize: '13px', color: LTT3, minWidth: '80px', flexShrink: 0 }}>{isFr ? 'Tendance' : 'Trend'}</span>
+                <span style={{ fontSize: '12px', textAlign: 'right' as const, flex: 1, color: (priceHistory.statistics.trend_pct ?? 0) >= 0 ? GL : RED }}>
+                  {priceHistory.statistics.trend_pct != null && `${priceHistory.statistics.trend_pct > 0 ? '+' : ''}${priceHistory.statistics.trend_pct}% (12m)`}
+                  {priceHistory.statistics.sell_above_estimate_pct != null && ` · ${priceHistory.statistics.sell_above_estimate_pct}% ${isFr ? 'ventes > estim.' : 'sold > est.'}`}
+                </span>
+              </div>
+            )}
           </div>
           {/* Col droite — COÛT RÉEL DÉTAILLÉ */}
           <div style={{ padding: '28px 40px 28px 24px' }}>
@@ -1137,7 +1186,7 @@ export default function OpportunityDetail() {
                 </div>
               </div>
             )}
-            {isInvestor && (formatMatrix?.formats?.length > 0 || timingData?.best_house) && (
+            {isInvestor && (formatMatrix?.formats?.length > 0 || timingData?.best_house || cycleStage) && (
               <div style={{ padding: '0 40px 24px' }}>
                 <div style={{ border: '0.5px solid rgba(232,228,220,0.4)', borderRadius: '10px', padding: '20px 24px', background: 'rgba(255,255,255,0.02)' }}>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '20px' }}>
@@ -1201,6 +1250,22 @@ export default function OpportunityDetail() {
                           <div style={{ fontSize: '12px', color: LTT3 }}>
                             {timingData.best_season}
                             {timingData.best_avg_price && ` · €${Math.round(timingData.best_avg_price).toLocaleString()} moy.`}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Cycle de marché */}
+                    {cycleStage && (
+                      <div style={{ flex: 1, minWidth: '140px' }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: LTT3, letterSpacing: '0.1em', marginBottom: '6px' }}>
+                          {isFr ? 'CYCLE DE MARCHÉ' : 'MARKET CYCLE'}
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: cycleStage.color, marginBottom: '3px' }}>{cycleStage.icon} {cycleStage.stage}</div>
+                        <div style={{ fontSize: '11px', color: LTT3, marginBottom: '2px' }}>{cycleStage.description}</div>
+                        {cycleStage.momentum_pct != null && (
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: cycleStage.momentum_pct > 0 ? GL : RED }}>
+                            {cycleStage.momentum_pct > 0 ? '+' : ''}{cycleStage.momentum_pct}% {isFr ? 'vs an passé' : 'vs last yr'}
                           </div>
                         )}
                       </div>
@@ -1277,7 +1342,7 @@ export default function OpportunityDetail() {
             ) : null}
 
             {/* ── SCÉNARIOS DE VALORISATION ───────────────────────────────────── */}
-            {!hasAccess ? null : !hasAccess ? (
+            {hasAccess && !canSeeAnalysis ? (
               <div style={{ padding: '0 40px 24px' }}>
                 <LockedBlock
                   title="Scénarios de valorisation"
