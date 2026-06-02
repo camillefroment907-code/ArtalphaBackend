@@ -148,7 +148,8 @@ function Tip({ text, width = 220, theme = 'dark' }: { text: string; width?: numb
         <div style={{
           position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
           background: '#0C1622', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)',
-          fontSize: 11, padding: '10px 14px', borderRadius: 5, width, lineHeight: 1.55, zIndex: 9999,
+          fontSize: 11, fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 400,
+          padding: '10px 14px', borderRadius: 5, width, lineHeight: 1.55, zIndex: 9999,
           whiteSpace: 'pre-line', pointerEvents: 'none', boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
         }}>
           {text}
@@ -906,9 +907,9 @@ export default function OpportunityDetail() {
                 <div>
                   <div style={{ fontSize: 12, color: dealScore >= 80 ? '#4ade80' : '#FBBF24', fontFamily: 'var(--font-mono)', fontWeight: 600, letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: 5 }}>
                     {stickyTier}
-                    <Tip width={270} text={isFr
-                      ? `6 critères : décote vs estimation (30 %), décote vs marché historique (30 %), liquidité artiste (20 %), réputation maison (10 %), fiabilité des données (10 %), signal Oracle ±8 pts.\nINTÉRESSANT ≥ 65 · FORT ≥ 77 · EXCEPTIONNEL ≥ 83`
-                      : `6 criteria: discount vs estimate (30%), discount vs historical market (30%), artist liquidity (20%), house reputation (10%), data confidence (10%), Oracle signal ±8 pts.\nINTERESTING ≥ 65 · STRONG ≥ 77 · EXCEPTIONAL ≥ 83`}
+                    <Tip width={230} text={isFr
+                      ? `Le score Nautilus combine :\n• l'attractivité du prix actuel\n• les ventes comparables observées\n• la liquidité du marché de l'artiste\n• la qualité des données disponibles\n\nINTÉRESSANT ≥ 65\nFORT ≥ 77\nEXCEPTIONNEL ≥ 83`
+                      : `The Nautilus score combines:\n• current price attractiveness\n• observed comparable sales\n• artist market liquidity\n• quality of available data\n\nINTERESTING ≥ 65\nSTRONG ≥ 77\nEXCEPTIONAL ≥ 83`}
                     />
                   </div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
@@ -955,7 +956,7 @@ export default function OpportunityDetail() {
       {/* ═══ LIGHT ZONE ═══ */}
       <div className="lot-light-zone" style={{ background: '#F5F4F0' }}>
 
-        <div style={{ background: '#fff', borderBottom: '0.5px solid #E8E4DC', overflow: 'hidden' }}>
+        <div style={{ background: '#fff', borderBottom: '0.5px solid #E8E4DC' }}>
 
           {/* Coût réel strip */}
           <div style={{ display: 'flex', alignItems: 'center', padding: '7px 20px', background: '#F5F4F0', borderTop: '0.5px solid #E8E4DC' }}>
@@ -965,7 +966,7 @@ export default function OpportunityDetail() {
               { lbl: isFr ? 'FRAIS ACHETEUR' : 'BUYER FEES', val: `+${buyerPremiumPct}%`, color: LTT1,
                 tip: isFr ? `Commission de la maison de vente sur le prix marteau. Taux appliqué ici : ${buyerPremiumPct}%.` : `Auction house commission on top of the hammer price. Rate applied here: ${buyerPremiumPct}%.` },
               { lbl: isFr ? 'RENTABILITÉ DÈS' : 'BREAK-EVEN AT', val: realCost?.breakeven_hammer ? fmtExact(Math.round(realCost.breakeven_hammer)) : '—', color: AMB,
-                tip: isFr ? `Marteau minimum à la revente pour couvrir tous les frais, commission vendeur 15 % incluse. En dessous, vous êtes en perte.` : `Minimum resale hammer to cover all costs including the 15% seller's fee. Below this, you lose money.` },
+                tip: isFr ? `Prix minimum à la revente pour couvrir l'ensemble des frais et commissions. En dessous, vous êtes en perte.` : `Minimum resale price to cover all fees and commissions. Below this, you are at a loss.` },
               { lbl: isFr ? 'PROGRESSION NÉCESSAIRE' : 'NEEDED GAIN', val: breakEvenGain != null ? `+${Math.round(breakEvenGain)}%` : '—', color: LTT1,
                 tip: isFr ? `Hausse minimale du prix pour être à l'équilibre à la revente, tous frais compris.` : `Minimum price increase to break even at resale, all costs included.` },
             ] as { lbl: string; val: string; color: string; tip: string }[]).map((item, i, arr) => (
