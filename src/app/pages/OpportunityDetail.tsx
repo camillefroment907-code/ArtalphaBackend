@@ -131,6 +131,32 @@ function buildNarrativeReading(lot: any, isFr: boolean, cc: number): string {
   return isFr ? "Cette œuvre ressort positivement dans notre analyse. Le niveau de conviction reste mesuré en raison du volume de données disponibles, mais les signaux observés justifient une attention particulière." : "This work stands out positively in our analysis. The conviction level remains measured due to the volume of available data, but the observed signals justify special attention.";
 }
 
+// ── TOOLTIP ───────────────────────────────────────────────────────────────────
+
+function Tip({ text, width = 220 }: { text: string; width?: number }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span
+      style={{ position: 'relative', display: 'inline-flex', cursor: 'help' }}
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      <span style={{ color: 'rgba(255,255,255,0.28)', fontSize: 9, border: '1px solid rgba(255,255,255,0.18)', borderRadius: '50%', width: 14, height: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>?</span>
+      {show && (
+        <div style={{
+          position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
+          background: '#0C1622', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)',
+          fontSize: 11, padding: '10px 14px', borderRadius: 5, width, lineHeight: 1.55, zIndex: 9999,
+          whiteSpace: 'pre-line', pointerEvents: 'none', boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+        }}>
+          {text}
+          <span style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', display: 'block', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid #0C1622' }} />
+        </div>
+      )}
+    </span>
+  );
+}
+
 // ── LOCKED BLOCK (light theme) ────────────────────────────────────────────────
 
 function LockedBlock({ preview, ctaText }: {
@@ -459,14 +485,13 @@ export default function OpportunityDetail() {
   const totalCost     = realCost ? realCost.cost_basis : (price > 0 ? Math.round(price * premiumMultiplier) : null);
   const breakEvenGain = realCost?.needed_gain_pct ?? null;
   const netGain       = breakEvenGain != null ? upsidePct - breakEvenGain : null;
-  const avoidAbove = maxBidFromApi ?? null;
   const avoidAboveUsedComps = maxBidFromApi != null;
   const RELIABLE_SOURCES = [
     'comparables_proches',
     'comparables_meme_technique',
     'comparables_technique_proche',
   ];
-  const maxBidIsReliable = !!avoidAbove && RELIABLE_SOURCES.includes(maxBidSource ?? '');
+  // avoidAbove computed after sameArtistComps below
   const daysUntilClose = lot.auction_date
     ? Math.max(0, Math.round((new Date(lot.auction_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null;
@@ -491,6 +516,18 @@ export default function OpportunityDetail() {
   );
   const displayComps = sameArtistComps.length >= 2 ? sameArtistComps.slice(0, 3) : allComps.slice(0, 3);
   const compsLabel   = sameArtistComps.length >= 2 ? (isFr ? 'VENTES COMPARABLES' : 'COMPARABLE SALES') : (isFr ? 'ŒUVRES SIMILAIRES' : 'SIMILAR WORKS');
+  const compsMedian  = (() => {
+    const prices = sameArtistComps.map((c: any) => c.current_price || 0).filter(Boolean).sort((a: number, b: number) => a - b);
+    return prices.length >= 2 ? prices[Math.floor(prices.length / 2)] : null;
+  })();
+  // Estimation de l'œuvre : API max_bid → market analysis → médiane des comparables → mid-estimate → estimate_high
+  const avoidAbove = maxBidFromApi
+    ?? (marketAnalysis?.median_price ? Math.round(marketAnalysis.median_price) : null)
+    ?? (marketAnalysis?.avg_price    ? Math.round(marketAnalysis.avg_price)    : null)
+    ?? compsMedian
+    ?? estimateMid
+    ?? (estHigh || null);
+  const maxBidIsReliable = !!maxBidFromApi && RELIABLE_SOURCES.includes(maxBidSource ?? '');
   const maxCompPrice = comparables.length > 0 ? Math.max(...comparables.map((c: any) => c.current_price || 0), price) : price;
   const isHistorical = comparables.length > 0 && comparables[0].is_historical === true;
 
@@ -707,6 +744,23 @@ export default function OpportunityDetail() {
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.32)' }}>
                   {[lot.medium, lot.auction_house_name?.split('—')[0].trim()].filter(Boolean).join(' · ')}
                 </div>
+                {(estLow || estHigh || daysUntilClose != null) && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 14px', marginTop: 9 }}>
+                    {(estLow || estHigh) && (
+                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
+                        {isFr ? 'Est.' : 'Est.'} {estLow ? fmtExact(estLow) : '—'}{estHigh ? ` – ${fmtExact(estHigh)}` : ''}
+                      </span>
+                    )}
+                    {daysUntilClose != null && (
+                      <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', color: daysUntilClose <= 3 ? '#F87171' : daysUntilClose <= 7 ? '#FBBF24' : 'rgba(255,255,255,0.5)' }}>
+                        {daysUntilClose === 0
+                          ? (isFr ? 'Vente aujourd\'hui' : 'Sale today')
+                          : `J-${daysUntilClose}`}
+                        {auctionDateFmt ? ` · ${auctionDateFmt}` : ''}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Q1 — Verdict */}
@@ -763,10 +817,7 @@ export default function OpportunityDetail() {
                       <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>
                         {isFr ? 'PRIX MAXIMUM CONSEILLÉ' : 'RECOMMENDED MAX BID'}
                       </span>
-                      <span
-                        title={isFr ? 'Prix maximum recommandé par Nautilus avant que le rapport risque/opportunité ne devienne défavorable.' : 'Maximum price recommended by Nautilus before the risk/opportunity ratio becomes unfavorable.'}
-                        style={{ cursor: 'help', color: 'rgba(255,255,255,0.25)', fontSize: 9, border: '1px solid rgba(255,255,255,0.18)', borderRadius: '50%', width: 14, height: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                      >?</span>
+                      <Tip text={isFr ? 'Valeur de marché estimée par Nautilus à partir des ventes comparables. Au-delà de ce prix, le rapport risque/opportunité devient défavorable.' : 'Market value estimated by Nautilus from comparable sales. Beyond this price, the risk/opportunity ratio becomes unfavorable.'} width={240} />
                     </div>
                     {avoidAbove ? (
                       <>
@@ -774,7 +825,9 @@ export default function OpportunityDetail() {
                           {fmtExact(avoidAbove)}
                         </div>
                         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>
-                          {isFr ? 'perte garantie au-delà' : 'guaranteed loss beyond'}
+                          {maxBidFromApi
+                            ? (isFr ? 'perte garantie au-delà' : 'guaranteed loss beyond')
+                            : (isFr ? 'valeur estimée Nautilus' : 'Nautilus estimated value')}
                         </div>
                       </>
                     ) : (
@@ -795,10 +848,7 @@ export default function OpportunityDetail() {
               <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, padding: '20px 18px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
                   <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>SCORE</span>
-                  <span
-                    title={isFr ? "Score Nautilus calculé sur 6 critères.\nÉchelle :\n90–100 · Exceptionnel\n80–89 · Très fort\n65–79 · Intéressant\n< 65 · Neutre" : "Nautilus Score on 6 criteria.\nScale:\n90–100 · Exceptional\n80–89 · Very strong\n65–79 · Interesting\n< 65 · Neutral"}
-                    style={{ cursor: 'help', color: 'rgba(255,255,255,0.28)', fontSize: 9, border: '1px solid rgba(255,255,255,0.18)', borderRadius: '50%', width: 14, height: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                  >?</span>
+                  <Tip text={isFr ? `Score Nautilus sur 6 critères.\n\nÉchelle :\n90–100 · Exceptionnel\n80–89 · Très fort\n65–79 · Intéressant\n< 65 · Neutre` : `Nautilus Score on 6 criteria.\n\nScale:\n90–100 · Exceptional\n80–89 · Very strong\n65–79 · Interesting\n< 65 · Neutral`} width={200} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 10 }}>
                   <span style={{ fontSize: 56, fontFamily: "'Playfair Display', serif", color: '#fff', fontWeight: 600, lineHeight: 1 }}>{Math.round(dealScore)}</span>
