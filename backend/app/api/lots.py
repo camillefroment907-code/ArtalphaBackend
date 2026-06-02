@@ -2476,6 +2476,10 @@ async def get_comparables(
         "max_bid_source": max_bid_source,
         "max_bid_comp_count": max_bid_comp_count,
         "max_bid_comp_level": max_bid_comp_level,
+        # fair_value = undiscounted market value (medium-filtered) — use this to display
+        # "PRIX MAXIMUM CONSEILLÉ". max_bid = compute_max_bid(fair_value) ≈ 60% of this.
+        "fair_value": round(weighted["market_value"]) if weighted else (round(float(lot.estimate_high) * 1.0) if lot.estimate_high else None),
+        "fair_value_source": weighted.get("max_bid_source", "estimate") if weighted else "estimate",
         "market_analysis": {
             "comparable_count":    comparable_count_total,
             "market_avg_price":    round(market_avg) if market_avg else None,

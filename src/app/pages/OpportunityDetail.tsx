@@ -197,10 +197,12 @@ export default function OpportunityDetail() {
   const [memoLoading, setMemoLoading]     = useState(false);
   const [memo, setMemo]                   = useState<any>(null);
   const [showMemo, setShowMemo]           = useState(false);
-  const [comparables, setComparables]     = useState<any[]>([]);
+  const [comparables, setComparables]       = useState<any[]>([]);
   const [marketAnalysis, setMarketAnalysis] = useState<any>(null);
   const [maxBidFromApi, setMaxBidFromApi]   = useState<number | null>(null);
   const [maxBidSource, setMaxBidSource]     = useState<string | null>(null);
+  const [fairValueFromComps, setFairValueFromComps] = useState<number | null>(null);
+  const [fairValueSource, setFairValueSource]       = useState<string | null>(null);
   const [stickyVisible, setStickyVisible] = useState(false);
 
   const [subscribed, setSubscribed]       = useState(false);
@@ -290,6 +292,8 @@ export default function OpportunityDetail() {
       setMarketAnalysis(data.market_analysis || null);
       setMaxBidFromApi(data.max_bid ?? null);
       setMaxBidSource(data.max_bid_source ?? null);
+      setFairValueFromComps(data.fair_value ?? null);
+      setFairValueSource(data.fair_value_source ?? null);
     }).catch(() => {});
     const token = getToken();
     if (token && id) {
@@ -534,16 +538,24 @@ export default function OpportunityDetail() {
     const prices = sameArtistComps.map((c: any) => c.current_price || 0).filter(Boolean).sort((a: number, b: number) => a - b);
     return prices.length >= 2 ? prices[Math.floor(prices.length / 2)] : null;
   })();
-  // Estimation de l'œuvre : fair_value_nautilus (médiane réalisée) → market analysis → médiane comparables → estimate_high
-  // NB: maxBidFromApi = compute_max_bid(fair_value) ≈ 60% of fair value (profit-adjusted) — trop bas pour afficher comme "prix max"
-  const fairValueNautilus = lot.fair_value_nautilus ? Math.round(lot.fair_value_nautilus) : null;
-  const avoidAbove = fairValueNautilus
-    ?? (marketAnalysis?.median_price ? Math.round(marketAnalysis.median_price) : null)
-    ?? (marketAnalysis?.avg_price    ? Math.round(marketAnalysis.avg_price)    : null)
-    ?? compsMedian
-    ?? (estHigh || null);
-  const avoidAboveIsEstimate = !fairValueNautilus && !marketAnalysis?.median_price && !marketAnalysis?.avg_price && !compsMedian;
-  const maxBidIsReliable = !!fairValueNautilus || (!!maxBidFromApi && RELIABLE_SOURCES.includes(maxBidSource ?? ''));
+  // Estimation de l'œuvre : comparables API (medium-filtered) → market analysis → médiane comparables → estimation maison de vente
+  // Priority 1: fair_value from comparables endpoint = _compute_weighted_max_bid().market_value (medium-filtered, most reliable)
+  // Priority 2: market analysis medians (correct field names: market_median_price / market_avg_price)
+  // Priority 3: same-artist comps median (only if ≥ estLow — avoids cheap-prints contamination)
+  // Priority 4: estimate mid/high (auction house data — always available)
+  const avoidAbove = (() => {
+    if (fairValueFromComps) {
+      // Sanity floor: if comps-derived value < estLow, the medium mix is off — fall back to estimate
+      if (estLow && fairValueFromComps < estLow) return estimateMid ?? estHigh ?? null;
+      return fairValueFromComps;
+    }
+    if (marketAnalysis?.market_median_price) return Math.round(marketAnalysis.market_median_price);
+    if (marketAnalysis?.market_avg_price)    return Math.round(marketAnalysis.market_avg_price);
+    if (compsMedian && (!estLow || compsMedian >= estLow)) return compsMedian;
+    return estimateMid ?? estHigh ?? null;
+  })();
+  const avoidAboveIsEstimate = !fairValueFromComps && !marketAnalysis?.market_median_price && !marketAnalysis?.market_avg_price && !compsMedian;
+  const maxBidIsReliable = !!fairValueFromComps || (!!maxBidFromApi && RELIABLE_SOURCES.includes(maxBidSource ?? ''));
   const maxCompPrice = comparables.length > 0 ? Math.max(...comparables.map((c: any) => c.current_price || 0), price) : price;
   const isHistorical = comparables.length > 0 && comparables[0].is_historical === true;
 
@@ -847,8 +859,10 @@ export default function OpportunityDetail() {
                         ) : (
                           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>
                             {avoidAboveIsEstimate
-                              ? (isFr ? 'estimation haute maison de vente' : 'auction house high estimate')
-                              : (isFr ? 'valeur de marché Nautilus' : 'Nautilus market value')}
+                              ? (isFr ? 'estimation maison de vente' : 'auction house estimate')
+                              : fairValueSource && fairValueSource !== 'estimate'
+                                ? (isFr ? 'ventes comparables filtrées' : 'filtered comparable sales')
+                                : (isFr ? 'valeur de marché Nautilus' : 'Nautilus market value')}
                           </div>
                         )}
                       </>
