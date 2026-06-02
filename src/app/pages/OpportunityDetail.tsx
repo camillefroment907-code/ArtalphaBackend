@@ -959,21 +959,30 @@ export default function OpportunityDetail() {
 
           {/* Coût réel strip */}
           <div style={{ display: 'flex', alignItems: 'center', padding: '7px 20px', background: '#F5F4F0', borderTop: '0.5px solid #E8E4DC' }}>
-            {[
-              { lbl: isFr ? 'COÛT RÉEL' : 'REAL COST', val: totalCost ? fmtExact(totalCost) : '—', color: LTT1 },
-              { lbl: isFr ? 'FRAIS ACHETEUR' : 'BUYER FEES', val: `+${buyerPremiumPct}%`, color: LTT1 },
-              { lbl: isFr ? 'RENTABILITÉ DÈS' : 'BREAK-EVEN AT', val: realCost?.breakeven_hammer ? fmtExact(Math.round(realCost.breakeven_hammer)) : '—', color: AMB },
-              { lbl: isFr ? 'PROGRESSION NÉCESSAIRE' : 'NEEDED GAIN', val: breakEvenGain != null ? `+${Math.round(breakEvenGain)}%` : '—', color: LTT1 },
-            ].map((item, i, arr) => (
+            {([
+              { lbl: isFr ? 'COÛT RÉEL' : 'REAL COST', val: totalCost ? fmtExact(totalCost) : '—', color: LTT1,
+                tip: isFr ? 'Prix marteau + frais acheteur + coût de détention 3 ans.\nC\'est ce que vous payez réellement pour acquérir cette œuvre.' : 'Hammer price + buyer\'s premium + 3-year holding cost.\nWhat you actually pay to acquire this work.' },
+              { lbl: isFr ? 'FRAIS ACHETEUR' : 'BUYER FEES', val: `+${buyerPremiumPct}%`, color: LTT1,
+                tip: isFr ? `Commission prélevée par la maison de vente en plus du prix marteau.\nTaux appliqué : ${buyerPremiumPct}% (variable selon la maison).` : `Commission charged by the auction house on top of the hammer price.\nApplied rate: ${buyerPremiumPct}% (varies by house).` },
+              { lbl: isFr ? 'RENTABILITÉ DÈS' : 'BREAK-EVEN AT', val: realCost?.breakeven_hammer ? fmtExact(Math.round(realCost.breakeven_hammer)) : '—', color: AMB,
+                tip: isFr ? 'Marteau minimum à obtenir lors de la revente pour couvrir tous vos frais (achat + détention + commission vendeur 15 %).\nEn dessous de ce seuil, vous êtes en perte.' : 'Minimum hammer you need to achieve when reselling to cover all costs (purchase + holding + 15% seller\'s fee).\nBelow this threshold, you make a loss.' },
+              { lbl: isFr ? 'PROGRESSION NÉCESSAIRE' : 'NEEDED GAIN', val: breakEvenGain != null ? `+${Math.round(breakEvenGain)}%` : '—', color: LTT1,
+                tip: isFr ? 'Hausse minimale que l\'œuvre doit prendre pour que vous soyez à l\'équilibre à la revente.\nTient compte des frais acheteur, du coût de détention et de la commission vendeur.' : 'Minimum price appreciation needed for you to break even at resale.\nAccounts for buyer\'s premium, holding costs and seller\'s commission.' },
+            ] as { lbl: string; val: string; color: string; tip: string }[]).map((item, i, arr) => (
               <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: '5px', paddingRight: i < arr.length - 1 ? '16px' : 0, borderRight: i < arr.length - 1 ? '0.5px solid #E0DDD8' : 'none', marginRight: i < arr.length - 1 ? '16px' : 0 }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '1.5px', textTransform: 'uppercase' as const }}>{item.lbl}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '1.5px', textTransform: 'uppercase' as const }}>
+                  {item.lbl}
+                  <Tip theme="light" width={220} text={item.tip} />
+                </div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: item.color }}>{item.val}</div>
               </div>
             ))}
-            <span
-              title={isFr ? "Cette analyse repose sur les données disponibles aujourd'hui. Le marché de l'art peut évoluer et aucune performance future ne peut être garantie. Nautilus est un outil d'aide à la décision — pas un conseil financier réglementé." : 'This analysis is based on data available today. The art market may evolve and no future performance can be guaranteed. Nautilus is a decision support tool — not regulated financial advice.'}
-              style={{ cursor: 'help', fontSize: 10, color: LTT3, marginLeft: 'auto', userSelect: 'none' as const }}
-            >*</span>
+            <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center' }}>
+              <Tip theme="light" width={250} text={isFr
+                ? "Cette analyse repose sur les données disponibles aujourd'hui. Le marché de l'art peut évoluer et aucune performance future ne peut être garantie.\nNautilus est un outil d'aide à la décision — pas un conseil financier réglementé."
+                : "This analysis is based on data available today. The art market may evolve and no future performance can be guaranteed.\nNautilus is a decision support tool — not regulated financial advice."
+              } />
+            </span>
           </div>
 
         </div>
