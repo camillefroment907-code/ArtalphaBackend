@@ -844,6 +844,10 @@ export default function OpportunityDetail() {
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: item.color }}>{item.val}</div>
               </div>
             ))}
+            <span
+              title={isFr ? "Cette analyse repose sur les données disponibles aujourd'hui. Le marché de l'art peut évoluer et aucune performance future ne peut être garantie. Nautilus est un outil d'aide à la décision — pas un conseil financier réglementé." : 'This analysis is based on data available today. The art market may evolve and no future performance can be guaranteed. Nautilus is a decision support tool — not regulated financial advice.'}
+              style={{ cursor: 'help', fontSize: 10, color: LTT3, marginLeft: 'auto', userSelect: 'none' as const }}
+            >*</span>
           </div>
 
         </div>
@@ -857,141 +861,6 @@ export default function OpportunityDetail() {
             </div>
           </div>
         )}
-
-        {/* ── ZONE DÉCISIONNELLE ───────────────────────────────────────────── */}
-        <div style={{ padding: '40px 40px 0', background: '#F5F4F0' }}>
-
-          {/* Score + confiance + lecture */}
-          <div style={{ marginBottom: '36px' }}>
-            {/* Badge + score */}
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '42px', fontWeight: 700, color: LTT1, lineHeight: 1 }}>{Math.round(dealScore)}</span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', color: LTT3 }}>/100</span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: verdict.gl, letterSpacing: '0.04em', marginLeft: '6px' }}>{humanLabel}</span>
-            </div>
-            {topPct && (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, letterSpacing: '0.1em', marginBottom: '10px' }}>
-                <span style={{ color: GL, fontWeight: 700 }}>TOP {topPct}%</span> {isFr ? 'DES OPPORTUNITÉS NAUTILUS' : 'OF NAUTILUS OPPORTUNITIES'}
-              </div>
-            )}
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: confP.color, marginBottom: '2px' }}>{confP.label}</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: LTT3, marginBottom: '20px' }}>
-              {isFr ? `Basée sur ${compCount > 0 ? compCount : '—'} ventes comparables` : `Based on ${compCount > 0 ? compCount : '—'} comparable sales`}
-            </div>
-            <div style={{ height: '0.5px', background: '#E8E4DC', marginBottom: '20px' }} />
-            {/* Notre lecture */}
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '8px' }}>
-              {isFr ? 'NOTRE LECTURE' : 'OUR TAKE'}
-            </div>
-            <p style={{ fontSize: '14px', color: LTT2, lineHeight: 1.75, margin: 0, fontStyle: 'italic', borderLeft: '2px solid rgba(198,168,90,0.3)', paddingLeft: '14px' }}>
-              {narrative}
-            </p>
-          </div>
-
-          {/* Signaux positifs */}
-          {optimismSigs.length > 0 && (
-            <div style={{ marginBottom: '28px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '12px' }}>
-                {isFr ? 'POURQUOI NOUS SOMMES OPTIMISTES' : 'WHY WE ARE OPTIMISTIC'}
-              </div>
-              {optimismSigs.map((s, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px', fontSize: '14px', color: LTT2, lineHeight: 1.6 }}>
-                  <span style={{ color: GL, flexShrink: 0, marginTop: '1px', fontSize: '12px' }}>✓</span>
-                  <span>{s}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Points de vigilance */}
-          {vigilanceSigs.length > 0 && (
-            <div style={{ marginBottom: '28px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '12px' }}>
-                {isFr ? 'POINTS DE VIGILANCE' : 'POINTS OF CAUTION'}
-              </div>
-              {vigilanceSigs.map((s, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px', fontSize: '14px', color: LTT2, lineHeight: 1.6 }}>
-                  <span style={{ color: AMB, flexShrink: 0, marginTop: '1px', fontSize: '12px' }}>▲</span>
-                  <span>{s}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Ce qui pourrait nous faire changer d'avis */}
-          <div style={{ marginBottom: '28px' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '12px' }}>
-              {isFr ? "CE QUI POURRAIT NOUS FAIRE CHANGER D'AVIS" : 'WHAT COULD CHANGE OUR MIND'}
-            </div>
-            {changeOfMind.map((s, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px', fontSize: '14px', color: LTT2, lineHeight: 1.6 }}>
-                <span style={{ color: LTT3, flexShrink: 0, marginTop: '1px', fontSize: '12px' }}>—</span>
-                <span>{s}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Pourquoi pas mieux notée */}
-          {whyNotHigher.length > 0 && (
-            <div style={{ marginBottom: '28px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '12px' }}>
-                {isFr ? "POURQUOI CETTE ŒUVRE N'EST-ELLE PAS MIEUX NOTÉE ?" : "WHY ISN'T THIS WORK RATED HIGHER?"}
-              </div>
-              {whyNotHigher.map((s, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px', fontSize: '14px', color: LTT2, lineHeight: 1.6 }}>
-                  <span style={{ color: LTT3, flexShrink: 0, marginTop: '1px', fontSize: '12px' }}>—</span>
-                  <span>{s}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Pourquoi maintenant */}
-          {timingReasons.length > 0 && (
-            <div style={{ marginBottom: '28px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '12px' }}>
-                {isFr ? 'POURQUOI MAINTENANT ?' : 'WHY NOW?'}
-              </div>
-              {timingReasons.map((s, i) => (
-                <div key={i} style={{ fontSize: '14px', color: LTT2, lineHeight: 1.6, paddingBottom: i < timingReasons.length - 1 ? '8px' : 0, marginBottom: i < timingReasons.length - 1 ? '8px' : 0, borderBottom: i < timingReasons.length - 1 ? '0.5px solid #E8E4DC' : 'none' }}>{s}</div>
-              ))}
-            </div>
-          )}
-
-          {/* Recommandation */}
-          <div style={{ marginBottom: '36px', paddingTop: '4px', borderTop: '0.5px solid #E8E4DC' }}>
-            <div style={{ paddingTop: '28px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '10px' }}>
-                ◆ {isFr ? 'NOTRE RECOMMANDATION' : 'OUR RECOMMENDATION'}
-              </div>
-              <div style={{ fontSize: '17px', fontWeight: 600, color: LTT1, marginBottom: '6px', fontFamily: "'Playfair Display', Georgia, serif" }}>{recoText}</div>
-              <div style={{ fontSize: '13px', color: LTT3, lineHeight: 1.6, marginBottom: '20px' }}>
-                {isFr ? "Les signaux disponibles sont suffisamment solides pour l'analyser avant la clôture." : 'The available signals are solid enough to analyze before the closing.'}
-              </div>
-              <button
-                onClick={async () => {
-                  if (!getToken()) { window.location.href = '/app/login'; return; }
-                  setSubLoading(true);
-                  try {
-                    const r = await fetch(`${BACKEND}/api/wishlist/${id}`, { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } });
-                    if (r.status === 403) setUpgradeModal('wishlist');
-                    else if (r.ok) { setSubscribed(true); setSubId(id); trackEvent('lot_watchlist_add', 'lot', lot.id, { lot_title: lot.title, artist: lot.artist_name_raw, deal_score: lot.deal_score, source: 'reco_cta' }); }
-                  } finally { setSubLoading(false); }
-                }}
-                style={{ padding: '10px 24px', background: subscribed ? 'rgba(26,127,75,0.08)' : DK, border: `0.5px solid ${subscribed ? GL : DK}`, color: subscribed ? GL : '#F0EDE6', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.12em', borderRadius: '4px', textTransform: 'uppercase', fontWeight: 600, transition: 'all 0.15s' }}
-              >
-                {subscribed ? (isFr ? '✓ AJOUTÉ À VOTRE SHORTLIST' : '✓ ADDED TO SHORTLIST') : ctaWishlist.toUpperCase()}
-              </button>
-            </div>
-          </div>
-
-          {/* Disclaimer */}
-          <div style={{ fontSize: '11px', color: LTT3, lineHeight: 1.6, paddingBottom: '36px', borderBottom: '0.5px solid #E8E4DC' }}>
-            {isFr
-              ? "Cette analyse repose sur les données disponibles aujourd'hui. Le marché de l'art peut évoluer et aucune performance future ne peut être garantie. Nautilus est un outil d'aide à la décision — pas un conseil financier réglementé."
-              : 'This analysis is based on data available today. The art market may evolve and no future performance can be guaranteed. Nautilus is a decision support tool — not regulated financial advice.'}
-          </div>
-        </div>
 
         {/* ── DÉTAILS + COÛT RÉEL ───────────────────────────────────────────── */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#fff', borderBottom: '0.5px solid #E8E4DC' }}>
