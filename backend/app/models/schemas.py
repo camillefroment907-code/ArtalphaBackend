@@ -367,3 +367,86 @@ class TopDeal(BaseModel):
     rank: int
     estimated_saving_eur: Optional[float]
     estimated_saving_pct: Optional[float]
+
+
+# ── Artist Cycle Intelligence (Step 4) ───────────────────────────────────────
+
+class SegmentStats(BaseModel):
+    """Statistics for one artist segment (e.g., a specific medium or auction house)."""
+    sales_count: int
+    sold_above_low_count: int
+    n_with_estimate: int
+    sold_above_low_pct: float
+    median_premium_ratio: Optional[float] = None
+    avg_premium_ratio: Optional[float] = None
+    wilson_lower: float
+    confidence_tier: str  # 'low' | 'medium' | 'high'
+
+
+class ArtistCycleSummary(BaseModel):
+    """Summary of an artist's best auction configuration (from artist_cycle_stats)."""
+    artist_id: UUID
+    computed_at: Optional[datetime] = None
+    is_eligible: bool
+
+    # Eligibility details
+    total_sales: Optional[int] = None
+    recent_sales_3y: Optional[int] = None
+    estimate_coverage: Optional[float] = None
+
+    # Best configuration
+    best_medium: Optional[str] = None
+    best_medium_wilson: Optional[float] = None
+    best_size: Optional[str] = None
+    best_size_wilson: Optional[float] = None
+    best_house: Optional[str] = None
+    best_house_wilson: Optional[float] = None
+    best_month: Optional[int] = None
+    best_month_wilson: Optional[float] = None
+    best_season: Optional[str] = None
+    best_season_wilson: Optional[float] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ArtistCycleDetail(ArtistCycleSummary):
+    """Full cycle detail including per-segment stats (JSONB columns)."""
+    medium_stats: Optional[Dict[str, Any]] = None
+    size_stats: Optional[Dict[str, Any]] = None
+    house_stats: Optional[Dict[str, Any]] = None
+    month_stats: Optional[Dict[str, Any]] = None
+    season_stats: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CycleFitComponent(BaseModel):
+    """Score contribution from one dimension (medium, house, season, size)."""
+    lot_value: Optional[str] = None
+    best_value: Optional[str] = None
+    score: float
+    segment_wilson: Optional[float] = None
+    best_wilson: Optional[float] = None
+    confidence_tier: Optional[str] = None
+    available: bool
+
+
+class CycleFitResult(BaseModel):
+    """Result of a cycle fit computation for a specific lot configuration."""
+    score: Optional[float] = None          # 0–100, or None if insufficient data
+    components: Dict[str, Any] = {}
+    confidence: float = 0.0               # 0–1
+    reasons: List[str] = []
+    data_quality: str = "insufficient"    # 'sufficient' | 'limited' | 'insufficient'
+
+
+class CycleFitRequest(BaseModel):
+    """Request body for POST /api/v1/cycle/fit."""
+    artist_id: UUID
+    medium: Optional[str] = None
+    auction_house: Optional[str] = None
+    sale_date: Optional[str] = None       # ISO date string e.g. "2026-03-15"
+    dimensions_cm: Optional[Dict[str, Any]] = None  # {width_cm, height_cm}
+    lang: Optional[str] = "en"           # 'en' | 'fr'

@@ -2,6 +2,7 @@ from sqlalchemy import (
     Column, String, Integer, Float, Boolean, DateTime, Date, Text,
     ForeignKey, JSON, Enum, Index, ARRAY, UniqueConstraint, text, TypeDecorator
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
@@ -1541,4 +1542,60 @@ class EmailSentLog(Base):
 
     __table_args__ = (
         Index("ix_email_sent_log_user_type_sent", "user_id", "email_type", "sent_at"),
+    )
+
+
+class ArtistCycleStats(Base):
+    """
+    Pre-computed cycle intelligence for an eligible artist.
+
+    One row per artist (UNIQUE constraint on artist_id).
+    Computed by the CLI script compute_artist_cycle_stats.py.
+    Read by the /api/v1/cycle router.
+
+    IMPORTANT: This table is additive-only.
+    To roll back: DROP TABLE artist_cycle_stats.
+    """
+    __tablename__ = "artist_cycle_stats"
+
+    id           = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    artist_id    = Column(
+        UUID(as_uuid=True),
+        ForeignKey("artists.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    computed_at  = Column(DateTime, nullable=False, server_default=text("NOW()"), default=datetime.utcnow)
+
+    # ── Eligibility ─────────────────────────────────────────────────────────────
+    is_eligible         = Column(Boolean, nullable=False, default=False)
+    total_sales         = Column(Integer, nullable=True)
+    recent_sales_3y     = Column(Integer, nullable=True)
+    estimate_coverage   = Column(Float, nullable=True)  # 0.0–1.0
+
+    # ── Best configuration ───────────────────────────────────────────────────────
+    best_medium         = Column(Text, nullable=True)
+    best_medium_wilson  = Column(Float, nullable=True)
+    best_size           = Column(Text, nullable=True)
+    best_size_wilson    = Column(Float, nullable=True)
+    best_house          = Column(Text, nullable=True)
+    best_house_wilson   = Column(Float, nullable=True)
+    best_month          = Column(Integer, nullable=True)  # calendar month 1–12
+    best_month_wilson   = Column(Float, nullable=True)
+    best_season         = Column(Text, nullable=True)
+    best_season_wilson  = Column(Float, nullable=True)
+
+    # ── Full segment detail (JSONB for flexibility and indexing) ─────────────────
+    # Each JSONB column stores { segment_value: {sales_count, sold_above_low_pct, ...} }
+    medium_stats        = Column(JSONB, nullable=True)
+    size_stats          = Column(JSONB, nullable=True)
+    house_stats         = Column(JSONB, nullable=True)
+    month_stats         = Column(JSONB, nullable=True)
+    season_stats        = Column(JSONB, nullable=True)
+
+    artist = relationship("Artist", foreign_keys=[artist_id])
+
+    __table_args__ = (
+        UniqueConstraint("artist_id", name="uq_artist_cycle_stats_artist"),
+        Index("ix_artist_cycle_stats_artist_id", "artist_id"),
+        Index("ix_artist_cycle_stats_eligible", "is_eligible"),
     )
