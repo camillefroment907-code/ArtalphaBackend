@@ -133,15 +133,17 @@ function buildNarrativeReading(lot: any, isFr: boolean, cc: number): string {
 
 // ── TOOLTIP ───────────────────────────────────────────────────────────────────
 
-function Tip({ text, width = 220 }: { text: string; width?: number }) {
+function Tip({ text, width = 220, theme = 'dark' }: { text: string; width?: number; theme?: 'dark' | 'light' }) {
   const [show, setShow] = useState(false);
+  const badgeColor  = theme === 'light' ? '#9CA3AF' : 'rgba(255,255,255,0.28)';
+  const badgeBorder = theme === 'light' ? '1px solid #D1D5DB' : '1px solid rgba(255,255,255,0.18)';
   return (
     <span
       style={{ position: 'relative', display: 'inline-flex', cursor: 'help' }}
       onMouseEnter={() => setShow(true)}
       onMouseLeave={() => setShow(false)}
     >
-      <span style={{ color: 'rgba(255,255,255,0.28)', fontSize: 9, border: '1px solid rgba(255,255,255,0.18)', borderRadius: '50%', width: 14, height: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>?</span>
+      <span style={{ color: badgeColor, fontSize: 9, border: badgeBorder, borderRadius: '50%', width: 14, height: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>?</span>
       {show && (
         <div style={{
           position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
@@ -500,7 +502,9 @@ export default function OpportunityDetail() {
   const premiumMultiplier = getBuyerPremium(lot.auction_house_name || '');
   const buyerPremiumPct = Math.round((premiumMultiplier - 1) * 100);
 
-  const totalCost     = realCost ? realCost.cost_basis : (price > 0 ? Math.round(price * premiumMultiplier) : null);
+  const totalCost     = realCost
+    ? realCost.cost_basis + (realCost.holding_cost_3y || 0)
+    : (price > 0 ? Math.round(price * premiumMultiplier) : null);
   const breakEvenGain = realCost?.needed_gain_pct ?? null;
   const netGain       = breakEvenGain != null ? upsidePct - breakEvenGain : null;
   const avoidAboveUsedComps = maxBidFromApi != null;
@@ -1014,7 +1018,13 @@ export default function OpportunityDetail() {
           </div>
           {/* Col droite — COÛT RÉEL DÉTAILLÉ */}
           <div style={{ padding: '28px 40px 28px 24px' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '16px' }}>COÛT RÉEL DÉTAILLÉ</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: 6 }}>
+              {isFr ? 'COÛT RÉEL DÉTAILLÉ' : 'REAL COST BREAKDOWN'}
+              <Tip theme="light" width={260} text={isFr
+                ? `Coût d'acquisition = prix marteau × (1 + frais acheteur)\nFrais acheteur par maison : Sotheby's 27,5 %, Christie's 26 %, Drouot/Artcurial 25 %, défaut 26 %.\n\nCoût de détention (3 ans) = coût d'acquisition × 0,6 %/an × 3\n→ stockage ~0,5 %/an + assurance ~0,1 %/an.\n\nSeuil de rentabilité = (acquisition + détention) ÷ (1 − 15 % commission vendeur)\n→ marteau minimum à atteindre à la revente pour couvrir tous les frais.`
+                : `Acquisition cost = hammer × (1 + buyer's premium)\nBy house: Sotheby's 27.5%, Christie's 26%, Drouot/Artcurial 25%, default 26%.\n\nHolding cost (3 yr) = acquisition cost × 0.6%/yr × 3\n→ storage ~0.5%/yr + insurance ~0.1%/yr.\n\nBreak-even = (acquisition + holding) ÷ (1 − 15% seller's fee)\n→ minimum hammer needed at resale to cover all costs.`}
+              />
+            </div>
             <div style={{ background: '#F5F4F0', borderRadius: '10px', padding: '16px 18px' }}>
               {([
                 { k: isFr ? 'Prix de départ' : 'Starting price', v: realCost?.ref_price || price },
