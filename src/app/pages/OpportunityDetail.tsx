@@ -904,7 +904,13 @@ export default function OpportunityDetail() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 14px', background: dealScore >= 80 ? 'rgba(74,222,128,0.07)' : 'rgba(251,191,36,0.07)', border: `1px solid ${dealScore >= 80 ? 'rgba(74,222,128,0.18)' : 'rgba(251,191,36,0.18)'}`, borderRadius: 5 }}>
                 <div style={{ width: 7, height: 7, borderRadius: '50%', background: dealScore >= 80 ? '#4ade80' : '#FBBF24', flexShrink: 0 }} />
                 <div>
-                  <div style={{ fontSize: 12, color: dealScore >= 80 ? '#4ade80' : '#FBBF24', fontFamily: 'var(--font-mono)', fontWeight: 600, letterSpacing: '0.08em' }}>{stickyTier}</div>
+                  <div style={{ fontSize: 12, color: dealScore >= 80 ? '#4ade80' : '#FBBF24', fontFamily: 'var(--font-mono)', fontWeight: 600, letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    {stickyTier}
+                    <Tip width={240} text={isFr
+                      ? `Score d'opportunité Nautilus sur 100.\n\nIl mesure si ce lot est une bonne affaire en combinant :\n• Décote vs estimation basse de la maison de vente\n• Écart avec la valeur de marché de l'artiste\n• Liquidité de l'artiste et réputation de la maison\n• Signal de tendance sur 6 mois\n\nINTÉRESSANT ≥ 65 · FORT ≥ 77 · EXCEPTIONNEL ≥ 83`
+                      : `Nautilus opportunity score out of 100.\n\nMeasures whether this lot is a good deal:\n• Discount vs auction house low estimate\n• Gap vs artist's market value\n• Artist liquidity & house reputation\n• 6-month trend signal\n\nINTERESTING ≥ 65 · STRONG ≥ 77 · EXCEPTIONAL ≥ 83`}
+                    />
+                  </div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
                     {lot.artist?.trend === 'up' ? (isFr ? '↑ Artiste en hausse' : '↑ Rising artist') : lot.artist?.trend === 'down' ? (isFr ? '↓ Artiste en recul' : '↓ Falling artist') : (isFr ? '→ Artiste stable' : '→ Stable artist')}
                   </div>
@@ -924,7 +930,13 @@ export default function OpportunityDetail() {
                              : `ORACLE · ${sig}`;
                 return (
                   <div style={{ padding: '10px 14px', background: bg, border: `1px solid ${bd}`, borderRadius: 5 }}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: col, letterSpacing: '0.1em', fontWeight: 700, marginBottom: 4 }}>{label}</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: col, letterSpacing: '0.1em', fontWeight: 700, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      {label}
+                      <Tip width={240} text={isFr
+                        ? `Analyse des ventes de l'artiste sur les 6 derniers mois.\n\nACHETER : le marché de l'artiste est en pleine hausse — c'est le bon moment pour entrer.\nSURVEILLER : signal positif mais encore à confirmer.\nATTENDRE : marché neutre, ni haussier ni baissier.\nÉVITER : tendance à la baisse — mieux vaut patienter.\n\nLe score 6m (0–100) mesure la vigueur du marché. La hausse cible est le potentiel de revalorisation estimé par Nautilus.`
+                        : `Analysis of the artist's sales over the past 6 months.\n\nBUY NOW: strong upward momentum — good time to enter.\nWATCH: positive signal, not yet confirmed.\nHOLD: neutral market, neither up nor down.\nAVOID: downward trend — better to wait.\n\nThe 6m score (0–100) measures market strength. Target upside is Nautilus's estimated revaluation potential.`}
+                      />
+                    </div>
                     {lot.oracle.target_upside && (
                       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: '#fff', marginBottom: 2 }}>{lot.oracle.target_upside}</div>
                     )}
