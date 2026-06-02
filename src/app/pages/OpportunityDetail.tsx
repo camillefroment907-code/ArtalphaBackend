@@ -149,6 +149,7 @@ function Tip({ text, width = 220, theme = 'dark' }: { text: string; width?: numb
           position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
           background: '#0C1622', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)',
           fontSize: 13, fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 400,
+          textTransform: 'none', letterSpacing: 'normal',
           padding: '12px 16px', borderRadius: 8, width, lineHeight: 1.65, zIndex: 9999,
           whiteSpace: 'pre-line', pointerEvents: 'none', boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
         }}>
