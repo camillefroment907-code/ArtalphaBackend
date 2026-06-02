@@ -1545,6 +1545,74 @@ class EmailSentLog(Base):
     )
 
 
+class UpsideModelVersion(Base):
+    """
+    ML model artifact registry for the Upside Prediction Engine (Step 3).
+
+    One row per trained model version. `is_active=True` marks the
+    currently-deployed model. Never delete rows — always version.
+
+    IMPORTANT: This table is additive-only.
+    To roll back: DROP TABLE lot_upside_predictions; DROP TABLE upside_model_versions.
+    """
+    __tablename__ = "upside_model_versions"
+
+    id            = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    version       = Column(Text, nullable=False, unique=True)   # e.g. "v1.0.0-2026-06-02"
+    created_at    = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=text("NOW()"))
+    is_active     = Column(Boolean, nullable=False, default=False, server_default=text("FALSE"))
+    artifact_path = Column(Text, nullable=False)                 # "models/upside/v1.0.0-2026-06-02.joblib"
+    feature_list  = Column(JSONB, nullable=False)               # ordered list of feature names
+    metrics       = Column(JSONB, nullable=False)               # roc_auc, precision_at_10, etc.
+    baseline_metrics = Column(JSONB, nullable=True)             # baseline comparison
+    train_size    = Column(Integer, nullable=True)
+    val_size      = Column(Integer, nullable=True)
+    test_size     = Column(Integer, nullable=True)
+    train_cutoff  = Column(Date, nullable=True)
+    val_cutoff    = Column(Date, nullable=True)
+    test_cutoff   = Column(Date, nullable=True)
+    promoted      = Column(Boolean, nullable=False, default=False, server_default=text("FALSE"))
+    notes         = Column(Text, nullable=True)
+
+    predictions = relationship("LotUpsidePrediction", back_populates="model_version")
+
+    __table_args__ = (
+        Index("ix_upside_model_versions_is_active", "is_active"),
+        Index("ix_upside_model_versions_created_at", "created_at"),
+    )
+
+
+class LotUpsidePrediction(Base):
+    """
+    Per-lot upside prediction from the active ML model.
+
+    One row per (lot_id, model_version_id) pair.
+    Predictions are stored-only — they do NOT influence deal scores or rankings.
+
+    IMPORTANT: This table is additive-only.
+    """
+    __tablename__ = "lot_upside_predictions"
+
+    id               = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    lot_id           = Column(UUID(as_uuid=True), ForeignKey("lots.id", ondelete="CASCADE"), nullable=False)
+    model_version_id = Column(UUID(as_uuid=True), ForeignKey("upside_model_versions.id", ondelete="RESTRICT"), nullable=False)
+    predicted_at     = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=text("NOW()"))
+    upside_prob      = Column(Float, nullable=False)            # 0.0 to 1.0
+    confidence_score = Column(Float, nullable=True)             # model calibration confidence
+    signal_label     = Column(Text, nullable=True)              # "high" / "moderate" / "limited"
+    feature_snapshot = Column(JSONB, nullable=True)             # features used for this prediction
+
+    model_version = relationship("UpsideModelVersion", back_populates="predictions")
+    lot = relationship("Lot", backref="upside_predictions")
+
+    __table_args__ = (
+        UniqueConstraint("lot_id", "model_version_id", name="uq_lot_upside_pred_lot_model"),
+        Index("ix_lot_upside_predictions_lot_id", "lot_id"),
+        Index("ix_lot_upside_predictions_model_version_id", "model_version_id"),
+        Index("ix_lot_upside_predictions_upside_prob", "upside_prob"),
+    )
+
+
 class ArtistCycleStats(Base):
     """
     Pre-computed cycle intelligence for an eligible artist.

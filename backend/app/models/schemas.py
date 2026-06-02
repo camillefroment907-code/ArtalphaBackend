@@ -450,3 +450,54 @@ class CycleFitRequest(BaseModel):
     sale_date: Optional[str] = None       # ISO date string e.g. "2026-03-15"
     dimensions_cm: Optional[Dict[str, Any]] = None  # {width_cm, height_cm}
     lang: Optional[str] = "en"           # 'en' | 'fr'
+
+
+# ── Upside Prediction Engine (Step 3) ────────────────────────────────────────
+
+class UpsideModelVersionOut(BaseModel):
+    """Active upside model metadata returned by GET /api/v1/upside/model/active."""
+    id: UUID
+    version: str
+    created_at: datetime
+    is_active: bool
+    artifact_path: str
+    feature_list: List[str]
+    metrics: Dict[str, Any]
+    baseline_metrics: Optional[Dict[str, Any]] = None
+    train_size: Optional[int] = None
+    val_size: Optional[int] = None
+    test_size: Optional[int] = None
+    train_cutoff: Optional[str] = None
+    val_cutoff: Optional[str] = None
+    test_cutoff: Optional[str] = None
+    promoted: bool
+    notes: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class UpsidePredictionOut(BaseModel):
+    """Upside prediction for a single lot — returned by GET /api/v1/upside/lot/{lot_id}."""
+    id: UUID
+    lot_id: UUID
+    model_version_id: UUID
+    predicted_at: datetime
+    upside_prob: float
+    confidence_score: Optional[float] = None
+    signal_label: Optional[str] = None
+    feature_snapshot: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True
+
+
+class UpsideSignalOut(BaseModel):
+    """Human-readable upside signal — returned by GET /api/v1/upside/lot/{lot_id}/signal."""
+    lot_id: str
+    upside_prob: Optional[float] = None         # None if no prediction available
+    signal_label: Optional[str] = None          # "High upside signal" etc.
+    explanation: Optional[str] = None           # 1–2 sentence explanation
+    lang: str = "en"
+    predicted_at: Optional[datetime] = None
+    model_version: Optional[str] = None

@@ -14,3 +14,8 @@ package-lock.json
 *.pem
 *.key
 frontend/.next/
+# ML model artifacts — never commit trained models (large binaries)
+backend/models/upside/*.joblib
+backend/models/upside/*.pkl
+models/upside/*.joblib
+models/upside/*.pkl
