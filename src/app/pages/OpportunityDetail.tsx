@@ -634,29 +634,6 @@ export default function OpportunityDetail() {
             </div>
           )}
 
-          {/* Market context stats */}
-          {(priceHistory?.statistics?.trend_pct != null || lot.fair_value_confidence != null) && (
-            <div style={{ display: 'flex', gap: '20px', marginTop: '14px', flexWrap: 'wrap' as const }}>
-              {priceHistory?.statistics?.trend_pct != null && (
-                <div>
-                  <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '3px', textTransform: 'uppercase' as const }}>{isFr ? 'MARCHÉ ARTISTE' : 'ARTIST MARKET'}</div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: priceHistory.statistics.trend_pct > 0 ? '#34D399' : '#F87171' }}>{priceHistory.statistics.trend_pct > 0 ? '↑ +' : '↓ '}{priceHistory.statistics.trend_pct}% YoY</div>
-                </div>
-              )}
-              {priceHistory?.statistics?.sell_above_estimate_pct != null && (
-                <div>
-                  <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '3px', textTransform: 'uppercase' as const }}>{isFr ? 'TAUX DE VENTE' : 'SELL-THROUGH'}</div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'white' }}>{priceHistory.statistics.sell_above_estimate_pct}%</div>
-                </div>
-              )}
-              {lot.fair_value_confidence != null && (
-                <div>
-                  <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: '3px', textTransform: 'uppercase' as const }}>COMPARABLES 24M</div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'white' }}>{lot.fair_value_confidence} {isFr ? 'ventes' : 'sales'}</div>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* WHY block */}
           {(() => {
@@ -890,39 +867,88 @@ export default function OpportunityDetail() {
             );
           })()}
 
-          {/* Block 4 — MAX BID */}
+          {/* Block 4 — PRIX ACTUEL + MAX BID */}
           {!isGallery && maxBidIsReliable && (
             <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? (isGallery ? 'PRIX MAXIMUM RECOMMANDÉ' : 'MAX BID RENTABLE') : (isGallery ? 'RECOMMENDED MAX PRICE' : 'MAX PROFITABLE BID')}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>{fmtExact(avoidAbove)}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
-                {maxBidSource === 'comparables_proches'
-                  ? (isFr ? 'Ventes même technique + taille — marge 10%' : 'Same medium & size sales — 10% margin')
-                  : maxBidSource === 'comparables_meme_technique'
-                  ? (isFr ? 'Ventes même technique — marge 10%' : 'Same medium sales — 10% margin')
-                  : (isFr ? 'Techniques proches (2D) — marge 10%' : 'Similar medium (2D) — 10% margin')}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                {/* PRIX ACTUEL */}
+                <div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '6px' }}>{isFr ? 'PRIX ACTUEL' : 'CURRENT PRICE'}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: 'white', lineHeight: 1 }}>{fmtExact(price)}</div>
+                  {(lot.pct_below_low_estimate || 0) > 0 && (
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#34D399', marginTop: '4px' }}>
+                      -{Math.round(lot.pct_below_low_estimate || 0)}% {isFr ? 'sous estim.' : 'below est.'}
+                    </div>
+                  )}
+                </div>
+                {/* MAX BID */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>{isFr ? 'MAX BID' : 'MAX BID'}</span>
+                    <span
+                      title={isFr ? 'Prix maximum recommandé par Nautilus avant que le rapport risque/opportunité ne devienne défavorable.' : 'Maximum price recommended by Nautilus before the risk/opportunity ratio becomes unfavorable.'}
+                      style={{ cursor: 'help', color: 'rgba(255,255,255,0.25)', fontSize: '8px', border: '1px solid rgba(255,255,255,0.18)', borderRadius: '50%', width: 13, height: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                    >?</span>
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: GOLD, lineHeight: 1 }}>{fmtExact(avoidAbove)}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
+                    {maxBidSource === 'comparables_proches'
+                      ? (isFr ? 'Marge 10% · même technique' : '10% margin · same medium')
+                      : maxBidSource === 'comparables_meme_technique'
+                      ? (isFr ? 'Marge 10% · même technique' : '10% margin · same medium')
+                      : (isFr ? 'Marge 10% · techniques proches' : '10% margin · similar medium')}
+                  </div>
+                </div>
               </div>
             </div>
           )}
           {!isGallery && avoidAbove && !maxBidIsReliable && (
             <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>MAX BID</div>
-              <div style={{ color: '#64748B', fontSize: '13px', fontStyle: 'italic' }}>
-                {isFr ? 'Données insuffisantes pour un prix max fiable' : 'Insufficient data for a reliable max bid'}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '6px' }}>{isFr ? 'PRIX ACTUEL' : 'CURRENT PRICE'}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: 'white', lineHeight: 1 }}>{fmtExact(price)}</div>
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>MAX BID</span>
+                    <span
+                      title={isFr ? 'Prix maximum recommandé par Nautilus avant que le rapport risque/opportunité ne devienne défavorable.' : 'Maximum price recommended by Nautilus before the risk/opportunity ratio becomes unfavorable.'}
+                      style={{ cursor: 'help', color: 'rgba(255,255,255,0.25)', fontSize: '8px', border: '1px solid rgba(255,255,255,0.18)', borderRadius: '50%', width: 13, height: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                    >?</span>
+                  </div>
+                  <div style={{ color: '#64748B', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.4 }}>
+                    {isFr ? 'Données insuffisantes pour un prix max fiable' : 'Insufficient data for a reliable max bid'}
+                  </div>
+                </div>
               </div>
             </div>
           )}
           {!isGallery && !avoidAbove && (
             <div style={{ padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{isFr ? 'MAX BID' : 'MAX BID'}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>
-                {isFr ? 'Données insuffisantes' : 'Insufficient data'}
-              </div>
-              {estLow > 0 && (
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.25)', marginTop: '2px' }}>
-                  {isFr ? `Basez-vous sur ${fmtExact(estLow)}–${fmtExact(estHigh)}` : `Refer to ${fmtExact(estLow)}–${fmtExact(estHigh)}`}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: '6px' }}>{isFr ? 'PRIX ACTUEL' : 'CURRENT PRICE'}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: 'white', lineHeight: 1 }}>{fmtExact(price)}</div>
+                  {estLow > 0 && (
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.25)', marginTop: '4px' }}>
+                      {isFr ? `estim. ${fmtExact(estLow)}–${fmtExact(estHigh)}` : `est. ${fmtExact(estLow)}–${fmtExact(estHigh)}`}
+                    </div>
+                  )}
                 </div>
-              )}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>MAX BID</span>
+                    <span
+                      title={isFr ? 'Prix maximum recommandé par Nautilus avant que le rapport risque/opportunité ne devienne défavorable.' : 'Maximum price recommended by Nautilus before the risk/opportunity ratio becomes unfavorable.'}
+                      style={{ cursor: 'help', color: 'rgba(255,255,255,0.25)', fontSize: '8px', border: '1px solid rgba(255,255,255,0.18)', borderRadius: '50%', width: 13, height: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                    >?</span>
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>
+                    {isFr ? 'Données insuffisantes' : 'Insufficient data'}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
