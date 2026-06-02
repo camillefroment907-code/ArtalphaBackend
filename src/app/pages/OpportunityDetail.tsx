@@ -888,7 +888,7 @@ export default function OpportunityDetail() {
               <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, padding: '20px 18px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
                   <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>SCORE</span>
-                  <Tip text={isFr ? `Score Nautilus sur 6 critères.\n\nÉchelle :\n90–100 · Exceptionnel\n80–89 · Très fort\n65–79 · Intéressant\n< 65 · Neutre` : `Nautilus Score on 6 criteria.\n\nScale:\n90–100 · Exceptional\n80–89 · Very strong\n65–79 · Interesting\n< 65 · Neutral`} width={200} />
+                  <Tip text={isFr ? `Score d'opportunité Nautilus sur 100. INTÉRESSANT ≥ 65 · FORT ≥ 77 · EXCEPTIONNEL ≥ 83` : `Nautilus opportunity score out of 100. INTERESTING ≥ 65 · STRONG ≥ 77 · EXCEPTIONAL ≥ 83`} width={230} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 10 }}>
                   <span style={{ fontSize: 56, fontFamily: "'Playfair Display', serif", color: '#fff', fontWeight: 600, lineHeight: 1 }}>{Math.round(dealScore)}</span>
@@ -906,9 +906,9 @@ export default function OpportunityDetail() {
                 <div>
                   <div style={{ fontSize: 12, color: dealScore >= 80 ? '#4ade80' : '#FBBF24', fontFamily: 'var(--font-mono)', fontWeight: 600, letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: 5 }}>
                     {stickyTier}
-                    <Tip width={290} text={isFr
-                      ? `SCORE NAUTILUS — comment il est calculé\n\n① Décote vs estimation basse (30 %)\nLe prix actuel est-il sous l'estimation de la maison ? Plus la décote est forte, plus ce critère monte.\n\n② Décote vs marché historique (30 %)\nComparaison avec la moyenne des ventes réalisées pour cet artiste. Mesure si le lot est vraiment bon marché.\n\n③ Liquidité de l'artiste (20 %)\nFacilité à revendre : fréquence des ventes aux enchères, volume de la demande. Un artiste très liquide = sortie plus facile.\n\n④ Réputation de la maison de vente (10 %)\nChristie's, Sotheby's = 96-97/100. Garantit la provenance et réduit le risque d'authenticité.\n\n⑤ Fiabilité de l'analyse (10 %)\nNombre de ventes comparables disponibles. Peu de données = score moins sûr, plus conservateur.\n\n⑥ Signal Oracle (±8 pts bonus)\nTendance du marché de l'artiste sur 6 mois. Signal haussier = jusqu'à +8 pts. Signal baissier = jusqu'à −8 pts.\n\nINTÉRESSANT ≥ 65 · FORT ≥ 77 · EXCEPTIONNEL ≥ 83`
-                      : `NAUTILUS SCORE — how it's calculated\n\n① Discount vs low estimate (30%)\nIs the current price below the house estimate? The deeper the discount, the higher this component.\n\n② Discount vs historical market (30%)\nCompared to average realised prices for this artist. Measures if the lot is genuinely cheap.\n\n③ Artist liquidity (20%)\nEase of resale: frequency of auction sales, depth of demand. High liquidity = easier exit.\n\n④ Auction house reputation (10%)\nChristie's, Sotheby's = 96–97/100. Ensures provenance quality and reduces authenticity risk.\n\n⑤ Data confidence (10%)\nNumber of comparable sales available. Fewer data points = more conservative, less certain score.\n\n⑥ Oracle signal (±8 pts bonus)\n6-month market trend for the artist. Bullish signal = up to +8 pts. Bearish = up to −8 pts.\n\nINTERESTING ≥ 65 · STRONG ≥ 77 · EXCEPTIONAL ≥ 83`}
+                    <Tip width={270} text={isFr
+                      ? `6 critères : décote vs estimation (30 %), décote vs marché historique (30 %), liquidité artiste (20 %), réputation maison (10 %), fiabilité des données (10 %), signal Oracle ±8 pts.\nINTÉRESSANT ≥ 65 · FORT ≥ 77 · EXCEPTIONNEL ≥ 83`
+                      : `6 criteria: discount vs estimate (30%), discount vs historical market (30%), artist liquidity (20%), house reputation (10%), data confidence (10%), Oracle signal ±8 pts.\nINTERESTING ≥ 65 · STRONG ≥ 77 · EXCEPTIONAL ≥ 83`}
                     />
                   </div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
@@ -933,8 +933,8 @@ export default function OpportunityDetail() {
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: col, letterSpacing: '0.1em', fontWeight: 700, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
                       {label}
                       <Tip width={240} text={isFr
-                        ? `Analyse des ventes de l'artiste sur les 6 derniers mois.\n\nACHETER : le marché de l'artiste est en pleine hausse — c'est le bon moment pour entrer.\nSURVEILLER : signal positif mais encore à confirmer.\nATTENDRE : marché neutre, ni haussier ni baissier.\nÉVITER : tendance à la baisse — mieux vaut patienter.\n\nLe score 6m (0–100) mesure la vigueur du marché. La hausse cible est le potentiel de revalorisation estimé par Nautilus.`
-                        : `Analysis of the artist's sales over the past 6 months.\n\nBUY NOW: strong upward momentum — good time to enter.\nWATCH: positive signal, not yet confirmed.\nHOLD: neutral market, neither up nor down.\nAVOID: downward trend — better to wait.\n\nThe 6m score (0–100) measures market strength. Target upside is Nautilus's estimated revaluation potential.`}
+                        ? `Signal basé sur les ventes de l'artiste sur 6 mois. ACHETER = momentum fort · SURVEILLER = signal non confirmé · ÉVITER = marché en recul. Le score 6m mesure la vigueur du marché (0–100).`
+                        : `Signal based on artist sales over 6 months. BUY NOW = strong momentum · WATCH = unconfirmed signal · AVOID = declining market. The 6m score measures market strength (0–100).`}
                       />
                     </div>
                     {lot.oracle.target_upside && (
@@ -961,13 +961,13 @@ export default function OpportunityDetail() {
           <div style={{ display: 'flex', alignItems: 'center', padding: '7px 20px', background: '#F5F4F0', borderTop: '0.5px solid #E8E4DC' }}>
             {([
               { lbl: isFr ? 'COÛT RÉEL' : 'REAL COST', val: totalCost ? fmtExact(totalCost) : '—', color: LTT1,
-                tip: isFr ? 'Prix marteau + frais acheteur + coût de détention 3 ans.\nC\'est ce que vous payez réellement pour acquérir cette œuvre.' : 'Hammer price + buyer\'s premium + 3-year holding cost.\nWhat you actually pay to acquire this work.' },
+                tip: isFr ? `Marteau + frais acheteur + stockage/assurance sur 3 ans. Ce que vous déboursez réellement.` : `Hammer + buyer's premium + storage/insurance over 3 years. What you actually spend.` },
               { lbl: isFr ? 'FRAIS ACHETEUR' : 'BUYER FEES', val: `+${buyerPremiumPct}%`, color: LTT1,
-                tip: isFr ? `Commission prélevée par la maison de vente en plus du prix marteau.\nTaux appliqué : ${buyerPremiumPct}% (variable selon la maison).` : `Commission charged by the auction house on top of the hammer price.\nApplied rate: ${buyerPremiumPct}% (varies by house).` },
+                tip: isFr ? `Commission de la maison de vente sur le prix marteau. Taux appliqué ici : ${buyerPremiumPct}%.` : `Auction house commission on top of the hammer price. Rate applied here: ${buyerPremiumPct}%.` },
               { lbl: isFr ? 'RENTABILITÉ DÈS' : 'BREAK-EVEN AT', val: realCost?.breakeven_hammer ? fmtExact(Math.round(realCost.breakeven_hammer)) : '—', color: AMB,
-                tip: isFr ? 'Marteau minimum à obtenir lors de la revente pour couvrir tous vos frais (achat + détention + commission vendeur 15 %).\nEn dessous de ce seuil, vous êtes en perte.' : 'Minimum hammer you need to achieve when reselling to cover all costs (purchase + holding + 15% seller\'s fee).\nBelow this threshold, you make a loss.' },
+                tip: isFr ? `Marteau minimum à la revente pour couvrir tous les frais, commission vendeur 15 % incluse. En dessous, vous êtes en perte.` : `Minimum resale hammer to cover all costs including the 15% seller's fee. Below this, you lose money.` },
               { lbl: isFr ? 'PROGRESSION NÉCESSAIRE' : 'NEEDED GAIN', val: breakEvenGain != null ? `+${Math.round(breakEvenGain)}%` : '—', color: LTT1,
-                tip: isFr ? 'Hausse minimale que l\'œuvre doit prendre pour que vous soyez à l\'équilibre à la revente.\nTient compte des frais acheteur, du coût de détention et de la commission vendeur.' : 'Minimum price appreciation needed for you to break even at resale.\nAccounts for buyer\'s premium, holding costs and seller\'s commission.' },
+                tip: isFr ? `Hausse minimale du prix pour être à l'équilibre à la revente, tous frais compris.` : `Minimum price increase to break even at resale, all costs included.` },
             ] as { lbl: string; val: string; color: string; tip: string }[]).map((item, i, arr) => (
               <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: '5px', paddingRight: i < arr.length - 1 ? '16px' : 0, borderRight: i < arr.length - 1 ? '0.5px solid #E0DDD8' : 'none', marginRight: i < arr.length - 1 ? '16px' : 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '1.5px', textTransform: 'uppercase' as const }}>
@@ -978,9 +978,9 @@ export default function OpportunityDetail() {
               </div>
             ))}
             <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center' }}>
-              <Tip theme="light" width={250} text={isFr
-                ? "Cette analyse repose sur les données disponibles aujourd'hui. Le marché de l'art peut évoluer et aucune performance future ne peut être garantie.\nNautilus est un outil d'aide à la décision — pas un conseil financier réglementé."
-                : "This analysis is based on data available today. The art market may evolve and no future performance can be guaranteed.\nNautilus is a decision support tool — not regulated financial advice."
+              <Tip theme="light" width={230} text={isFr
+                ? "Analyse basée sur les données disponibles. Nautilus est un outil d'aide à la décision — pas un conseil financier réglementé."
+                : "Analysis based on available data. Nautilus is a decision-support tool — not regulated financial advice."
               } />
             </span>
           </div>
@@ -1041,9 +1041,9 @@ export default function OpportunityDetail() {
           <div style={{ padding: '28px 40px 28px 24px' }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: GOLD, letterSpacing: '2.5px', textTransform: 'uppercase' as const, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: 6 }}>
               {isFr ? 'COÛT RÉEL DÉTAILLÉ' : 'REAL COST BREAKDOWN'}
-              <Tip theme="light" width={260} text={isFr
-                ? `Coût d'acquisition = prix marteau × (1 + frais acheteur)\nFrais acheteur par maison : Sotheby's 27,5 %, Christie's 26 %, Drouot/Artcurial 25 %, défaut 26 %.\n\nCoût de détention (3 ans) = coût d'acquisition × 0,6 %/an × 3\n→ stockage ~0,5 %/an + assurance ~0,1 %/an.\n\nSeuil de rentabilité = (acquisition + détention) ÷ (1 − 15 % commission vendeur)\n→ marteau minimum à atteindre à la revente pour couvrir tous les frais.`
-                : `Acquisition cost = hammer × (1 + buyer's premium)\nBy house: Sotheby's 27.5%, Christie's 26%, Drouot/Artcurial 25%, default 26%.\n\nHolding cost (3 yr) = acquisition cost × 0.6%/yr × 3\n→ storage ~0.5%/yr + insurance ~0.1%/yr.\n\nBreak-even = (acquisition + holding) ÷ (1 − 15% seller's fee)\n→ minimum hammer needed at resale to cover all costs.`}
+              <Tip theme="light" width={240} text={isFr
+                ? `Prix marteau × (1 + frais acheteur) + stockage et assurance 0,6 %/an sur 3 ans. Le seuil de rentabilité intègre la commission vendeur (15 %) à la revente.`
+                : `Hammer × (1 + buyer's premium) + storage and insurance 0.6%/yr over 3 years. Break-even includes the seller's commission (15%) at resale.`}
               />
             </div>
             <div style={{ background: '#F5F4F0', borderRadius: '10px', padding: '16px 18px' }}>
