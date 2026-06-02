@@ -379,12 +379,26 @@ export default function OpportunityDetail() {
   const upside    = Number(lot.pct_below_low_estimate || 0);
   const upsidePct = upside > 0 ? upside : 0;
   // Use API projections when available, fallback to CAGR calc
-  const _projMap: Record<number, { projected_value_eur: number; gain_pct: number }> = {};
+  // projCagr is in % (e.g. 8.5 = 8.5%/yr). Cap at 15% — guards against corrupted DB entries.
+  const _projMapRaw: Record<number, any> = {};
   if (Array.isArray(lot.projection?.years)) {
-    for (const p of lot.projection.years) _projMap[p.years] = p;
+    for (const p of lot.projection.years) _projMapRaw[p.years] = p;
   }
-  const projCagr = lot.projection?.cagr_pct ?? 0;
+  const projCagr = Math.min(lot.projection?.cagr_pct ?? 0, 15);
   const hasProjection = !!lot.projection?.cagr_pct;
+  // If API CAGR was >15%, projected_value_eur from server is also corrupted — ignore and recompute
+  const cagrWasClamped = (lot.projection?.cagr_pct ?? 0) > 15;
+  const _projMap: Record<number, { projected_value_eur: number; optimistic_eur?: number; conservative_eur?: number; gain_pct: number }> = {};
+  for (const [y, p] of Object.entries(_projMapRaw)) {
+    const yn = Number(y);
+    if (cagrWasClamped) {
+      // Recompute with capped CAGR
+      const base = price > 0 ? Math.round(price * Math.pow(1 + projCagr / 100, yn)) : 0;
+      _projMap[yn] = { projected_value_eur: base, optimistic_eur: Math.round(base * 1.3), conservative_eur: Math.round(base * 0.7), gain_pct: price > 0 ? ((base - price) / price) * 100 : 0 };
+    } else {
+      _projMap[yn] = p;
+    }
+  }
   const proj      = (years: number): number =>
     _projMap[years]?.projected_value_eur ?? Math.round(price * Math.pow(1 + projCagr / 100, years));
   const projGainPct = (years: number): number =>

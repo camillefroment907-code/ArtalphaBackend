@@ -1830,11 +1830,23 @@ async def get_lot(
             years=[3, 5, 6, 7, 8, 9, 10],   # covers all possible recommended_hold_years outputs
             cagr_override=cagr_override,
         )
+        # Cap cagr_pct at 15% — guards against corrupted DB entries (cagr stored as
+        # decimal fraction, or pre-cap legacy rows).  base_cagr_pct is already ×100
+        # (e.g. 15.0 means 15%), so cap at 15.0.
+        safe_cagr_pct = min(proj["base_cagr_pct"], 15.0)
+        _basis = float(proj_price or hammer or 1)
+        # Re-project with capped CAGR so year values are consistent with the header
+        from app.engines.projections import project_value as _pv
+        _safe_proj = _pv(
+            purchase_price_eur=_basis,
+            cagr_override=safe_cagr_pct / 100,
+            years=[1, 3, 5, 10],
+        )["projections"]
         lot_dict["projection"] = {
             "artist_tier":            proj["artist_tier"],
-            "cagr_pct":               proj["base_cagr_pct"],
-            "cagr_raw_pct":           round(cagr_raw_used * 100, 2) if cagr_raw_used is not None else proj["base_cagr_pct"],
-            "cagr_aggregate_pct":     round(cagr_aggregate * 100, 2) if cagr_aggregate is not None else None,
+            "cagr_pct":               safe_cagr_pct,
+            "cagr_raw_pct":           round(min(cagr_raw_used * 100, 15.0), 2) if cagr_raw_used is not None else safe_cagr_pct,
+            "cagr_aggregate_pct":     round(min(cagr_aggregate * 100, 15.0), 2) if cagr_aggregate is not None else None,
             "cagr_source":            cagr_source_used,
             "cagr_medium_used":       cagr_medium_used,
             "cagr_confidence":        cagr_confidence_used,
@@ -1846,13 +1858,13 @@ async def get_lot(
             "years": [
                 {
                     "years":               y,
-                    "projected_value_eur": v["base_eur"],
-                    "optimistic_eur":      v["optimistic_eur"],
-                    "conservative_eur":    v["conservative_eur"],
-                    "gain_pct":            v["base_roi_pct"],
+                    "projected_value_eur": _safe_proj[y]["base_eur"],
+                    "optimistic_eur":      _safe_proj[y]["optimistic_eur"],
+                    "conservative_eur":    _safe_proj[y]["conservative_eur"],
+                    "gain_pct":            _safe_proj[y]["base_roi_pct"],
                 }
-                for y, v in proj["projections"].items()
-                if y in [1, 3, 5, 10]
+                for y in [1, 3, 5, 10]
+                if y in _safe_proj
             ],
             # all_in_cost uses the projection price (expected acquisition price),
             # NOT the current bid — avoids misleading low values on upcoming lots.
