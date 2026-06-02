@@ -133,10 +133,17 @@ function buildNarrativeReading(lot: any, isFr: boolean, cc: number): string {
 
 // ── TOOLTIP ───────────────────────────────────────────────────────────────────
 
-function Tip({ text, width = 220, theme = 'dark' }: { text: string; width?: number; theme?: 'dark' | 'light' }) {
+function Tip({ text, width = 220, theme = 'dark', align = 'center' }: { text: string; width?: number; theme?: 'dark' | 'light'; align?: 'left' | 'center' | 'right' }) {
   const [show, setShow] = useState(false);
   const badgeColor  = theme === 'light' ? '#9CA3AF' : 'rgba(255,255,255,0.28)';
   const badgeBorder = theme === 'light' ? '1px solid #D1D5DB' : '1px solid rgba(255,255,255,0.18)';
+  const popupPos = align === 'left'
+    ? { left: 0,    transform: 'none' }
+    : align === 'right'
+    ? { right: 0,   left: 'auto' as const, transform: 'none' }
+    : { left: '50%', transform: 'translateX(-50%)' };
+  const arrowLeft = align === 'left' ? 14 : align === 'right' ? (width as number) - 14 : '50%';
+  const arrowTransform = align === 'center' ? 'translateX(-50%)' : 'none';
   return (
     <span
       style={{ position: 'relative', display: 'inline-flex', cursor: 'help' }}
@@ -146,7 +153,7 @@ function Tip({ text, width = 220, theme = 'dark' }: { text: string; width?: numb
       <span style={{ color: badgeColor, fontSize: 9, border: badgeBorder, borderRadius: '50%', width: 14, height: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>?</span>
       {show && (
         <div style={{
-          position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
+          position: 'absolute', bottom: 'calc(100% + 8px)', ...popupPos,
           background: '#0C1622', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)',
           fontSize: 13, fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 400,
           textTransform: 'none', letterSpacing: 'normal',
@@ -154,7 +161,7 @@ function Tip({ text, width = 220, theme = 'dark' }: { text: string; width?: numb
           whiteSpace: 'pre-line', pointerEvents: 'none', boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
         }}>
           {text}
-          <span style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', display: 'block', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid #0C1622' }} />
+          <span style={{ position: 'absolute', top: '100%', left: arrowLeft, transform: arrowTransform, display: 'block', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid #0C1622' }} />
         </div>
       )}
     </span>
@@ -962,19 +969,19 @@ export default function OpportunityDetail() {
           {/* Coût réel strip */}
           <div style={{ display: 'flex', alignItems: 'center', padding: '7px 20px', background: '#F5F4F0', borderTop: '0.5px solid #E8E4DC' }}>
             {([
-              { lbl: isFr ? 'COÛT RÉEL' : 'REAL COST', val: totalCost ? fmtExact(totalCost) : '—', color: LTT1,
+              { lbl: isFr ? 'COÛT RÉEL' : 'REAL COST', val: totalCost ? fmtExact(totalCost) : '—', color: LTT1, tipAlign: 'left' as const,
                 tip: isFr ? `Marteau + frais acheteur + stockage/assurance sur 3 ans. Ce que vous déboursez réellement.` : `Hammer + buyer's premium + storage/insurance over 3 years. What you actually spend.` },
-              { lbl: isFr ? 'FRAIS ACHETEUR' : 'BUYER FEES', val: `+${buyerPremiumPct}%`, color: LTT1,
+              { lbl: isFr ? 'FRAIS ACHETEUR' : 'BUYER FEES', val: `+${buyerPremiumPct}%`, color: LTT1, tipAlign: 'center' as const,
                 tip: isFr ? `Commission de la maison de vente sur le prix marteau. Taux appliqué ici : ${buyerPremiumPct}%.` : `Auction house commission on top of the hammer price. Rate applied here: ${buyerPremiumPct}%.` },
-              { lbl: isFr ? 'RENTABILITÉ DÈS' : 'BREAK-EVEN AT', val: realCost?.breakeven_hammer ? fmtExact(Math.round(realCost.breakeven_hammer)) : '—', color: AMB,
+              { lbl: isFr ? 'RENTABILITÉ DÈS' : 'BREAK-EVEN AT', val: realCost?.breakeven_hammer ? fmtExact(Math.round(realCost.breakeven_hammer)) : '—', color: AMB, tipAlign: 'center' as const,
                 tip: isFr ? `Prix minimum à la revente pour couvrir l'ensemble des frais et commissions. En dessous, vous êtes en perte.` : `Minimum resale price to cover all fees and commissions. Below this, you are at a loss.` },
-              { lbl: isFr ? 'PROGRESSION NÉCESSAIRE' : 'NEEDED GAIN', val: breakEvenGain != null ? `+${Math.round(breakEvenGain)}%` : '—', color: LTT1,
+              { lbl: isFr ? 'PROGRESSION NÉCESSAIRE' : 'NEEDED GAIN', val: breakEvenGain != null ? `+${Math.round(breakEvenGain)}%` : '—', color: LTT1, tipAlign: 'right' as const,
                 tip: isFr ? `Hausse minimale du prix pour être à l'équilibre à la revente, tous frais compris.` : `Minimum price increase to break even at resale, all costs included.` },
-            ] as { lbl: string; val: string; color: string; tip: string }[]).map((item, i, arr) => (
+            ] as { lbl: string; val: string; color: string; tip: string; tipAlign: 'left' | 'center' | 'right' }[]).map((item, i, arr) => (
               <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: '5px', paddingRight: i < arr.length - 1 ? '16px' : 0, borderRight: i < arr.length - 1 ? '0.5px solid #E0DDD8' : 'none', marginRight: i < arr.length - 1 ? '16px' : 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#B0A898', letterSpacing: '1.5px', textTransform: 'uppercase' as const }}>
                   {item.lbl}
-                  <Tip theme="light" width={220} text={item.tip} />
+                  <Tip theme="light" width={220} align={item.tipAlign} text={item.tip} />
                 </div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: item.color }}>{item.val}</div>
               </div>
