@@ -41,22 +41,11 @@ export default function ClosingSoon() {
 
   useEffect(() => {
     const token = getToken();
-    const now = new Date();
-    const in48h = new Date(now.getTime() + 48 * 3600000);
-
-    const params = new URLSearchParams({
-      auction_date_from: now.toISOString(),
-      auction_date_to: in48h.toISOString(),
-      sort_by: 'auction_date',
-      sort_dir: 'asc',
-      page_size: '40',
-    });
-
-    fetch(`${BACKEND}/api/lots?${params}`, {
+    fetch(`${BACKEND}/api/recommendations/closing-soon?hours=48&limit=60`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then(r => r.ok ? r.json() : { items: [] })
-      .then(data => { setLots(data.items || []); setLoading(false); })
+      .then(r => r.ok ? r.json() : { lots: [] })
+      .then(data => { setLots(data.lots || []); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 

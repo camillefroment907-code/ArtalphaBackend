@@ -530,6 +530,50 @@ async def get_market_brief(
     return result
 
 
+@router.get("/closing-soon")
+async def get_closing_soon(
+    hours: int = Query(default=48, ge=1, le=168),
+    limit: int = Query(default=40, le=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Lots whose auction closes within the next `hours` hours, sorted by auction_date asc."""
+    now = datetime.utcnow()
+    cutoff = now + timedelta(hours=hours)
+
+    result = await db.execute(
+        select(Lot)
+        .where(and_(
+            Lot.auction_date.isnot(None),
+            Lot.auction_date >= now,
+            Lot.auction_date <= cutoff,
+            Lot.hammer_price.is_(None),
+        ))
+        .order_by(Lot.auction_date)
+        .limit(limit)
+    )
+    lots = result.scalars().all()
+
+    def _card(lot: Lot) -> dict:
+        return {
+            "id":                     str(lot.id),
+            "title":                  lot.title,
+            "artist_name_raw":        lot.artist_name_raw,
+            "current_price":          lot.current_price,
+            "estimate_low":           lot.estimate_low,
+            "estimate_high":          lot.estimate_high,
+            "deal_score":             lot.deal_score,
+            "pct_below_low_estimate": lot.pct_below_low_estimate,
+            "image_url":              lot.image_url,
+            "auction_date":           lot.auction_date.isoformat() if lot.auction_date else None,
+            "auction_house_name":     lot.auction_house_name,
+            "category":               lot.category,
+            "status":                 lot.status.value if lot.status else None,
+        }
+
+    return {"lots": [_card(l) for l in lots], "total": len(lots), "hours": hours}
+
+
 @router.post("/dismiss/{lot_id}", status_code=202)
 async def dismiss_recommendation(
     lot_id: str,
