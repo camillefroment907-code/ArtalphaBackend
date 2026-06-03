@@ -19,7 +19,8 @@ const OpportunityDetail = lazy(() => import('./pages/OpportunityDetail'));
 const Artists       = lazy(() => import('./pages/Artists'));
 const ArtistDetail  = lazy(() => import('./pages/ArtistDetail'));
 const ArtistIntelligence = lazy(() => import('./pages/ArtistIntelligence'));
-const Market        = lazy(() => import('./pages/Market'));
+const MarketContainer  = lazy(() => import('./components/MarketContainer'));
+const ArtistsFollowing = lazy(() => import('./pages/ArtistsFollowing'));
 const Alerts        = lazy(() => import('./pages/Alerts'));
 const Portfolio        = lazy(() => import('./pages/Portfolio'));
 const CollectionMatch  = lazy(() => import('./pages/CollectionMatch'));
@@ -137,20 +138,29 @@ export const router = createBrowserRouter([
       { index: true, loader: () => redirect('/app/dashboard') },
       { path: 'waitlist', loader: () => redirect('/app/signup') },
       { path: 'dashboard', Component: Dashboard },
-      { path: 'explore', Component: Explore },
+      { path: 'explore', loader: () => redirect('/app/market/opportunities') },
       { path: 'login', Component: Login },
       { path: 'signup', Component: Signup },
       { path: 'contact', Component: ContactSales },
       { path: 'pricing', Component: Pricing },
-      { path: 'opportunities', loader: () => redirect('/app/explore') },
+      { path: 'opportunities', loader: () => redirect('/app/market/opportunities') },
       { path: 'primary', Component: Primary },
       { path: 'convictions', Component: Convictions },
       { path: 'opportunities/:id', Component: OpportunityDetail },
-      { path: 'artists', Component: ArtistIntelligence },
+      { path: 'artists', loader: () => redirect('/app/market/artists') },
       { path: 'artists/:artistName', Component: ArtistIntelligence },
       { path: 'artists-legacy', Component: Artists },
       { path: 'artists-legacy/:id', Component: ArtistDetail },
-      { path: 'market', Component: Market },
+      {
+        path: 'market',
+        Component: MarketContainer,
+        children: [
+          { index: true, loader: () => redirect('/app/market/opportunities') },
+          { path: 'opportunities', Component: Explore },
+          { path: 'artists', Component: ArtistIntelligence },
+          { path: 'artists-following', Component: ArtistsFollowing },
+        ],
+      },
       { path: 'alerts', Component: Alerts },
       { path: 'portfolio', Component: Portfolio },
       { path: 'collection-match', Component: CollectionMatch },
@@ -195,15 +205,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/market',
-    Component: ProtectedRoute,
-    children: [
-      {
-        Component: Root,
-        children: [
-          { index: true, Component: Market },
-        ],
-      },
-    ],
+    loader: () => redirect('/app/market'),
   },
   {
     path: '/alerts',

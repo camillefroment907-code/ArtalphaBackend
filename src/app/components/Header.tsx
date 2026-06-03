@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Logo } from './Logo';
@@ -17,21 +17,14 @@ function useIsMobile(breakpoint = 900) {
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 const NAV_ITEMS = [
-  { tKey: 'nav.maSelection', label: '',        to: '/app/dashboard', dropdown: null },
-  { tKey: 'nav.leMarche',    label: '',        to: '/app/explore',   dropdown: null },
-  { tKey: 'nav.artists',     label: '',        to: '/app/artists',   dropdown: null },
-  { tKey: 'nav.alerts',      label: '',        to: '/app/agent',     dropdown: null },
-  { tKey: 'nav.calendar',    label: '',        to: '/app/calendar',  dropdown: null },
-  { tKey: 'nav.portfolio',   label: '',        to: '/app/portfolio', dropdown: null },
-  { tKey: '',                label: "Aujourd'hui", to: '/app/today',  dropdown: null },
-  { tKey: '',                label: '⚡ Urgent',  to: '/app/urgent', dropdown: null },
-];
-
-const EXPLORER_ITEMS = [
-  { icon: '◆', labelKey: 'explorer.bestLots',     subKey: 'explorer.bestLotsSub',     to: '/app/explore?tab=best' },
-  { icon: '◉', labelKey: 'explorer.allAuctions',  subKey: 'explorer.allAuctionsSub',  to: '/app/explore?tab=auctions' },
-  { icon: '◐', labelKey: 'explorer.directArtist', subKey: 'explorer.directArtistSub', to: '/app/explore?tab=primary' },
-];
+  { label: "Aujourd'hui",     to: '/app/today'     },
+  { label: 'Dernière chance', to: '/app/urgent'    },
+  { label: 'Le marché',       to: '/app/market'    },
+  { label: 'Ma sélection',    to: '/app/dashboard' },
+  { label: 'Portfolio',       to: '/app/portfolio' },
+  { label: 'Alertes',         to: '/app/alerts'    },
+  { label: 'Calendrier',      to: '/app/calendar'  },
+] as const;
 
 const PLAN_LABELS: Record<string, string> = {
   free: 'Free', starter: 'Collector', investor: 'Investor',
@@ -52,7 +45,6 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
     localStorage.setItem('i18nextLng', newLang);
   };
 
-  const [explorerOpen, setExplorerOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -65,7 +57,7 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchValue.trim()) {
-      navigate(`/app/explore?tab=best&search=${encodeURIComponent(searchValue.trim())}`);
+      navigate(`/app/market/opportunities?search=${encodeURIComponent(searchValue.trim())}`);
       setSearchValue('');
     }
   };
@@ -100,15 +92,15 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const isActive = (item: typeof NAV_ITEMS[0]) => {
-    if (item.to === '/app/explore') {
-      return ['/app/explore', '/app/opportunities', '/app/primary', '/app/convictions']
-        .some(p => location.pathname.startsWith(p));
+  const isActive = (to: string) => {
+    if (to === '/app/market') {
+      return (
+        location.pathname.startsWith('/app/market') ||
+        location.pathname.startsWith('/app/explore') ||
+        location.pathname.startsWith('/app/artists')
+      );
     }
-    if (item.to === '/app/agent') {
-      return location.pathname.startsWith('/app/agent') || location.pathname.startsWith('/app/intelligence');
-    }
-    return location.pathname.startsWith(item.to);
+    return location.pathname.startsWith(to);
   };
 
   const initials = user
@@ -176,90 +168,9 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
           {/* Nav */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
             {NAV_ITEMS.map((item) => {
-              const active = isActive(item);
-              const isExplorer = item.dropdown === 'explorer';
-              const isIntelligence = item.to === '/app/agent';
-
-              if (isExplorer) {
-                return (
-                  <div
-                    key={item.to}
-                    style={{ position: 'relative' }}
-                    onMouseEnter={() => setExplorerOpen(true)}
-                    onMouseLeave={() => setExplorerOpen(false)}
-                  >
-                    <Link
-                      to={item.to}
-                      style={{
-                        padding: '6px 14px',
-                        fontSize: '13px',
-                        fontWeight: active ? 600 : 400,
-                        color: active ? 'var(--navy)' : 'var(--text-2)',
-                        textDecoration: 'none',
-                        borderBottom: active ? '2px solid var(--electric)' : '2px solid transparent',
-                        transition: 'all 0.15s var(--ease)',
-                        letterSpacing: '0.01em',
-                        display: 'flex', alignItems: 'center', gap: '4px',
-                        lineHeight: '42px',
-                      }}
-                    >
-                      {item.label || t(item.tKey)}
-                      <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{
-                        transition: 'transform 0.15s',
-                        transform: explorerOpen ? 'rotate(180deg)' : 'none',
-                        opacity: 0.5,
-                      }}>
-                        <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </Link>
-
-                    <div style={{
-                      position: 'absolute', top: '100%', left: '0',
-                      background: 'var(--bg-card)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '0 8px 8px 8px',
-                      boxShadow: 'var(--shadow-lg)',
-                      minWidth: '240px',
-                      padding: '6px',
-                      pointerEvents: explorerOpen ? 'auto' : 'none',
-                      opacity: explorerOpen ? 1 : 0,
-                      transform: explorerOpen ? 'translateY(0)' : 'translateY(-6px)',
-                      transition: 'opacity 0.15s var(--ease), transform 0.15s var(--ease)',
-                    }}>
-                      {EXPLORER_ITEMS.map(sub => (
-                        <Link
-                          key={sub.to}
-                          to={sub.to}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '12px',
-                            padding: '10px 16px', borderRadius: '6px',
-                            textDecoration: 'none',
-                            cursor: 'pointer',
-                            transition: 'background 0.12s',
-                          }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-subtle)')}
-                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                        >
-                          <span style={{ fontSize: '14px', flexShrink: 0, width: '20px', textAlign: 'center', color: 'var(--navy)' }}>
-                            {sub.icon}
-                          </span>
-                          <div>
-                            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', lineHeight: 1.3 }}>
-                              {t(sub.labelKey)}
-                            </div>
-                            <div style={{ fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.3 }}>
-                              {t(sub.subKey)}
-                            </div>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                );
-              }
-
-              const isEmerging = item.to === '/app/emerging';
-              const isBrief = item.to === '/app/today';
+              const active = isActive(item.to);
+              const isAlerts = item.to === '/app/alerts';
+              const isToday  = item.to === '/app/today';
               return (
                 <Link
                   key={item.to}
@@ -289,16 +200,14 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
                     }
                   }}
                 >
-                  {isEmerging ? (
-                    <>{t(item.tKey)}</>
-                  ) : (item.label || t(item.tKey))}
-                  {isIntelligence && agentUnread > 0 && (
+                  {item.label}
+                  {isAlerts && agentUnread > 0 && (
                     <span style={{
                       width: '6px', height: '6px', borderRadius: '50%',
                       background: 'var(--gold)', display: 'inline-block', flexShrink: 0,
                     }} />
                   )}
-                  {isBrief && briefUnseen && !active && (
+                  {isToday && briefUnseen && !active && (
                     <span style={{
                       width: '6px', height: '6px', borderRadius: '50%',
                       background: 'var(--electric)', display: 'inline-block', flexShrink: 0,
@@ -511,24 +420,34 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
             </div>
           </div>
 
-          {/* Nav items */}
-          {NAV_ITEMS.map(item => (
-            <Link
-              key={item.to}
-              to={item.to}
-              style={{
-                display: 'flex', alignItems: 'center',
-                padding: '14px 20px',
-                fontSize: '15px', fontWeight: isActive(item) ? 600 : 400,
-                color: isActive(item) ? 'var(--navy)' : 'var(--text)',
-                textDecoration: 'none',
-                borderLeft: isActive(item) ? '3px solid var(--gold)' : '3px solid transparent',
-                background: isActive(item) ? 'var(--navy-subtle)' : 'transparent',
-                minHeight: '44px',
-              }}
-            >
-              {item.label || t(item.tKey)}
-            </Link>
+          {/* Nav items — grouped */}
+          {NAV_ITEMS.map((item, idx) => (
+            <Fragment key={item.to}>
+              {idx === 3 && <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />}
+              {idx === 5 && <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />}
+              <Link
+                key={item.to}
+                to={item.to}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '14px 20px',
+                  fontSize: '15px', fontWeight: isActive(item.to) ? 600 : 400,
+                  color: isActive(item.to) ? 'var(--navy)' : 'var(--text)',
+                  textDecoration: 'none',
+                  borderLeft: isActive(item.to) ? '3px solid var(--gold)' : '3px solid transparent',
+                  background: isActive(item.to) ? 'var(--navy-subtle)' : 'transparent',
+                  minHeight: '44px',
+                }}
+              >
+                {item.label}
+                {item.to === '/app/alerts' && agentUnread > 0 && (
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--gold)', display: 'inline-block' }} />
+                )}
+                {item.to === '/app/today' && briefUnseen && !isActive(item.to) && (
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--electric)', display: 'inline-block' }} />
+                )}
+              </Link>
+            </Fragment>
           ))}
 
           <div style={{ height: '1px', background: 'var(--border)', margin: '8px 0' }} />
