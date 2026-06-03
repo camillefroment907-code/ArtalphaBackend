@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { getToken } from '../../lib/auth';
+import { CopilotBar } from '../components/CopilotBar';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -317,6 +318,14 @@ export default function TodayPage() {
           }
         </div>
       </div>
+
+      {/* ── COPILOT ──────────────────────────────────────────────────── */}
+      <CopilotBar
+        mode="chips"
+        topDealId={conviction?.id ?? null}
+        urgentCount={brief.closing_today_count ?? brief.closing_soon.length}
+        sourcePage="today"
+      />
 
       {/* ── ZONE 2 : La Conviction du Jour ───────────────────────────── */}
       {conviction ? (

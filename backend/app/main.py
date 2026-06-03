@@ -47,6 +47,7 @@ from app.api.emerging import router as emerging_router, emerging_artists_router
 from app.api.admin_scoring import router as admin_scoring_router
 from app.api.tracking import router as tracking_router
 from app.api.collection import router as collection_router
+from app.api.copilot import router as copilot_router
 from app.api.collection_os import router as collection_os_router
 from app.routers.cycle import router as cycle_router
 from app.routers.upside import router as upside_router
@@ -271,6 +272,7 @@ app.include_router(contact_router,          prefix="/api")
 app.include_router(waitlist_router,         prefix="/api")
 app.include_router(collector_router,        prefix="/api")
 app.include_router(recommendations_router,  prefix="/api")
+app.include_router(copilot_router,          prefix="/api")
 app.include_router(blog_router,             prefix="/api")
 app.include_router(feedback_router,         prefix="/api")
 app.include_router(analytics_router,       prefix="/api")

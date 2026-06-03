@@ -705,6 +705,59 @@ class AgentRecommendation(Base):
     )
 
 
+class CopilotMemory(Base):
+    """
+    Episodic memory for the Copilot advisor.
+    Stores inferred or stated user preferences, decisions, and interests.
+    Survives across sessions. Grows over time as Nautilus learns the user.
+    """
+    __tablename__ = "copilot_memories"
+
+    id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id         = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    memory_key      = Column(String(200), nullable=False)   # e.g. "interest:sculptor", "budget:stated"
+    memory_value    = Column(JSONB, nullable=False)          # structured value
+    confidence      = Column(Float, default=1.0)             # 0–1, decays over time
+    source          = Column(String(50), nullable=True)      # "stated" | "inferred" | "observed"
+    created_at      = Column(DateTime, server_default=text("NOW()"), nullable=False)
+    last_reinforced = Column(DateTime, server_default=text("NOW()"), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "memory_key", name="uq_copilot_memory_user_key"),
+        Index("ix_copilot_memory_user_id", "user_id"),
+        Index("ix_copilot_memory_key", "memory_key"),
+    )
+
+
+class CopilotConversation(Base):
+    """
+    Full interaction log for every Copilot touchpoint.
+    Phase 2: chip clicks (role="user", no assistant response).
+    Phase 3+: full message pairs with assembled context snapshot.
+    Retention: 365 days.
+    """
+    __tablename__ = "copilot_conversations"
+
+    id               = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id          = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    session_id       = Column(UUID(as_uuid=True), nullable=False, default=uuid.uuid4)
+    role             = Column(String(20), nullable=False)    # "user" | "assistant"
+    content          = Column(Text, nullable=False)
+    intent           = Column(String(50), nullable=True)     # taxonomy: conviction_explain | urgency_check | …
+    source_page      = Column(String(50), nullable=True)     # "today" | "lot_detail" | "market" | …
+    context_snapshot = Column(JSONB, nullable=True)          # assemble_user_context() output at interaction time
+    lot_id           = Column(UUID(as_uuid=True), ForeignKey("lots.id", ondelete="SET NULL"), nullable=True)
+    artist_id        = Column(UUID(as_uuid=True), ForeignKey("artists.id", ondelete="SET NULL"), nullable=True)
+    created_at       = Column(DateTime, server_default=text("NOW()"), nullable=False)
+
+    __table_args__ = (
+        Index("ix_copilot_conv_user_id", "user_id"),
+        Index("ix_copilot_conv_session_id", "session_id"),
+        Index("ix_copilot_conv_intent", "intent"),
+        Index("ix_copilot_conv_created_at", "created_at"),
+    )
+
+
 class ChatMessage(Base):
     """Larry chat history — kept 30 days then purged by daily_cleanup."""
     __tablename__ = "chat_messages"
