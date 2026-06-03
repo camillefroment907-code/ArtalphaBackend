@@ -397,6 +397,134 @@ async def get_for_you(
     return _rec_result
 
 
+@router.get("/market-brief")
+async def get_market_brief(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Daily market brief — one-stop summary for the user.
+    Returns: new lots since last visit, closing soon, top picks, agent unread count, top deal.
+    Cached 30 min per user. Updates CollectorDNA.last_active_at on cache miss.
+    """
+    _key = f"market_brief:{current_user.id}"
+    _cached = get_cached(_key, ttl=1800)
+    if _cached is not None:
+        return _cached
+
+    dna = await _get_dna(current_user.id, db)
+    now = datetime.utcnow()
+
+    # "Since last visit" window — default 24h if never computed
+    since = (dna.last_active_at if dna and dna.last_active_at else now - timedelta(hours=24))
+    horizon_48h = now + timedelta(hours=48)
+
+    def _lot_card(lot: Lot) -> dict:
+        return {
+            "id":                     str(lot.id),
+            "title":                  lot.title,
+            "artist_name_raw":        lot.artist_name_raw,
+            "current_price":          lot.current_price,
+            "estimate_low":           lot.estimate_low,
+            "estimate_high":          lot.estimate_high,
+            "deal_score":             lot.deal_score,
+            "pct_below_low_estimate": lot.pct_below_low_estimate,
+            "image_url":              lot.image_url,
+            "auction_date":           lot.auction_date.isoformat() if lot.auction_date else None,
+            "auction_house_name":     lot.auction_house_name,
+            "category":               lot.category,
+            "status":                 lot.status.value if lot.status else None,
+        }
+
+    # New lots since last visit
+    new_lots_result = await db.execute(
+        select(Lot)
+        .where(and_(
+            Lot.status.cast(String).in_(["upcoming", "live"]),
+            Lot.market_type == MarketType.AUCTION,
+            Lot.created_at >= since,
+            Lot.deal_score.isnot(None),
+        ))
+        .order_by(desc(Lot.deal_score))
+        .limit(12)
+    )
+    new_lots = new_lots_result.scalars().all()
+
+    # Closing soon (< 48h)
+    closing_result = await db.execute(
+        select(Lot)
+        .where(and_(
+            Lot.status.cast(String).in_(["upcoming", "live"]),
+            Lot.market_type == MarketType.AUCTION,
+            Lot.auction_date.isnot(None),
+            Lot.auction_date >= now,
+            Lot.auction_date <= horizon_48h,
+        ))
+        .order_by(Lot.auction_date)
+        .limit(10)
+    )
+    closing_lots = closing_result.scalars().all()
+
+    # Top deal globally
+    top_deal_result = await db.execute(
+        select(Lot)
+        .where(and_(
+            Lot.status.cast(String).in_(["upcoming", "live"]),
+            Lot.market_type == MarketType.AUCTION,
+            Lot.deal_score.isnot(None),
+        ))
+        .order_by(desc(Lot.deal_score))
+        .limit(1)
+    )
+    top_deal_lot = top_deal_result.scalar_one_or_none()
+
+    # Agent unread count
+    agent_count_result = await db.execute(
+        select(func.count(AgentRecommendation.id)).where(
+            and_(
+                AgentRecommendation.user_id == current_user.id,
+                AgentRecommendation.is_read == False,  # noqa: E712
+            )
+        )
+    )
+    agent_unread = agent_count_result.scalar() or 0
+
+    # Top picks — run 3 strategies, deduplicate, take 5
+    excluded: set = set()
+    top_picks: list = []
+    for strategy in [_strategy_deal_alert, _strategy_artist_momentum, _strategy_category_match]:
+        try:
+            cards = await strategy(dna, excluded, db, 3)
+            for card in cards:
+                lid = card["lot"]["id"]
+                if lid not in excluded and len(top_picks) < 5:
+                    excluded.add(lid)
+                    top_picks.append(card)
+        except Exception:
+            continue
+
+    # Update last_active_at to now (marks this visit)
+    if dna:
+        dna.last_active_at = now
+        try:
+            await db.commit()
+        except Exception:
+            pass
+
+    result = {
+        "since":           since.isoformat(),
+        "generated_at":    now.isoformat(),
+        "new_lots_count":  len(new_lots),
+        "new_lots":        [_lot_card(l) for l in new_lots[:6]],
+        "closing_soon":    [_lot_card(l) for l in closing_lots],
+        "top_picks":       top_picks,
+        "top_deal":        _lot_card(top_deal_lot) if top_deal_lot else None,
+        "agent_unread":    agent_unread,
+    }
+    set_cached(_key, result)
+    return result
+
+
 @router.post("/dismiss/{lot_id}", status_code=202)
 async def dismiss_recommendation(
     lot_id: str,

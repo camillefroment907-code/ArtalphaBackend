@@ -6,6 +6,7 @@ import { RecommendationPopup } from './components/RecommendationPopup';
 import { NPSSurvey } from './components/NPSSurvey';
 import { LegalDisclaimer } from './components/LegalDisclaimer';
 import { getUser, getToken, setUser } from '../lib/auth';
+import { MarketBriefModal } from './components/MarketBriefModal';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -75,6 +76,7 @@ export default function Root() {
       {!isOnboarding && <RecommendationPopup />}
       <NPSSurvey />
       {!isOnboarding && <LegalDisclaimer />}
+      {!isOnboarding && <MarketBriefModal />}
     </div>
   );
 }

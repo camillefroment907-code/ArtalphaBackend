@@ -17,12 +17,14 @@ function useIsMobile(breakpoint = 900) {
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 const NAV_ITEMS = [
-  { tKey: 'nav.maSelection', label: '', to: '/app/dashboard', dropdown: null },
-  { tKey: 'nav.leMarche',    label: '', to: '/app/explore',   dropdown: null },
-  { tKey: 'nav.artists',     label: '', to: '/app/artists',   dropdown: null },
-  { tKey: 'nav.alerts',      label: '', to: '/app/agent',     dropdown: null },
-  { tKey: 'nav.calendar',    label: '', to: '/app/calendar',  dropdown: null },
-  { tKey: 'nav.portfolio',   label: '', to: '/app/portfolio', dropdown: null },
+  { tKey: 'nav.maSelection', label: '',        to: '/app/dashboard', dropdown: null },
+  { tKey: 'nav.leMarche',    label: '',        to: '/app/explore',   dropdown: null },
+  { tKey: 'nav.artists',     label: '',        to: '/app/artists',   dropdown: null },
+  { tKey: 'nav.alerts',      label: '',        to: '/app/agent',     dropdown: null },
+  { tKey: 'nav.calendar',    label: '',        to: '/app/calendar',  dropdown: null },
+  { tKey: 'nav.portfolio',   label: '',        to: '/app/portfolio', dropdown: null },
+  { tKey: '',                label: 'Brief',   to: '/app/brief',     dropdown: null },
+  { tKey: '',                label: '⚡ Urgent', to: '/app/urgent',  dropdown: null },
 ];
 
 const EXPLORER_ITEMS = [
@@ -58,6 +60,7 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [agentUnread, setAgentUnread] = useState(0);
+  const [briefUnseen, setBriefUnseen] = useState(false);
   const [scanState, setScanState] = useState<'idle' | 'loading' | 'done'>('idle');
 
   // Close mobile menu on route change
@@ -84,6 +87,12 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
       .then(d => setAgentUnread(d.count ?? 0))
       .catch(() => {});
   }, [user?.email]);
+
+  useEffect(() => {
+    if (!user) return;
+    const key = `nautilus_brief_${new Date().toISOString().slice(0, 10)}`;
+    setBriefUnseen(!localStorage.getItem(key));
+  }, [user?.email, location.pathname]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -267,6 +276,7 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
               }
 
               const isEmerging = item.to === '/app/emerging';
+              const isBrief = item.to === '/app/brief';
               return (
                 <Link
                   key={item.to}
@@ -303,6 +313,12 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
                     <span style={{
                       width: '6px', height: '6px', borderRadius: '50%',
                       background: 'var(--gold)', display: 'inline-block', flexShrink: 0,
+                    }} />
+                  )}
+                  {isBrief && briefUnseen && !active && (
+                    <span style={{
+                      width: '6px', height: '6px', borderRadius: '50%',
+                      background: 'var(--electric)', display: 'inline-block', flexShrink: 0,
                     }} />
                   )}
                 </Link>
