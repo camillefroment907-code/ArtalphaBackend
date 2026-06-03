@@ -21,13 +21,15 @@ export default defineConfig({
   assetsInclude: ['**/*.svg', '**/*.csv'],
 
   build: {
-    chunkSizeWarningLimit: 800,
+    chunkSizeWarningLimit: 500,
     rollupOptions: {
       output: {
         manualChunks: {
-          react: ['react', 'react-dom'],
-          router: ['react-router'],
-          i18n: ['i18next', 'react-i18next'],
+          react:   ['react', 'react-dom'],
+          router:  ['react-router'],
+          i18n:    ['i18next', 'react-i18next'],
+          charts:  ['recharts'],        // ~200 KB — isolated so it never blocks initial paint
+          zustand: ['zustand'],
         },
       },
     },

@@ -1,33 +1,69 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import useSWR from "swr";
 import {
   ArrowLeft, ExternalLink, Bell, CheckCircle, Sparkles, Info,
   ChevronRight, Download, FileText, Clock, AlertCircle, AlertTriangle,
   Bookmark, Share2, TrendingUp, TrendingDown, Minus,
 } from "lucide-react";
-import {
-  ResponsiveContainer, ComposedChart, XAxis, YAxis, CartesianGrid,
-  Scatter, ReferenceLine, Tooltip,
-} from "recharts";
 import { lotsApi, artistsApi, type Lot, type OracleSignal } from "@/lib/api";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { WishlistButton } from "@/components/lots/WishlistButton";
-import { GalleryCard } from "@/components/lots/GalleryCard";
 import { TabsNav } from "@/components/lot/TabsNav";
-import { ComparablesTab } from "@/components/lot/ComparablesTab";
-import { ComparablesHero } from "@/components/lot/ComparablesHero";
-import { AnalysisTab } from "@/components/lot/AnalysisTab";
-import { InvestmentTimeline } from "@/components/lot/InvestmentTimeline";
-import { ProvenanceTab } from "@/components/lot/ProvenanceTab";
-import { DocumentsTab } from "@/components/lot/DocumentsTab";
 import { useLanguageStore, formatPriceInCurrency } from "@/lib/useLanguage";
 import { convertPrice } from "@/lib/i18n";
 import { useAuthStore } from "@/lib/store";
 import { computeFairValue } from "@/lib/lotHelpers";
+
+// ── Lazy-loaded tab components ────────────────────────────────────────────────
+// None of these are above-the-fold on initial render — loading them eagerly
+// bloats the initial JS bundle by ~150 KB (Recharts + tab content).
+// Each becomes its own webpack chunk, loaded only when the tab is activated.
+
+const TabFallback = () => (
+  <div style={{ padding: "40px 0", textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>
+    Loading…
+  </div>
+);
+
+const GalleryCard = dynamic(
+  () => import("@/components/lots/GalleryCard").then(m => ({ default: m.GalleryCard })),
+  { ssr: false, loading: () => <div style={{ height: 200, background: "var(--bg-card)", borderRadius: 8 }} /> }
+);
+const ComparablesTab = dynamic(
+  () => import("@/components/lot/ComparablesTab").then(m => ({ default: m.ComparablesTab })),
+  { ssr: false, loading: TabFallback }
+);
+const ComparablesHero = dynamic(
+  () => import("@/components/lot/ComparablesHero").then(m => ({ default: m.ComparablesHero })),
+  { ssr: false, loading: TabFallback }
+);
+const AnalysisTab = dynamic(
+  () => import("@/components/lot/AnalysisTab").then(m => ({ default: m.AnalysisTab })),
+  { ssr: false, loading: TabFallback }
+);
+const InvestmentTimeline = dynamic(
+  () => import("@/components/lot/InvestmentTimeline").then(m => ({ default: m.InvestmentTimeline })),
+  { ssr: false, loading: TabFallback }
+);
+const ProvenanceTab = dynamic(
+  () => import("@/components/lot/ProvenanceTab").then(m => ({ default: m.ProvenanceTab })),
+  { ssr: false, loading: TabFallback }
+);
+const DocumentsTab = dynamic(
+  () => import("@/components/lot/DocumentsTab").then(m => ({ default: m.DocumentsTab })),
+  { ssr: false, loading: TabFallback }
+);
+
+// Recharts is used for the inline price scatter chart in the main view.
+import {
+  ResponsiveContainer, ComposedChart, XAxis, YAxis, CartesianGrid,
+  Scatter, ReferenceLine, Tooltip,
+} from "recharts";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const SUCCESS = "#16A34A";

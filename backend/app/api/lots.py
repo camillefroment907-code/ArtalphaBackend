@@ -1679,6 +1679,24 @@ async def get_lot(
         raise HTTPException(status_code=404, detail="Lot not found")
     lot_plan = await get_user_plan(current_user, db)
 
+    # ── Response cache (2 min per lot × plan tier) ────────────────────────────
+    # Eliminates the 7+ sub-queries that build lot_dict on every request.
+    # Cache is keyed by (lot_id, plan) so free/paid users never see each
+    # other's data.  UserEvent tracking always runs regardless of cache state.
+    _lot_cache_key = f"lot_detail:{lot_id}:{lot_plan}"
+    _lot_cached = get_cached(_lot_cache_key, ttl=120)
+    if _lot_cached is not None:
+        try:
+            db.add(UserEvent(
+                user_id=current_user.id if current_user else None,
+                lot_id=lot.id,
+                event_type="lot_view",
+            ))
+            await db.commit()
+        except Exception:
+            pass
+        return _lot_cached
+
     # Serialize via schema then inject parsed dimension fields.
     # If the lot has no explicit dimensions, try to extract from description or title.
     lot_dict = LotOut.model_validate(lot).model_dump(mode="json")
@@ -1872,57 +1890,60 @@ async def get_lot(
             "projection_price_basis": proj_price_basis,
         }
 
-    # ── Nautilus fair value + real market average ─────────────────────────────
-    # Both share the same DB query. fair_value = median (≥5). market avg = mean (≥3).
+    # ── Nautilus fair value + price history — ONE combined query ─────────────
+    # Previously two separate DB round-trips; now a single query covers both:
+    #  - fair_value / market avg  → hammer_price, last 24 m
+    #  - price history / trend   → hammer_price + estimate_high + auction_date, last 48 m
+    # Python slices the 48 m result to derive the 24 m subset.
     lot_dict["fair_value_nautilus"] = None
     lot_dict["fair_value_confidence"] = None
-    lot_dict["real_data_n_sales"] = 0    # real hammer prices in DB for this artist (24m)
-    _prices_for_market: list = []   # scoped outside so else-branch can see it
+    lot_dict["real_data_n_sales"] = 0
+    _prices_for_market: list = []
+    _all_rows: list = []   # shared between fair_value and price_history sections
     if lot.artist_name_raw:
-        cutoff = datetime.utcnow() - timedelta(days=730)
-        comp_result = await db.execute(
-            select(Lot.hammer_price)
-            .where(
+        _now = datetime.utcnow()
+        _cutoff_24m = _now - timedelta(days=730)
+        _cutoff_48m = _now - timedelta(days=1460)
+        # Single query: 48 m window with all three columns needed downstream
+        _combined_result = await db.execute(
+            select(Lot.hammer_price, Lot.estimate_high, Lot.auction_date).where(
                 and_(
                     func.lower(Lot.artist_name_raw) == lot.artist_name_raw.lower(),
                     Lot.hammer_price.isnot(None),
-                    Lot.auction_date >= cutoff,
+                    Lot.hammer_price > 0,
+                    Lot.auction_date >= _cutoff_48m,
                     Lot.id != lot.id,
                 )
             )
         )
-        _prices_for_market = [row[0] for row in comp_result.fetchall() if row[0] and row[0] > 0]
+        _all_rows = _combined_result.fetchall()
+        # fair_value uses last 24 m
+        _prices_for_market = [r[0] for r in _all_rows if r[2] and r[2] >= _cutoff_24m]
         lot_dict["real_data_n_sales"] = len(_prices_for_market)
         if len(_prices_for_market) >= 5:
             lot_dict["fair_value_nautilus"] = statistics.median(_prices_for_market)
             lot_dict["fair_value_confidence"] = len(_prices_for_market)
 
         # ── Override below_market metrics with real DB data (≥3 sales) ─────────
-        # Replaces heuristic/GPT-generated Artist.avg_auction_price with actual
-        # hammer prices from the database for this artist (last 24 months).
         sb = lot_dict.get("score_breakdown")
         if len(_prices_for_market) >= 3:
             real_avg_market = statistics.mean(_prices_for_market)
             ref_price = lot.current_price or hammer
             if ref_price and ref_price > 0 and real_avg_market > 0:
                 pct_below_mkt = (real_avg_market - ref_price) / real_avg_market * 100
-                # Same sigmoid as scoring engine: steepness=0.09, midpoint=25
                 new_below_mkt = 100.0 / (1 + math.exp(-0.09 * (pct_below_mkt - 25)))
                 new_below_mkt = round(max(0.0, min(100.0, new_below_mkt)), 2)
-
                 lot_dict["pct_below_market_avg"] = round(pct_below_mkt, 2)
                 if sb:
                     old_score = sb.get("below_market_score") or 45.0
                     sb["below_market_score"] = new_below_mkt
                     sb["pct_below_market_avg"] = round(pct_below_mkt, 2)
-                    # Adjust deal_score: swap old market component for real one
                     if lot_dict.get("deal_score") is not None:
-                        delta = (new_below_mkt - old_score) * 0.30  # weight_below_market
+                        delta = (new_below_mkt - old_score) * 0.30
                         lot_dict["deal_score"] = round(
                             max(0.0, min(100.0, lot_dict["deal_score"] + delta)), 1
                         )
         else:
-            # < 3 real sales — reset heuristic to sentinel
             lot_dict["pct_below_market_avg"] = None
             if sb:
                 old_score = sb.get("below_market_score") or 45.0
@@ -1935,7 +1956,6 @@ async def get_lot(
                     )
 
     if not _prices_for_market and not lot.artist_name_raw:
-        # No artist — reset any heuristic batch value to sentinel
         lot_dict["pct_below_market_avg"] = None
         _sb = lot_dict.get("score_breakdown")
         if _sb:
@@ -1948,33 +1968,21 @@ async def get_lot(
                     max(0.0, min(100.0, lot_dict["deal_score"] + delta)), 1
                 )
 
-    # ── Artist price history statistics ──────────────────────────────────────
+    # ── Artist price history — derived from the combined query above ──────────
     try:
-        now = datetime.utcnow()
-        cutoff_24m = now - timedelta(days=730)
-        cutoff_48m = now - timedelta(days=1460)
-        if lot.artist_name_raw:
-            prices_result = await db.execute(
-                select(Lot.hammer_price, Lot.estimate_high, Lot.auction_date).where(
-                    and_(
-                        func.lower(Lot.artist_name_raw) == lot.artist_name_raw.lower(),
-                        Lot.hammer_price.isnot(None),
-                        Lot.hammer_price > 0,
-                        Lot.auction_date >= cutoff_48m,
-                        Lot.id != lot.id,
-                    )
-                )
-            )
-            price_rows = prices_result.fetchall()
-            recent = [r[0] for r in price_rows if r[2] and r[2] >= cutoff_24m]
-            prior = [r[0] for r in price_rows if r[2] and r[2] < cutoff_24m]
+        if lot.artist_name_raw and _all_rows:
+            price_rows = _all_rows
+            _cutoff_24m_inner = datetime.utcnow() - timedelta(days=730)
+            _cutoff_48m_inner = datetime.utcnow() - timedelta(days=1460)
+            recent = [r[0] for r in price_rows if r[2] and r[2] >= _cutoff_24m_inner]
+            prior = [r[0] for r in price_rows if r[2] and r[2] < _cutoff_24m_inner]
             trend_pct = None
             if len(recent) >= 3 and len(prior) >= 3:
                 med_recent = statistics.median(recent)
                 med_prior = statistics.median(prior)
                 if med_prior > 0:
                     trend_pct = round((med_recent - med_prior) / med_prior * 100, 1)
-            with_estimate = [r for r in price_rows if r[1] and r[1] > 0 and r[2] and r[2] >= cutoff_24m]
+            with_estimate = [r for r in price_rows if r[1] and r[1] > 0 and r[2] and r[2] >= _cutoff_24m_inner]
             sell_above_pct = None
             if len(with_estimate) >= 3:
                 above = sum(1 for r in with_estimate if r[0] > r[1])
@@ -1997,6 +2005,9 @@ async def get_lot(
         lot_dict["fair_value_nautilus"] = None
         lot_dict["fair_value_confidence"] = None
         lot_dict["price_history"] = None
+
+    # Store in cache before returning (only complete lot_dicts are cached)
+    set_cached(_lot_cache_key, lot_dict)
 
     try:
         db.add(UserEvent(
