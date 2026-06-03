@@ -1,7 +1,7 @@
 """
 Nautilus — Upside Model Training Script (Step 3).
 
-Trains a GradientBoostingClassifier to predict sold_above_low_estimate.
+Trains a HistGradientBoostingClassifier to predict sold_above_low_estimate.
 Uses a temporal train/val/test split — NEVER random split.
 
 Usage:
@@ -40,7 +40,8 @@ import joblib
 import numpy as np
 import pandas as pd
 import psycopg2
-from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.inspection import permutation_importance
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
@@ -321,17 +322,19 @@ def build_preprocessing_config(df_train: pd.DataFrame) -> dict:
     return config
 
 
-def apply_preprocessing(df: pd.DataFrame, config: dict) -> np.ndarray:
+def apply_preprocessing(df: pd.DataFrame, config: dict, feature_names: list | None = None) -> np.ndarray:
     """
     Apply preprocessing config to a DataFrame.
     Returns a numpy array with shape (n_rows, n_features).
+    feature_names overrides FEATURE_NAMES (used to drop constant columns).
     """
     label_encoders = config["label_encoders"]
     medians = config["medians"]
     log_features = config["log_features"]
+    features = feature_names if feature_names is not None else FEATURE_NAMES
 
     result = []
-    for feat in FEATURE_NAMES:
+    for feat in features:
         if feat not in df.columns:
             # Feature missing entirely — use median or 0
             col = np.full(len(df), medians.get(feat, 0.0))
@@ -590,17 +593,29 @@ def main():
         )
         sys.exit(1)
 
+    # ── Drop constant / near-constant features ────────────────────────────────
+    # Features with >=99% null in training become constant after imputation,
+    # which breaks HistGBM's histogram binner (sliding_window_view on 1 element).
+    active_features = [
+        f for f in FEATURE_NAMES
+        if f in df_train.columns and df_train[f].isna().mean() < 0.99
+    ]
+    dropped = [f for f in FEATURE_NAMES if f not in active_features]
+    if dropped:
+        log.info("Dropping %d constant/near-null features: %s", len(dropped), dropped)
+
     # ── Preprocessing ─────────────────────────────────────────────────────────
     log.info("Building preprocessing config from training data...")
-    preprocessing_config = build_preprocessing_config(df_train)
+    preprocessing_config = build_preprocessing_config(df_train[active_features + ["target", "sale_date"]])
+    preprocessing_config["active_features"] = active_features
 
-    X_train = apply_preprocessing(df_train, preprocessing_config)
+    X_train = apply_preprocessing(df_train, preprocessing_config, feature_names=active_features)
     y_train = df_train["target"].values.astype(int)
 
-    X_val = apply_preprocessing(df_val, preprocessing_config) if len(df_val) > 0 else np.empty((0, len(FEATURE_NAMES)))
+    X_val = apply_preprocessing(df_val, preprocessing_config, feature_names=active_features) if len(df_val) > 0 else np.empty((0, len(active_features)))
     y_val = df_val["target"].values.astype(int) if len(df_val) > 0 else np.array([])
 
-    X_test = apply_preprocessing(df_test, preprocessing_config) if len(df_test) > 0 else np.empty((0, len(FEATURE_NAMES)))
+    X_test = apply_preprocessing(df_test, preprocessing_config, feature_names=active_features) if len(df_test) > 0 else np.empty((0, len(active_features)))
     y_test = df_test["target"].values.astype(int) if len(df_test) > 0 else np.array([])
 
     log.info("Feature matrix shapes: train=%s, val=%s, test=%s",
@@ -644,15 +659,14 @@ def main():
         )
 
     # ── Model training ────────────────────────────────────────────────────────
-    log.info("Training GradientBoostingClassifier...")
-    model = GradientBoostingClassifier(
-        n_estimators=200,
+    log.info("Training HistGradientBoostingClassifier...")
+    model = HistGradientBoostingClassifier(
+        max_iter=200,
         max_depth=4,
         learning_rate=0.05,
-        subsample=0.8,
         min_samples_leaf=20,
         random_state=42,
-    )
+    )  # Handles NaN natively — faster than GradientBoostingClassifier on large datasets
     model.fit(X_train, y_train)
     log.info("Training complete.")
 
@@ -688,9 +702,18 @@ def main():
     )
 
     # ── Feature importance ────────────────────────────────────────────────────
-    importances = model.feature_importances_
+    # HistGBM doesn't expose feature_importances_ — use permutation importance
+    # on a subsample of the test set (fast, model-agnostic).
+    log.info("Computing permutation feature importances (n=2000 subsample)...")
+    _perm_n = min(2000, len(X_test))
+    _idx = np.random.default_rng(42).integers(0, len(X_test), _perm_n)
+    perm_result = permutation_importance(
+        model, X_test[_idx], y_test[_idx],
+        n_repeats=5, random_state=42, n_jobs=-1,
+    )
+    importances = perm_result.importances_mean
     feat_importance = sorted(
-        zip(FEATURE_NAMES, importances),
+        zip(active_features, importances),
         key=lambda x: x[1],
         reverse=True,
     )
@@ -725,12 +748,12 @@ def main():
     artifact = {
         "model": model,
         "preprocessing_config": preprocessing_config,
-        "feature_list": FEATURE_NAMES,
+        "feature_list": active_features,
         "version": version,
         "trained_at": datetime.utcnow().isoformat(),
         "feature_importances": {
             fname: float(imp)
-            for fname, imp in zip(FEATURE_NAMES, importances)
+            for fname, imp in zip(active_features, importances)
         },
     }
     joblib.dump(artifact, artifact_path)
@@ -760,7 +783,7 @@ def main():
                 (
                     version,
                     relative_path,
-                    json.dumps(FEATURE_NAMES),
+                    json.dumps(active_features),
                     json.dumps(model_metrics),
                     json.dumps(baseline_results),
                     int(len(df_train)),
