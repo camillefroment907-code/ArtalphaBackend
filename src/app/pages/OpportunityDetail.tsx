@@ -226,6 +226,7 @@ export default function OpportunityDetail() {
   const [purchaseDone, setPurchaseDone]         = useState(false);
   const [hammerHistory, setHammerHistory] = useState<any>(null);
   const [hammerLoading, setHammerLoading] = useState(false);
+  const [upsideSignal, setUpsideSignal]   = useState<any>(null);
   const [formatMatrix, setFormatMatrix]   = useState<any>(null);
   const [timingData, setTimingData]       = useState<any>(null);
   const [purchasePrice, setPurchasePrice]       = useState('');
@@ -315,6 +316,18 @@ export default function OpportunityDetail() {
         .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
         .then(data => { setHammerHistory(data); setHammerLoading(false); })
         .catch((e) => { console.error('hammer-history fetch failed:', e); setHammerLoading(false); });
+
+      // Upside signal — only show High / Limited (Moderate = 95% of lots, not useful)
+      fetch(`${BACKEND}/api/v1/upside/lot/${id}/signal?lang=fr`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.signal_label === 'High upside signal' || data?.signal_label === 'Limited upside signal') {
+            setUpsideSignal(data);
+          }
+        })
+        .catch(() => {});
     }
   }, [id]);
 
@@ -951,6 +964,55 @@ export default function OpportunityDetail() {
                     )}
                     {lot.oracle.score_6m != null && (
                       <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>Score 6m : {Number(lot.oracle.score_6m).toFixed(0)}/100</div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Upside signal — only rendered for High or Limited */}
+              {upsideSignal && (() => {
+                const isHigh = upsideSignal.signal_label === 'High upside signal';
+                const col = isHigh ? '#4ade80' : '#FBBF24';
+                const bg  = isHigh ? 'rgba(74,222,128,0.07)' : 'rgba(251,191,36,0.07)';
+                const bd  = isHigh ? 'rgba(74,222,128,0.18)' : 'rgba(251,191,36,0.18)';
+                const labelFr = isHigh ? 'SETUP · FAVORABLE' : 'SETUP · PRUDENCE';
+                const labelEn = isHigh ? 'SETUP · FAVORABLE' : 'SETUP · CAUTION';
+
+                // Build dynamic tooltip from context stats
+                const hPct   = upsideSignal.house_sold_above_pct != null ? Math.round(upsideSignal.house_sold_above_pct * 100) : null;
+                const hCount = upsideSignal.house_sales_count;
+                const aPct   = upsideSignal.artist_sold_above_pct != null ? Math.round(upsideSignal.artist_sold_above_pct * 100) : null;
+                const aTotal = upsideSignal.artist_total_sales;
+                const prem   = upsideSignal.median_premium_pct != null ? Math.round(upsideSignal.median_premium_pct) : null;
+
+                const useHouseData = hCount != null && hCount >= 5 && hPct != null;
+                const tipFr = useHouseData
+                  ? `Sur ${hCount} vente${hCount > 1 ? 's' : ''} de cet artiste dans cette maison, ${hPct}% ont dépassé l'estimation basse.${prem != null ? `\nPrime médiane observée : +${prem}% au-dessus de l'estimation.` : ''}${aTotal ? `\n\n${aTotal} ventes au total dans la base.` : ''}`
+                  : aPct != null
+                  ? `Sur ${aTotal ?? '?'} ventes historiques de cet artiste, ${aPct}% ont dépassé l'estimation basse.${prem != null ? `\nPrime médiane : +${prem}%.` : ''}\n\nDonnées insuffisantes pour cette maison spécifiquement.`
+                  : `Signal basé sur les patterns historiques de l'artiste (médium, maison, saison). Données contextuelles limitées.`;
+
+                const tipEn = useHouseData
+                  ? `Across ${hCount} sale${hCount > 1 ? 's' : ''} of this artist at this house, ${hPct}% exceeded the low estimate.${prem != null ? `\nMedian premium observed: +${prem}% above estimate.` : ''}${aTotal ? `\n\n${aTotal} total sales in the database.` : ''}`
+                  : aPct != null
+                  ? `Across ${aTotal ?? '?'} historical sales of this artist, ${aPct}% exceeded the low estimate.${prem != null ? `\nMedian premium: +${prem}%.` : ''}\n\nInsufficient data for this specific house.`
+                  : `Signal based on historical patterns (medium, house, season). Limited contextual data available.`;
+
+                return (
+                  <div style={{ padding: '10px 14px', background: bg, border: `1px solid ${bd}`, borderRadius: 5 }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: col, letterSpacing: '0.1em', fontWeight: 700, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      {isFr ? labelFr : labelEn}
+                      <Tip width={260} text={isFr ? tipFr : tipEn} />
+                    </div>
+                    {useHouseData && hPct != null && (
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: '#fff', marginBottom: 2 }}>
+                        {hPct}% <span style={{ fontSize: 9, fontWeight: 400, color: 'rgba(255,255,255,0.45)' }}>{isFr ? 'au-dessus estimat.' : 'above estimate'}</span>
+                      </div>
+                    )}
+                    {prem != null && (
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
+                        {isFr ? `Prime médiane : +${prem}%` : `Median premium: +${prem}%`}
+                      </div>
                     )}
                   </div>
                 );

@@ -501,3 +501,9 @@ class UpsideSignalOut(BaseModel):
     lang: str = "en"
     predicted_at: Optional[datetime] = None
     model_version: Optional[str] = None
+    # Context stats extracted from feature_snapshot — power the tooltip
+    house_sold_above_pct: Optional[float] = None   # 0–1, artist at this house
+    house_sales_count: Optional[int] = None        # nb of artist sales at this house
+    artist_sold_above_pct: Optional[float] = None  # 0–1, artist overall
+    artist_total_sales: Optional[int] = None       # total artist sales in DB
+    median_premium_pct: Optional[float] = None     # e.g. 18.0 means +18% above estimate

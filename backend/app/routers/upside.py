@@ -171,6 +171,29 @@ async def get_lot_signal(
         except Exception:
             pass
 
+        # Extract context stats from feature_snapshot for rich tooltip
+        house_sold_above_pct = None
+        house_sales_count = None
+        artist_sold_above_pct = None
+        artist_total_sales = None
+        median_premium_pct = None
+        try:
+            snap = pred.feature_snapshot or {}
+            if snap.get("house_sold_above_pct_before") is not None:
+                house_sold_above_pct = round(float(snap["house_sold_above_pct_before"]), 3)
+            if snap.get("house_sales_count_before") is not None:
+                house_sales_count = int(snap["house_sales_count_before"])
+            if snap.get("artist_sold_above_pct_before") is not None:
+                artist_sold_above_pct = round(float(snap["artist_sold_above_pct_before"]), 3)
+            if snap.get("artist_total_sales_before") is not None:
+                artist_total_sales = int(snap["artist_total_sales_before"])
+            if snap.get("artist_median_premium_before") is not None:
+                raw = float(snap["artist_median_premium_before"])
+                # raw is hammer/estimate_low ratio — convert to % above estimate
+                median_premium_pct = round((raw - 1.0) * 100, 1)
+        except Exception:
+            pass
+
         return UpsideSignalOut(
             lot_id=lot_id,
             upside_prob=round(prob, 4),
@@ -179,6 +202,11 @@ async def get_lot_signal(
             lang=lang,
             predicted_at=pred.predicted_at,
             model_version=model_version_str,
+            house_sold_above_pct=house_sold_above_pct,
+            house_sales_count=house_sales_count,
+            artist_sold_above_pct=artist_sold_above_pct,
+            artist_total_sales=artist_total_sales,
+            median_premium_pct=median_premium_pct,
         )
 
     except Exception as exc:
