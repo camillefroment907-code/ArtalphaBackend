@@ -25,6 +25,7 @@ from app.models.db_models import (
     CollectorDNA, RecommendationEvent,
     AgentAlert, AgentRecommendation,
 )
+from app.utils.cache import get_cached, set_cached
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 
@@ -317,7 +318,13 @@ async def get_for_you(
     """
     Returns personalized lot recommendations across up to 20 rec types.
     Deduplicates across strategies. Excludes already-dismissed lots.
+    Cached per user for 5 minutes — recommendations don't change that fast.
     """
+    _rec_key = f"for_you:{current_user.id}:{limit}"
+    _rec_cached = get_cached(_rec_key, ttl=300)
+    if _rec_cached is not None:
+        return _rec_cached
+
     dna = await _get_dna(current_user.id, db)
     excluded = await _get_dismissed_ids(current_user.id, db)
 
@@ -380,12 +387,14 @@ async def get_for_you(
     except Exception:
         pass  # impressions are non-critical
 
-    return {
+    _rec_result = {
         "recommendations": final,
         "total": len(final),
         "has_dna": dna is not None,
         "generated_at": datetime.utcnow().isoformat(),
     }
+    set_cached(_rec_key, _rec_result)
+    return _rec_result
 
 
 @router.post("/dismiss/{lot_id}", status_code=202)

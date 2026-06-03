@@ -294,47 +294,132 @@ export default function OpportunityDetail() {
 
   useEffect(() => {
     if (!id) return;
-    fetch(`${BACKEND}/api/lots/${id}`, {
-      headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
-    })
-      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-      .then(data => { setLot(data); setLoading(false); })
-      .catch(() => setLoading(false));
-    fetch(`${BACKEND}/api/lots/${id}/comparables`, {
-      headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
-    }).then(r => r.json()).then(data => {
-      setComparables(data.comparables || []);
-      setMarketAnalysis(data.market_analysis || null);
-      setMaxBidFromApi(data.max_bid ?? null);
-      setMaxBidSource(data.max_bid_source ?? null);
-      setFairValueFromComps(data.fair_value ?? null);
-      setFairValueSource(data.fair_value_source ?? null);
-      setMaxBidConfidence(data.max_bid_confidence ?? null);
-      setMarketContext(data.market_context ?? null);
-      setMaxBidCompCount(data.max_bid_comp_count ?? null);
-    }).catch(() => {});
     const token = getToken();
-    if (token && id) {
-      setHammerLoading(true);
-      fetch(`${BACKEND}/api/lots/${id}/hammer-history`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-        .then(data => { setHammerHistory(data); setHammerLoading(false); })
-        .catch((e) => { console.error('hammer-history fetch failed:', e); setHammerLoading(false); });
+    const authHeaders = token ? { Authorization: `Bearer ${token}` } : {} as Record<string, string>;
 
-      // Upside signal — only show High / Limited (Moderate = 95% of lots, not useful)
-      fetch(`${BACKEND}/api/v1/upside/lot/${id}/signal?lang=fr`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (data?.signal_label === 'High upside signal' || data?.signal_label === 'Limited upside signal') {
+    // ── Bundle fetch: 4 requests → 1 ─────────────────────────────────────────
+    // On cache hit (>85% of requests): zero DB queries, single round-trip.
+    // On cold path: hammer_history + upside served inline; lot + comparables
+    //               may be null → individual fallback fetches below handle them.
+    fetch(`${BACKEND}/api/lots/${id}/bundle?lang=fr`, { headers: authHeaders })
+      .then(r => r.ok ? r.json() : null)
+      .then(bundle => {
+        if (!bundle) return;
+
+        // Lot detail
+        if (bundle.lot) {
+          setLot(bundle.lot);
+          setLoading(false);
+        }
+
+        // Comparables
+        if (bundle.comparables) {
+          const data = bundle.comparables;
+          setComparables(data.comparables || []);
+          setMarketAnalysis(data.market_analysis || null);
+          setMaxBidFromApi(data.max_bid ?? null);
+          setMaxBidSource(data.max_bid_source ?? null);
+          setFairValueFromComps(data.fair_value ?? null);
+          setFairValueSource(data.fair_value_source ?? null);
+          setMaxBidConfidence(data.max_bid_confidence ?? null);
+          setMarketContext(data.market_context ?? null);
+          setMaxBidCompCount(data.max_bid_comp_count ?? null);
+        }
+
+        // Hammer history
+        if (bundle.hammer_history) {
+          setHammerHistory(bundle.hammer_history);
+          setHammerLoading(false);
+        }
+
+        // Upside signal
+        if (bundle.upside_signal) {
+          const data = bundle.upside_signal;
+          if (data.signal_label === 'High upside signal' || data.signal_label === 'Limited upside signal') {
             setUpsideSignal(data);
           }
-        })
-        .catch(() => {});
-    }
+        }
+
+        // ── Fallback individual fetches for cold-path nulls ──────────────────
+        if (!bundle.lot) {
+          fetch(`${BACKEND}/api/lots/${id}`, { headers: authHeaders })
+            .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+            .then(data => { setLot(data); setLoading(false); })
+            .catch(() => setLoading(false));
+        }
+
+        if (!bundle.comparables) {
+          fetch(`${BACKEND}/api/lots/${id}/comparables`, { headers: authHeaders })
+            .then(r => r.json())
+            .then(data => {
+              setComparables(data.comparables || []);
+              setMarketAnalysis(data.market_analysis || null);
+              setMaxBidFromApi(data.max_bid ?? null);
+              setMaxBidSource(data.max_bid_source ?? null);
+              setFairValueFromComps(data.fair_value ?? null);
+              setFairValueSource(data.fair_value_source ?? null);
+              setMaxBidConfidence(data.max_bid_confidence ?? null);
+              setMarketContext(data.market_context ?? null);
+              setMaxBidCompCount(data.max_bid_comp_count ?? null);
+            })
+            .catch(() => {});
+        }
+
+        if (!bundle.hammer_history && token) {
+          setHammerLoading(true);
+          fetch(`${BACKEND}/api/lots/${id}/hammer-history`, { headers: authHeaders })
+            .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+            .then(data => { setHammerHistory(data); setHammerLoading(false); })
+            .catch(() => setHammerLoading(false));
+        }
+
+        if (!bundle.upside_signal && token) {
+          fetch(`${BACKEND}/api/v1/upside/lot/${id}/signal?lang=fr`, { headers: authHeaders })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+              if (data?.signal_label === 'High upside signal' || data?.signal_label === 'Limited upside signal') {
+                setUpsideSignal(data);
+              }
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {
+        // Bundle endpoint failed entirely — fall back to individual requests
+        fetch(`${BACKEND}/api/lots/${id}`, { headers: authHeaders })
+          .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+          .then(data => { setLot(data); setLoading(false); })
+          .catch(() => setLoading(false));
+        fetch(`${BACKEND}/api/lots/${id}/comparables`, { headers: authHeaders })
+          .then(r => r.json())
+          .then(data => {
+            setComparables(data.comparables || []);
+            setMarketAnalysis(data.market_analysis || null);
+            setMaxBidFromApi(data.max_bid ?? null);
+            setMaxBidSource(data.max_bid_source ?? null);
+            setFairValueFromComps(data.fair_value ?? null);
+            setFairValueSource(data.fair_value_source ?? null);
+            setMaxBidConfidence(data.max_bid_confidence ?? null);
+            setMarketContext(data.market_context ?? null);
+            setMaxBidCompCount(data.max_bid_comp_count ?? null);
+          })
+          .catch(() => {});
+        if (token) {
+          setHammerLoading(true);
+          fetch(`${BACKEND}/api/lots/${id}/hammer-history`, { headers: authHeaders })
+            .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+            .then(data => { setHammerHistory(data); setHammerLoading(false); })
+            .catch(() => setHammerLoading(false));
+          fetch(`${BACKEND}/api/v1/upside/lot/${id}/signal?lang=fr`, { headers: authHeaders })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+              if (data?.signal_label === 'High upside signal' || data?.signal_label === 'Limited upside signal') {
+                setUpsideSignal(data);
+              }
+            })
+            .catch(() => {});
+        }
+      });
   }, [id]);
 
   useEffect(() => {

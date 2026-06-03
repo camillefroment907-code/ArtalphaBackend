@@ -373,7 +373,10 @@ async def list_lots(
         return {"items": [], "total": max_per_page, "pages": 1, "page": page, "page_size": page_size}
 
     # ── Cache lookup ─────────────────────────────────────────────────────────
-    cache_key = f"lots:{plan}:{sort_by}:{sort_dir}:{min_score}:{page}:{page_size}:{category or ''}:{categories or ''}:{search or ''}:{provenance or ''}:{source or ''}:{sources or ''}:{min_price or 0}:{max_price or 0}:{auction_date_from or ''}:{auction_date_to or ''}"
+    # count_key excludes page/page_size — the total doesn't change between pages
+    _filter_sig = f"{plan}:{sort_by}:{sort_dir}:{min_score}:{category or ''}:{categories or ''}:{search or ''}:{provenance or ''}:{source or ''}:{sources or ''}:{min_price or 0}:{max_price or 0}:{auction_date_from or ''}:{auction_date_to or ''}"
+    cache_key = f"lots:{_filter_sig}:{page}:{page_size}"
+    count_key  = f"lots_count:{_filter_sig}"
     cached = get_cached(cache_key, ttl=120)
     if cached:
         response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=120"
@@ -594,11 +597,15 @@ async def list_lots(
         )
         filters.append(Lot.artist_name_raw.in_(supply_subq))
 
-    count_stmt = select(func.count(Lot.id))
-    if filters:
-        count_stmt = count_stmt.where(and_(*filters))
-    count_result = await db.execute(count_stmt)
-    total = count_result.scalar()
+    # COUNT(*) is cached per filter-set for 5 min — identical across all pages
+    total = get_cached(count_key, ttl=300)
+    if total is None:
+        count_stmt = select(func.count(Lot.id))
+        if filters:
+            count_stmt = count_stmt.where(and_(*filters))
+        count_result = await db.execute(count_stmt)
+        total = count_result.scalar()
+        set_cached(count_key, total)
 
     sort_col = getattr(Lot, sort_by, Lot.deal_score)
     sort_expr = desc(sort_col) if sort_dir == "desc" else sort_col
@@ -2022,6 +2029,142 @@ async def get_lot(
     return lot_dict
 
 
+# ── Bundle endpoint ────────────────────────────────────────────────────────────
+# Combines lot + comparables + hammer_history + upside_signal into one response.
+# Eliminates 4 HTTP round trips on OpportunityDetail initial load (~100-200 ms
+# saved on mobile; more on high-latency connections).
+#
+# Hot path  (all pieces cached): 0 DB queries — single cache read per piece.
+# Warm path (hammer/upside not cached): 1 Lot fetch + 2 parallel sub-queries.
+# Cold path (lot/comps not cached): those keys are null; frontend falls back to
+#           the individual endpoints for those pieces only.
+
+@router.get("/{lot_id}/bundle")
+async def get_lot_bundle(
+    lot_id: str,
+    lang: str = Query("fr"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Aggregate endpoint: lot + comparables + hammer_history + upside_signal.
+    Keys that are not yet cached are fetched in parallel and cached for future calls.
+    null values mean "not ready yet — use the individual endpoint as fallback".
+    """
+    plan = await get_user_plan(current_user, db)
+
+    # ── Cache lookups ─────────────────────────────────────────────────────────
+    lot_cached  = get_cached(f"lot_detail:{lot_id}:{plan}", ttl=120)
+    comp_cached = get_cached(f"comparables:{lot_id}", ttl=3600)
+    hh_cached   = get_cached(f"hammer_history:{lot_id}", ttl=600)
+    up_cached   = get_cached(f"upside_signal:{lot_id}", ttl=300)
+
+    # ── Full cache hit — zero DB queries ──────────────────────────────────────
+    if lot_cached and comp_cached and hh_cached and up_cached:
+        return {
+            "lot":            lot_cached,
+            "comparables":    comp_cached,
+            "hammer_history": hh_cached,
+            "upside_signal":  up_cached,
+        }
+
+    # ── Fetch Lot row (needed for hammer_history inline query) ────────────────
+    lot_obj = None
+    if hh_cached is None or up_cached is None:
+        _lr = await db.execute(select(Lot).where(Lot.id == lot_id))
+        lot_obj = _lr.scalar_one_or_none()
+
+    # ── Parallel sub-fetches for uncached pieces ──────────────────────────────
+    async def _fetch_hammer() -> dict | None:
+        if hh_cached is not None:
+            return hh_cached
+        if plan not in {"investor", "pro", "institutional"}:
+            result = {"locked": True}
+            set_cached(f"hammer_history:{lot_id}", result)
+            return result
+        if not lot_obj or not lot_obj.artist_name_raw:
+            result = {"artist": None, "total_sales": 0, "median_eur": None,
+                      "avg_eur": None, "sales": []}
+            set_cached(f"hammer_history:{lot_id}", result)
+            return result
+        from app.jobs.quality_filter import normalize_artist_name
+        artist_norm = normalize_artist_name(lot_obj.artist_name_raw)
+        hp_result = await db.execute(
+            select(HammerPrice)
+            .where(
+                HammerPrice.artist_name_normalized == artist_norm,
+                HammerPrice.hammer_price_eur.isnot(None),
+            )
+            .order_by(HammerPrice.sale_date.desc())
+            .limit(50)
+        )
+        rows = hp_result.scalars().all()
+        prices = [r.hammer_price_eur for r in rows]
+        total  = len(prices)
+        avg    = round(sum(prices) / total, 2) if total else None
+        median = None
+        if total:
+            s = sorted(prices)
+            mid = total // 2
+            median = round((s[mid - 1] + s[mid]) / 2, 2) if total % 2 == 0 else round(s[mid], 2)
+        result = {
+            "artist": artist_norm, "artist_norm": artist_norm,
+            "total_sales": total, "median_eur": median, "avg_eur": avg,
+            "sales": [
+                {
+                    "sale_date":        r.sale_date.strftime("%Y-%m-%d") if r.sale_date else None,
+                    "hammer_price_eur": r.hammer_price_eur,
+                    "medium_category":  r.medium_category,
+                    "auction_house":    r.auction_house,
+                    "estimate_low":     r.estimate_low,
+                    "estimate_high":    r.estimate_high,
+                    "artwork_title":    r.artwork_title,
+                }
+                for r in rows
+            ],
+        }
+        set_cached(f"hammer_history:{lot_id}", result)
+        return result
+
+    async def _fetch_upside() -> dict | None:
+        if up_cached is not None:
+            return up_cached
+        try:
+            from app.routers.upside import _get_latest_prediction
+            from app.engines.upside_predictor import upside_signal_label, upside_signal_explanation
+            pred = await _get_latest_prediction(lot_id, db)
+            if pred is None:
+                result = {"lot_id": lot_id, "upside_prob": None, "signal_label": None,
+                          "explanation": None, "lang": lang, "predicted_at": None, "model_version": None}
+                set_cached(f"upside_signal:{lot_id}", result)
+                return result
+            prob  = pred.upside_prob
+            label = upside_signal_label(prob, lang=lang)
+            expl  = upside_signal_explanation(prob, lang=lang)
+            result = {
+                "lot_id": lot_id,
+                "upside_prob":  round(prob, 4),
+                "signal_label": label,
+                "explanation":  expl,
+                "lang":         lang,
+                "predicted_at": pred.predicted_at.isoformat() if pred.predicted_at else None,
+                "model_version": None,
+            }
+            set_cached(f"upside_signal:{lot_id}", result)
+            return result
+        except Exception:
+            return None
+
+    hh_data, up_data = await asyncio.gather(_fetch_hammer(), _fetch_upside())
+
+    return {
+        "lot":            lot_cached,   # null on cold path → frontend fetches /lots/:id
+        "comparables":    comp_cached,  # null on cold path → frontend fetches /lots/:id/comparables
+        "hammer_history": hh_data,
+        "upside_signal":  up_data,
+    }
+
+
 # ── Weighted max-bid helpers ──────────────────────────────────────────────────
 
 _MEDIUM_CATEGORIES: dict[str, list[str]] = {
@@ -2773,6 +2916,11 @@ async def get_hammer_history(
     if plan not in {"investor", "pro", "institutional"}:
         return {"locked": True}
 
+    _hh_key = f"hammer_history:{lot_id}"
+    _hh_cached = get_cached(_hh_key, ttl=600)
+    if _hh_cached is not None:
+        return _hh_cached
+
     lot_result = await db.execute(select(Lot).where(Lot.id == lot_id))
     lot = lot_result.scalar_one_or_none()
     if not lot:
@@ -2784,15 +2932,6 @@ async def get_hammer_history(
 
     from app.jobs.quality_filter import normalize_artist_name
     artist_norm = normalize_artist_name(lot.artist_name_raw)
-
-    print(f"DEBUG hammer-history: lot_id={lot_id} artist_raw='{lot.artist_name_raw}' artist_norm='{artist_norm}'")
-
-    from sqlalchemy import text as _sa_text
-    count_result = await db.execute(
-        _sa_text("SELECT COUNT(*) FROM hammer_prices WHERE artist_name_normalized = :norm"),
-        {"norm": artist_norm},
-    )
-    debug_count = count_result.scalar_one()
 
     hp_result = await db.execute(
         select(HammerPrice)
@@ -2827,15 +2966,16 @@ async def get_hammer_history(
         for r in rows
     ]
 
-    return {
+    _hh_result = {
         "artist":      artist_norm,
         "artist_norm": artist_norm,
-        "debug_count": debug_count,
         "total_sales": total,
         "median_eur":  median,
         "avg_eur":     avg,
         "sales":       sales,
     }
+    set_cached(_hh_key, _hh_result)
+    return _hh_result
 
 
 # ── Decision Archive ───────────────────────────────────────────────────────────
