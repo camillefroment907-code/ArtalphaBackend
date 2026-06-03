@@ -64,6 +64,27 @@ export function CopilotBar({
   const messagesRef               = useRef<HTMLDivElement>(null);
   const inputRef                  = useRef<HTMLInputElement>(null);
 
+  // Usage quota
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [limit, setLimit]         = useState<number | null>(null);
+
+  useEffect(() => {
+    if (mode !== 'chat') return;
+    const token = getToken();
+    if (!token) return;
+    fetch(`${BACKEND}/api/copilot/usage`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { remaining: number; limit: number } | null) => {
+        if (data) {
+          setRemaining(data.remaining);
+          setLimit(data.limit);
+        }
+      })
+      .catch(() => {});
+  }, [mode]);
+
   // Scroll to bottom on new messages
   useEffect(() => {
     if (messagesRef.current) {
@@ -208,6 +229,7 @@ export function CopilotBar({
       });
     } finally {
       setIsLoading(false);
+      setRemaining(prev => prev !== null && prev > 0 ? prev - 1 : prev);
       inputRef.current?.focus();
     }
   }
@@ -247,14 +269,31 @@ export function CopilotBar({
 
       {/* Eyebrow */}
       <div style={{
-        fontFamily:    'var(--font-mono)',
-        fontSize:      '10px',
-        letterSpacing: '0.12em',
-        textTransform: 'uppercase',
-        color:         'var(--text-3)',
+        display:       'flex',
+        alignItems:    'center',
+        justifyContent:'space-between',
         marginBottom:  '14px',
       }}>
-        Votre conseiller
+        <span style={{
+          fontFamily:    'var(--font-mono)',
+          fontSize:      '10px',
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color:         'var(--text-3)',
+        }}>
+          Votre conseiller
+        </span>
+
+        {mode === 'chat' && remaining !== null && limit !== null && limit < 99999 && (
+          <span style={{
+            fontFamily:    'var(--font-mono)',
+            fontSize:      '10px',
+            letterSpacing: '0.08em',
+            color:         remaining <= 3 ? 'var(--gold)' : 'var(--text-3)',
+          }}>
+            {remaining} message{remaining !== 1 ? 's' : ''} restant{remaining !== 1 ? 's' : ''}
+          </span>
+        )}
       </div>
 
       {/* ── Chips mode (legacy) ─────────────────────────────────────────────── */}
