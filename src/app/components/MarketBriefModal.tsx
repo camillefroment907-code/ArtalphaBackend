@@ -11,15 +11,39 @@ function todayKey() {
 interface BriefSummary {
   new_lots_count: number;
   closing_soon: { id: string }[];
+  closing_today_count?: number;
   agent_unread: number;
   top_deal: {
     artist_name_raw: string;
     title: string;
     deal_score: number;
+    pct_below_low_estimate?: number;
     image_url: string;
     auction_house_name: string;
+    auction_date?: string;
   } | null;
   since: string;
+}
+
+function buildModalPhrase(deal: BriefSummary['top_deal']): string {
+  if (!deal) return '';
+  const pct = deal.pct_below_low_estimate;
+  if (deal.auction_date) {
+    const h = (new Date(deal.auction_date).getTime() - Date.now()) / 3600000;
+    if (pct && pct >= 15 && h > 0 && h < 24) {
+      return `Estimé ${Math.round(pct)} % sous sa valeur — vente ce soir.`;
+    }
+    if (h > 0 && h < 24) {
+      return `Vente dans moins de 24 heures. Notre sélection prioritaire.`;
+    }
+  }
+  if (pct && pct >= 15) {
+    return `${Math.round(pct)} % sous l'estimation basse. Une anomalie de prix rare.`;
+  }
+  if (pct && pct >= 8) {
+    return `Parmi les meilleures opportunités valeur/risque identifiées ce jour.`;
+  }
+  return `Notre recommandation prioritaire du moment.`;
 }
 
 export function MarketBriefModal() {
@@ -31,7 +55,6 @@ export function MarketBriefModal() {
   useEffect(() => {
     const user = getUser();
     if (!user) return;
-    // Already seen today
     if (localStorage.getItem(todayKey())) return;
 
     const token = getToken();
@@ -42,7 +65,6 @@ export function MarketBriefModal() {
       .then(data => {
         if (!data) return;
         setBrief(data);
-        // Slight delay so the page has time to render first
         setTimeout(() => setVisible(true), 800);
       })
       .catch(() => {});
@@ -60,8 +82,7 @@ export function MarketBriefModal() {
 
   if (!visible || dismissed || !brief) return null;
 
-  const since = new Date(brief.since);
-  const sinceLabel = since.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const closingCount = brief.closing_today_count ?? brief.closing_soon.length;
 
   return (
     <>
@@ -87,69 +108,94 @@ export function MarketBriefModal() {
         border: '1px solid var(--border)',
         borderRadius: '12px',
         boxShadow: 'var(--shadow-lg)',
-        width: 'min(480px, calc(100vw - 32px))',
+        width: 'min(440px, calc(100vw - 32px))',
         overflow: 'hidden',
         animation: 'briefSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       }}>
-        {/* Header stripe */}
+
+        {/* Header */}
         <div style={{
           background: 'var(--navy)',
           padding: '20px 24px 18px',
           display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
         }}>
           <div>
-            <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginBottom: '6px' }}>
-              Nautilus · Brief du jour
+            <div style={{
+              fontSize: '10px', fontFamily: 'var(--font-mono)',
+              letterSpacing: '0.12em', color: 'rgba(255,255,255,0.4)',
+              textTransform: 'uppercase', marginBottom: '8px',
+            }}>
+              Nautilus · Aujourd'hui
             </div>
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: '#fff', lineHeight: 1.2 }}>
-              Bonjour — voici ce qui<br />s'est passé depuis {sinceLabel}
+            <div style={{
+              fontFamily: 'var(--font-serif)', fontSize: '18px',
+              color: '#fff', lineHeight: 1.3,
+            }}>
+              {brief.new_lots_count > 0
+                ? <>{brief.new_lots_count.toLocaleString('fr-FR')} lots analysés
+                    {closingCount > 0 && <>, dont{' '}
+                      <span style={{ color: 'var(--gold)' }}>{closingCount}</span>{' '}
+                      se ferment aujourd'hui
+                    </>}.
+                  </>
+                : <>Nautilus a travaillé pour vous depuis hier.</>
+              }
             </div>
           </div>
           <button
             onClick={dismiss}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: '20px', lineHeight: 1, padding: '0 0 0 12px', flexShrink: 0 }}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'rgba(255,255,255,0.4)', fontSize: '20px',
+              lineHeight: 1, padding: '0 0 0 12px', flexShrink: 0,
+            }}
           >
             ×
           </button>
         </div>
 
-        {/* Stats row */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-          borderBottom: '1px solid var(--border)',
-          overflow: 'hidden',
-        }}>
-          <Stat value={brief.new_lots_count} label="nouvelles opportunités" accent="var(--electric)" />
-          <Stat value={brief.closing_soon.length} label="clôturent dans 48h" accent="var(--gold)" />
-          <Stat value={brief.agent_unread} label="alertes non lues" accent="var(--navy)" />
-        </div>
-
-        {/* Top deal */}
+        {/* Conviction du jour */}
         {brief.top_deal && (
-          <div style={{ padding: '16px 24px', display: 'flex', gap: '14px', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
+          <div style={{
+            padding: '18px 24px 16px',
+            borderBottom: '1px solid var(--border)',
+            display: 'flex', gap: '16px', alignItems: 'flex-start',
+          }}>
             <div style={{
-              width: '52px', height: '52px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0,
+              width: '64px', height: '80px',
+              borderRadius: '4px', overflow: 'hidden', flexShrink: 0,
               background: 'var(--bg-subtle)',
             }}>
               {brief.top_deal.image_url && (
-                <img src={brief.top_deal.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img
+                  src={brief.top_deal.image_url} alt=""
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }}
+                />
               )}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '3px' }}>
-                ◆ Meilleure opportunité du moment
+              <div style={{
+                fontSize: '10px', fontFamily: 'var(--font-mono)',
+                letterSpacing: '0.10em', textTransform: 'uppercase',
+                color: 'var(--electric)', marginBottom: '6px',
+              }}>
+                Conviction du jour
               </div>
-              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '14px', color: 'var(--navy)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{
+                fontFamily: 'var(--font-serif)', fontSize: '16px',
+                color: 'var(--navy)', fontWeight: 400,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                marginBottom: '6px',
+              }}>
                 {brief.top_deal.artist_name_raw}
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {brief.top_deal.auction_house_name}
+              <div style={{
+                fontFamily: 'var(--font-serif)', fontSize: '12px',
+                fontStyle: 'italic', color: 'var(--text-2)',
+                lineHeight: 1.5,
+              }}>
+                {buildModalPhrase(brief.top_deal)}
               </div>
-            </div>
-            <div style={{
-              flexShrink: 0, fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: 'var(--navy)',
-            }}>
-              {brief.top_deal.deal_score}
             </div>
           </div>
         )}
@@ -164,9 +210,12 @@ export function MarketBriefModal() {
               border: 'none', borderRadius: '6px',
               fontSize: '13px', fontWeight: 600, cursor: 'pointer',
               fontFamily: 'var(--font-sans)',
+              transition: 'opacity 0.15s',
             }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >
-            Voir Aujourd'hui →
+            Voir ma recommandation →
           </button>
           <button
             onClick={dismiss}
@@ -188,18 +237,5 @@ export function MarketBriefModal() {
         @keyframes briefSlideUp { from { opacity: 0; transform: translate(-50%, calc(-50% + 16px)) } to { opacity: 1; transform: translate(-50%, -50%) } }
       `}</style>
     </>
-  );
-}
-
-function Stat({ value, label, accent }: { value: number; label: string; accent: string }) {
-  return (
-    <div style={{ padding: '16px', borderRight: '1px solid var(--border)', textAlign: 'center' }}>
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: accent, lineHeight: 1 }}>
-        {value}
-      </div>
-      <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px', lineHeight: 1.3 }}>
-        {label}
-      </div>
-    </div>
   );
 }

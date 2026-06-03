@@ -164,11 +164,6 @@ function ExpiringRow({ lot, onClick }: { lot: LotCard; onClick: () => void }) {
           }}>
             {urgent ? '⚡ ' : ''}{formatCountdown(lot.auction_date)}
           </div>
-          {lot.deal_score !== null && lot.deal_score !== undefined && (
-            <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '2px' }}>
-              score {lot.deal_score}
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -200,14 +195,14 @@ function MiniCard({ lot, onClick }: { lot: LotCard; onClick: () => void }) {
             />
           : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--border)', fontSize: '20px' }}>◇</div>
         }
-        {lot.deal_score !== null && lot.deal_score !== undefined && (
+        {lot.pct_below_low_estimate && lot.pct_below_low_estimate >= 10 && (
           <div style={{
             position: 'absolute', top: '7px', right: '7px',
             background: 'rgba(26,42,68,0.82)', color: 'var(--gold)',
             fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700,
             padding: '2px 6px', borderRadius: '3px',
           }}>
-            {lot.deal_score}
+            −{Math.round(lot.pct_below_low_estimate)}%
           </div>
         )}
       </div>
@@ -295,49 +290,33 @@ export default function TodayPage() {
         <div style={{
           fontFamily: 'var(--font-mono)', fontSize: '11px',
           letterSpacing: '0.12em', textTransform: 'uppercase',
-          color: 'var(--text-3)', marginBottom: '16px',
+          color: 'var(--text-3)', marginBottom: '20px',
         }}>
           {formatDate(brief.generated_at)}
         </div>
 
         <div style={{
-          fontSize: '12px', color: 'var(--text-3)',
-          marginBottom: '14px', fontStyle: 'italic',
+          fontFamily: 'var(--font-serif)', fontSize: isMobile ? '17px' : '19px',
+          color: 'var(--navy)', lineHeight: 1.55,
         }}>
-          Depuis votre dernière visite :
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <StatLine
-            value={brief.new_lots_count}
-            label="nouvelles opportunités pertinentes"
-            color="var(--navy)"
-          />
-          <StatLine
-            value={brief.closing_today_count ?? brief.closing_soon.length}
-            label="ventes se terminent aujourd'hui"
-            color="var(--gold)"
-          />
-          <StatLine
-            value={1}
-            label="recommandation prioritaire"
-            color="var(--electric)"
-          />
+          {brief.new_lots_count > 0
+            ? <>
+                <span style={{ fontWeight: 500 }}>{brief.new_lots_count.toLocaleString('fr-FR')}</span>
+                {' '}lots analysés depuis {formatDate(brief.since)}
+                {(brief.closing_today_count ?? brief.closing_soon.length) > 0 && (
+                  <> — dont{' '}
+                    <span style={{ color: 'var(--gold)', fontWeight: 500 }}>
+                      {brief.closing_today_count ?? brief.closing_soon.length}
+                    </span>
+                    {' '}qui se ferment aujourd'hui.
+                  </>
+                )}
+                {!(brief.closing_today_count ?? brief.closing_soon.length) && '.'}
+              </>
+            : <>Nautilus a passé en revue le marché depuis {formatDate(brief.since)}.</>
+          }
         </div>
       </div>
-
-      {/* ── ZONE 1 : Intro éditoriale ─────────────────────────────────── */}
-      {conviction && (
-        <div style={{ marginBottom: '20px' }}>
-          <p style={{
-            fontFamily: 'var(--font-serif)', fontSize: '15px',
-            fontStyle: 'italic', color: 'var(--text-2)',
-            lineHeight: 1.6, margin: 0,
-          }}>
-            Si nous ne devions retenir qu'une seule opportunité aujourd'hui, ce serait celle-ci.
-          </p>
-        </div>
-      )}
 
       {/* ── ZONE 2 : La Conviction du Jour ───────────────────────────── */}
       {conviction ? (
@@ -378,23 +357,32 @@ export default function TodayPage() {
           }}>
 
             {/* Eyebrow */}
-            <div style={{
-              fontFamily: 'var(--font-mono)', fontSize: '10px',
-              letterSpacing: '0.14em', textTransform: 'uppercase',
-              color: 'var(--text-3)', marginBottom: '20px',
-              display: 'flex', alignItems: 'center', gap: '8px',
-            }}>
-              {conviction.auction_house_name && (
-                <span>{conviction.auction_house_name}</span>
-              )}
-              {conviction.auction_date && hoursLeft(conviction.auction_date) > 0 && (
-                <>
-                  <span style={{ opacity: 0.4 }}>·</span>
-                  <span style={{ color: hoursLeft(conviction.auction_date) < 24 ? 'var(--gold)' : 'var(--text-3)' }}>
-                    Clôture dans {formatCountdown(conviction.auction_date)}
-                  </span>
-                </>
-              )}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                fontFamily: 'var(--font-mono)', fontSize: '10px',
+                letterSpacing: '0.14em', textTransform: 'uppercase',
+                color: 'var(--electric)', marginBottom: '8px',
+              }}>
+                Conviction du jour
+              </div>
+              <div style={{
+                fontFamily: 'var(--font-mono)', fontSize: '10px',
+                letterSpacing: '0.10em', textTransform: 'uppercase',
+                color: 'var(--text-3)',
+                display: 'flex', alignItems: 'center', gap: '8px',
+              }}>
+                {conviction.auction_house_name && (
+                  <span>{conviction.auction_house_name}</span>
+                )}
+                {conviction.auction_date && hoursLeft(conviction.auction_date) > 0 && (
+                  <>
+                    <span style={{ opacity: 0.4 }}>·</span>
+                    <span style={{ color: hoursLeft(conviction.auction_date) < 24 ? 'var(--gold)' : 'var(--text-3)' }}>
+                      Clôture dans {formatCountdown(conviction.auction_date)}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Artiste */}
@@ -591,20 +579,3 @@ export default function TodayPage() {
   );
 }
 
-// ─── StatLine ─────────────────────────────────────────────────────────────────
-
-function StatLine({ value, label, color }: { value: number; label: string; color: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-      <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700,
-        color, minWidth: '40px', textAlign: 'right', lineHeight: 1,
-      }}>
-        {value}
-      </span>
-      <span style={{ fontSize: '13px', color: 'var(--text-2)' }}>
-        {label}
-      </span>
-    </div>
-  );
-}
