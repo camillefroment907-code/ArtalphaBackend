@@ -2155,7 +2155,9 @@ async def get_lot_bundle(
         except Exception:
             return None
 
-    hh_data, up_data = await asyncio.gather(_fetch_hammer(), _fetch_upside())
+    # Sequential — asyncpg does not allow concurrent queries on the same session
+    hh_data = await _fetch_hammer()
+    up_data  = await _fetch_upside()
 
     return {
         "lot":            lot_cached,   # null on cold path → frontend fetches /lots/:id

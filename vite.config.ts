@@ -29,7 +29,6 @@ export default defineConfig({
           router:  ['react-router'],
           i18n:    ['i18next', 'react-i18next'],
           charts:  ['recharts'],        // ~200 KB — isolated so it never blocks initial paint
-          zustand: ['zustand'],
         },
       },
     },
