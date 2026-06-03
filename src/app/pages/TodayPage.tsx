@@ -321,7 +321,7 @@ export default function TodayPage() {
 
       {/* ── COPILOT ──────────────────────────────────────────────────── */}
       <CopilotBar
-        mode="chips"
+        mode="chat"
         topDealId={conviction?.id ?? null}
         urgentCount={brief.closing_today_count ?? brief.closing_soon.length}
         sourcePage="today"
