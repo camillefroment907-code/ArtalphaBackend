@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.database import AsyncSessionLocal
-from app.models.db_models import Lot, ScorePerformance, HammerPrice
+from app.models.db_models import Lot, ScorePerformance, HammerPrice, LotUpsidePrediction
 import structlog
 
 logger = structlog.get_logger()
@@ -33,10 +33,26 @@ async def upsert_score_performance(
     - Never overwrites post-auction fields (actual_hammer_price, actual_upside,
       prediction_correct, verified_at)
 
+    Also captures ml_upside_prob from lot_upside_predictions if a prediction
+    exists for this lot — enables post-auction ML validation automatically.
+
     Skipped when auction_date is None (gallery/primary lots without a sale date).
     """
     if auction_date is None:
         return
+
+    # Self-heal: pick up ML prediction if one exists for this lot.
+    ml_upside_prob: "float | None" = None
+    try:
+        res = await session.execute(
+            select(LotUpsidePrediction.upside_prob)
+            .where(LotUpsidePrediction.lot_id == lot_id)
+            .order_by(LotUpsidePrediction.predicted_at.desc())
+            .limit(1)
+        )
+        ml_upside_prob = res.scalar_one_or_none()
+    except Exception:
+        pass  # no prediction table yet or no row — stay null, never block scoring
 
     stmt = (
         pg_insert(ScorePerformance)
@@ -45,6 +61,7 @@ async def upsert_score_performance(
             lot_id=lot_id,
             nautilus_score=nautilus_score,
             predicted_upside=predicted_upside,
+            ml_upside_prob=ml_upside_prob,
             auction_date=auction_date,
             created_at=datetime.utcnow(),
         )
@@ -53,6 +70,7 @@ async def upsert_score_performance(
             set_={
                 "nautilus_score": nautilus_score,
                 "predicted_upside": predicted_upside,
+                "ml_upside_prob": ml_upside_prob,
                 # auction_date intentionally not updated (stays as first-seen)
                 # actual_hammer_price, actual_upside, prediction_correct, verified_at
                 # are NEVER overwritten here — they belong to post_auction_fill.py
@@ -121,9 +139,15 @@ async def get_accuracy_stats() -> dict:
         high_conviction = [p for p in perfs if p.nautilus_score >= 75]
         hc_correct = sum(1 for p in high_conviction if p.prediction_correct)
 
+        # ML accuracy: compare ml_upside_prob threshold (>=0.6) vs actual_upside (>0)
+        ml_perfs = [p for p in perfs if p.ml_upside_prob is not None and p.actual_upside is not None]
+        ml_correct = sum(1 for p in ml_perfs if (p.ml_upside_prob >= 0.6) == (p.actual_upside > 0))
+
         return {
             "overall_accuracy": round(correct / len(perfs) * 100, 1),
             "high_conviction_accuracy": round(hc_correct / len(high_conviction) * 100, 1) if high_conviction else 0,
             "sample_size": len(perfs),
             "high_conviction_sample": len(high_conviction),
+            "ml_accuracy": round(ml_correct / len(ml_perfs) * 100, 1) if ml_perfs else None,
+            "ml_sample_size": len(ml_perfs),
         }

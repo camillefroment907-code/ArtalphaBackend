@@ -865,6 +865,7 @@ class ScorePerformance(Base):
     lot_id               = Column(UUID(as_uuid=True), ForeignKey("lots.id"), nullable=False, index=True)
     nautilus_score       = Column(Float, nullable=False)   # score at time of recommendation
     predicted_upside     = Column(Float, nullable=True)
+    ml_upside_prob       = Column(Float, nullable=True)    # ML model prediction (0–1); populated by generate_upside_predictions
     actual_hammer_price  = Column(Float, nullable=True)    # filled after auction
     actual_upside        = Column(Float, nullable=True)
     prediction_correct   = Column(Boolean, nullable=True)
