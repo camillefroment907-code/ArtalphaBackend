@@ -50,7 +50,7 @@ const VerifyEmail              = lazy(() => import('./pages/VerifyEmail'));
 const Partners                 = lazy(() => import('./pages/Partners'));
 const Preferences              = lazy(() => import('./pages/Preferences'));
 const GoogleCallback           = lazy(() => import('./pages/GoogleCallback'));
-const MarketBriefPage          = lazy(() => import('./pages/MarketBriefPage'));
+const TodayPage                = lazy(() => import('./pages/TodayPage'));
 const ClosingSoon              = lazy(() => import('./pages/ClosingSoon'));
 
 export const router = createBrowserRouter([
@@ -160,7 +160,7 @@ export const router = createBrowserRouter([
       { path: 'visualizer', Component: RoomVisualizer },
       { path: 'calendar', Component: AuctionCalendar },
       { path: 'emerging', Component: Emerging },
-      { path: 'brief',                  Component: MarketBriefPage      },
+      { path: 'today',                  Component: TodayPage            },
       { path: 'urgent',                 Component: ClosingSoon          },
       { path: 'verify-pending',        Component: VerifyPending        },
       { path: 'verify-email-required', Component: VerifyEmailRequired  },

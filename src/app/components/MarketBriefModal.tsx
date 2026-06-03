@@ -5,7 +5,7 @@ import { getToken, getUser } from '../../lib/auth';
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 function todayKey() {
-  return `nautilus_brief_${new Date().toISOString().slice(0, 10)}`;
+  return `nautilus_today_${new Date().toISOString().slice(0, 10)}`;
 }
 
 interface BriefSummary {
@@ -55,7 +55,7 @@ export function MarketBriefModal() {
 
   function openBrief() {
     dismiss();
-    navigate('/app/brief');
+    navigate('/app/today');
   }
 
   if (!visible || dismissed || !brief) return null;
@@ -166,7 +166,7 @@ export function MarketBriefModal() {
               fontFamily: 'var(--font-sans)',
             }}
           >
-            Voir le brief complet
+            Voir Aujourd'hui →
           </button>
           <button
             onClick={dismiss}

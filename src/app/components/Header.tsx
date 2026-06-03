@@ -23,8 +23,8 @@ const NAV_ITEMS = [
   { tKey: 'nav.alerts',      label: '',        to: '/app/agent',     dropdown: null },
   { tKey: 'nav.calendar',    label: '',        to: '/app/calendar',  dropdown: null },
   { tKey: 'nav.portfolio',   label: '',        to: '/app/portfolio', dropdown: null },
-  { tKey: '',                label: 'Brief',   to: '/app/brief',     dropdown: null },
-  { tKey: '',                label: '⚡ Urgent', to: '/app/urgent',  dropdown: null },
+  { tKey: '',                label: "Aujourd'hui", to: '/app/today',  dropdown: null },
+  { tKey: '',                label: '⚡ Urgent',  to: '/app/urgent', dropdown: null },
 ];
 
 const EXPLORER_ITEMS = [
@@ -86,7 +86,7 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
 
   useEffect(() => {
     if (!user) return;
-    const key = `nautilus_brief_${new Date().toISOString().slice(0, 10)}`;
+    const key = `nautilus_today_${new Date().toISOString().slice(0, 10)}`;
     setBriefUnseen(!localStorage.getItem(key));
   }, [user?.email, location.pathname]);
 
@@ -259,7 +259,7 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
               }
 
               const isEmerging = item.to === '/app/emerging';
-              const isBrief = item.to === '/app/brief';
+              const isBrief = item.to === '/app/today';
               return (
                 <Link
                   key={item.to}

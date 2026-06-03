@@ -516,15 +516,22 @@ async def get_market_brief(
         except Exception:
             pass
 
+    horizon_24h = now + timedelta(hours=24)
+    closing_today_count = sum(
+        1 for l in closing_lots
+        if l.auction_date and l.auction_date <= horizon_24h
+    )
+
     result = {
-        "since":           since.isoformat(),
-        "generated_at":    now.isoformat(),
-        "new_lots_count":  new_lots_total,
-        "new_lots":        [_lot_card(l) for l in new_lots],
-        "closing_soon":    [_lot_card(l) for l in closing_lots],
-        "top_picks":       top_picks,
-        "top_deal":        _lot_card(top_deal_lot) if top_deal_lot else None,
-        "agent_unread":    agent_unread,
+        "since":                since.isoformat(),
+        "generated_at":         now.isoformat(),
+        "new_lots_count":       new_lots_total,
+        "closing_today_count":  closing_today_count,
+        "new_lots":             [_lot_card(l) for l in new_lots],
+        "closing_soon":         [_lot_card(l) for l in closing_lots],
+        "top_picks":            top_picks,
+        "top_deal":             _lot_card(top_deal_lot) if top_deal_lot else None,
+        "agent_unread":         agent_unread,
     }
     set_cached(_key, result)
     return result
