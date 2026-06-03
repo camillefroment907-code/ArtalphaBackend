@@ -116,9 +116,9 @@ _SIZE_THRESHOLDS = [
 ]
 
 
-def _size_bucket(dimensions: Optional[str]) -> str:
+def _size_bucket(dimensions) -> str:
     """Parse dimensions string → size bucket."""
-    if not dimensions:
+    if not dimensions or not isinstance(dimensions, str):
         return "unknown"
     import re
     nums = re.findall(r"[\d.]+", dimensions.replace(",", "."))
@@ -161,7 +161,7 @@ WITH base AS (
         AVG(
             CASE WHEN hp.hammer_price_eur >= hp.estimate_low THEN 1.0 ELSE 0.0 END
         ) OVER w_artist_before_excl                                             AS artist_sold_above_pct_before,
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY
+        AVG(
             hp.hammer_price_eur / NULLIF(hp.estimate_low, 0)
         ) OVER w_artist_before_excl                                             AS artist_median_premium_before,
 
@@ -230,14 +230,14 @@ ORDER BY sale_date ASC
 """
 
 
-def load_dataset(db_url: str) -> pd.DataFrame:
+def load_dataset(db_url: str, connect_kwargs: dict | None = None) -> pd.DataFrame:
     """
     Load and engineer training features from hammer_prices via sync psycopg2.
 
     Returns a DataFrame with feature columns + 'target' + 'sale_date'.
     """
     log.info("Connecting to database...")
-    conn = psycopg2.connect(db_url)
+    conn = psycopg2.connect(db_url, **(connect_kwargs or {}))
     try:
         log.info("Loading training dataset (window functions)...")
         df = pd.read_sql(TRAINING_QUERY, conn)
@@ -534,12 +534,18 @@ def main():
     # asyncpg URL → psycopg2 URL
     if "postgresql+asyncpg://" in db_url:
         db_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
-    # Strip sslmode params that psycopg2 handles differently
-    import re
-    db_url = re.sub(r"[?&]sslmode=[^&]*", "", db_url).rstrip("?&")
+    # Sanitize query string: remove params psycopg2 doesn't understand,
+    # keep sslmode (as a connect_arg below), strip channel_binding entirely.
+    from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
+    _p = urlparse(db_url)
+    _qs = parse_qs(_p.query, keep_blank_values=True)
+    _needs_ssl = _qs.pop("sslmode", [""])[0] in ("require", "verify-ca", "verify-full")
+    _qs.pop("channel_binding", None)
+    db_url = urlunparse(_p._replace(query=urlencode({k: v[0] for k, v in _qs.items()})))
+    _connect_kwargs = {"sslmode": "require"} if _needs_ssl else {}
 
     # ── Load dataset ──────────────────────────────────────────────────────────
-    df = load_dataset(db_url)
+    df = load_dataset(db_url, _connect_kwargs)
 
     if len(df) == 0:
         log.error("No eligible rows found in hammer_prices. Check data quality.")
@@ -734,7 +740,7 @@ def main():
     relative_path = f"models/upside/{version}.joblib"
 
     # ── Write DB record ───────────────────────────────────────────────────────
-    conn = psycopg2.connect(db_url)
+    conn = psycopg2.connect(db_url, **_connect_kwargs)
     try:
         with conn.cursor() as cur:
             cur.execute(
