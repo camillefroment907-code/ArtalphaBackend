@@ -192,7 +192,7 @@ async def run(dry_run: bool, batch_size: int):
                   AND NOT EXISTS (
                       SELECT 1 FROM lot_upside_predictions lup
                       WHERE lup.lot_id = l.id
-                        AND lup.model_version_id = :model_version_id::UUID
+                        AND lup.model_version_id = :model_version_id
                   )
             """),
             {"model_version_id": predictor._model_version_id},
@@ -235,7 +235,7 @@ async def run(dry_run: bool, batch_size: int):
                       AND NOT EXISTS (
                           SELECT 1 FROM lot_upside_predictions lup
                           WHERE lup.lot_id = l.id
-                            AND lup.model_version_id = :model_version_id::UUID
+                            AND lup.model_version_id = :model_version_id
                       )
                     ORDER BY l.auction_date ASC NULLS LAST, l.id
                     LIMIT :batch_size OFFSET :offset
@@ -346,8 +346,8 @@ async def run(dry_run: bool, batch_size: int):
                                 confidence_score, signal_label, feature_snapshot
                             )
                             VALUES (
-                                :lot_id::UUID, :model_version_id::UUID, :upside_prob,
-                                :confidence_score, :signal_label, :feature_snapshot::jsonb
+                                :lot_id, :model_version_id, :upside_prob,
+                                :confidence_score, :signal_label, :feature_snapshot
                             )
                             ON CONFLICT (lot_id, model_version_id) DO NOTHING
                         """),
@@ -357,7 +357,10 @@ async def run(dry_run: bool, batch_size: int):
                             "upside_prob": pred.upside_prob,
                             "confidence_score": pred.confidence_score,
                             "signal_label": pred.signal_label,
-                            "feature_snapshot": __import__("json").dumps(pred.feature_snapshot),
+                            "feature_snapshot": __import__("json").dumps(
+                                pred.feature_snapshot,
+                                default=lambda o: float(o) if hasattr(o, '__float__') else str(o),
+                            ),
                         },
                     )
                     inserted_count += 1
