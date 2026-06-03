@@ -55,8 +55,8 @@ export default function ClosingSoon() {
     fetch(`${BACKEND}/api/lots?${params}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then(r => r.ok ? r.json() : { lots: [] })
-      .then(data => { setLots(data.lots || []); setLoading(false); })
+      .then(r => r.ok ? r.json() : { items: [] })
+      .then(data => { setLots(data.items || []); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
