@@ -436,17 +436,22 @@ async def get_market_brief(
             "status":                 lot.status.value if lot.status else None,
         }
 
-    # New lots since last visit
+    # New lots since last visit — count all, display top 6
+    _new_filter = and_(
+        Lot.status.cast(String).in_(["upcoming", "live"]),
+        Lot.market_type == MarketType.AUCTION,
+        Lot.created_at >= since,
+    )
+    new_count_result = await db.execute(
+        select(func.count(Lot.id)).where(_new_filter)
+    )
+    new_lots_total = new_count_result.scalar() or 0
+
     new_lots_result = await db.execute(
         select(Lot)
-        .where(and_(
-            Lot.status.cast(String).in_(["upcoming", "live"]),
-            Lot.market_type == MarketType.AUCTION,
-            Lot.created_at >= since,
-            Lot.deal_score.isnot(None),
-        ))
+        .where(and_(_new_filter, Lot.deal_score.isnot(None)))
         .order_by(desc(Lot.deal_score))
-        .limit(12)
+        .limit(6)
     )
     new_lots = new_lots_result.scalars().all()
 
@@ -514,8 +519,8 @@ async def get_market_brief(
     result = {
         "since":           since.isoformat(),
         "generated_at":    now.isoformat(),
-        "new_lots_count":  len(new_lots),
-        "new_lots":        [_lot_card(l) for l in new_lots[:6]],
+        "new_lots_count":  new_lots_total,
+        "new_lots":        [_lot_card(l) for l in new_lots],
         "closing_soon":    [_lot_card(l) for l in closing_lots],
         "top_picks":       top_picks,
         "top_deal":        _lot_card(top_deal_lot) if top_deal_lot else None,
