@@ -2051,6 +2051,80 @@ def _house_tier_num(house: str | None) -> int:
     return 3
 
 
+# ── Pricing-safety helpers (module-level so they can be unit-tested) ─────────
+
+def _price_band(
+    estimate_low: float | None,
+    estimate_high: float | None,
+) -> tuple[float, float] | tuple[None, None]:
+    """
+    Derive a price band for comparable selection.
+
+    Only fetch comps that traded in the same economic neighbourhood as the lot.
+    - floor = estimate_low × 0.15  (allows distressed comps; filters unrelated cheap works)
+    - ceil  = estimate_high × 4.0  (prevents tier-mismatch; 4× covers strong outperformers)
+
+    Returns (None, None) when estimate is missing — no filter applied (legacy behaviour).
+    """
+    if not estimate_low or not estimate_high or estimate_low <= 0 or estimate_high <= 0:
+        return None, None
+    return float(estimate_low) * 0.15, float(estimate_high) * 4.0
+
+
+def _anchor_comps(
+    pairs: list[tuple[int, float]],
+    est_hi: float | None,
+    ratio: float = 3.0,
+) -> list[tuple[int, float]]:
+    """
+    Secondary post-SQL guard: drop comps above ratio × estimate_high.
+
+    The SQL price band (×4) is the primary filter. This tightens it further
+    to ×3, providing defence-in-depth for cases where estimate_high shifts
+    between query time and evaluation time.
+    Returns the full list unchanged when est_hi is unknown.
+    """
+    if not est_hi or est_hi <= 0:
+        return pairs
+    ceiling = est_hi * ratio
+    return [(s, p) for s, p in pairs if p <= ceiling]
+
+
+def _value_is_sane(market_value: float, est_hi: float | None, ratio: float = 5.0) -> bool:
+    """
+    Final backstop: reject any market_value > ratio × estimate_high.
+
+    Should rarely trigger after SQL filtering and _anchor_comps; exists
+    as a last-resort guard against edge cases (e.g. missing estimate at
+    query time, integer overflow, unexpected data).
+    """
+    if not est_hi or est_hi <= 0:
+        return True
+    return market_value <= est_hi * ratio
+
+
+def _confidence_label(comp_level: int, comp_count: int) -> str:
+    """
+    Map (comp_level, comp_count) → confidence tier used by the API.
+
+    forte       — deep market, tight comparables (L1, ≥10 comps)
+    modérée     — reliable signal, sufficient data (L1 3–9 / L2 ≥5)
+    faible      — signal present but limited data (L2 3–4 / L3)
+    insuffisante— not enough data to make a defensible recommendation
+    """
+    if comp_level == 1 and comp_count >= 10:
+        return "forte"
+    if comp_level == 1 and comp_count >= 3:
+        return "modérée"
+    if comp_level == 2 and comp_count >= 10:
+        return "modérée"
+    if comp_level == 2 and comp_count >= 3:
+        return "faible"
+    if comp_level == 3:
+        return "faible"
+    return "insuffisante"
+
+
 def _comp_proximity_score(
     row: dict,
     lot_medium_cat: str | None,
@@ -2120,17 +2194,38 @@ async def _compute_weighted_max_bid(lot, db) -> dict:
     if not artist_normalized:
         return {}
 
+    # Build price-tier filter: only fetch comps from the same economic tier as
+    # the lot.  This is the primary defence against tier-mismatch contamination
+    # (e.g. cheap offset lithos vs expensive signed editions in the same
+    # "print" bucket).  price_band_sql is a hardcoded SQL fragment — no user
+    # input touches it; bound parameters carry the actual values.
+    est_floor, est_ceil = _price_band(lot.estimate_low, lot.estimate_high)
+    params: dict = {"norm": artist_normalized}
+    price_band_sql = ""
+    if est_floor is not None and est_ceil is not None:
+        params["est_floor"] = est_floor
+        params["est_ceil"]  = est_ceil
+        price_band_sql = """
+          AND (
+            (hammer_price_eur IS NOT NULL
+             AND hammer_price_eur BETWEEN :est_floor AND :est_ceil)
+            OR (hammer_price_eur IS NULL AND hammer_price IS NOT NULL
+                AND hammer_price BETWEEN :est_floor AND :est_ceil)
+          )
+        """
+
     result = await db.execute(
-        text("""
+        text(f"""
             SELECT medium, dimensions, year_created, sale_date,
                    hammer_price_eur, hammer_price, auction_house
             FROM hammer_prices
             WHERE artist_name_normalized = :norm
               AND (hammer_price_eur IS NOT NULL OR hammer_price IS NOT NULL)
+              {price_band_sql}
             ORDER BY sale_date DESC NULLS LAST
             LIMIT 200
         """),
-        {"norm": artist_normalized},
+        params,
     )
     rows = result.mappings().all()
     if not rows:
@@ -2142,6 +2237,7 @@ async def _compute_weighted_max_bid(lot, db) -> dict:
     lot_area = (lot_w * lot_h) if (lot_w and lot_h) else None
     lot_medium_cat = _medium_category(lot.medium) or _medium_category(lot.title or "")
     lot_house_tier = _house_tier_num(lot.auction_house_name)
+    lot_est_hi = float(lot.estimate_high) if lot.estimate_high else None
 
     _2D_CATS = {"print", "drawing", "photo", "watercolor"}
 
@@ -2198,48 +2294,67 @@ async def _compute_weighted_max_bid(lot, db) -> dict:
         return sum(s * p for s, p in pairs) / total_w
 
     def _eval(pairs: list[tuple[int, float]], min_count: int = 3) -> list[tuple[int, float]] | None:
-        """Apply outlier filter and return if enough comps remain."""
-        clean = _remove_outliers(pairs)
+        """Secondary anchor + outlier filter; return None if too few comps survive."""
+        anchored = _anchor_comps(pairs, lot_est_hi)   # module-level, ratio=3.0
+        clean = _remove_outliers(anchored)
         return clean if len(clean) >= min_count else None
 
     # Level 1 — ≥3 exact-medium comps, well-scored (size + recency match too)
     l1 = _eval([(s, p) for s, p in same_medium if s >= 60])
     if l1:
-        return {"market_value": _wavg(l1), "comp_count": len(l1),
-                "comp_level": 1, "max_bid_source": "comparables_proches"}
+        mv = _wavg(l1)
+        if _value_is_sane(mv, lot_est_hi):
+            return {"market_value": mv, "comp_count": len(l1),
+                    "comp_level": 1, "max_bid_source": "comparables_proches",
+                    "confidence": _confidence_label(1, len(l1))}
 
     # Level 2 — ≥3 exact-medium comps (any score; medium is mandatory)
     l2 = _eval(same_medium)
     if l2:
-        return {"market_value": _wavg(l2), "comp_count": len(l2),
-                "comp_level": 2, "max_bid_source": "comparables_meme_technique"}
+        mv = _wavg(l2)
+        if _value_is_sane(mv, lot_est_hi):
+            return {"market_value": mv, "comp_count": len(l2),
+                    "comp_level": 2, "max_bid_source": "comparables_meme_technique",
+                    "confidence": _confidence_label(2, len(l2))}
 
     # Level 3 — ≥3 cross-2D comps (e.g. drawing used to estimate print value)
     l3 = _eval(cross_2d)
     if l3:
-        return {"market_value": _wavg(l3), "comp_count": len(l3),
-                "comp_level": 3, "max_bid_source": "comparables_technique_proche"}
+        mv = _wavg(l3)
+        if _value_is_sane(mv, lot_est_hi):
+            return {"market_value": mv, "comp_count": len(l3),
+                    "comp_level": 3, "max_bid_source": "comparables_technique_proche",
+                    "confidence": _confidence_label(3, len(l3))}
 
     # Level 4 — 1–2 exact-medium sales (real data but below L2 threshold).
     # Use simple average — no coefficient applied, it's actual same-medium data.
-    if same_medium:
-        avg = sum(p for _, p in same_medium) / len(same_medium)
-        return {"market_value": avg, "comp_count": len(same_medium),
-                "comp_level": 4, "max_bid_source": "ventes_meme_technique_limite"}
+    anchored_same = _anchor_comps(same_medium, lot_est_hi)
+    if anchored_same:
+        avg = sum(p for _, p in anchored_same) / len(anchored_same)
+        if _value_is_sane(avg, lot_est_hi):
+            return {"market_value": avg, "comp_count": len(anchored_same),
+                    "comp_level": 4, "max_bid_source": "ventes_meme_technique_limite",
+                    "confidence": _confidence_label(4, len(anchored_same))}
 
     # Level 5 — 1–2 cross-2D sales (adjacent medium, real data).
-    if cross_2d:
-        avg = sum(p for _, p in cross_2d) / len(cross_2d)
-        return {"market_value": avg, "comp_count": len(cross_2d),
-                "comp_level": 5, "max_bid_source": "comparables_2d_limite"}
+    anchored_cross = _anchor_comps(cross_2d, lot_est_hi)
+    if anchored_cross:
+        avg = sum(p for _, p in anchored_cross) / len(anchored_cross)
+        if _value_is_sane(avg, lot_est_hi):
+            return {"market_value": avg, "comp_count": len(anchored_cross),
+                    "comp_level": 5, "max_bid_source": "comparables_2d_limite",
+                    "confidence": _confidence_label(5, len(anchored_cross))}
 
     # Level 6 — medium unknown for this lot: no discount can be computed,
     # use all-artist sales as a raw proxy (only when lot medium is unidentified).
     if not lot_medium_cat:
         l6 = _eval(all_scored, min_count=5)
         if l6:
-            return {"market_value": _wavg(l6), "comp_count": len(l6),
-                    "comp_level": 6, "max_bid_source": "ventes_artiste_sans_medium"}
+            mv = _wavg(l6)
+            if _value_is_sane(mv, lot_est_hi):
+                return {"market_value": mv, "comp_count": len(l6),
+                        "comp_level": 6, "max_bid_source": "ventes_artiste_sans_medium",
+                        "confidence": _confidence_label(6, len(l6))}
 
     # No usable same-medium or adjacent data — refuse to fabricate a value.
     return {}
@@ -2447,19 +2562,57 @@ async def get_comparables(
             pass
 
     # ── Max bid — proximity-weighted comparable analysis ──────────────────────
+    #
+    # Confidence tiers:
+    #   forte / modérée / faible  → comp-derived value is used
+    #   insuffisante              → comp data too sparse; fall back to estimate
+    #
+    # "insuffisante" covers levels 4-6 (≤2 comps or medium unknown).
+    # Displaying a value from 1-2 comps as "PRIX MAXIMUM CONSEILLÉ" would
+    # mislead Sophie/Thomas — the estimate-based fallback is more defensible.
     max_bid: int | None = None
     max_bid_source: str | None = None
     max_bid_comp_count: int | None = None
     max_bid_comp_level: int | None = None
+    max_bid_confidence: str | None = None
+    fair_value: int | None = None
+    fair_value_source: str | None = None
+
     weighted = await _compute_weighted_max_bid(lot, db)
-    if weighted:
+    comp_confidence = weighted.get("confidence") if weighted else None
+    use_comp_value = weighted and comp_confidence not in (None, "insuffisante")
+
+    if use_comp_value:
         max_bid = compute_max_bid(weighted["market_value"], lot.auction_house_name)
         max_bid_source = weighted["max_bid_source"]
         max_bid_comp_count = weighted["comp_count"]
         max_bid_comp_level = weighted["comp_level"]
+        max_bid_confidence = comp_confidence
+        fair_value = round(weighted["market_value"])
+        fair_value_source = weighted["max_bid_source"]
     elif lot.estimate_high:
-        max_bid = compute_max_bid(float(lot.estimate_high) * 0.85, lot.auction_house_name)
+        # Sparse or missing comps: fall back to estimate_high directly.
+        # Production data shows p50 realized = 0.966× estimate_high, so estimate_high
+        # is a sound anchor. The × 0.85 multiplier was an unjustified double-discount
+        # on top of the real-cost discounts already applied by compute_max_bid.
+        max_bid = compute_max_bid(float(lot.estimate_high), lot.auction_house_name)
         max_bid_source = "estimate"
+        max_bid_confidence = "insuffisante"
+        max_bid_comp_count = weighted["comp_count"] if weighted else None
+        max_bid_comp_level = weighted["comp_level"] if weighted else None
+        fair_value = round(float(lot.estimate_high))
+        fair_value_source = "estimate"
+
+    # ── Market context alert ──────────────────────────────────────────────────
+    # Surfaces an explicit warning when the market historically trades far above
+    # the auction-house estimate but we have no reliable comps to show a value.
+    # Prevents the UI from silently showing Score 94 + max bid = estimate_high
+    # without flagging the divergence.
+    market_context: str | None = None
+    if max_bid_confidence == "insuffisante" and market_benchmarks:
+        p50 = market_benchmarks.get("p50")
+        if p50 and lot.estimate_high and p50 > float(lot.estimate_high) * 3:
+            market_context = "market_above_estimate"
 
     response = {
         "lot_id": lot_id,
@@ -2476,10 +2629,10 @@ async def get_comparables(
         "max_bid_source": max_bid_source,
         "max_bid_comp_count": max_bid_comp_count,
         "max_bid_comp_level": max_bid_comp_level,
-        # fair_value = undiscounted market value (medium-filtered) — use this to display
-        # "PRIX MAXIMUM CONSEILLÉ". max_bid = compute_max_bid(fair_value) ≈ 60% of this.
-        "fair_value": round(weighted["market_value"]) if weighted else (round(float(lot.estimate_high) * 1.0) if lot.estimate_high else None),
-        "fair_value_source": weighted.get("max_bid_source", "estimate") if weighted else "estimate",
+        "max_bid_confidence": max_bid_confidence,   # forte/modérée/faible/insuffisante
+        "market_context": market_context,           # "market_above_estimate" | null
+        "fair_value": fair_value,
+        "fair_value_source": fair_value_source,
         "market_analysis": {
             "comparable_count":    comparable_count_total,
             "market_avg_price":    round(market_avg) if market_avg else None,

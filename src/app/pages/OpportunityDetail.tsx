@@ -214,6 +214,9 @@ export default function OpportunityDetail() {
   const [maxBidSource, setMaxBidSource]     = useState<string | null>(null);
   const [fairValueFromComps, setFairValueFromComps] = useState<number | null>(null);
   const [fairValueSource, setFairValueSource]       = useState<string | null>(null);
+  const [maxBidConfidence, setMaxBidConfidence]     = useState<string | null>(null);
+  const [marketContext, setMarketContext]           = useState<string | null>(null);
+  const [maxBidCompCount, setMaxBidCompCount]       = useState<number | null>(null);
   const [stickyVisible, setStickyVisible] = useState(false);
 
   const [subscribed, setSubscribed]       = useState(false);
@@ -306,6 +309,9 @@ export default function OpportunityDetail() {
       setMaxBidSource(data.max_bid_source ?? null);
       setFairValueFromComps(data.fair_value ?? null);
       setFairValueSource(data.fair_value_source ?? null);
+      setMaxBidConfidence(data.max_bid_confidence ?? null);
+      setMarketContext(data.market_context ?? null);
+      setMaxBidCompCount(data.max_bid_comp_count ?? null);
     }).catch(() => {});
     const token = getToken();
     if (token && id) {
@@ -867,28 +873,102 @@ export default function OpportunityDetail() {
                     )}
                   </div>
                   <div>
+                    {/* Label + dynamic tooltip */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
                       <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em' }}>
                         {isFr ? 'PRIX MAXIMUM CONSEILLÉ' : 'RECOMMENDED MAX BID'}
                       </span>
-                      <Tip text={isFr ? 'Valeur de marché estimée par Nautilus à partir des ventes comparables. Au-delà de ce prix, le rapport risque/opportunité devient défavorable.' : 'Market value estimated by Nautilus from comparable sales. Beyond this price, the risk/opportunity ratio becomes unfavorable.'} width={240} />
+                      <Tip width={240} text={
+                        maxBidConfidence === 'forte'
+                          ? (isFr
+                            ? `Basé sur ${maxBidCompCount ?? ''} ventes comparables filtrées par médium et catégorie de prix. Le max bid intègre les frais acheteur de la maison de vente.`
+                            : `Based on ${maxBidCompCount ?? ''} comparable sales filtered by medium and price range. The max bid includes buyer's premium.`)
+                          : maxBidConfidence === 'modérée'
+                          ? (isFr
+                            ? `Basé sur ${maxBidCompCount ?? ''} ventes comparables — données suffisantes pour une bonne référence directionnelle.`
+                            : `Based on ${maxBidCompCount ?? ''} comparable sales — enough for a solid directional reference.`)
+                          : maxBidConfidence === 'faible'
+                          ? (isFr
+                            ? 'Peu de données comparables disponibles — valeur indicative uniquement. À prendre comme ordre de grandeur.'
+                            : 'Limited comparable data — indicative value only. Use as a rough order of magnitude.')
+                          : marketContext === 'market_above_estimate'
+                          ? (isFr
+                            ? "Le marché de cet artiste s'est historiquement réalisé bien au-dessus des estimations, mais les données sont insuffisantes pour calculer une valeur précise."
+                            : "This artist's market has historically realized well above estimates, but data is insufficient to compute a precise value.")
+                          : (isFr
+                            ? "Aucune vente comparable disponible. Valeur basée sur l'estimation haute de la maison de vente (les réalisations historiques sont proches de l'estimation haute)."
+                            : "No comparable sales available. Value based on the auction house high estimate (historical realizations are close to the high estimate).")
+                      } />
                     </div>
+
+                    {/* market_above_estimate alert panel */}
+                    {maxBidConfidence === 'insuffisante' && marketContext === 'market_above_estimate' && (
+                      <div style={{ marginBottom: 8, padding: '7px 10px', background: 'rgba(217,119,6,0.12)', border: '1px solid rgba(217,119,6,0.3)', borderRadius: 5, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: 13, lineHeight: 1, flexShrink: 0 }}>⚡</span>
+                        <span style={{ fontSize: 10, color: '#FCD34D', fontFamily: 'var(--font-mono)', lineHeight: 1.4 }}>
+                          {isFr
+                            ? 'Marché historiquement supérieur à l\u2019estimation · données insuffisantes pour valoriser'
+                            : 'Market historically above estimate · insufficient data to value precisely'}
+                        </span>
+                      </div>
+                    )}
+
                     {avoidAbove ? (
                       <>
-                        <div style={{ fontSize: 34, fontFamily: "'Playfair Display', serif", color: avoidAbove < price ? '#f87171' : '#b8922a', fontWeight: 600, lineHeight: 1, marginBottom: 6 }}>
-                          {fmtExact(avoidAbove)}
+                        {/* Value — size, color, tilde per confidence */}
+                        <div style={{
+                          fontSize: maxBidConfidence === 'insuffisante' ? 28 : 34,
+                          fontFamily: "'Playfair Display', serif",
+                          fontWeight: 600,
+                          lineHeight: 1,
+                          marginBottom: 6,
+                          color: avoidAbove < price
+                            ? '#f87171'
+                            : maxBidConfidence === 'insuffisante'
+                            ? 'rgba(255,255,255,0.65)'
+                            : maxBidConfidence === 'faible'
+                            ? '#9B7A3C'
+                            : '#C6A85A',
+                        }}>
+                          {maxBidConfidence === 'faible' ? '~' : ''}{fmtExact(avoidAbove)}
+                          {maxBidConfidence === 'insuffisante' && (
+                            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', fontWeight: 400, marginLeft: 4, opacity: 0.7 }}>
+                              {isFr ? '(estimatif)' : '(estimate)'}
+                            </span>
+                          )}
                         </div>
+
+                        {/* Confidence bars — forte/modérée/faible only */}
+                        {maxBidConfidence && maxBidConfidence !== 'insuffisante' && avoidAbove >= price && (() => {
+                          const filled = maxBidConfidence === 'forte' ? 4 : maxBidConfidence === 'modérée' ? 3 : 2;
+                          const barCol = maxBidConfidence === 'forte' ? '#4ade80' : maxBidConfidence === 'modérée' ? '#FBBF24' : '#9B7A3C';
+                          return (
+                            <div style={{ display: 'flex', gap: 3, marginBottom: 5 }}>
+                              {[0,1,2,3].map(i => (
+                                <div key={i} style={{ width: 18, height: 4, borderRadius: 2, background: i < filled ? barCol : 'rgba(255,255,255,0.12)' }} />
+                              ))}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Subtitle / source line */}
                         {avoidAbove < price ? (
                           <div style={{ fontSize: 10, color: '#f87171', fontFamily: 'var(--font-mono)', fontWeight: 600, letterSpacing: '0.04em' }}>
                             ▲ {isFr ? 'prix actuel dépasse notre estimation' : 'current price exceeds our estimate'}
                           </div>
+                        ) : maxBidConfidence === 'forte' || maxBidConfidence === 'modérée' ? (
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)' }}>
+                            {maxBidCompCount
+                              ? `${maxBidCompCount} ${isFr ? 'ventes comparables' : 'comparable sales'}`
+                              : (isFr ? 'ventes comparables filtrées' : 'filtered comparable sales')}
+                          </div>
+                        ) : maxBidConfidence === 'faible' ? (
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)' }}>
+                            {isFr ? 'peu de données · indicatif' : 'limited data · indicative'}
+                          </div>
                         ) : (
-                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>
-                            {avoidAboveIsEstimate
-                              ? (isFr ? 'estimation maison de vente' : 'auction house estimate')
-                              : fairValueSource && fairValueSource !== 'estimate'
-                                ? (isFr ? 'ventes comparables filtrées' : 'filtered comparable sales')
-                                : (isFr ? 'valeur de marché Nautilus' : 'Nautilus market value')}
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)' }}>
+                            {isFr ? "basé sur l'estimation de la maison de vente" : 'based on auction house estimate'}
                           </div>
                         )}
                       </>
