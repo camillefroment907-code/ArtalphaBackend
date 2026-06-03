@@ -38,8 +38,6 @@ const PLAN_LABELS: Record<string, string> = {
   pro: 'Pro', elite: 'Institutional', institutional: 'Institutional',
 };
 
-const ADMIN_EMAIL = 'camillefroment907@gmail.com';
-
 export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -61,7 +59,6 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
   const [searchValue, setSearchValue] = useState('');
   const [agentUnread, setAgentUnread] = useState(0);
   const [briefUnseen, setBriefUnseen] = useState(false);
-  const [scanState, setScanState] = useState<'idle' | 'loading' | 'done'>('idle');
 
   // Close mobile menu on route change
   useEffect(() => { setMobileMenuOpen(false); }, [location.pathname]);
@@ -77,7 +74,6 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
 
   const plan = getUserPlan();
   const planLabel = PLAN_LABELS[plan] ?? plan;
-  const isAdmin = user?.email === ADMIN_EMAIL;
 
   useEffect(() => {
     if (!user) return;
@@ -114,19 +110,6 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
     }
     return location.pathname.startsWith(item.to);
   };
-
-  async function handleScan() {
-    if (scanState === 'loading') return;
-    setScanState('loading');
-    try {
-      await fetch(`${BACKEND}/api/n8n/trigger-scraping`, {
-        method: 'POST',
-        headers: { 'x-api-key': 'eee50ac99b4fca0ff5c5c205fe3ed79a' },
-      });
-    } catch { /* ignore */ }
-    setScanState('done');
-    setTimeout(() => setScanState('idle'), 2000);
-  }
 
   const initials = user
     ? (user.name ? user.name.slice(0, 2) : user.email.slice(0, 2)).toUpperCase()
@@ -457,17 +440,6 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
                   >
                     <span style={{ opacity: 0.5 }}>◈</span> Subscription
                   </button>
-
-                  {isAdmin && (
-                    <button
-                      onClick={() => { handleScan(); setAvatarOpen(false); }}
-                      style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '10px 16px', fontSize: '13px', color: 'var(--navy)', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--navy-subtle)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                    >
-                      <span>⚡</span> {scanState === 'loading' ? 'Scanning…' : scanState === 'done' ? 'Done ✓' : 'Scan Market'}
-                    </button>
-                  )}
 
                   <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />
 
