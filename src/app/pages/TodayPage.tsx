@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { getToken } from '../../lib/auth';
 import { CopilotBar } from '../components/CopilotBar';
+import { parseUTC, isLiveLot, timeLabel, isActiveAuction } from '../../lib/auction';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -54,17 +55,8 @@ function fmt(n: number | null | undefined) {
 }
 
 function hoursLeft(iso: string): number {
-  return (new Date(iso).getTime() - Date.now()) / 3600000;
-}
-
-function formatCountdown(iso: string): string {
-  const h = hoursLeft(iso);
-  if (h <= 0) return 'terminée';
-  if (h < 1) return `${Math.floor(h * 60)} min`;
-  if (h < 24) return `${Math.floor(h)}h`;
-  const d = Math.floor(h / 24);
-  const rem = Math.floor(h % 24);
-  return rem > 0 ? `${d}j ${rem}h` : `${d}j`;
+  // Uses parseUTC to avoid timezone bug (Python isoformat = naive UTC)
+  return (parseUTC(iso) - Date.now()) / 3600000;
 }
 
 function buildConvictionPhrase(lot: LotCard): string {
@@ -113,12 +105,13 @@ function SectionLabel({ children }: { children: string }) {
 }
 
 function ExpiringRow({ lot, onClick }: { lot: LotCard; onClick: () => void }) {
-  const urgent = lot.auction_date && hoursLeft(lot.auction_date) < 6;
+  const live = isLiveLot(lot.status);
+  const time = lot.auction_date ? timeLabel(lot.auction_date, live) : null;
   return (
     <div
       onClick={onClick}
       style={{
-        display: 'flex', alignItems: 'center', gap: '16px',
+        display: 'flex', alignItems: 'center', gap: '12px',
         padding: '14px 0',
         borderBottom: '1px solid var(--border)',
         cursor: 'pointer',
@@ -127,11 +120,15 @@ function ExpiringRow({ lot, onClick }: { lot: LotCard; onClick: () => void }) {
       onMouseEnter={e => (e.currentTarget.style.opacity = '0.72')}
       onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
     >
+      {/* Status dot */}
+      <span style={{ fontSize: '8px', flexShrink: 0, color: live ? '#22c55e' : 'var(--text-3)' }}>
+        {live ? '●' : '○'}
+      </span>
+
       {/* Thumbnail */}
       <div style={{
         width: '48px', height: '48px', borderRadius: '4px',
-        overflow: 'hidden', flexShrink: 0,
-        background: 'var(--bg-subtle)',
+        overflow: 'hidden', flexShrink: 0, background: 'var(--bg-subtle)',
       }}>
         {lot.image_url
           ? <img src={lot.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -157,13 +154,10 @@ function ExpiringRow({ lot, onClick }: { lot: LotCard; onClick: () => void }) {
       </div>
 
       {/* Countdown */}
-      {lot.auction_date && (
+      {time && (
         <div style={{ flexShrink: 0, textAlign: 'right' }}>
-          <div style={{
-            fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700,
-            color: urgent ? 'var(--gold)' : 'var(--text-2)',
-          }}>
-            {urgent ? '⚡ ' : ''}{formatCountdown(lot.auction_date)}
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: time.color }}>
+            {time.urgent && '⚡ '}{time.label}
           </div>
         </div>
       )}
@@ -275,7 +269,9 @@ export default function TodayPage() {
     );
   }
 
-  const expiringLots = brief.closing_soon.slice(0, isMobile ? 3 : 4);
+  const expiringLots = brief.closing_soon
+    .filter(l => isActiveAuction(l.auction_date))
+    .slice(0, isMobile ? 3 : 4);
   const conviction = brief.top_deal;
 
   return (
@@ -375,14 +371,15 @@ export default function TodayPage() {
                 {conviction.auction_house_name && (
                   <span>{conviction.auction_house_name}</span>
                 )}
-                {conviction.auction_date && hoursLeft(conviction.auction_date) > 0 && (
-                  <>
-                    <span style={{ opacity: 0.4 }}>·</span>
-                    <span style={{ color: hoursLeft(conviction.auction_date) < 24 ? 'var(--gold)' : 'var(--text-3)' }}>
-                      Clôture dans {formatCountdown(conviction.auction_date)}
-                    </span>
-                  </>
-                )}
+                {conviction.auction_date && hoursLeft(conviction.auction_date) > 0 && (() => {
+                  const t = timeLabel(conviction.auction_date, isLiveLot(conviction.status));
+                  return (
+                    <>
+                      <span style={{ opacity: 0.4 }}>·</span>
+                      <span style={{ color: t.color }}>{t.urgent && '⚡ '}{t.label}</span>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 

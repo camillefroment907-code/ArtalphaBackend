@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { getToken } from '../../lib/auth';
+import { parseUTC, isLiveLot, timeLabel, isActiveAuction } from '../../lib/auction';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
@@ -20,14 +21,6 @@ interface Lot {
   status: string | null;
 }
 
-// ── Auction state ─────────────────────────────────────────────────────────────
-// "live"     = auction actively in progress — bids are happening now
-// "upcoming" = not yet started — estimate is the only reliable price signal
-
-function isLive(lot: Lot): boolean {
-  return lot.status === 'live';
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmt(n: number | null | undefined) {
@@ -35,31 +28,7 @@ function fmt(n: number | null | undefined) {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
 }
 
-// Python isoformat() returns naive UTC without 'Z' — JS parses that as local time → wrong.
-function parseUTC(iso: string): number {
-  if (!iso.endsWith('Z') && !/[+\-]\d{2}:\d{2}$/.test(iso)) return new Date(iso + 'Z').getTime();
-  return new Date(iso).getTime();
-}
-
-function timeLabel(iso: string, live: boolean): { label: string; urgent: boolean; color: string } {
-  const ms  = parseUTC(iso) - Date.now();
-  const h   = Math.floor(ms / 3600000);
-  const min = Math.floor(ms / 60000);
-
-  if (live) {
-    if (ms <= 0)  return { label: 'Terminée',                  urgent: false, color: 'var(--text-3)' };
-    if (min < 60) return { label: `Se termine dans ${min} min`, urgent: true,  color: '#ef4444' };
-    if (h < 6)    return { label: `Se termine dans ${h}h`,      urgent: true,  color: '#f97316' };
-    if (h < 24)   return { label: "Se termine aujourd'hui",     urgent: true,  color: 'var(--gold)' };
-                  return { label: 'Se termine demain',          urgent: false, color: 'var(--text-3)' };
-  } else {
-    if (ms <= 0)  return { label: 'Ouverte maintenant',         urgent: true,  color: '#22c55e' };
-    if (min < 60) return { label: `Ouverture dans ${min} min`,  urgent: true,  color: '#f97316' };
-    if (h < 6)    return { label: `Ouverture dans ${h}h`,       urgent: false, color: 'var(--gold)' };
-    if (h < 24)   return { label: "Ouverture aujourd'hui",      urgent: false, color: 'var(--text-3)' };
-                  return { label: 'Ouverture demain',           urgent: false, color: 'var(--text-3)' };
-  }
-}
+// parseUTC, isLiveLot, timeLabel, isActiveAuction imported from ../../lib/auction
 
 // ── Signals — state-dependent ─────────────────────────────────────────────────
 // LIVE only: price / discount signals — the bid is a real market signal
@@ -70,7 +39,7 @@ type Signal = { label: string; color: string; bg: string; border: string };
 function getSignal(lot: Lot): Signal {
   const score = lot.deal_score ?? 0;
 
-  if (isLive(lot)) {
+  if (isLiveLot(lot.status)) {
     const pct = lot.pct_below_low_estimate ?? 0;
     if (pct >= 40)   return { label: 'Forte décote',           color: '#22c55e', bg: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.22)' };
     if (pct >= 25)   return { label: 'Sous estimation',        color: '#4ade80', bg: 'rgba(74,222,128,0.08)',  border: 'rgba(74,222,128,0.18)' };
@@ -88,7 +57,7 @@ function getSignal(lot: Lot): Signal {
 
 function priorityScore(lot: Lot): number {
   // For upcoming lots don't use pct_below (it's based on opening bid, not market)
-  if (isLive(lot)) return (lot.deal_score || 0) + (lot.pct_below_low_estimate ?? 0) * 0.5;
+  if (isLiveLot(lot.status)) return (lot.deal_score || 0) + (lot.pct_below_low_estimate ?? 0) * 0.5;
   return lot.deal_score || 0;
 }
 
@@ -114,8 +83,8 @@ export default function ClosingSoon() {
 
   // Live lots are more immediately actionable — surface them first in top picks
   const byPriority = [
-    ...activeLots.filter(isLive).sort((a, b) => priorityScore(b) - priorityScore(a)),
-    ...activeLots.filter(l => !isLive(l)).sort((a, b) => priorityScore(b) - priorityScore(a)),
+    ...activeLots.filter(l => isLiveLot(l.status)).sort((a, b) => priorityScore(b) - priorityScore(a)),
+    ...activeLots.filter(l => !isLiveLot(l.status)).sort((a, b) => priorityScore(b) - priorityScore(a)),
   ];
 
   const TOP_N = Math.min(5, activeLots.length);
@@ -131,7 +100,7 @@ export default function ClosingSoon() {
       return parseUTC(a.auction_date) - parseUTC(b.auction_date);
     });
 
-  const liveCount     = activeLots.filter(isLive).length;
+  const liveCount     = activeLots.filter(l => isLiveLot(l.status)).length;
   const upcomingCount = activeLots.length - liveCount;
 
   return (
@@ -229,7 +198,7 @@ export default function ClosingSoon() {
 // ── Premium Card ──────────────────────────────────────────────────────────────
 
 function PremiumCard({ lot, isLast, onClick }: { lot: Lot; isLast: boolean; onClick: () => void }) {
-  const live   = isLive(lot);
+  const live   = isLiveLot(lot.status);
   const signal = getSignal(lot);
   const time   = lot.auction_date ? timeLabel(lot.auction_date, live) : null;
 
@@ -349,7 +318,7 @@ function PremiumCard({ lot, isLast, onClick }: { lot: Lot; isLast: boolean; onCl
 // ── Compact Row ───────────────────────────────────────────────────────────────
 
 function CompactRow({ lot, onClick }: { lot: Lot; onClick: () => void }) {
-  const live   = isLive(lot);
+  const live   = isLiveLot(lot.status);
   const signal = getSignal(lot);
   const time   = lot.auction_date ? timeLabel(lot.auction_date, live) : null;
 
