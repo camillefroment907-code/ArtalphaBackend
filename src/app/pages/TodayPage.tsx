@@ -277,49 +277,66 @@ function ConvictionCard({
         border: `1px solid ${hovered ? 'rgba(26,42,68,0.22)' : 'rgba(26,42,68,0.10)'}`,
         borderTop: `3px solid ${typeColor}`,
         borderRadius: '8px',
-        padding: '16px',
+        padding: 0,
+        overflow: 'hidden',
         cursor: 'pointer',
         transition: 'all 0.15s',
-        display: 'flex', flexDirection: 'column', gap: '12px',
+        display: 'flex', flexDirection: 'column',
         boxShadow: hovered
           ? '0 6px 24px rgba(26,42,68,0.10)'
           : '0 1px 4px rgba(26,42,68,0.05)',
       }}
     >
-      {/* ── Header: thumbnail + identity ── */}
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+      {/* ── Image banner — full-width, artwork visible ── */}
+      <div style={{
+        width: '100%', height: '190px',
+        overflow: 'hidden', flexShrink: 0,
+        background: 'rgba(26,42,68,0.07)',
+        position: 'relative',
+      }}>
+        {lot.image_url
+          ? <img
+              src={lot.image_url} alt=""
+              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
+            />
+          : <div style={{
+              width: '100%', height: '100%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'rgba(26,42,68,0.15)', fontSize: '36px',
+            }}>◇</div>
+        }
+        {/* Badges overlaid on image */}
         <div style={{
-          width: '52px', height: '52px', borderRadius: '4px',
-          overflow: 'hidden', flexShrink: 0,
-          background: 'rgba(26,42,68,0.06)',
-          border: '1px solid rgba(26,42,68,0.08)',
+          position: 'absolute', bottom: '10px', left: '10px', right: '10px',
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '6px',
         }}>
-          {lot.image_url
-            ? <img src={lot.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
-            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(26,42,68,0.2)', fontSize: '16px' }}>◇</div>
-          }
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginBottom: '5px' }}>
-            {/* Type badge with tinted background */}
+          <span style={{
+            fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700,
+            letterSpacing: '0.08em', textTransform: 'uppercase',
+            color: typeColor,
+            background: 'rgba(10,18,36,0.72)', backdropFilter: 'blur(6px)',
+            padding: '3px 8px', borderRadius: '3px',
+          }}>
+            {typeLabel}
+          </span>
+          {time && (
             <span style={{
               fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700,
-              letterSpacing: '0.08em', textTransform: 'uppercase',
-              color: typeColor,
-              background: `${typeColor}18`,
-              padding: '2px 6px', borderRadius: '3px',
+              color: time.color,
+              background: 'rgba(10,18,36,0.72)', backdropFilter: 'blur(6px)',
+              padding: '3px 8px', borderRadius: '3px', flexShrink: 0,
             }}>
-              {typeLabel}
+              {time.urgent && '⚡ '}{time.label}
             </span>
-            {time && (
-              <span style={{
-                fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700,
-                color: time.color, flexShrink: 0,
-              }}>
-                {time.urgent && '⚡ '}{time.label}
-              </span>
-            )}
-          </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Content section ── */}
+      <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+        {/* Identity: artist + title + house */}
+        <div>
           <div style={{
             fontFamily: 'var(--font-serif)', fontSize: '15px', fontWeight: 600,
             color: 'var(--navy)', lineHeight: 1.2,
@@ -332,7 +349,7 @@ function ConvictionCard({
               fontFamily: 'var(--font-serif)', fontSize: '11px',
               color: 'var(--text-3)', fontStyle: 'italic',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              marginTop: '1px',
+              marginTop: '2px',
             }}>
               {lot.title}
             </div>
@@ -340,13 +357,12 @@ function ConvictionCard({
           {lot.auction_house_name && (
             <div style={{
               fontSize: '10px', color: 'var(--text-3)',
-              fontFamily: 'var(--font-mono)', marginTop: '2px', letterSpacing: '0.04em',
+              fontFamily: 'var(--font-mono)', marginTop: '3px', letterSpacing: '0.04em',
             }}>
               {lot.auction_house_name}
             </div>
           )}
         </div>
-      </div>
 
       {/* ── Conviction phrase — left accent border + subtle tint ── */}
       <div style={{
@@ -428,6 +444,8 @@ function ConvictionCard({
           Analyser →
         </button>
       </div>
+
+      </div>{/* end content section */}
     </div>
   );
 }
