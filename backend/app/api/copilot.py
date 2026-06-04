@@ -106,7 +106,7 @@ Tu dois TOUJOURS répondre avec un objet JSON valide. NE JAMAIS retourner du tex
   "intro": "1-2 phrases max, direct, sans formule de politesse",
   "components": [
     {"type": "reason", "icon": "check" | "warning" | "info", "title": "...", "body": "..."},
-    {"type": "lot_card", "lot_id": "uuid-exact", "artist": "...", "lot_title": "...", "current_price": 1200, "estimate_low": 2000, "currency": "EUR", "pct_below": 40, "signal": "Court signal", "auction_house": "...", "image_url": null, "lot_url": "/app/opportunities/uuid"},
+    {"type": "lot_card", "lot_id": "uuid-exact", "artist": "...", "lot_title": "...", "current_price": 1200, "estimate_low": 2000, "currency": "EUR", "pct_below": 40, "signal": "Court signal", "auction_house": "...", "image_url": null, "lot_url": "/app/opportunities/uuid", "budget_compat": "compatible" | "possible" | "hors_budget" | null, "acquisition_range": "600 € – 900 €"},
     {"type": "artist_card", "name": "...", "signal": "...", "trend": "hausse" | "stable" | "baisse", "artist_url": "/app/market/artists/Prenom-Nom"},
     {"type": "action", "label": "Voir l'opportunité", "url": "/app/opportunities/uuid"}
   ]
@@ -121,11 +121,19 @@ RÈGLES FORMAT :
 - action : CTA final — "Voir l'opportunité", "Explorer le marché", "Voir l'artiste", etc.
 - Ne jamais mettre d'URL brute dans intro ou body — utilise uniquement lot_url/artist_url dans les composants
 
-## BUDGET — CONTRAINTE ABSOLUE
-Si un budget maximum est renseigné dans CONTEXTE MEMBRE :
-- Ne recommande JAMAIS un lot dont le prix dépasse ce budget × 1.3
-- Mentionne si un lot respecte la contrainte budgétaire
-- Si aucun lot disponible dans le budget → dis-le clairement et suggère d'élargir les catégories ou d'attendre
+## BUDGET — RAISONNEMENT ENCHÈRES
+Dans une vente aux enchères : prix actuel ≠ coût final d'acquisition.
+Le collectionneur paiera : prix marteau final + frais acheteur (≈ 20-28%).
+
+Chaque lot dans OPPORTUNITÉS ACTUELLES inclut une ligne "Coût probable" et une compatibilité budget.
+Ces données sont calculées par Nautilus — utilise-les directement, ne les recalcule pas.
+
+RÈGLES ABSOLUES BUDGET (si budget_max est renseigné dans CONTEXTE MEMBRE) :
+1. Ne jamais recommander un lot "✕ hors budget" comme opportunité principale
+2. Pour les lots "⚠ possible" : inclure un reason {icon:"warning"} mentionnant le risque de dépassement
+3. Si aucun lot ✓ ou ⚠ disponible : verdict="peu_convaincant", intro="Aucune opportunité ne semble compatible avec votre budget aujourd'hui."
+4. Dans l'intro ou un reason, explique : "J'ai retenu ces lots car leur coût probable reste dans votre budget."
+5. Ne jamais utiliser current_price comme proxy du coût final — utiliser "Coût probable" fourni dans le contexte
 
 ## URGENCE ENCHÈRES
 Pour tout lot marqué ⚡ (enchère ≤ 7 jours) : signale l'urgence EXPLICITEMENT.
@@ -358,16 +366,70 @@ def _format_context_for_prompt(ctx: dict) -> str:
     return "\n\nCONTEXTE MEMBRE :\n" + "\n".join(lines)
 
 
+# ── Acquisition cost estimation ───────────────────────────────────────────────
+# In an auction, current_price is the current bid (or opening bid for upcoming lots),
+# NOT the final acquisition cost.  Final cost = hammer_price × (1 + buyer_premium).
+#
+# For upcoming lots: current_price is just the opening bid — ignore it.
+#                    Use estimate_low/high as the basis.
+# For live lots:     current_price is real but bidding is ongoing — expect more.
+
+_BUYER_PREMIUM = 0.25  # Conservative (covers Christie's 26.5%, Drouot 14-25%)
+
+
+def _estimate_acquisition_range(lot: Lot) -> tuple[int, int] | None:
+    """Returns (acq_low, acq_high) in EUR including buyer's premium, or None if insufficient data."""
+    status_val = lot.status.value if lot.status else None
+
+    if status_val == "live":
+        p = lot.current_price
+        if not p:
+            return None
+        e_high = lot.estimate_high or lot.estimate_low or p * 2.0
+        # Bid is real but ongoing: at minimum 20% more bidding, ceiling near estimate_high
+        hammer_low  = p * 1.20
+        hammer_high = max(float(e_high) * 1.10, p * 1.80)
+    else:
+        # upcoming — opening bid is irrelevant; use estimate as basis
+        e_low = lot.estimate_low
+        if not e_low:
+            return None
+        e_high = lot.estimate_high or e_low * 1.50
+        # Range: could sell below estimate (slow day) or above (sought work)
+        hammer_low  = float(e_low)  * 0.80
+        hammer_high = float(e_high) * 1.20
+
+    acq_low  = int(hammer_low  * (1 + _BUYER_PREMIUM))
+    acq_high = int(hammer_high * (1 + _BUYER_PREMIUM))
+    return (acq_low, acq_high)
+
+
+def _budget_compat(acq_range: tuple[int, int] | None, budget_max: float | None) -> str | None:
+    """
+    ✓ compatible   — acq_high ≤ budget (likely stays within budget)
+    ⚠ possible     — acq_low ≤ budget < acq_high (may exceed budget)
+    ✕ hors_budget  — acq_low > budget (almost certainly out of budget)
+    """
+    if not acq_range or not budget_max:
+        return None
+    acq_low, acq_high = acq_range
+    if acq_low > budget_max:
+        return "hors_budget"
+    if acq_high <= budget_max:
+        return "compatible"
+    return "possible"
+
+
 async def _get_top_lots_context(db: AsyncSession, ctx: dict | None = None) -> str:
     """
     Injects current deals into the system prompt.
     - Excludes expired lots (auction already ended)
     - Excludes artefacts (estimate ≥ 8× price — printed multiples / catalog errors)
-    - Filters by user budget (≤ budget × 1.5) when available
+    - Filters by acquisition range (not current_price) when budget is set
     - Prioritises user's preferred categories with global fallback
     - Deduplicates by artist (max 2 lots per artist)
     - Adds urgency signal (⚡ for ≤ 7 days to auction)
-    - Returns up to 10 lots (was 5)
+    - Returns up to 10 lots
     """
     try:
         now = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -405,13 +467,15 @@ async def _get_top_lots_context(db: AsyncSession, ctx: dict | None = None) -> st
             ),
         ]
 
-        # Budget cap: current_price ≤ budget_max × 1.5
+        # No SQL budget filter — current_price is misleading for upcoming lots
+        # (opening bid ≠ final price). Filtering happens in Python after acquisition
+        # range estimation.  Keep a broad guard to avoid obviously irrelevant lots.
         budget_filters: list = []
         if budget_max:
             budget_filters = [
                 or_(
-                    Lot.current_price.is_(None),
-                    Lot.current_price <= budget_max * 1.5,
+                    Lot.estimate_low.is_(None),
+                    Lot.estimate_low <= budget_max * 3.0,  # very generous — Python filter does the real work
                 )
             ]
 
@@ -452,17 +516,43 @@ async def _get_top_lots_context(db: AsyncSession, ctx: dict | None = None) -> st
             if artist_counts.get(artist_key, 0) < 2:
                 deduped.append(lot)
                 artist_counts[artist_key] = artist_counts.get(artist_key, 0) + 1
-            if len(deduped) >= 10:
+            if len(deduped) >= 12:
                 break
 
-        # ── 4. Format with urgency signals ───────────────────────────────
+        # ── 4. Python-side budget filter: exclude hors_budget lots ────────
+        if budget_max:
+            deduped = [
+                lot for lot in deduped
+                if _budget_compat(_estimate_acquisition_range(lot), budget_max) != "hors_budget"
+            ]
+
+        # ── 5. Format with urgency signals and acquisition range ──────────
+        status_val = lambda lot: lot.status.value if lot.status else "upcoming"
         lines = ["\n\nOPPORTUNITÉS ACTUELLES (cite UNIQUEMENT ces lots si tu recommandes une œuvre spécifique) :"]
-        for lot in deduped:
-            price = lot.current_price or lot.estimate_low or 0
+        for lot in deduped[:10]:
+            is_live_lot = status_val(lot) == "live"
             line = f"- lot_id:{lot.id} | {lot.artist_name_raw or 'Artiste inconnu'} — {(lot.title or 'Sans titre')[:60]}"
-            line += f" | Prix : €{price:,.0f}"
-            if lot.pct_below_low_estimate and lot.pct_below_low_estimate > 5:
-                line += f" | Décote : -{lot.pct_below_low_estimate:.0f}%"
+
+            if is_live_lot:
+                line += f" | Enchère : €{lot.current_price:,.0f}" if lot.current_price else ""
+                if lot.pct_below_low_estimate and lot.pct_below_low_estimate > 5:
+                    line += f" | Décote : -{lot.pct_below_low_estimate:.0f}%"
+            else:
+                if lot.estimate_low:
+                    est = f"€{lot.estimate_low:,.0f}"
+                    if lot.estimate_high:
+                        est += f" – €{lot.estimate_high:,.0f}"
+                    line += f" | Estimation : {est}"
+
+            # Acquisition range and budget compatibility
+            acq_range = _estimate_acquisition_range(lot)
+            if acq_range:
+                line += f" | Coût probable : €{acq_range[0]:,} – €{acq_range[1]:,} (frais inclus)"
+            compat = _budget_compat(acq_range, budget_max)
+            if compat:
+                compat_label = {"compatible": "✓ compatible", "possible": "⚠ possible", "hors_budget": "✕ hors budget"}[compat]
+                line += f" | Budget : {compat_label}"
+
             line += f" | Maison : {lot.auction_house_name or '—'}"
             if lot.auction_date:
                 days_left = (lot.auction_date - now).days
@@ -477,11 +567,9 @@ async def _get_top_lots_context(db: AsyncSession, ctx: dict | None = None) -> st
             line += f" | URL : https://www.get-nautilus.com/app/opportunities/{lot.id}"
             lines.append(line)
 
-        filters_applied = []
+        filters_applied = ["artefacts exclus", "enchères actives uniquement"]
         if budget_max:
-            filters_applied.append(f"budget ≤ €{int(budget_max * 1.5):,}")
-        filters_applied.append("artefacts exclus")
-        filters_applied.append("enchères actives uniquement")
+            filters_applied.append(f"hors-budget exclus (coût probable > €{int(budget_max):,})")
         lines.append(f"[Filtres actifs : {' | '.join(filters_applied)}]")
 
         return "\n".join(lines)

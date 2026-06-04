@@ -35,7 +35,7 @@ interface Chip {
 type LarryVerdict = 'forte_opportunite' | 'opinion_positive' | 'a_surveiller' | 'opinion_prudente' | 'peu_convaincant';
 
 interface LarryReasonComp  { type: 'reason';      icon: 'check' | 'warning' | 'info'; title: string; body: string; }
-interface LarryLotCardComp { type: 'lot_card';    lot_id: string; artist: string; lot_title: string; current_price: number | null; estimate_low: number | null; currency: string; pct_below: number | null; signal: string; auction_house: string; image_url: string | null; lot_url: string; }
+interface LarryLotCardComp { type: 'lot_card';    lot_id: string; artist: string; lot_title: string; current_price: number | null; estimate_low: number | null; currency: string; pct_below: number | null; signal: string; auction_house: string; image_url: string | null; lot_url: string; budget_compat?: 'compatible' | 'possible' | 'hors_budget' | null; acquisition_range?: string | null; }
 interface LarryArtistComp  { type: 'artist_card'; name: string; signal: string; trend: 'hausse' | 'stable' | 'baisse'; artist_url: string; }
 interface LarryActionComp  { type: 'action';      label: string; url: string; }
 type LarryComponent = LarryReasonComp | LarryLotCardComp | LarryArtistComp | LarryActionComp;
@@ -641,6 +641,18 @@ function LarryLotCard({ comp, navigate }: { comp: LarryLotCardComp; navigate: Re
           </div>
           {comp.signal && (
             <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-sans)', marginTop: '3px' }}>{comp.signal}</div>
+          )}
+          {comp.budget_compat && comp.budget_compat !== 'hors_budget' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '5px', paddingTop: '5px', borderTop: '1px solid var(--border)' }}>
+              {comp.budget_compat === 'compatible' ? (
+                <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: '#22c55e' }}>✓ Compatible avec votre budget</span>
+              ) : (
+                <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: '#f59e0b' }}>⚠ Possiblement compatible</span>
+              )}
+              {comp.acquisition_range && (
+                <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--text-3)' }}>· Coût probable : {comp.acquisition_range}</span>
+              )}
+            </div>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px', borderLeft: '1px solid var(--border)' }}>
