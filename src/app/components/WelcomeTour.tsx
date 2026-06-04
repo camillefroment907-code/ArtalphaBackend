@@ -125,7 +125,7 @@ export function WelcomeTour({ onClose }: WelcomeTourProps) {
   };
 
   const goNext = () => {
-    if (isLast) { handleClose(); navigate('/app/explore'); return; }
+    if (isLast) { handleClose(); navigate('/app/today'); return; }
     setVisible(false);
     setTimeout(() => { setSlide(s => s + 1); setVisible(true); }, 200);
   };

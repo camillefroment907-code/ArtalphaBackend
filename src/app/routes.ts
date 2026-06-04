@@ -135,7 +135,7 @@ export const router = createBrowserRouter([
     path: '/app',
     Component: Root,
     children: [
-      { index: true, loader: () => redirect('/app/dashboard') },
+      { index: true, loader: () => redirect('/app/today') },
       { path: 'waitlist', loader: () => redirect('/app/signup') },
       { path: 'dashboard', Component: Dashboard },
       { path: 'explore', loader: () => redirect('/app/market/opportunities') },

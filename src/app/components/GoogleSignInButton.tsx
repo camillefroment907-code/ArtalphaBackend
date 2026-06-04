@@ -49,7 +49,7 @@ export function GoogleSignInButton({ onError }: Props) {
               localStorage.setItem('nautilus_show_tour', '1');
               navigate('/app/onboarding');
             } else {
-              navigate('/app/explore');
+              navigate('/app/today');
             }
           } catch (e: any) {
             onError?.(e?.message || 'Google sign in failed');

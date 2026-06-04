@@ -222,7 +222,7 @@ export default function Login() {
       if (res.is_verified === false) {
         navigate('/app/verify-email-required');
       } else {
-        navigate('/app/explore');
+        navigate('/app/today');
       }
     } catch (err: any) {
       setError(err.message || 'Login failed');

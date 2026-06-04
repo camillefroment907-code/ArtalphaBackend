@@ -131,13 +131,13 @@ export default function Onboarding() {
     } catch { /* silent */ }
     localStorage.setItem('nautilus_show_tour', '1');
     localStorage.removeItem('nautilus_tour_seen');
-    navigate('/app/explore?onboarding=1');
+    navigate('/app/today');
   };
 
   const handleSkip = () => {
     localStorage.setItem('nautilus_show_tour', '1');
     localStorage.removeItem('nautilus_tour_seen');
-    navigate('/app/explore');
+    navigate('/app/today');
   };
 
   // ── Tile styles ─────────────────────────────────────────────────────────────

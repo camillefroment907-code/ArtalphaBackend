@@ -26,7 +26,7 @@ export function AdminRoute() {
   const user = getUser();
 
   if (!user) return <Navigate to="/app/login" replace />;
-  if (user.email !== ADMIN_EMAIL) return <Navigate to="/app/explore" replace />;
+  if (user.email !== ADMIN_EMAIL) return <Navigate to="/app/today" replace />;
 
   return <Outlet />;
 }
