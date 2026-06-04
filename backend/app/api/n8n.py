@@ -46,8 +46,9 @@ async def trigger_scraping(
         from app.jobs.tasks import _poll_and_score_async
 
         # Run with timeout — 4 minutes max (n8n times out at 5min)
+        # skip_rationale=True: rationale backfill runs separately every 30 min
         await asyncio.wait_for(
-            _poll_and_score_async(),
+            _poll_and_score_async(skip_rationale=True),
             timeout=550
         )
 

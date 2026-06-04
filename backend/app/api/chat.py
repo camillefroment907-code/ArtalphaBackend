@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from app.database import get_db, AsyncSessionLocal
 from app.api.auth_utils import get_current_user
 from app.config import get_settings
-from app.utils.openai_guard import can_make_request, record_request
+from app.utils.openai_guard import user_guard as _openai_guard
 from app.utils.plan_utils import get_user_plan
 from app.models.db_models import (
     User, ChatMessage, Lot, PortfolioItem,
@@ -306,7 +306,7 @@ async def _stream_larry_response(
         yield f"data: {json.dumps({'error': 'Larry service temporarily unavailable.'})}\n\n"
         return
 
-    if not can_make_request():
+    if not _openai_guard.can_make_request():
         yield f"data: {json.dumps({'error': 'Service temporarily unavailable — daily quota reached. Try again tomorrow.'})}\n\n"
         return
 
@@ -328,7 +328,7 @@ async def _stream_larry_response(
                 full_response.append(delta)
                 yield f"data: {json.dumps({'delta': delta})}\n\n"
 
-        record_request()
+        _openai_guard.record_request()
         full_text = "".join(full_response)
         yield f"data: {json.dumps({'done': True, 'full': full_text})}\n\n"
 
@@ -488,7 +488,7 @@ async def dashboard_brief(
             "message": "Upgrade to Collector to unlock the AI Market Brief",
         }
 
-    if not _settings.openai_api_key or not can_make_request():
+    if not _settings.openai_api_key or not _openai_guard.can_make_request():
         return {"brief": None, "locked": False, "message": "Brief temporarily unavailable"}
 
     try:
@@ -509,7 +509,7 @@ Style : factuel, précis, ton premium. Commence directement sans introduction.""
             max_tokens=150,
             temperature=0.5,
         )
-        record_request()
+        _openai_guard.record_request()
         brief = response.choices[0].message.content.strip()
         return {"brief": brief, "locked": False}
 

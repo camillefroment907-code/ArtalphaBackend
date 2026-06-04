@@ -28,7 +28,7 @@ from app.config import get_settings
 from app.database import AsyncSessionLocal, get_db
 from app.models.db_models import CopilotConversation, Lot, User
 from app.services.copilot_context import assemble_user_context
-from app.utils.openai_guard import can_make_request, record_request
+from app.utils.openai_guard import user_guard as _openai_guard
 from app.utils.plan_utils import get_user_plan
 
 logger = logging.getLogger(__name__)
