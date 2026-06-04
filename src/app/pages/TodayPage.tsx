@@ -119,23 +119,29 @@ const REC_TYPE_COLORS: Record<string, string> = {
   emerging_artist:'#8b5cf6',
 };
 
+/** Returns pill style based on signal category */
+function signalPillStyle(signal: string) {
+  const isUrgency  = signal.includes('h restantes') || signal.includes('Enchères');
+  const isPersonal = ['Artiste suivi', 'Votre catégorie', 'Dans votre budget', 'Votre période'].includes(signal);
+  if (isUrgency)  return { bg: 'rgba(239,68,68,0.10)',  border: 'rgba(239,68,68,0.28)',  color: '#ef4444'  };
+  if (isPersonal) return { bg: 'rgba(59,130,246,0.10)', border: 'rgba(59,130,246,0.28)', color: '#3b82f6'  };
+  return           { bg: 'rgba(198,168,90,0.12)',  border: 'rgba(198,168,90,0.35)',  color: '#A07830'  };
+}
+
 /** Personalization + urgency signals shown as ✓ pills on each conviction */
 function buildSignals(lot: LotCard, recType: string): string[] {
   const signals: string[] = [];
 
-  // Personalization signals first (most valuable)
   if (recType === 'artist_momentum') signals.push('Artiste suivi');
   if (recType === 'category_match')  signals.push('Votre catégorie');
   if (recType === 'budget_match')    signals.push('Dans votre budget');
   if (recType === 'period_match')    signals.push('Votre période');
 
-  // Timing signals
   const h = lot.auction_date ? hoursLeft(lot.auction_date) : null;
-  if (isLiveLot(lot.status))           signals.push('Enchères en cours');
+  if (isLiveLot(lot.status))              signals.push('Enchères en cours');
   else if (h !== null && h > 0 && h < 24) signals.push('< 24\u202fh restantes');
   else if (h !== null && h > 0 && h < 48) signals.push('< 48\u202fh restantes');
 
-  // Market signals
   if (lot.pct_below_low_estimate && lot.pct_below_low_estimate >= 20)
     signals.push('Forte décote');
   else if (lot.pct_below_low_estimate && lot.pct_below_low_estimate >= 10)
@@ -192,65 +198,72 @@ function buildVerdict(lot: LotCard, recType?: string): string {
   const h    = lot.auction_date ? hoursLeft(lot.auction_date) : null;
   const live = isLiveLot(lot.status);
 
-  if (h !== null && h > 0 && h < 6) {
-    return "Décision dans l'heure. Je n'attendrais pas.";
-  }
-  if (h !== null && h > 0 && h < 24) {
-    return 'Décision à prendre aujourd\'hui. Passé ce délai, la fenêtre se ferme.';
-  }
+  if (h !== null && h > 0 && h < 6)  return "Décision dans l'heure. Je n'attendrais pas.";
+  if (h !== null && h > 0 && h < 24) return 'Décision à prendre aujourd\'hui. Passé ce délai, la fenêtre se ferme.';
   if (pct && pct >= 25 && lot.estimate_low) {
     const target = Math.round(lot.estimate_low * 0.88 / 50) * 50;
     return `J'essaierais d'obtenir ce lot sous\u00a0${fmt(target)}.`;
   }
-  if (pct && pct >= 15) {
-    return 'Le rapport valeur/prix est favorable. Je ne dépasserais pas l\'estimation basse.';
-  }
-  if (recType === 'artist_momentum') {
-    return 'Artiste dans votre radar. Une entrée à considérer sérieusement maintenant.';
-  }
-  if (recType === 'category_match') {
-    return 'Correspond à votre profil. Point d\'entrée dans une catégorie que vous suivez.';
-  }
-  if (live) {
-    return 'Enchères en cours. Je suivrais l\'évolution du prix en temps réel.';
-  }
+  if (pct && pct >= 15) return 'Le rapport valeur/prix est favorable. Je ne dépasserais pas l\'estimation basse.';
+  if (recType === 'artist_momentum') return 'Artiste dans votre radar. Une entrée à considérer sérieusement maintenant.';
+  if (recType === 'category_match')  return 'Correspond à votre profil. Point d\'entrée dans une catégorie que vous suivez.';
+  if (live) return 'Enchères en cours. Je suivrais l\'évolution du prix en temps réel.';
   return 'Position intéressante. Je surveille cette vente.';
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function SectionLabel({ children, action }: { children: string; action?: React.ReactNode }) {
+/**
+ * Section label with optional icon + accent color.
+ * Each section gets a distinct visual identity via icon and colored separator.
+ */
+function SectionLabel({
+  children, icon, accent, action,
+}: {
+  children: string;
+  icon?: string;
+  accent?: string;
+  action?: React.ReactNode;
+}) {
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '10px',
-      marginBottom: '16px',
-    }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+      {icon && (
+        <span style={{
+          fontSize: '11px', color: accent || 'var(--text-3)',
+          lineHeight: 1, flexShrink: 0, fontWeight: 700,
+        }}>
+          {icon}
+        </span>
+      )}
       <span style={{
         fontSize: '10px', fontFamily: 'var(--font-mono)',
         letterSpacing: '0.14em', textTransform: 'uppercase',
-        color: 'var(--text-3)', flexShrink: 0,
+        color: accent || 'var(--text-3)', flexShrink: 0, fontWeight: 700,
       }}>
         {children}
       </span>
-      <span style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+      <span style={{
+        flex: 1, height: '1px',
+        background: accent ? `color-mix(in srgb, ${accent} 25%, transparent)` : 'var(--border)',
+      }} />
       {action}
     </div>
   );
 }
 
-/** Conviction card — vertical layout for 3-col grid */
+/** Conviction card — vertical, with top accent bar + colored signal pills */
 function ConvictionCard({
   pick, onClick,
 }: {
   pick: TopPickCard; onClick: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
-  const lot      = pick.lot;
-  const live     = isLiveLot(lot.status);
-  const time     = lot.auction_date ? timeLabel(lot.auction_date, live) : null;
-  const phrase   = buildPhrase(lot, pick.rec_type);
-  const verdict  = buildVerdict(lot, pick.rec_type);
-  const signals  = buildSignals(lot, pick.rec_type);
+  const lot       = pick.lot;
+  const live      = isLiveLot(lot.status);
+  const time      = lot.auction_date ? timeLabel(lot.auction_date, live) : null;
+  const phrase    = buildPhrase(lot, pick.rec_type);
+  const verdict   = buildVerdict(lot, pick.rec_type);
+  const signals   = buildSignals(lot, pick.rec_type);
   const typeLabel = REC_TYPE_LABELS[pick.rec_type] || 'Opportunité';
   const typeColor = REC_TYPE_COLORS[pick.rec_type] || '#3b82f6';
 
@@ -260,44 +273,55 @@ function ConvictionCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: hovered ? 'var(--bg-subtle)' : 'white',
-        border: `1px solid ${hovered ? 'var(--navy)' : 'var(--border)'}`,
-        borderRadius: '10px',
-        padding: '18px',
+        background: '#FAFAF8',
+        border: `1px solid ${hovered ? 'rgba(26,42,68,0.22)' : 'rgba(26,42,68,0.10)'}`,
+        borderTop: `3px solid ${typeColor}`,
+        borderRadius: '8px',
+        padding: '16px',
         cursor: 'pointer',
         transition: 'all 0.15s',
-        display: 'flex', flexDirection: 'column', gap: '14px',
-        boxShadow: hovered ? '0 4px 20px rgba(26,42,68,0.09)' : 'none',
+        display: 'flex', flexDirection: 'column', gap: '12px',
+        boxShadow: hovered
+          ? '0 6px 24px rgba(26,42,68,0.10)'
+          : '0 1px 4px rgba(26,42,68,0.05)',
       }}
     >
       {/* ── Header: thumbnail + identity ── */}
       <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
         <div style={{
           width: '52px', height: '52px', borderRadius: '4px',
-          overflow: 'hidden', flexShrink: 0, background: 'var(--bg-subtle)',
+          overflow: 'hidden', flexShrink: 0,
+          background: 'rgba(26,42,68,0.06)',
+          border: '1px solid rgba(26,42,68,0.08)',
         }}>
           {lot.image_url
             ? <img src={lot.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
-            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--border)', fontSize: '16px' }}>◇</div>
+            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(26,42,68,0.2)', fontSize: '16px' }}>◇</div>
           }
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginBottom: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginBottom: '5px' }}>
+            {/* Type badge with tinted background */}
             <span style={{
               fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700,
-              letterSpacing: '0.1em', textTransform: 'uppercase',
+              letterSpacing: '0.08em', textTransform: 'uppercase',
               color: typeColor,
+              background: `${typeColor}18`,
+              padding: '2px 6px', borderRadius: '3px',
             }}>
               {typeLabel}
             </span>
             {time && (
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: time.color, flexShrink: 0 }}>
+              <span style={{
+                fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700,
+                color: time.color, flexShrink: 0,
+              }}>
                 {time.urgent && '⚡ '}{time.label}
               </span>
             )}
           </div>
           <div style={{
-            fontFamily: 'var(--font-serif)', fontSize: '15px', fontWeight: 500,
+            fontFamily: 'var(--font-serif)', fontSize: '15px', fontWeight: 600,
             color: 'var(--navy)', lineHeight: 1.2,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
@@ -314,52 +338,64 @@ function ConvictionCard({
             </div>
           )}
           {lot.auction_house_name && (
-            <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: '2px', letterSpacing: '0.04em' }}>
+            <div style={{
+              fontSize: '10px', color: 'var(--text-3)',
+              fontFamily: 'var(--font-mono)', marginTop: '2px', letterSpacing: '0.04em',
+            }}>
               {lot.auction_house_name}
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Conviction phrase ── */}
+      {/* ── Conviction phrase — left accent border + subtle tint ── */}
       <div style={{
         fontFamily: 'var(--font-serif)', fontSize: '12px',
-        color: 'var(--navy)', lineHeight: 1.65, opacity: 0.85,
-        borderLeft: '2px solid var(--gold)', paddingLeft: '10px',
+        color: 'var(--navy)', lineHeight: 1.65,
+        borderLeft: `2px solid ${typeColor}`,
+        paddingLeft: '10px',
+        background: `${typeColor}07`,
+        borderRadius: '0 4px 4px 0',
+        padding: '7px 10px',
       }}>
         {phrase}
       </div>
 
-      {/* ── Personalization signals ── */}
+      {/* ── Personalization signals — color-coded pills ── */}
       {signals.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-          {signals.map(s => (
-            <span key={s} style={{
-              fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 600,
-              letterSpacing: '0.05em', color: 'var(--text-2)',
-              background: 'var(--bg-subtle)', border: '1px solid var(--border)',
-              padding: '2px 8px', borderRadius: '20px',
-            }}>
-              ✓ {s}
-            </span>
-          ))}
+          {signals.map(s => {
+            const ps = signalPillStyle(s);
+            return (
+              <span key={s} style={{
+                fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700,
+                letterSpacing: '0.05em',
+                color: ps.color,
+                background: ps.bg,
+                border: `1px solid ${ps.border}`,
+                padding: '2px 8px', borderRadius: '20px',
+              }}>
+                ✓ {s}
+              </span>
+            );
+          })}
         </div>
       )}
 
-      {/* ── Larry verdict ── */}
+      {/* ── Larry verdict — gold ✦ icon signals it's Larry speaking ── */}
       <div style={{
+        display: 'flex', gap: '7px', alignItems: 'flex-start',
         fontFamily: 'var(--font-serif)', fontSize: '12px',
-        fontStyle: 'italic', color: 'var(--text-2)',
-        lineHeight: 1.55,
-        paddingTop: '2px',
+        fontStyle: 'italic', lineHeight: 1.6,
       }}>
-        "{verdict}"
+        <span style={{ color: 'var(--gold)', fontSize: '10px', flexShrink: 0, marginTop: '2px' }}>✦</span>
+        <span style={{ color: 'rgba(26,42,68,0.75)' }}>"{verdict}"</span>
       </div>
 
       {/* ── Footer: price + CTA ── */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderTop: '1px solid var(--border)', paddingTop: '12px', gap: '8px',
+        borderTop: '1px solid rgba(26,42,68,0.08)', paddingTop: '11px', gap: '8px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: 'var(--navy)' }}>
@@ -368,8 +404,10 @@ function ConvictionCard({
           {lot.pct_below_low_estimate && lot.pct_below_low_estimate >= 10 && (
             <span style={{
               fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700,
-              color: '#C6A85A', background: 'rgba(198,168,90,0.10)',
-              padding: '1px 5px', borderRadius: '3px',
+              color: '#A07830',
+              background: 'rgba(198,168,90,0.12)',
+              border: '1px solid rgba(198,168,90,0.30)',
+              padding: '1px 6px', borderRadius: '3px',
             }}>
               −{Math.round(lot.pct_below_low_estimate)}%
             </span>
@@ -379,8 +417,8 @@ function ConvictionCard({
           onClick={e => { e.stopPropagation(); onClick(); }}
           style={{
             padding: '6px 14px',
-            background: hovered ? 'var(--navy)' : 'transparent',
-            border: '1px solid var(--navy)',
+            background: hovered ? 'var(--navy)' : 'rgba(26,42,68,0.06)',
+            border: '1px solid rgba(26,42,68,0.2)',
             color: hovered ? '#fff' : 'var(--navy)',
             borderRadius: '4px', fontSize: '11px', fontWeight: 600,
             cursor: 'pointer', letterSpacing: '0.04em',
@@ -394,8 +432,9 @@ function ConvictionCard({
   );
 }
 
-/** Expiring lot row — action-oriented, compact */
+/** Expiring lot — real card with urgency color coding (left border + tinted background) */
 function ExpiringRow({ lot, onClick }: { lot: LotCard; onClick: () => void }) {
+  const [hovered, setHovered] = useState(false);
   const live = isLiveLot(lot.status);
   const time = lot.auction_date ? timeLabel(lot.auction_date, live) : null;
   const h    = lot.auction_date ? hoursLeft(lot.auction_date) : null;
@@ -405,52 +444,18 @@ function ExpiringRow({ lot, onClick }: { lot: LotCard; onClick: () => void }) {
     h !== null && h > 0 && h < 24 ? 'À décider aujourd\'hui' :
     'À surveiller';
 
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        display: 'flex', alignItems: 'center', gap: '10px',
-        padding: '10px 0', borderBottom: '1px solid var(--border)',
-        cursor: 'pointer', transition: 'opacity 0.12s',
-      }}
-      onMouseEnter={e => (e.currentTarget.style.opacity = '0.7')}
-      onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-    >
-      <span style={{ fontSize: '7px', flexShrink: 0, color: live ? '#22c55e' : 'var(--text-3)' }}>
-        {live ? '●' : '○'}
-      </span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontFamily: 'var(--font-serif)', fontSize: '13px', color: 'var(--navy)',
-          fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
-          {lot.artist_name_raw || '—'}
-        </div>
-        <div style={{ fontSize: '10px', color: time?.urgent ? time.color : 'var(--text-3)', marginTop: '1px', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
-          {action}
-        </div>
-      </div>
-      {time && (
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: time.color, flexShrink: 0 }}>
-          {time.urgent && '⚡ '}{time.label}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** New signal row — text-based, information-first (replaces MiniCard image grid) */
-function SignalRow({ lot, onClick }: { lot: LotCard; onClick: () => void }) {
-  const [hovered, setHovered] = useState(false);
-  const live  = isLiveLot(lot.status);
-  const time  = lot.auction_date ? timeLabel(lot.auction_date, live) : null;
-
-  const signal =
-    lot.pct_below_low_estimate && lot.pct_below_low_estimate >= 10
-      ? `−${Math.round(lot.pct_below_low_estimate)}% sous estimation`
-      : lot.deal_score && lot.deal_score >= 70
-      ? `Score\u00a0${lot.deal_score}/100`
-      : 'Nouveau lot analysé';
+  const urgencyColor  =
+    h !== null && h > 0 && h < 6  ? '#ef4444' :
+    h !== null && h > 0 && h < 24 ? '#f97316' :
+    'rgba(26,42,68,0.3)';
+  const urgencyBg     =
+    h !== null && h > 0 && h < 6  ? 'rgba(239,68,68,0.05)' :
+    h !== null && h > 0 && h < 24 ? 'rgba(249,115,22,0.04)' :
+    'transparent';
+  const urgencyBorder =
+    h !== null && h > 0 && h < 6  ? 'rgba(239,68,68,0.18)' :
+    h !== null && h > 0 && h < 24 ? 'rgba(249,115,22,0.18)' :
+    'rgba(26,42,68,0.08)';
 
   return (
     <div
@@ -458,28 +463,118 @@ function SignalRow({ lot, onClick }: { lot: LotCard; onClick: () => void }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        display: 'flex', alignItems: 'center', gap: '8px',
-        padding: '9px 0', borderBottom: '1px solid var(--border)',
+        display: 'flex', alignItems: 'center', gap: '10px',
+        padding: '9px 11px',
+        background: hovered ? 'rgba(26,42,68,0.04)' : urgencyBg,
+        border: `1px solid ${urgencyBorder}`,
+        borderLeft: `3px solid ${urgencyColor}`,
+        borderRadius: '6px',
+        marginBottom: '7px',
+        cursor: 'pointer', transition: 'background 0.12s',
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontFamily: 'var(--font-serif)', fontSize: '13px', color: 'var(--navy)',
+          fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {lot.artist_name_raw || '—'}
+        </div>
+        <div style={{
+          fontSize: '10px', color: urgencyColor, marginTop: '1px',
+          fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', fontWeight: 600,
+        }}>
+          {action}
+        </div>
+      </div>
+      {time && (
+        <div style={{
+          fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700,
+          color: time.color, flexShrink: 0,
+        }}>
+          {time.urgent && '⚡ '}{time.label}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** New signal row — colored dot + signal badge, information-first */
+function SignalRow({ lot, onClick }: { lot: LotCard; onClick: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  const live   = isLiveLot(lot.status);
+  const time   = lot.auction_date ? timeLabel(lot.auction_date, live) : null;
+  const hasPct = lot.pct_below_low_estimate && lot.pct_below_low_estimate >= 10;
+  const hasScore = !hasPct && lot.deal_score && lot.deal_score >= 70;
+
+  const signal =
+    hasPct   ? `−${Math.round(lot.pct_below_low_estimate!)}% sous estimation` :
+    hasScore ? `Score\u00a0${lot.deal_score}/100` :
+    'Nouveau lot analysé';
+
+  const signalColor =
+    hasPct   ? '#A07830' :
+    hasScore ? '#8b5cf6' :
+    'var(--text-3)';
+  const signalBg =
+    hasPct   ? 'rgba(198,168,90,0.10)' :
+    hasScore ? 'rgba(139,92,246,0.10)' :
+    'rgba(26,42,68,0.05)';
+  const dotColor =
+    hasPct   ? '#C6A85A' :
+    hasScore ? '#8b5cf6' :
+    'rgba(26,42,68,0.2)';
+
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        padding: '9px 0',
+        borderBottom: '1px solid rgba(26,42,68,0.07)',
         cursor: 'pointer',
-        opacity: hovered ? 0.7 : 1,
+        opacity: hovered ? 0.72 : 1,
         transition: 'opacity 0.12s',
       }}
     >
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--gold)', fontWeight: 700, flexShrink: 0 }}>↑</span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500, color: 'var(--navy)' }}>
+      {/* Colored dot indicator */}
+      <div style={{
+        width: '6px', height: '6px', borderRadius: '50%',
+        background: dotColor, flexShrink: 0,
+      }} />
+
+      {/* Artist + house */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+        <span style={{
+          fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500,
+          color: 'var(--navy)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
           {lot.artist_name_raw || '—'}
         </span>
         {lot.auction_house_name && (
-          <span style={{ fontSize: '11px', color: 'var(--text-3)', marginLeft: '5px' }}>· {lot.auction_house_name}</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-3)', flexShrink: 0 }}>
+            · {lot.auction_house_name}
+          </span>
         )}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#C6A85A', fontWeight: 600 }}>
+
+      {/* Signal badge + time */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+        <span style={{
+          fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700,
+          color: signalColor, background: signalBg,
+          padding: '2px 7px', borderRadius: '3px',
+          letterSpacing: '0.04em',
+        }}>
           {signal}
         </span>
         {time && (
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: time.color, fontWeight: 600 }}>
+          <span style={{
+            fontFamily: 'var(--font-mono)', fontSize: '10px',
+            color: time.color, fontWeight: 600,
+          }}>
             {time.label}
           </span>
         )}
@@ -532,7 +627,6 @@ export default function TodayPage() {
     );
   }
 
-  // Convictions — top_picks if available, else fall back to top_deal
   const convictions: TopPickCard[] = (brief.top_picks || []).length
     ? (brief.top_picks || []).slice(0, 3)
     : brief.top_deal
@@ -545,20 +639,17 @@ export default function TodayPage() {
 
   const topConviction = convictions[0]?.lot ?? brief.top_deal ?? null;
 
-  // Conviction grid: 3 cols desktop, 1 col mobile
   const convictionCols = isMobile ? '1fr' : isDesktop ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)';
-
-  // Signal list: 2 cols desktop, 1 col mobile
-  const signalCols = isMobile ? '1fr' : 'repeat(2, 1fr)';
+  const signalCols     = isMobile ? '1fr' : 'repeat(2, 1fr)';
 
   return (
     <main style={{
       maxWidth: '1440px', margin: '0 auto',
       padding: isMobile ? '24px 16px 72px' : '36px 48px 88px',
     }}>
-      <style>{`@keyframes todayFade{0%,100%{opacity:0.2}50%{opacity:0.8}}`}</style>
+      <style>{'@keyframes todayFade{0%,100%{opacity:0.2}50%{opacity:0.8}}'}</style>
 
-      {/* ── ZONE 0: Header — compact, action-oriented ─────────────────── */}
+      {/* ── ZONE 0: Header ────────────────────────────────────────────────── */}
       <div style={{
         marginBottom: isMobile ? '28px' : '32px',
         paddingBottom: isMobile ? '20px' : '24px',
@@ -596,15 +687,14 @@ export default function TodayPage() {
           </div>
         </div>
 
-        {/* Action pills — only urgency and agent, not informational counts */}
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flexShrink: 0 }}>
           {(brief.closing_today_count ?? 0) > 0 && (
             <button
               onClick={() => navigate('/app/urgent')}
               style={{
-                background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+                background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.32)',
                 color: '#ef4444', fontFamily: 'var(--font-mono)', fontSize: '10px',
-                fontWeight: 600, letterSpacing: '0.08em',
+                fontWeight: 700, letterSpacing: '0.08em',
                 padding: '5px 14px', borderRadius: '20px', cursor: 'pointer',
                 whiteSpace: 'nowrap',
               }}
@@ -616,9 +706,9 @@ export default function TodayPage() {
             <button
               onClick={() => navigate('/app/agent')}
               style={{
-                background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)',
+                background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.32)',
                 color: '#3b82f6', fontFamily: 'var(--font-mono)', fontSize: '10px',
-                fontWeight: 600, letterSpacing: '0.08em',
+                fontWeight: 700, letterSpacing: '0.08em',
                 padding: '5px 14px', borderRadius: '20px', cursor: 'pointer',
                 whiteSpace: 'nowrap',
               }}
@@ -629,9 +719,9 @@ export default function TodayPage() {
         </div>
       </div>
 
-      {/* ── ZONE 1: Conviction grid — 3 cols side-by-side ─────────────── */}
+      {/* ── ZONE 1: Conviction grid ─────────────────────────────────────── */}
       <div style={{ marginBottom: isMobile ? '32px' : '40px' }}>
-        <SectionLabel>
+        <SectionLabel icon="◈" accent="#C6A85A">
           Convictions du jour — Larry pour vous
         </SectionLabel>
 
@@ -639,7 +729,7 @@ export default function TodayPage() {
           <div style={{
             display: 'grid',
             gridTemplateColumns: convictionCols,
-            gap: isMobile ? '16px' : '16px',
+            gap: '16px',
           }}>
             {convictions.map(pick => (
               <ConvictionCard
@@ -656,7 +746,7 @@ export default function TodayPage() {
         )}
       </div>
 
-      {/* ── ZONE 2: Larry chat (left) + Sidebar (right) ───────────────── */}
+      {/* ── ZONE 2: Larry (left) + Sidebar (right) ─────────────────────── */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: isMobile ? '1fr' : '1fr 300px',
@@ -665,19 +755,74 @@ export default function TodayPage() {
         alignItems: 'start',
       }}>
 
-        {/* Larry chat */}
+        {/* Larry — card with identity banner */}
         <div>
-          <SectionLabel>Demandez à Larry</SectionLabel>
-          <CopilotBar
-            mode="chat"
-            topDealId={topConviction?.id ?? null}
-            topDealScore={topConviction?.deal_score ?? null}
-            urgentCount={brief.closing_today_count ?? brief.closing_soon.length}
-            sourcePage="today"
-          />
+          {/* Larry identity card */}
+          <div style={{
+            border: '1px solid rgba(26,42,68,0.12)',
+            borderRadius: '10px',
+            overflow: 'hidden',
+          }}>
+            {/* Banner */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '11px',
+              padding: '13px 16px',
+              background: 'rgba(26,42,68,0.04)',
+              borderBottom: '1px solid rgba(26,42,68,0.09)',
+            }}>
+              {/* L monogram */}
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '50%',
+                background: 'var(--navy)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--gold)', fontSize: '13px',
+                fontFamily: 'var(--font-serif)', fontWeight: 700, flexShrink: 0,
+              }}>
+                L
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontSize: '13px', fontWeight: 600,
+                  color: 'var(--navy)', fontFamily: 'var(--font-sans)',
+                }}>
+                  Larry
+                </div>
+                <div style={{
+                  fontSize: '10px', color: 'var(--text-3)',
+                  fontFamily: 'var(--font-mono)', letterSpacing: '0.04em',
+                }}>
+                  Votre analyste IA personnel
+                </div>
+              </div>
+              {/* Online indicator */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                <div style={{
+                  width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e',
+                }} />
+                <span style={{
+                  fontSize: '9px', color: '#22c55e',
+                  fontFamily: 'var(--font-mono)', fontWeight: 700,
+                  letterSpacing: '0.06em',
+                }}>
+                  EN LIGNE
+                </span>
+              </div>
+            </div>
+
+            {/* CopilotBar */}
+            <div style={{ padding: '16px' }}>
+              <CopilotBar
+                mode="chat"
+                topDealId={topConviction?.id ?? null}
+                topDealScore={topConviction?.deal_score ?? null}
+                urgentCount={brief.closing_today_count ?? brief.closing_soon.length}
+                sourcePage="today"
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Sidebar: decision column */}
+        {/* Sidebar */}
         <div>
 
           {/* Agent alert */}
@@ -687,17 +832,18 @@ export default function TodayPage() {
               style={{
                 display: 'flex', alignItems: 'center', gap: '12px',
                 padding: '12px 14px',
-                background: 'rgba(59,130,246,0.06)',
-                border: '1px solid rgba(59,130,246,0.2)',
+                background: 'rgba(59,130,246,0.07)',
+                border: '1px solid rgba(59,130,246,0.22)',
+                borderLeft: '3px solid #3b82f6',
                 borderRadius: '8px', cursor: 'pointer',
-                marginBottom: '24px',
+                marginBottom: '20px',
                 transition: 'background 0.12s',
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.10)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.06)')}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.12)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.07)')}
             >
               <div style={{
-                width: '26px', height: '26px', borderRadius: '50%',
+                width: '28px', height: '28px', borderRadius: '50%',
                 background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0, fontSize: '10px', color: '#3b82f6',
@@ -719,10 +865,16 @@ export default function TodayPage() {
           {expiringLots.length > 0 ? (
             <div>
               <SectionLabel
+                icon="⚡"
+                accent="#ef4444"
                 action={
                   <button
                     onClick={() => navigate('/app/urgent')}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '10px', color: 'var(--electric)', fontWeight: 600, padding: 0, fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', flexShrink: 0 }}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      fontSize: '10px', color: 'var(--electric)', fontWeight: 600,
+                      padding: 0, fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', flexShrink: 0,
+                    }}
                   >
                     Tout voir →
                   </button>
@@ -746,15 +898,21 @@ export default function TodayPage() {
         </div>
       </div>
 
-      {/* ── ZONE 3: Nouveaux signaux — text list, information-first ───── */}
+      {/* ── ZONE 3: Nouveaux signaux ─────────────────────────────────────── */}
       {brief.new_lots.length > 0 && (
         <div>
           <SectionLabel
+            icon="↑"
+            accent="#0ea5e9"
             action={
               brief.new_lots_count > brief.new_lots.length
                 ? <button
                     onClick={() => navigate('/app/explore')}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '10px', color: 'var(--electric)', fontWeight: 600, padding: 0, fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', flexShrink: 0 }}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      fontSize: '10px', color: 'var(--electric)', fontWeight: 600,
+                      padding: 0, fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', flexShrink: 0,
+                    }}
                   >
                     {brief.new_lots_count.toLocaleString('fr-FR')} au total →
                   </button>
