@@ -39,9 +39,22 @@ interface Message {
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
+// ── Verdict ────────────────────────────────────────────────────────────────────
+
+function getVerdict(score?: number | null) {
+  if (!score) return null;
+  if (score >= 80) return { label: 'FORT INTÉRÊT', color: '#22c55e', bg: 'rgba(34,197,94,0.10)', border: 'rgba(34,197,94,0.22)' };
+  if (score >= 65) return { label: 'À SURVEILLER', color: '#C6A85A', bg: 'rgba(198,168,90,0.08)', border: 'rgba(198,168,90,0.22)' };
+  if (score >= 50) return { label: 'SIGNAL MODÉRÉ', color: '#9ca3af', bg: 'rgba(255,255,255,0.04)', border: 'rgba(156,163,175,0.2)' };
+  return null;
+}
+
+// ── Props ─────────────────────────────────────────────────────────────────────
+
 interface CopilotBarProps {
   mode?:        'chips' | 'chat';
   topDealId?:   string | null;
+  topDealScore?: number | null;
   urgentCount?: number;
   sourcePage?:  string;
 }
@@ -51,6 +64,7 @@ interface CopilotBarProps {
 export function CopilotBar({
   mode = 'chips',
   topDealId,
+  topDealScore,
   urgentCount = 0,
   sourcePage = 'today',
 }: CopilotBarProps) {
@@ -61,6 +75,7 @@ export function CopilotBar({
   const [input, setInput]         = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId]               = useState(() => crypto.randomUUID());
+  const hasAutoSent               = useRef(false);
   const messagesRef               = useRef<HTMLDivElement>(null);
   const inputRef                  = useRef<HTMLInputElement>(null);
 
@@ -91,6 +106,26 @@ export function CopilotBar({
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Auto-send first message on mount (once per session, chat mode only)
+  useEffect(() => {
+    if (mode !== 'chat') return;
+    const SESSION_KEY = 'larry_today_auto_sent';
+    if (hasAutoSent.current || sessionStorage.getItem(SESSION_KEY)) return;
+    const token = getToken();
+    if (!token) return;
+    // Short delay so the component is fully mounted
+    const timer = setTimeout(() => {
+      hasAutoSent.current = true;
+      sessionStorage.setItem(SESSION_KEY, '1');
+      const prompt = topDealId
+        ? 'Donne-moi ton verdict sur la conviction du jour en tenant compte de mon profil et de mon budget.'
+        : "Qu'est-ce qui mérite mon attention aujourd'hui sur le marché ?";
+      handleSend(prompt, true);
+    }, 600);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   const chips: Chip[] = [
     topDealId
@@ -125,15 +160,16 @@ export function CopilotBar({
 
   // ── Chat send ───────────────────────────────────────────────────────────────
 
-  async function handleSend(overrideText?: string) {
+  async function handleSend(overrideText?: string, isAuto = false) {
     const text = (overrideText ?? input).trim();
     if (!text || isLoading) return;
 
     setInput('');
     setMessages(prev => [
       ...prev,
-      { role: 'user',      content: text },
-      { role: 'assistant', content: '' },
+      // For auto messages (pre-loaded), don't show the user prompt bubble
+      ...(isAuto ? [] : [{ role: 'user' as const, content: text }]),
+      { role: 'assistant' as const, content: '' },
     ]);
     setIsLoading(true);
 
@@ -267,22 +303,42 @@ export function CopilotBar({
       borderBottom: '1px solid var(--border)',
     }}>
 
-      {/* Eyebrow */}
+      {/* Header — Larry + verdict */}
       <div style={{
         display:       'flex',
         alignItems:    'center',
         justifyContent:'space-between',
         marginBottom:  '14px',
       }}>
-        <span style={{
-          fontFamily:    'var(--font-mono)',
-          fontSize:      '10px',
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          color:         'var(--text-3)',
-        }}>
-          Votre conseiller
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{
+            fontFamily:    'var(--font-mono)',
+            fontSize:      '11px',
+            fontWeight:    700,
+            letterSpacing: '0.06em',
+            color:         'var(--gold, #C6A85A)',
+          }}>
+            ◆ LARRY
+          </span>
+          {(() => {
+            const v = getVerdict(topDealScore);
+            return v ? (
+              <span style={{
+                fontFamily:    'var(--font-mono)',
+                fontSize:      '10px',
+                fontWeight:    700,
+                letterSpacing: '0.1em',
+                color:         v.color,
+                background:    v.bg,
+                border:        `1px solid ${v.border}`,
+                borderRadius:  '3px',
+                padding:       '2px 8px',
+              }}>
+                {v.label}
+              </span>
+            ) : null;
+          })()}
+        </div>
 
         {mode === 'chat' && remaining !== null && limit !== null && limit < 99999 && (
           <span style={{
@@ -343,7 +399,7 @@ export function CopilotBar({
                       color:         'var(--electric)',
                       marginBottom:  '5px',
                     }}>
-                      Nautilus
+                      LARRY
                     </span>
                   )}
                   <div style={{
@@ -387,7 +443,7 @@ export function CopilotBar({
                   handleSend();
                 }
               }}
-              placeholder="Posez une question à Nautilus…"
+              placeholder="Pose une question à Larry…"
               disabled={isLoading}
               style={{
                 flex:        1,

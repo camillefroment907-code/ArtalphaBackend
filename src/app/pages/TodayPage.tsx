@@ -319,14 +319,6 @@ export default function TodayPage() {
         </div>
       </div>
 
-      {/* ── COPILOT ──────────────────────────────────────────────────── */}
-      <CopilotBar
-        mode="chat"
-        topDealId={conviction?.id ?? null}
-        urgentCount={brief.closing_today_count ?? brief.closing_soon.length}
-        sourcePage="today"
-      />
-
       {/* ── ZONE 2 : La Conviction du Jour ───────────────────────────── */}
       {conviction ? (
         <div
@@ -474,6 +466,15 @@ export default function TodayPage() {
           Aucune recommandation disponible pour le moment.
         </div>
       )}
+
+      {/* ── LARRY ────────────────────────────────────────────────────── */}
+      <CopilotBar
+        mode="chat"
+        topDealId={conviction?.id ?? null}
+        topDealScore={conviction?.deal_score ?? null}
+        urgentCount={brief.closing_today_count ?? brief.closing_soon.length}
+        sourcePage="today"
+      />
 
       {/* ── ZONE 3 : Ce qui expire ────────────────────────────────────── */}
       {expiringLots.length > 0 && (
