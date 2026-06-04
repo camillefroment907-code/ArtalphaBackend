@@ -29,8 +29,8 @@ _settings = get_settings()
 
 CHAT_LIMITS: dict[str, int] = {
     "free":          0,        # No Larry on free plan
-    "starter":       10,       # Collector — 10/month
-    "investor":      20,       # €19 — 20/month
+    "trial":         25,       # 7-day trial — 25 total requests
+    "investor":      100,      # €10/mo — 100/month
     "pro":           99999,    # Family Office — unlimited
     "institutional": 99999,    # unlimited
     "expert":        99999,
@@ -143,7 +143,7 @@ ACCOUNT:
 SUBSCRIPTIONS:
 - View plans → get-nautilus.com/app/pricing
 - Free: limited access, 3 lots visible
-- Investor €19/mo: unlimited lots, AI memos, real-time alerts, Larry 20 msg/mo
+- Investor €10/mo: unlimited lots, AI memos, real-time alerts, Larry 100 msg/mo
 - Family Office €99/mo: everything unlimited, AI Agent 5 alerts, Larry unlimited
 - Institutional: custom, everything unlimited
 - Upgrade: immediate with prorata → get-nautilus.com/app/pricing
@@ -362,12 +362,23 @@ async def get_usage(
 ):
     plan = await get_user_plan(current_user, db)
     limit = CHAT_LIMITS.get(plan, 0)
-    used = await _get_monthly_usage(current_user.id, db)
+    if plan == "trial":
+        trial_result = await db.execute(
+            select(func.count(ChatMessage.id)).where(
+                and_(
+                    ChatMessage.user_id == current_user.id,
+                    ChatMessage.role == "user",
+                )
+            )
+        )
+        used = trial_result.scalar() or 0
+    else:
+        used = await _get_monthly_usage(current_user.id, db)
     return {
         "plan": plan,
         "used": used,
         "limit": limit,
-        "can_chat": limit > 0 and used < limit,
+        "can_chat": used < 25 if plan == "trial" else limit > 0 and used < limit,
     }
 
 
@@ -407,12 +418,25 @@ async def send_message(
     plan = await get_user_plan(current_user, db)
     limit = CHAT_LIMITS.get(plan, 0)
 
-    used = await _get_monthly_usage(current_user.id, db)
-    if used >= limit:
-        raise HTTPException(
-            429,
-            f"Monthly limit reached ({limit} messages). Resets on the 1st of each month.",
+    if plan == "trial":
+        trial_result = await db.execute(
+            select(func.count(ChatMessage.id)).where(
+                and_(
+                    ChatMessage.user_id == current_user.id,
+                    ChatMessage.role == "user",
+                )
+            )
         )
+        trial_used = trial_result.scalar() or 0
+        if trial_used >= 25:
+            raise HTTPException(429, "Trial limit reached (25 messages). Upgrade to continue.")
+    else:
+        used = await _get_monthly_usage(current_user.id, db)
+        if used >= limit:
+            raise HTTPException(
+                429,
+                f"Monthly limit reached ({limit} messages). Resets on the 1st of each month.",
+            )
 
     if not body.message.strip():
         raise HTTPException(400, "Message cannot be empty.")
