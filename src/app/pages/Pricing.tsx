@@ -46,11 +46,11 @@ const PLANS: Plan[] = [
     name: 'Investor',
     monthlyPriceKey: 'investor_monthly',
     annualPriceKey: 'investor_annual',
-    price: 19,
-    annualPrice: 190,
-    annualMonthly: 15.83,
+    price: 10,
+    annualPrice: 96,
+    annualMonthly: 8,
     badge: 'FOUNDING MEMBER',
-    priceSubtext: 'Limited to 100 spots · Price locked for life · Rises to €49 after launch',
+    priceSubtext: 'Limited to 100 spots · Price locked for life · Rises to €29 after launch',
     description: '',
     highlight: true,
     cta: 'Get founding access →',
@@ -112,7 +112,7 @@ const PT = {
     monthly: 'Monthly', annual: 'Annual', save23: 'SAVE 23%',
     currentPlan: 'CURRENT PLAN',
     foundingPrice: 'Founding price · locked for life',
-    limitedSpots: 'Limited to 100 spots · Rises to €49 after launch',
+    limitedSpots: 'Limited to 100 spots · Rises to €29 after launch',
     comparePlans: 'Compare plans',
     institutionalTitle: 'Institutional Access',
     institutionalDesc: 'For auction houses, family offices, wealth managers and art funds. Custom limits, dedicated analytics team, API integration, SLA guarantees.',
@@ -138,7 +138,7 @@ const PT = {
     monthly: 'Mensuel', annual: 'Annuel', save23: 'ÉCONOMISEZ 23%',
     currentPlan: 'PLAN ACTUEL',
     foundingPrice: 'Prix fondateur · garanti à vie',
-    limitedSpots: 'Limité à 100 places · Passera à €49 au lancement',
+    limitedSpots: 'Limité à 100 places · Passera à €29 au lancement',
     comparePlans: 'Comparer les plans',
     institutionalTitle: 'Accès Institutionnel',
     institutionalDesc: "Pour les maisons de vente, family offices, gestionnaires de patrimoine et fonds d'art. Limites personnalisées, équipe analytics dédiée, intégration API, garanties SLA.",
@@ -181,8 +181,8 @@ export default function Pricing() {
   useSEO({
     title: lang === 'fr' ? 'Tarifs · Nautilus' : 'Pricing · Nautilus',
     description: lang === 'fr'
-      ? "Accès gratuit, puis à partir de 19 €/mois. Essai 7 jours inclus. Intelligence de marché pour collectionneurs sérieux."
-      : 'Free access, then from €19/month. 7-day trial included. Art market intelligence for serious collectors.',
+      ? "Accès gratuit, puis à partir de 10 €/mois. Essai 7 jours inclus. Intelligence de marché pour collectionneurs sérieux."
+      : 'Free access, then from €10/month. 7-day trial included. Art market intelligence for serious collectors.',
     schema: {
       '@context': 'https://schema.org',
       '@type': 'Product',
@@ -336,7 +336,7 @@ export default function Pricing() {
             const isHighlight = plan.highlight;
             const annualSavings = plan.annualPrice ? (plan.price * 12 - plan.annualPrice) : 0;
             const priceLabel = plan.key === 'free' ? '€0'
-              : plan.key === 'investor' ? '€19/mo'
+              : plan.key === 'investor' ? '€10/mo'
               : `€${isAnnual && plan.annualMonthly ? plan.annualMonthly : plan.price}/mo`;
             const features: string[] = (p.planFeatures as any)[plan.key] || plan.features;
             return (
@@ -369,7 +369,7 @@ export default function Pricing() {
                     <div style={{ paddingTop: '14px', marginBottom: '14px' }}>
                       {plan.key === 'investor' && isAnnual && (
                         <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', marginBottom: '4px' }}>
-                          €190/year · save €{annualSavings}/year
+                          €96/year · save €{annualSavings}/year
                         </div>
                       )}
                       {plan.key === 'investor' && (
@@ -497,17 +497,17 @@ export default function Pricing() {
                 ) : plan.key === 'investor' ? (
                   <div>
                     <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.28)', textDecoration: 'line-through', fontFamily: 'var(--font-mono)', marginBottom: '1px', letterSpacing: '0.04em' }}>
-                      €49/mo
+                      €29/mo
                     </div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '3px' }}>
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '36px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>
-                        €19
+                        €10
                       </span>
                       <span style={{ fontSize: '13px', color: 'rgba(198,168,90,0.55)' }}>/mo</span>
                     </div>
                     {isAnnual && (
                       <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', marginBottom: '2px' }}>
-                        €190/year · save €{annualSavings}/year
+                        €96/year · save €{annualSavings}/year
                       </div>
                     )}
                     <div style={{ fontSize: '11px', fontStyle: 'italic', color: 'rgba(198,168,90,0.75)', lineHeight: 1.3 }}>

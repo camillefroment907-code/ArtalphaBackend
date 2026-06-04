@@ -384,7 +384,7 @@ export default function Primary() {
                     <button onClick={() => navigate('/app/pricing')} className="btn btn-navy" style={{ fontSize: '13px', padding: '12px 36px', width: '100%', marginBottom: '10px' }}>
                       Unlock full access →
                     </button>
-                    <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>Founding price — €19/mo · Cancel anytime</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>Founding price — €10/mo · Cancel anytime</div>
                   </div>
                 </div>
               </div>

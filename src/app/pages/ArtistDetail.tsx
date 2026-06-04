@@ -681,7 +681,7 @@ export default function ArtistDetail() {
                 ]).map((b, i) => <div key={i}>· {b}</div>)}
               </div>
               <a href="/app/pricing" style={{ display: 'inline-block', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: '#C6A85A', letterSpacing: '0.12em', textDecoration: 'none', borderBottom: '1px solid rgba(198,168,90,0.35)', paddingBottom: 2 }}>
-                {isFr ? 'Passer Investor — €19/mois →' : 'Get Investor access — €19/mo →'}
+                {isFr ? 'Passer Investor — €10/mois →' : 'Get Investor access — €10/mo →'}
               </a>
             </div>
 

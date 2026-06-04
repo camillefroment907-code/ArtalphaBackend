@@ -157,7 +157,7 @@ export default function Artists() {
             <div style={{
               fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '24px',
             }}>
-              Available from Investor plan · €19/month
+              Available from Investor plan · €10/month
             </div>
             <button
               className="btn btn-gold"

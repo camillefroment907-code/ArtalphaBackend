@@ -431,7 +431,7 @@ export default function Convictions() {
                     cursor: 'pointer',
                   }}
                 >
-                  Founding price — €19/mo
+                  Founding price — €10/mo
                 </button>
               </div>
             )}

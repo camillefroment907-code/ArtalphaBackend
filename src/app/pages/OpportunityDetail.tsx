@@ -1909,8 +1909,8 @@ export default function OpportunityDetail() {
                             </button>
                             <div style={{ fontSize: '10px', color: '#9CA3AF', fontFamily: 'var(--font-mono)' }}>
                               {isFr
-                                ? `Investor · 19€/mois${isTrialActive() ? ` · ${getTrialDaysLeft()} jours restants` : ' · 7 jours gratuits'}`
-                                : `Investor · €19/mo${isTrialActive() ? ` · ${getTrialDaysLeft()} days left` : ' · 7 days free'}`
+                                ? `Investor · 10€/mois${isTrialActive() ? ` · ${getTrialDaysLeft()} jours restants` : ' · 7 jours gratuits'}`
+                                : `Investor · €10/mo${isTrialActive() ? ` · ${getTrialDaysLeft()} days left` : ' · 7 days free'}`
                               }
                             </div>
                           </div>

@@ -218,7 +218,7 @@ export default function MarketIndex() {
               See all {(lotsAnalyzed ?? week?.lots_analyzed)?.toLocaleString() || 'live'} opportunities
             </div>
             <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', marginBottom: '20px', maxWidth: '400px', margin: '0 auto 20px', lineHeight: 1.7 }}>
-              The Nautilus Index is free. Full market intelligence — Founding price — €19/mo.
+              The Nautilus Index is free. Full market intelligence — Founding price — €10/mo.
             </p>
             <a href="/app/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'white', color: 'var(--navy)', padding: '13px 32px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: 700, letterSpacing: '0.04em' }}>
               Access full intelligence →
