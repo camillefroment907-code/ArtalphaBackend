@@ -27,8 +27,14 @@ function fmt(n: number | null | undefined) {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
 }
 
+// Python isoformat() returns naive UTC without 'Z' — JS parses that as local time → wrong.
+function parseUTC(iso: string): number {
+  if (!iso.endsWith('Z') && !/[+\-]\d{2}:\d{2}$/.test(iso)) return new Date(iso + 'Z').getTime();
+  return new Date(iso).getTime();
+}
+
 function timeInfo(iso: string): { label: string; short: string; urgent: boolean; color: string } {
-  const ms = new Date(iso).getTime() - Date.now();
+  const ms = parseUTC(iso) - Date.now();
   if (ms <= 0) return { label: 'Terminé', short: 'Terminé', urgent: false, color: 'var(--text-3)' };
   const totalMin = Math.floor(ms / 60000);
   const h = Math.floor(ms / 3600000);
@@ -71,9 +77,9 @@ export default function ClosingSoon() {
       .catch(() => setLoading(false));
   }, []);
 
-  const now = Date.now();
-  // Strip already-ended lots
-  const activeLots = lots.filter(l => !l.auction_date || new Date(l.auction_date).getTime() > now);
+  // Backend already filters auction_date >= now — use directly, no client-side date filter
+  // (client-side filtering was buggy: Python isoformat() is naive UTC, JS parses as local time)
+  const activeLots = lots;
 
   // Top picks — best by composite priority score, max 5
   const byPriority = [...activeLots].sort((a, b) => priorityScore(b) - priorityScore(a));
