@@ -235,7 +235,7 @@ async def _stream_copilot_response(
         yield f"data: {json.dumps({'error': 'Conseiller temporairement indisponible.'})}\n\n"
         return
 
-    if not can_make_request():
+    if not _openai_guard.can_make_request():
         yield f"data: {json.dumps({'error': 'Quota journalier atteint. Réessayez demain.'})}\n\n"
         return
 
@@ -257,7 +257,7 @@ async def _stream_copilot_response(
                 full_response.append(delta)
                 yield f"data: {json.dumps({'delta': delta})}\n\n"
 
-        record_request()
+        _openai_guard.record_request()
         full_text = "".join(full_response)
         yield f"data: {json.dumps({'done': True})}\n\n"
 
