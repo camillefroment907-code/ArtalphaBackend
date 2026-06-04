@@ -336,7 +336,7 @@ export default function Pricing() {
             const isHighlight = plan.highlight;
             const annualSavings = plan.annualPrice ? (plan.price * 12 - plan.annualPrice) : 0;
             const priceLabel = plan.key === 'free' ? '€0'
-              : plan.key === 'investor' ? '€10/mo'
+              : plan.key === 'investor' ? (isAnnual ? '€8/mo' : '€10/mo')
               : `€${isAnnual && plan.annualMonthly ? plan.annualMonthly : plan.price}/mo`;
             const features: string[] = (p.planFeatures as any)[plan.key] || plan.features;
             return (
@@ -501,7 +501,7 @@ export default function Pricing() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '3px' }}>
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '36px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>
-                        €10
+                        {isAnnual ? '€8' : '€10'}
                       </span>
                       <span style={{ fontSize: '13px', color: 'rgba(198,168,90,0.55)' }}>/mo</span>
                     </div>
