@@ -6,6 +6,7 @@ import useSWR from "swr";
 import { motion } from "framer-motion";
 import { Trophy, TrendingDown, Calendar, Building2, ExternalLink } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
+import { LarryBar } from "@/components/larry/LarryBar";
 import { lotsApi, type TopDeal } from "@/lib/api";
 import { formatPrice, formatDate, getSourceLabel, cn } from "@/lib/utils";
 
@@ -173,7 +174,19 @@ export default function TopDealsPage() {
         ) : (
           <div className="space-y-2">
             {deals.map((deal) => (
-              <TopDealCard key={deal.lot.id} deal={deal} rank={deal.rank} />
+              <div key={deal.lot.id}>
+                <TopDealCard deal={deal} rank={deal.rank} />
+                {deal.rank === 1 && (
+                  <div className="mt-2">
+                    <LarryBar
+                      lotId={deal.lot.id}
+                      lotTitle={deal.lot.title ?? undefined}
+                      artistName={deal.lot.artist_name_raw ?? undefined}
+                      dealScore={deal.lot.deal_score ?? undefined}
+                    />
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}

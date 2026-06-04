@@ -18,6 +18,7 @@ import { useLanguageStore, formatPriceInCurrency } from "@/lib/useLanguage";
 import { convertPrice } from "@/lib/i18n";
 import { useAuthStore } from "@/lib/store";
 import { computeFairValue } from "@/lib/lotHelpers";
+import { LarryBar } from "@/components/larry/LarryBar";
 
 // ── Lazy-loaded tab components ────────────────────────────────────────────────
 // None of these are above-the-fold on initial render — loading them eagerly
@@ -720,7 +721,7 @@ function RiskIcon({ t }: { t: RiskFlag["icon"] }) {
 }
 
 // ── Right Panel ───────────────────────────────────────────────────────────────
-function RightPanel({ lot, lotId }: { lot: Lot; lotId: string }) {
+function RightPanel({ lot, lotId, onAskLarry }: { lot: Lot; lotId: string; onAskLarry: () => void }) {
   const score = lot.deal_score ?? 0;
   const upside = lot.pct_below_low_estimate;
   const risks = deriveRisks(lot);
@@ -764,6 +765,18 @@ function RightPanel({ lot, lotId }: { lot: Lot; lotId: string }) {
             color: "rgba(255,255,255,0.75)", fontSize: "11px", cursor: "pointer",
           }}>
             <Bell size={12} /> Set price alert
+          </button>
+          <button
+            onClick={onAskLarry}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+              padding: "9px 16px", borderRadius: "6px",
+              border: "1px solid rgba(201,168,76,0.3)", background: "rgba(201,168,76,0.07)",
+              color: GOLD, fontSize: "11px", fontWeight: 600, cursor: "pointer",
+              letterSpacing: "0.02em",
+            }}
+          >
+            ◆ Demander à Larry
           </button>
         </div>
       </div>
@@ -853,6 +866,7 @@ export default function LotPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const { currency, locale, lang } = useLanguageStore();
   const [activeTab, setActiveTab] = useState("overview");
+  const [showLarry, setShowLarry] = useState(false);
 
   const { data: lot, isLoading, error } = useSWR<Lot>(
     id ? `lot-${id}` : null,
@@ -1053,10 +1067,21 @@ export default function LotPage({ params }: { params: { id: string } }) {
             </div>
 
             {/* ── RIGHT STICKY PANEL ──────────────────────────── */}
-            <RightPanel lot={lot} lotId={id} />
+            <RightPanel lot={lot} lotId={id} onAskLarry={() => setShowLarry(true)} />
           </div>
         )}
       </div>
+
+      {showLarry && lot && (
+        <LarryBar
+          mode="full"
+          lotId={id}
+          lotTitle={lot.title ?? undefined}
+          artistName={lot.artist_name_raw ?? undefined}
+          dealScore={lot.deal_score ?? undefined}
+          onClose={() => setShowLarry(false)}
+        />
+      )}
     </div>
   );
 }
