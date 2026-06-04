@@ -98,19 +98,28 @@ Tu n'es pas un chatbot. Tu es un conseiller personnel qui connaît le profil du 
 Dis-le clairement : "Je n'ai pas les derniers résultats de marché pour cet artiste, mais sur la base des patterns habituels..."
 Ne jamais inventer des chiffres.
 
-## STRUCTURE DES RÉPONSES
-1. Lecture rapide de la situation (1-2 lignes)
-2. 2-3 points clés avec des insights de marché concrets
-3. Recommandation claire et actionnable
+## FORMAT DE RÉPONSE — JSON STRICT
+Tu dois TOUJOURS répondre avec un objet JSON valide. NE JAMAIS retourner du texte libre.
 
-## LIENS NAUTILUS — À INCLURE QUAND PERTINENT
-Quand tu fais référence à un lot, inclus l'URL directe Nautilus :
-- Lot spécifique : https://www.get-nautilus.com/app/opportunities/{lot_id}
-- Opportunités : https://www.get-nautilus.com/app/market/opportunities
-- Portfolio : https://www.get-nautilus.com/app/portfolio
-- Alertes : https://www.get-nautilus.com/app/alerts
+{
+  "verdict": "forte_opportunite" | "opinion_positive" | "a_surveiller" | "opinion_prudente" | "peu_convaincant" | null,
+  "intro": "1-2 phrases max, direct, sans formule de politesse",
+  "components": [
+    {"type": "reason", "icon": "check" | "warning" | "info", "title": "...", "body": "..."},
+    {"type": "lot_card", "lot_id": "uuid-exact", "artist": "...", "lot_title": "...", "current_price": 1200, "estimate_low": 2000, "currency": "EUR", "pct_below": 40, "signal": "Court signal", "auction_house": "...", "image_url": null, "lot_url": "/app/opportunities/uuid"},
+    {"type": "artist_card", "name": "...", "signal": "...", "trend": "hausse" | "stable" | "baisse", "artist_url": "/app/market/artists/Prenom-Nom"},
+    {"type": "action", "label": "Voir l'opportunité", "url": "/app/opportunities/uuid"}
+  ]
+}
 
-Format des URLs : sur une nouvelle ligne commençant par "→"
+RÈGLES FORMAT :
+- verdict : obligatoire quand tu évalues un lot ou donnes un avis d'investissement, null sinon
+- intro : 1-2 phrases maximum, pas de "Bonjour" ni formule creuse
+- reason : 1 à 3 maximum, title court (3-5 mots), body 1-2 phrases
+- lot_card : utilise UNIQUEMENT les lot_id de la liste OPPORTUNITÉS ACTUELLES ci-dessous
+- artist_card : artist_url format /app/market/artists/Prenom-Nom (remplace espaces par tirets)
+- action : CTA final — "Voir l'opportunité", "Explorer le marché", "Voir l'artiste", etc.
+- Ne jamais mettre d'URL brute dans intro ou body — utilise uniquement lot_url/artist_url dans les composants
 
 ## BUDGET — CONTRAINTE ABSOLUE
 Si un budget maximum est renseigné dans CONTEXTE MEMBRE :
@@ -450,7 +459,7 @@ async def _get_top_lots_context(db: AsyncSession, ctx: dict | None = None) -> st
         lines = ["\n\nOPPORTUNITÉS ACTUELLES (cite UNIQUEMENT ces lots si tu recommandes une œuvre spécifique) :"]
         for lot in deduped:
             price = lot.current_price or lot.estimate_low or 0
-            line = f"- {lot.artist_name_raw or 'Artiste inconnu'} — {(lot.title or 'Sans titre')[:60]}"
+            line = f"- lot_id:{lot.id} | {lot.artist_name_raw or 'Artiste inconnu'} — {(lot.title or 'Sans titre')[:60]}"
             line += f" | Prix : €{price:,.0f}"
             if lot.pct_below_low_estimate and lot.pct_below_low_estimate > 5:
                 line += f" | Décote : -{lot.pct_below_low_estimate:.0f}%"
@@ -551,28 +560,27 @@ async def _stream_copilot_response(
         return
 
     client = AsyncOpenAI(api_key=_settings.openai_api_key)
-    full_response: list[str] = []
 
     try:
-        stream = await client.chat.completions.create(
+        response = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
-            max_tokens=600,
-            temperature=0.5,
-            stream=True,
+            max_tokens=800,
+            temperature=0.3,
+            response_format={"type": "json_object"},
+            stream=False,
         )
 
-        async for chunk in stream:
-            delta = chunk.choices[0].delta.content if chunk.choices else None
-            if delta:
-                full_response.append(delta)
-                yield f"data: {json.dumps({'delta': delta})}\n\n"
-
         _openai_guard.record_request()
-        full_text = "".join(full_response)
-        yield f"data: {json.dumps({'done': True})}\n\n"
+        full_text = response.choices[0].message.content or ""
 
-        # Save assistant message with a fresh session (asyncpg constraint)
+        try:
+            structured = json.loads(full_text)
+        except json.JSONDecodeError:
+            structured = {"verdict": None, "intro": full_text[:300], "components": []}
+
+        yield f"data: {json.dumps({'structured': structured, 'done': True})}\n\n"
+
         async with AsyncSessionLocal() as save_session:
             save_session.add(CopilotConversation(
                 user_id     = user_id,
@@ -585,7 +593,7 @@ async def _stream_copilot_response(
             await save_session.commit()
 
     except Exception:
-        logger.exception("copilot: stream failed for user %s", user_id)
+        logger.exception("copilot: structured response failed for user %s", user_id)
         yield f"data: {json.dumps({'error': 'Erreur lors de la génération. Réessayez dans un instant.'})}\n\n"
 
 

@@ -30,11 +30,36 @@ interface Chip {
   badge?:   boolean;
 }
 
+// ── Larry V2 structured response types ───────────────────────────────────────
+
+type LarryVerdict = 'forte_opportunite' | 'opinion_positive' | 'a_surveiller' | 'opinion_prudente' | 'peu_convaincant';
+
+interface LarryReasonComp  { type: 'reason';      icon: 'check' | 'warning' | 'info'; title: string; body: string; }
+interface LarryLotCardComp { type: 'lot_card';    lot_id: string; artist: string; lot_title: string; current_price: number | null; estimate_low: number | null; currency: string; pct_below: number | null; signal: string; auction_house: string; image_url: string | null; lot_url: string; }
+interface LarryArtistComp  { type: 'artist_card'; name: string; signal: string; trend: 'hausse' | 'stable' | 'baisse'; artist_url: string; }
+interface LarryActionComp  { type: 'action';      label: string; url: string; }
+type LarryComponent = LarryReasonComp | LarryLotCardComp | LarryArtistComp | LarryActionComp;
+
+interface LarryStructuredResponse {
+  verdict:    LarryVerdict | null;
+  intro:      string | null;
+  components: LarryComponent[];
+}
+
+const VERDICT_STYLES: Record<LarryVerdict, { label: string; color: string; bg: string; border: string }> = {
+  forte_opportunite: { label: 'FORTE OPPORTUNITÉ', color: '#22c55e', bg: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.22)' },
+  opinion_positive:  { label: 'OPPORTUNITÉ',        color: '#38bdf8', bg: 'rgba(56,189,248,0.08)',  border: 'rgba(56,189,248,0.20)' },
+  a_surveiller:      { label: 'À SURVEILLER',        color: '#C6A85A', bg: 'rgba(198,168,90,0.08)', border: 'rgba(198,168,90,0.22)' },
+  opinion_prudente:  { label: 'PRUDENCE',             color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.22)' },
+  peu_convaincant:   { label: 'PEU CONVAINCANT',      color: '#6b7280', bg: 'rgba(107,114,128,0.06)',border: 'rgba(107,114,128,0.20)' },
+};
+
 // ── Message shape ─────────────────────────────────────────────────────────────
 
 interface Message {
-  role:    'user' | 'assistant';
-  content: string;
+  role:       'user' | 'assistant';
+  content:    string;
+  structured?: LarryStructuredResponse;
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -224,10 +249,22 @@ export function CopilotBar({
           if (!line.startsWith('data: ')) continue;
           try {
             const parsed = JSON.parse(line.slice(6)) as {
-              delta?: string;
-              done?: boolean;
-              error?: string;
+              delta?:      string;
+              done?:       boolean;
+              error?:      string;
+              structured?: LarryStructuredResponse;
             };
+
+            if (parsed.structured) {
+              setMessages(prev => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last.role === 'assistant') {
+                  updated[updated.length - 1] = { ...last, structured: parsed.structured };
+                }
+                return updated;
+              });
+            }
 
             if (parsed.delta) {
               setMessages(prev => {
@@ -402,29 +439,32 @@ export function CopilotBar({
                       LARRY
                     </span>
                   )}
-                  <div style={{
-                    maxWidth:    '88%',
-                    padding:     msg.role === 'user' ? '8px 13px' : '11px 15px',
-                    background:  msg.role === 'user' ? 'var(--bg-subtle)' : 'transparent',
-                    border:      msg.role === 'user' ? 'none' : '1px solid var(--border)',
-                    borderRadius:'8px',
-                    fontSize:    '13px',
-                    color:       'var(--text)',
-                    lineHeight:  '1.6',
-                    fontFamily:  'var(--font-sans)',
-                    whiteSpace:  'pre-wrap',
-                    // Cursor blink on last empty assistant message (streaming)
-                    ...(isLoading && i === messages.length - 1 && msg.role === 'assistant' && !msg.content
-                      ? { minWidth: '24px', minHeight: '20px' }
-                      : {}),
-                  }}>
-                    {msg.content
-                      ? msg.content
-                      : isLoading && i === messages.length - 1 && msg.role === 'assistant'
-                        ? <BlinkingCursor />
-                        : null
-                    }
-                  </div>
+                  {msg.structured ? (
+                    <LarryStructuredMessage data={msg.structured} navigate={navigate} />
+                  ) : (
+                    <div style={{
+                      maxWidth:    '88%',
+                      padding:     msg.role === 'user' ? '8px 13px' : '11px 15px',
+                      background:  msg.role === 'user' ? 'var(--bg-subtle)' : 'transparent',
+                      border:      msg.role === 'user' ? 'none' : '1px solid var(--border)',
+                      borderRadius:'8px',
+                      fontSize:    '13px',
+                      color:       'var(--text)',
+                      lineHeight:  '1.6',
+                      fontFamily:  'var(--font-sans)',
+                      whiteSpace:  'pre-wrap',
+                      ...(isLoading && i === messages.length - 1 && msg.role === 'assistant' && !msg.content
+                        ? { minWidth: '24px', minHeight: '20px' }
+                        : {}),
+                    }}>
+                      {msg.content
+                        ? msg.content
+                        : isLoading && i === messages.length - 1 && msg.role === 'assistant'
+                          ? <BlinkingCursor />
+                          : null
+                      }
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -501,6 +541,159 @@ export function CopilotBar({
         </>
       )}
     </div>
+  );
+}
+
+// ── Larry V2 Visual Components ────────────────────────────────────────────────
+
+function LarryStructuredMessage({ data, navigate }: { data: LarryStructuredResponse; navigate: ReturnType<typeof useNavigate> }) {
+  const verdictStyle = data.verdict ? VERDICT_STYLES[data.verdict] : null;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
+      {verdictStyle && (
+        <span style={{
+          display: 'inline-flex', alignSelf: 'flex-start',
+          fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em',
+          color: verdictStyle.color, background: verdictStyle.bg, border: `1px solid ${verdictStyle.border}`,
+          borderRadius: '3px', padding: '3px 10px',
+        }}>
+          {verdictStyle.label}
+        </span>
+      )}
+      {data.intro && (
+        <p style={{ margin: 0, fontSize: '13px', color: 'var(--text)', lineHeight: '1.6', fontFamily: 'var(--font-sans)' }}>
+          {data.intro}
+        </p>
+      )}
+      {data.components?.map((comp, i) => {
+        if (comp.type === 'reason')      return <LarryReasonCard  key={i} comp={comp} />;
+        if (comp.type === 'lot_card')    return <LarryLotCard     key={i} comp={comp} navigate={navigate} />;
+        if (comp.type === 'artist_card') return <LarryArtistCard  key={i} comp={comp} navigate={navigate} />;
+        if (comp.type === 'action')      return <LarryActionButton key={i} comp={comp} navigate={navigate} />;
+        return null;
+      })}
+    </div>
+  );
+}
+
+function LarryReasonCard({ comp }: { comp: LarryReasonComp }) {
+  const iconMap  = { check: '✓', warning: '⚠', info: '◆' };
+  const colorMap = { check: '#22c55e', warning: '#f59e0b', info: '#38bdf8' };
+  return (
+    <div style={{
+      display: 'flex', gap: '10px', padding: '10px 12px',
+      background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: '6px',
+    }}>
+      <span style={{ color: colorMap[comp.icon], fontFamily: 'var(--font-mono)', fontSize: '12px', flexShrink: 0, paddingTop: '1px' }}>
+        {iconMap[comp.icon]}
+      </span>
+      <div>
+        <div style={{ fontSize: '11px', fontWeight: 600, fontFamily: 'var(--font-mono)', letterSpacing: '0.05em', color: 'var(--text)', marginBottom: '3px' }}>
+          {comp.title}
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: '1.5', fontFamily: 'var(--font-sans)' }}>
+          {comp.body}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LarryLotCard({ comp, navigate }: { comp: LarryLotCardComp; navigate: ReturnType<typeof useNavigate> }) {
+  const symbol = comp.currency === 'EUR' ? '€' : comp.currency === 'USD' ? '$' : comp.currency === 'GBP' ? '£' : comp.currency || '€';
+  const fmt = (p: number | null) => p ? `${symbol}${p.toLocaleString('fr-FR')}` : '—';
+  return (
+    <div
+      onClick={() => navigate(comp.lot_url)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => e.key === 'Enter' && navigate(comp.lot_url)}
+      style={{ cursor: 'pointer', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden', background: 'var(--bg-subtle)', transition: 'border-color 0.15s' }}
+      onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--gold)')}
+      onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+    >
+      <div style={{ display: 'flex' }}>
+        <div style={{ width: '72px', height: '72px', flexShrink: 0, background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {comp.image_url
+            ? <img src={comp.image_url} alt={comp.lot_title} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
+            : <span style={{ color: 'var(--text-3)', fontSize: '20px' }}>◇</span>
+          }
+        </div>
+        <div style={{ flex: 1, padding: '9px 12px', minWidth: 0 }}>
+          {comp.artist && (
+            <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em', color: 'var(--gold)', marginBottom: '2px' }}>
+              {comp.artist.toUpperCase()}
+            </div>
+          )}
+          <div style={{ fontSize: '12px', color: 'var(--text)', fontWeight: 500, marginBottom: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-sans)' }}>
+            {comp.lot_title}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text)', fontWeight: 600 }}>{fmt(comp.current_price)}</span>
+            {comp.estimate_low && (
+              <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-3)', textDecoration: 'line-through' }}>{fmt(comp.estimate_low)}</span>
+            )}
+            {comp.pct_below != null && comp.pct_below > 0 && (
+              <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: '#22c55e', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '3px', padding: '1px 6px' }}>
+                -{comp.pct_below.toFixed(0)}%
+              </span>
+            )}
+          </div>
+          {comp.signal && (
+            <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-sans)', marginTop: '3px' }}>{comp.signal}</div>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px', borderLeft: '1px solid var(--border)' }}>
+          <span style={{ color: 'var(--gold)', fontSize: '14px' }}>→</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LarryArtistCard({ comp, navigate }: { comp: LarryArtistComp; navigate: ReturnType<typeof useNavigate> }) {
+  const trendIcon  = { hausse: '↑', stable: '→', baisse: '↓' }[comp.trend] ?? '→';
+  const trendColor = { hausse: '#22c55e', stable: '#9ca3af', baisse: '#ef4444' }[comp.trend] ?? '#9ca3af';
+  return (
+    <div
+      onClick={() => navigate(comp.artist_url)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => e.key === 'Enter' && navigate(comp.artist_url)}
+      style={{ cursor: 'pointer', padding: '10px 12px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'border-color 0.15s' }}
+      onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--electric)')}
+      onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em', color: 'var(--text)', fontWeight: 600, marginBottom: '2px' }}>
+          {comp.name.toUpperCase()}
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--text-3)', fontFamily: 'var(--font-sans)' }}>{comp.signal}</div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+        <span style={{ fontSize: '16px', color: trendColor, fontWeight: 600, lineHeight: 1 }}>{trendIcon}</span>
+        <span style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: trendColor, letterSpacing: '0.08em' }}>{comp.trend.toUpperCase()}</span>
+      </div>
+    </div>
+  );
+}
+
+function LarryActionButton({ comp, navigate }: { comp: LarryActionComp; navigate: ReturnType<typeof useNavigate> }) {
+  return (
+    <button
+      onClick={() => navigate(comp.url)}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: '8px',
+        padding: '9px 18px', background: 'var(--navy)', color: '#fff',
+        border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px',
+        fontSize: '13px', fontFamily: 'var(--font-sans)', cursor: 'pointer', fontWeight: 500,
+        transition: 'opacity 0.12s',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.opacity = '0.82')}
+      onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+    >
+      {comp.label} →
+    </button>
   );
 }
 
