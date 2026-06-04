@@ -455,7 +455,7 @@ async def get_market_brief(
     )
     new_lots = new_lots_result.scalars().all()
 
-    # Closing soon (< 48h)
+    # Closing soon (< 48h) — fetch top 10 for display, count all closing today separately
     closing_result = await db.execute(
         select(Lot)
         .where(and_(
@@ -469,6 +469,18 @@ async def get_market_brief(
         .limit(10)
     )
     closing_lots = closing_result.scalars().all()
+
+    horizon_24h = now + timedelta(hours=24)
+    closing_today_result = await db.execute(
+        select(func.count()).where(and_(
+            Lot.status.cast(String).in_(["upcoming", "live"]),
+            Lot.market_type == MarketType.AUCTION,
+            Lot.auction_date.isnot(None),
+            Lot.auction_date >= now,
+            Lot.auction_date <= horizon_24h,
+        ))
+    )
+    closing_today_count = closing_today_result.scalar() or 0
 
     # Top deal globally
     top_deal_result = await db.execute(
@@ -515,12 +527,6 @@ async def get_market_brief(
             await db.commit()
         except Exception:
             pass
-
-    horizon_24h = now + timedelta(hours=24)
-    closing_today_count = sum(
-        1 for l in closing_lots
-        if l.auction_date and l.auction_date <= horizon_24h
-    )
 
     result = {
         "since":                since.isoformat(),
