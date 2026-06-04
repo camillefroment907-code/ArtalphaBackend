@@ -11,85 +11,56 @@ const FAQ_DATA = {
       questions: [
         {
           q: "Qu'est-ce que Nautilus ?",
-          a: "Nautilus est une plateforme d'intelligence de marché pour les collectionneurs et investisseurs en art. Nous agrégeons en continu les données de plusieurs dizaines de milliers de lots aux enchères et sur le marché primaire, puis nous scorons chaque lot de 0 à 100 selon l'écart de prix par rapport aux ventes comparables, la dynamique de l'artiste et les signaux de demande du marché. L'objectif : vous donner un avantage d'information systématique pour acheter au bon prix.",
+          a: "Nautilus est un outil d'analyse du marché de l'art. Il rassemble et compare en continu un large volume de données de ventes — résultats d'enchères, estimations, tendances par artiste — pour aider ses utilisateurs à mieux comprendre la valorisation d'une œuvre avant d'enchérir. Nautilus ne vend pas d'œuvres, n'est ni une galerie ni une maison de vente, et ne fournit pas de conseils financiers. C'est un outil de recherche et d'aide à la décision, conçu pour que chaque acheteur puisse prendre position avec une meilleure compréhension du marché.",
         },
         {
           q: "À qui s'adresse Nautilus ?",
-          a: "Nautilus s'adresse à toute personne qui approche l'art avec une logique d'investissement : collectionneurs individuels avec des budgets de 500 € à plusieurs millions d'euros, family offices allouant des capitaux aux actifs alternatifs, gestionnaires de patrimoine accompagnant des clients avec des positions en art, ou simplement passionnés souhaitant mieux comprendre la valeur réelle de ce qu'ils achètent.",
+          a: "Nautilus est conçu pour toute personne qui souhaite mieux comprendre le marché avant d'acheter une œuvre. Que vous prépariez votre premier achat important — une toile, une sculpture, une édition — que vous collectionniez déjà activement depuis plusieurs années, ou que vous accompagniez professionnellement des clients dans leurs décisions d'acquisition, Nautilus apporte le même bénéfice : accéder rapidement à une analyse structurée d'une opportunité, sans avoir à passer des heures à rechercher manuellement des données dispersées.",
+        },
+        {
+          q: "Pourquoi utiliser Nautilus avant d'acheter une œuvre ?",
+          a: "Comprendre si un prix est cohérent avec le marché demande du temps. Il faut identifier des ventes comparables, analyser les résultats récents de l'artiste, évaluer si l'estimation de la maison de vente correspond aux données historiques. Nautilus fait ce travail automatiquement. En quelques secondes, vous voyez si un lot est pricé en ligne avec le marché, en dessous ou au-dessus — et dans quelle mesure. Cela ne remplace pas votre jugement, mais cela l'éclaire.",
         },
         {
           q: "Nautilus constitue-t-il un conseil financier ?",
-          a: "Non. Nautilus fournit de l'intelligence de marché et de l'analyse de données — pas des conseils financiers ou d'investissement. Nos scores et analyses sont des outils informationnels pour soutenir votre propre recherche et prise de décision. L'investissement en art comporte des risques, et les performances passées ne garantissent pas les résultats futurs.",
+          a: "Non. Nautilus fournit des données de marché et des analyses contextuelles — pas des conseils financiers, pas de recommandations d'investissement, pas de promesse de rendement. Le marché de l'art comporte des incertitudes que les données seules ne peuvent pas résoudre : état de conservation de l'œuvre, conditions de la vente, frais, évolution future des prix. Toutes les informations disponibles sur Nautilus sont des outils d'aide à la décision. La décision finale reste entièrement la vôtre.",
         },
         {
-          q: "Nautilus est-il disponible en français ?",
-          a: "Oui. L'interface est entièrement disponible en français et en anglais. Vous pouvez changer de langue à tout moment via le sélecteur en haut à droite de la plateforme.",
+          q: "D'où viennent vos données ?",
+          a: "Nautilus agrège des données provenant d'un large ensemble de sources publiques et professionnelles du marché de l'art. Ces données sont normalisées, structurées et comparées à plusieurs années d'historique de marché pour permettre une analyse cohérente et contextuelle. Nous ne communiquons pas le détail de nos sources — c'est une partie essentielle de notre méthodologie. Ce que vous consultez dans Nautilus repose sur des transactions réellement observées et des données de marché réelles, pas sur des estimations théoriques.",
         },
         {
-          q: "En quoi Nautilus est-il différent d'une simple recherche en ligne ?",
-          a: "Une recherche en ligne vous donne des informations dispersées, sans mise en perspective ni signal d'achat. Nautilus agrège, normalise et score des dizaines de milliers de lots simultanément, calcule automatiquement l'écart par rapport aux ventes comparables, et vous présente uniquement les opportunités les plus pertinentes selon votre profil — en quelques secondes plutôt qu'en plusieurs heures.",
-        },
-      ],
-    },
-    {
-      category: "L'essai gratuit · Démarrer",
-      questions: [
-        {
-          q: "Comment démarrer sur Nautilus ?",
-          a: "Cliquez sur « Commencer gratuitement » depuis la page d'accueil ou la page Tarifs. L'inscription prend moins d'une minute — avec votre email ou via Google. Aucune carte bancaire n'est demandée pour démarrer.",
+          q: "Quelle différence entre Nautilus et une recherche manuelle ?",
+          a: "Une recherche manuelle vous donne accès à des données brutes. Nautilus les analyse et les met en perspective. Plutôt que de comparer vous-même des dizaines de résultats d'enchères, Nautilus calcule automatiquement si un lot est cohérent avec ce que le marché a payé récemment pour des œuvres comparables. La différence, c'est la structure et la vitesse : ce qui vous prendrait plusieurs heures de recherche vous est présenté en quelques secondes, de manière lisible et directement utilisable.",
         },
         {
-          q: "En quoi consiste l'essai gratuit de 7 jours ?",
-          a: "Dès votre inscription, vous bénéficiez automatiquement de 7 jours complets sur le plan Investor — sans engagement ni carte bancaire. Vous avez accès à l'intégralité des fonctionnalités : flux complet de lots, scores de conviction, alertes, analyse d'artistes, Larry votre analyste IA, portefeuille et mémos d'investissement. À l'issue des 7 jours, vous choisissez librement de souscrire à un plan payant ou de continuer sur le plan Explorer (gratuit) avec des fonctionnalités réduites.",
-        },
-        {
-          q: "Faut-il une carte bancaire pour s'inscrire ?",
-          a: "Non. L'inscription et l'essai gratuit de 7 jours ne nécessitent aucune carte bancaire. Vous ne serez jamais débité sans avoir explicitement choisi un abonnement payant et renseigné vos informations de paiement.",
-        },
-        {
-          q: "Que se passe-t-il à la fin des 7 jours d'essai ?",
-          a: "À la fin de votre essai, votre compte passe automatiquement sur le plan Explorer (gratuit). Il n'y a aucun prélèvement automatique. Vous pouvez continuer à utiliser Nautilus avec 6 lots scorés par jour, ou choisir de souscrire au plan Investor pour conserver l'accès complet.",
-        },
-        {
-          q: "Puis-je inviter des proches à essayer Nautilus ?",
-          a: "Oui. Vous pouvez partager librement le lien d'inscription. Chaque nouvel utilisateur bénéficie du même essai gratuit de 7 jours sur le plan Investor, sans carte bancaire.",
+          q: "Quelle différence entre Nautilus et une base de données spécialisée ?",
+          a: "Les bases de données spécialisées donnent accès aux résultats historiques. Elles sont utiles, mais nécessitent une expertise significative pour être bien exploitées. Nautilus va plus loin : il analyse les données pour vous, identifie automatiquement les lots qui présentent un écart de prix intéressant par rapport aux comparables, et vous présente uniquement les opportunités les plus pertinentes selon votre profil. La différence, c'est entre avoir accès à l'information et disposer d'une information déjà analysée et priorisée.",
         },
       ],
     },
     {
-      category: 'La plateforme · Fonctionnalités',
+      category: 'Méthodologie',
       questions: [
         {
-          q: "Comment est organisée la plateforme ?",
-          a: "La plateforme est organisée autour de plusieurs espaces accessibles depuis le menu latéral : Aujourd'hui (votre briefing quotidien personnalisé), Marché (l'ensemble des lots analysés), Artistes (l'intelligence marché par artiste), Ventes urgentes (les lots qui ferment dans les 24–48 heures), Portefeuille (le suivi de vos acquisitions), Alertes (la configuration de vos notifications) et Agent (le chat direct avec Larry).",
+          q: "Comment calculez-vous les décotes ?",
+          a: "La décote est calculée en comparant le prix actuel d'un lot — ou son estimation basse — aux transactions observées pour des œuvres comparables sur une période récente. Nous prenons en compte des critères comme la technique, les dimensions, la période de création et la dynamique de l'artiste sur le marché secondaire. La décote affichée reflète l'écart entre le prix actuel et ce que le marché a effectivement payé pour des pièces similaires. C'est un indicateur de contexte, pas une promesse de valeur.",
         },
         {
-          q: "Qu'est-ce que la page Aujourd'hui ?",
-          a: "La page Aujourd'hui est votre tableau de bord quotidien personnalisé. Larry y sélectionne chaque jour les lots les plus pertinents selon votre profil, vous alerte sur les ventes qui ferment dans les 24 à 48 heures, et affiche les nouveaux signaux détectés depuis la veille. C'est le point de départ recommandé à chaque connexion.",
+          q: "Comment choisissez-vous les comparables ?",
+          a: "Les comparables sont des œuvres présentant des caractéristiques proches de celle analysée : même artiste, même technique, dimensions similaires, période de création proche. Nautilus les identifie automatiquement à partir de l'historique des ventes disponibles. Plus les comparables sont proches et récents, plus l'analyse est pertinente. Lorsque les comparables sont peu nombreux ou anciens, le score et les analyses le reflètent. Nous ne fabriquons pas de certitudes là où les données sont insuffisantes.",
         },
         {
-          q: "Qu'est-ce que Larry ?",
-          a: "Larry est votre analyste IA personnel intégré à Nautilus. Il surveille le marché en continu, sélectionne chaque jour les opportunités les plus pertinentes pour votre profil, et répond à toutes vos questions en langage naturel — pour analyser un lot précis, comprendre la dynamique d'un artiste, ou évaluer si une œuvre vaut son prix. Larry est accessible depuis la page Aujourd'hui ou via l'onglet Agent.",
+          q: "Combien d'œuvres Nautilus analyse-t-il ?",
+          a: "Nautilus analyse en continu plusieurs dizaines de milliers de lots actifs sur le marché, avec de nouveaux lots intégrés chaque jour dès leur publication. Le volume varie selon les périodes de vente et l'activité du marché, mais la couverture est large et mise à jour en permanence. Notre objectif est que chaque lot pertinent soit analysé et disponible dans les heures suivant sa publication, pas après plusieurs semaines de délai.",
         },
         {
-          q: "Comment fonctionnent les Convictions ?",
-          a: "Les Convictions sont les recommandations à plus forte conviction de Larry pour votre profil spécifique. Chaque conviction affiche l'œuvre, l'artiste, la maison de vente, le score de 0 à 100, la décote par rapport à l'estimation basse, les signaux de personnalisation (artiste suivi, votre catégorie, dans votre budget) et la recommandation de Larry en quelques mots. Un score supérieur à 65 indique une sous-évaluation significative par rapport aux ventes comparables.",
+          q: "Les données sont-elles mises à jour régulièrement ?",
+          a: "Oui. Les nouveaux lots sont intégrés dès leur publication sur le marché. Les scores sont recalculés régulièrement pour tous les lots actifs, de manière à refléter les évolutions du contexte de marché. Les résultats de vente — adjudications et retraits — sont intégrés dans les heures suivant la clôture. Notre objectif est que les informations que vous consultez correspondent à l'état réel du marché, et non à des données vieilles de plusieurs semaines.",
         },
         {
-          q: "Qu'est-ce que la section Ventes urgentes ?",
-          a: "La section Ventes urgentes regroupe tous les lots dont la clôture est imminente (moins de 24 à 48 heures). Ils sont classés par temps restant, avec un indicateur d'urgence. C'est la section à consulter en priorité pour ne manquer aucune fenêtre d'achat.",
-        },
-        {
-          q: "Comment fonctionne la section Artistes ?",
-          a: "La section Artistes vous permet d'accéder à la fiche de tout artiste présent dans notre base : résultats récents aux enchères, dynamique de marché, lots actuellement disponibles et évolution des prix. Vous pouvez suivre un artiste pour recevoir des alertes dès qu'un nouveau lot apparaît.",
-        },
-        {
-          q: "Qu'est-ce que Collection Match ?",
-          a: "Collection Match analyse votre profil de collectionneur (catégories préférées, artistes suivis, budget, historique) et identifie les lots du moment qui correspondent le mieux à votre collection ou à vos préférences déclarées. C'est un moteur de recommandation personnalisée, distinct du classement par score global.",
-        },
-        {
-          q: "Qu'est-ce que le Mémo d'investissement ?",
-          a: "Le Mémo d'investissement est un document généré automatiquement pour chaque lot, résumant le cas d'investissement : score de conviction, comparables de marché, profil de l'artiste, signaux d'achat et recommandation de prix. Il est disponible pour les membres Investor et Pro.",
+          q: "Comment identifiez-vous les opportunités ?",
+          a: "Nautilus identifie les lots qui présentent un écart positif entre leur prix actuel et les transactions comparables récentes. Cet écart — la décote — est l'un des principaux indicateurs utilisés. Nous l'associons à d'autres signaux : la dynamique de l'artiste sur le marché secondaire, les caractéristiques spécifiques du lot et la proximité de la date de vente. Il ne s'agit pas d'une sélection manuelle : c'est une analyse systématique de l'ensemble du marché disponible, sans parti pris.",
         },
       ],
     },
@@ -97,74 +68,75 @@ const FAQ_DATA = {
       category: 'Le score de conviction',
       questions: [
         {
-          q: "Comment fonctionne le score de 0 à 100 ?",
-          a: "Le score de conviction évalue la qualité de chaque opportunité selon plusieurs dimensions : l'écart entre le prix actuel et les ventes comparables récentes (composante principale), la dynamique de marché de l'artiste (résultats récents, tendance), les caractéristiques du lot (technique, dimensions) et les signaux de timing (temps avant clôture, ventes en cours). Un score supérieur à 65 signale une sous-évaluation notable. Au-dessus de 80, l'opportunité est considérée comme exceptionnelle.",
+          q: "Comment fonctionne le score de conviction ?",
+          a: "Le score de conviction est un indicateur synthétique allant de 0 à 100. Il résume, pour chaque lot, la combinaison de plusieurs signaux de marché : l'écart entre le prix actuel et les ventes comparables récentes, la dynamique de l'artiste sur le marché secondaire, les caractéristiques de l'œuvre et les conditions de la vente. Un score élevé indique qu'un lot présente plusieurs signaux favorables simultanément. C'est un outil de priorisation — pas une recommandation d'achat.",
         },
         {
-          q: "Qu'est-ce que le pourcentage de décote affiché ?",
-          a: "Le pourcentage de décote indique l'écart entre le prix actuel estimé (ou l'estimation basse de la maison de vente) et ce que le marché a payé pour des œuvres comparables récemment. Une décote de 20 % signifie que l'œuvre est estimée 20 % en dessous de ce que le marché paie habituellement pour des pièces équivalentes.",
+          q: "Pourquoi certains lots obtiennent-ils un score élevé ?",
+          a: "Un score élevé reflète la présence simultanée de plusieurs signaux favorables : un écart de prix significatif par rapport aux comparables récents, une dynamique positive de l'artiste sur le marché secondaire et des caractéristiques de lot cohérentes avec ce niveau de prix. Il peut aussi refléter une urgence temporelle — un lot dont la clôture est prochaine à un prix attractif. Ce n'est pas un jugement esthétique. C'est une lecture structurée des données de marché disponibles.",
         },
         {
-          q: "Qu'est-ce que le Max Bid ?",
-          a: "Le Max Bid est le prix maximum recommandé par notre modèle pour un lot donné, frais acheteur inclus. Il est calculé à partir des ventes comparables sur 24 mois, de la rareté relative de l'œuvre et du potentiel d'appréciation estimé. C'est le seuil au-delà duquel le risque de surpayer devient significatif.",
+          q: "Pourquoi certains lots obtiennent-ils un score faible ?",
+          a: "Un score faible peut indiquer plusieurs choses : le prix du lot est déjà en ligne avec — voire au-dessus de — ce que le marché a récemment payé pour des œuvres similaires ; l'artiste montre peu d'activité récente sur le marché secondaire ; ou les comparables disponibles ne justifient pas la valorisation actuelle. Un score faible ne signifie pas qu'une œuvre est sans intérêt. Il signifie simplement qu'elle ne présente pas d'écart de prix notable selon les données disponibles.",
         },
         {
-          q: "Pourquoi certains lots scorent-ils 85/100 et d'autres 40/100 ?",
-          a: "Un score élevé requiert deux conditions simultanées : une décote significative par rapport aux comparables ET de solides fondamentaux d'artiste. Un lot peut être moins cher que son estimation et scorer faiblement si l'artiste a une faible liquidité de marché. Inversement, un artiste très coté avec un lot bien pricé peut scorer moyen. L'écart de prix seul ne suffit pas — la qualité sous-jacente entre en compte.",
+          q: "Que signifie le pourcentage de décote affiché ?",
+          a: "Le pourcentage de décote indique l'écart entre l'estimation basse du lot et le prix médian observé pour des œuvres comparables récemment vendues sur le marché. Une décote de 25 % signifie que le lot est estimé 25 % en dessous de ce que le marché a payé en moyenne pour des pièces équivalentes. C'est un repère de contexte. Il doit toujours être lu en tenant compte de la qualité et de la pertinence des comparables disponibles.",
+        },
+        {
+          q: "Le score garantit-il qu'une œuvre est une bonne affaire ?",
+          a: "Non. Le score est un outil d'aide à la décision, pas une garantie. Il indique qu'un lot présente certains signaux favorables selon les données disponibles — pas que l'achat sera nécessairement rentable ou sans risque. Le marché de l'art comporte des incertitudes que les données seules ne peuvent pas résoudre : état de conservation, conditions de la vente, frais, liquidité future. Utilisez le score comme un premier filtre sérieux, pas comme un verdict définitif.",
         },
         {
           q: "Quelle est la fiabilité du score ?",
-          a: "Nos signaux sont calculés à partir de ventes réelles aux enchères. Le score mesure la probabilité qu'un lot soit sous-évalué par rapport au marché actuel — il ne garantit pas un résultat futur. Les performances passées ne préjugent pas des performances futures. Nautilus est un outil d'aide à la décision, pas un oracle.",
+          a: "Le score est un indicateur probabiliste construit sur des données de marché réelles. Il est fiable dans la mesure où il reflète fidèlement l'écart entre le prix d'un lot et les transactions observées pour des œuvres comparables. En revanche, il n'anticipe pas les conditions spécifiques d'une vente, l'état physique de l'œuvre, ni l'évolution future du marché. Comme tout outil d'analyse, il réduit l'incertitude — il ne l'élimine pas.",
         },
       ],
     },
     {
-      category: 'Plans & Tarifs',
+      category: 'Les opportunités',
       questions: [
         {
-          q: "Quels sont les plans disponibles ?",
-          a: "Nautilus propose trois niveaux d'accès. Le plan Explorer (gratuit) : 6 lots scorés par jour, score et décote visibles, sans alertes ni analyste IA. Le plan Investor (€10/mois ou €8/mois en annuel) : accès illimité, source de vente révélée, liens enchères directs, alertes temps réel, Larry analyste IA, mémos d'investissement, suivi de portefeuille. Le plan Pro : pour les investisseurs avec des besoins avancés, analyste IA illimité, stratégies illimitées et support prioritaire. Pour les institutions, nous proposons des configurations sur mesure.",
+          q: "Comment sont sélectionnées les opportunités affichées ?",
+          a: "Les opportunités affichées sont des lots qui présentent un score de conviction au-dessus d'un seuil et qui correspondent à votre profil — budget déclaré, catégories préférées, artistes suivis. Nautilus ne fait aucune sélection manuelle : toutes les opportunités que vous voyez résultent de l'analyse automatique de l'ensemble des lots disponibles sur le marché. Les résultats varient naturellement selon la période et le niveau d'activité du marché. Aucune opportunité n'est mise en avant pour des raisons commerciales.",
         },
         {
-          q: "Combien coûte le plan Investor ?",
-          a: "Le plan Investor est à €10/mois en facturation mensuelle, ou €96/an (soit €8/mois) en facturation annuelle — une économie de €24 par an. Il s'agit d'un prix fondateur verrouillé à vie pour les premiers membres, limité à 100 places.",
+          q: "Pourquoi ne vois-je pas toutes les œuvres disponibles sur le marché ?",
+          a: "Nautilus se concentre sur les lots qui présentent un intérêt particulier selon les données disponibles. Afficher l'intégralité des lots disponibles sans analyse ni priorisation aurait peu de valeur pratique. Notre objectif est de vous présenter les opportunités les plus pertinentes selon votre profil — pas d'agréger un catalogue exhaustif. Si vous souhaitez explorer plus largement l'ensemble du marché analysé, la section Marché vous permet d'ajuster librement les filtres.",
         },
         {
-          q: "L'essai est-il vraiment gratuit, sans carte bancaire ?",
-          a: "Oui, entièrement. Les 7 premiers jours sur le plan Investor sont offerts à l'inscription, sans carte bancaire, sans engagement. Aucun prélèvement n'est effectué sans votre accord explicite.",
+          q: "Nautilus recommande-t-il d'acheter certaines œuvres ?",
+          a: "Non. Nautilus présente des données et des analyses — il ne recommande pas d'acheter une œuvre en particulier. Un score de conviction élevé signifie qu'un lot présente des signaux favorables selon les données disponibles. Ce n'est pas une recommandation d'achat. La décision reste entièrement la vôtre et devrait toujours intégrer des éléments que les données seules ne couvrent pas : votre goût personnel, votre budget réel, votre horizon de détention et l'état physique de l'œuvre.",
         },
         {
-          q: "Puis-je changer de plan à tout moment ?",
-          a: "Oui. Les upgrades prennent effet immédiatement. Pour les plans annuels, les downgrades prennent effet à la fin de la période de facturation en cours — vous conservez votre accès actuel jusqu'à cette date.",
-        },
-        {
-          q: "La facturation est-elle mensuelle ou annuelle ?",
-          a: "Les deux options sont disponibles pour le plan Investor. Mensuel : €10/mois. Annuel : €96/an (€8/mois), avec une économie de €24 par an. Vous pouvez basculer entre les deux depuis votre profil.",
-        },
-        {
-          q: "Proposez-vous des tarifs pour les institutions ?",
-          a: "Oui. Pour les fonds d'art, family offices et gestionnaires de patrimoine, contactez-nous à contact@get-nautilus.com pour un accompagnement personnalisé et des conditions adaptées à votre volume.",
+          q: "Puis-je utiliser Nautilus si j'envisage d'acheter pour revendre ?",
+          a: "Certains utilisateurs achètent des œuvres sous-évaluées dans l'espoir d'une revalorisation. D'autres achètent pour le plaisir de collectionner, avec une meilleure compréhension du prix payé. Nautilus peut aider dans les deux cas : il identifie les lots qui présentent un écart de prix par rapport au marché actuel. En revanche, Nautilus ne prédit pas les prix futurs et ne garantit aucun résultat. Le marché de l'art est liquide de manière irrégulière et les prix peuvent évoluer dans un sens comme dans l'autre.",
         },
       ],
     },
     {
-      category: 'Données & Couverture',
+      category: 'Larry',
       questions: [
         {
-          q: "Combien de lots Nautilus analyse-t-il ?",
-          a: "Nautilus analyse en continu plusieurs dizaines de milliers de lots actifs, avec de nouveaux lots ingérés chaque jour dès leur publication. Notre pipeline fonctionne 24h/24 et reflète les données les plus récentes disponibles.",
+          q: "Que fait exactement Larry ?",
+          a: "Larry est un assistant de recherche spécialisé dans les données du marché de l'art. Il vous aide à analyser un lot précis, à comprendre le contexte d'un artiste sur le marché secondaire, à comparer une estimation avec les transactions récentes, ou à identifier rapidement les points de vigilance avant une enchère. Larry ne vous dit pas quoi acheter. Il répond à vos questions avec les données disponibles et vous aide à structurer votre réflexion avant de prendre position.",
         },
         {
-          q: "Quelles ventes Nautilus couvre-t-il ?",
-          a: "Nous couvrons les grandes maisons de vente aux enchères internationales et régionales, ainsi que des plateformes de marché primaire sélectionnées. Nous agrégeons régulièrement de nouvelles sources pour étendre la couverture géographique et sectorielle. Le détail des sources n'est pas communiqué publiquement.",
+          q: "Quelles questions puis-je poser à Larry ?",
+          a: "Larry est particulièrement utile pour des questions comme : « Est-ce que ce prix semble cohérent avec les ventes récentes ? », « Cet artiste est-il actif sur le marché secondaire ? », « Quels sont les risques principaux sur ce lot ? », « Comment ce lot se compare-t-il aux autres disponibles en ce moment ? » ou « Y a-t-il des signaux négatifs que je devrais connaître avant d'enchérir ? » Il peut également répondre à des questions plus larges sur un mouvement artistique ou un segment de marché.",
+        },
+      ],
+    },
+    {
+      category: 'Le portefeuille',
+      questions: [
+        {
+          q: "À quoi sert le portefeuille ?",
+          a: "Le portefeuille vous permet de garder une trace de vos acquisitions et de suivre leur valorisation estimée dans le temps, sur la base des données de marché disponibles. Pour chaque œuvre enregistrée, Nautilus calcule une estimation de valeur actuelle en s'appuyant sur les ventes comparables récentes. C'est utile pour avoir une vue globale de votre collection, suivre son évolution et préparer de futures décisions d'achat ou de vente avec davantage de contexte.",
         },
         {
-          q: "À quelle fréquence les données sont-elles mises à jour ?",
-          a: "Les nouveaux lots sont ingérés dès leur publication. Les scores sont recalculés régulièrement pour tous les lots actifs. Les résultats de vente (lots adjugés) sont intégrés dans les heures suivant la clôture.",
-        },
-        {
-          q: "Jusqu'où remontent les données historiques ?",
-          a: "Notre base couvre principalement les 24 derniers mois de résultats d'enchères pour les marchés actifs. Ces données historiques servent à calculer les prix comparables et à détecter les anomalies de valorisation.",
+          q: "Puis-je ajouter des œuvres achetées en dehors de Nautilus ?",
+          a: "Oui. Vous pouvez ajouter manuellement n'importe quelle acquisition à votre portefeuille — qu'elle ait été achetée aux enchères, en galerie, directement auprès d'un artiste ou via un autre canal. Il suffit de renseigner l'artiste, le titre, le prix d'achat et la date d'acquisition. Nautilus se charge ensuite d'identifier les ventes comparables et de calculer une estimation de valeur actuelle pour cette œuvre.",
         },
       ],
     },
@@ -173,57 +145,49 @@ const FAQ_DATA = {
       questions: [
         {
           q: "Comment fonctionnent les alertes ?",
-          a: "Nautilus vous envoie une notification par email dès qu'un lot correspondant à vos critères est détecté — budget, artistes suivis, score minimum, catégories préférées. Vous configurez vos préférences depuis la page Alertes.",
+          a: "Les alertes vous permettent d'être notifié par email lorsqu'un lot correspondant à vos critères apparaît sur le marché — artiste suivi, catégorie, budget ou score minimum. Elles vous évitent de surveiller le marché en permanence et vous permettent d'agir rapidement dès qu'une opportunité pertinente se présente, plutôt que de la découvrir après la clôture de la vente. Vous configurez vos préférences depuis la page Alertes. Les alertes sont disponibles à partir du plan Investor.",
         },
         {
-          q: "Puis-je recevoir des alertes sur des artistes spécifiques ?",
-          a: "Oui. Depuis la section Artistes, vous pouvez suivre n'importe quel artiste de notre base. Nautilus vous alertera à chaque nouveau lot de cet artiste, indépendamment de son score.",
+          q: "Puis-je suivre des artistes spécifiques ?",
+          a: "Oui. Depuis la section Artistes, vous pouvez suivre n'importe quel artiste présent dans notre base de données. Vous recevrez une notification dès qu'un nouveau lot de cet artiste est disponible sur le marché, indépendamment de son score de conviction. C'est particulièrement utile si vous attendez une occasion d'acquérir une œuvre d'un artiste précis, ou si vous souhaitez rester informé de son activité récente sur le marché secondaire.",
         },
         {
-          q: "Puis-je définir un score minimum pour les alertes ?",
-          a: "Oui. Vous pouvez configurer un seuil de score minimum depuis vos préférences d'alerte (par exemple, être alerté uniquement pour les lots scorés 65 et plus). Cela vous permet de filtrer le bruit et de ne recevoir que les signaux les plus pertinents.",
-        },
-        {
-          q: "Les alertes sont-elles disponibles sur tous les plans ?",
-          a: "Les alertes en temps réel (score ≥ 70) sont disponibles à partir du plan Investor. Le plan Explorer (gratuit) ne donne pas accès aux alertes. Sur le plan Pro, les alertes démarrent dès le score 60.",
+          q: "Puis-je définir mes propres critères d'alerte ?",
+          a: "Oui. Vous pouvez configurer vos alertes selon plusieurs critères cumulables : votre budget habituel, vos catégories préférées, les artistes que vous suivez et un score minimum. Cette combinaison vous permet de ne recevoir que les signaux qui correspondent réellement à ce que vous cherchez, sans être submergé par des notifications non pertinentes. Vous pouvez modifier ou désactiver vos critères à tout moment depuis la page Alertes.",
         },
       ],
     },
     {
-      category: 'Portefeuille & Suivi',
+      category: 'Plans & Tarifs',
       questions: [
         {
-          q: "À quoi sert le module portefeuille ?",
-          a: "Le portefeuille vous permet de consigner vos acquisitions et de suivre leur valeur estimée dans le temps, sur la base des ventes comparables récentes. Pour chaque œuvre enregistrée, Nautilus calcule une estimation de valeur actuelle et un retour estimé depuis l'achat.",
+          q: "Quelle est la différence entre Explorer, Investor et Pro ?",
+          a: "Explorer (gratuit) vous permet de découvrir la plateforme avec 6 lots scorés par jour et les scores de base — sans alertes ni accès à Larry. Investor (€10/mois ou €8/mois en annuel) débloque l'accès complet : flux illimité, source de vente, liens enchères, alertes en temps réel, Larry et les mémos d'analyse. Pro est conçu pour les utilisateurs qui ont besoin d'un volume plus important et d'un accès sans contrainte à l'assistant de recherche — notamment les professionnels qui utilisent Nautilus pour accompagner plusieurs clients.",
         },
         {
-          q: "Puis-je ajouter des œuvres que je n'ai pas achetées via Nautilus ?",
-          a: "Oui. Vous pouvez ajouter manuellement n'importe quelle acquisition — peu importe comment vous l'avez achetée. Il suffit de renseigner l'artiste, le titre, le prix d'achat et la date d'acquisition.",
+          q: "L'essai est-il réellement gratuit, sans carte bancaire ?",
+          a: "Oui. À l'inscription, vous bénéficiez automatiquement de 7 jours complets sur le plan Investor, sans carte bancaire et sans engagement d'aucune sorte. À l'issue de l'essai, votre compte passe automatiquement sur le plan Explorer (gratuit) — il n'y a aucun prélèvement automatique. Vous décidez librement si vous souhaitez continuer avec un plan payant, uniquement si Nautilus vous a apporté une valeur réelle.",
+        },
+        {
+          q: "Combien coûte le plan Investor ?",
+          a: "Le plan Investor est à €10/mois en facturation mensuelle, ou €96/an en facturation annuelle — soit €8/mois et une économie de €24 par an. Il s'agit d'un prix fondateur, proposé en nombre limité lors de notre phase de lancement. Ce prix est verrouillé à vie pour les membres qui souscrivent durant cette période. Après la phase de lancement, le tarif sera plus élevé. Aucune fonctionnalité n'est facturée séparément.",
+        },
+        {
+          q: "Puis-je changer de plan à tout moment ?",
+          a: "Oui. Vous pouvez passer à un plan supérieur à tout moment — le changement prend effet immédiatement. Pour les plans annuels, un retour vers un plan inférieur prend effet à la fin de la période de facturation en cours, et vous conservez votre accès actuel jusqu'à cette date. Les upgrades sont toujours traités sans délai. Pour toute question sur la facturation, notre équipe est disponible à contact@get-nautilus.com.",
         },
       ],
     },
     {
-      category: 'Compte & Sécurité',
+      category: 'Sécurité & Compte',
       questions: [
-        {
-          q: "Comment créer un compte ?",
-          a: "Cliquez sur « Commencer gratuitement » depuis n'importe quelle page du site. L'inscription se fait en moins d'une minute avec votre email ou via Google. Aucune carte bancaire n'est demandée.",
-        },
-        {
-          q: "Comment réinitialiser mon mot de passe ?",
-          a: "Depuis la page de connexion, cliquez sur « Mot de passe oublié ». Vous recevrez un lien de réinitialisation par email dans les minutes suivantes.",
-        },
         {
           q: "Mes données sont-elles sécurisées ?",
-          a: "Oui. Nautilus utilise le chiffrement SSL/TLS pour toutes les communications. Vos données personnelles ne sont jamais vendues ni partagées avec des tiers à des fins commerciales. Nous sommes conformes au RGPD.",
+          a: "Oui. Toutes les communications entre votre navigateur et nos serveurs sont chiffrées via SSL/TLS. Vos données personnelles ne sont ni vendues ni partagées avec des tiers à des fins commerciales. Nautilus est conforme au RGPD. Vous pouvez à tout moment demander l'accès, la modification ou la suppression de vos données personnelles en nous contactant directement à contact@get-nautilus.com.",
         },
         {
-          q: "Comment résilier mon abonnement ?",
-          a: "Vous pouvez résilier à tout moment depuis votre profil > Abonnement > Annuler. Vous conservez l'accès complet jusqu'à la fin de votre période de facturation en cours. Aucun frais supplémentaire ne sera prélevé.",
-        },
-        {
-          q: "Comment contacter le support ?",
-          a: "Par email à contact@get-nautilus.com. Notre équipe répond sous 24 heures ouvrées. Les membres Pro bénéficient d'un accès support prioritaire.",
+          q: "Comment supprimer mon compte ?",
+          a: "Vous pouvez supprimer votre compte depuis votre profil > Paramètres > Supprimer le compte, ou en nous contactant directement à contact@get-nautilus.com. La suppression entraîne l'effacement définitif de vos données personnelles dans les délais prévus par la réglementation applicable. Si vous avez un abonnement actif, pensez à le résilier avant de supprimer votre compte pour éviter tout prélèvement supplémentaire.",
         },
       ],
     },
@@ -233,86 +197,57 @@ const FAQ_DATA = {
       category: 'About Nautilus',
       questions: [
         {
-          q: 'What is Nautilus?',
-          a: "Nautilus is a market intelligence platform for art collectors and investors. We continuously aggregate data from tens of thousands of auction lots and primary market listings, then score every lot from 0 to 100 based on price vs comparable sales, artist momentum, and market demand signals. The goal: give you a systematic information edge to buy at the right price.",
+          q: "What is Nautilus?",
+          a: "Nautilus is an art market analysis tool. It continuously aggregates and compares a large volume of sales data — auction results, estimates, artist trends — to help users better understand how a work is valued before bidding. Nautilus does not sell artworks, is neither a gallery nor an auction house, and does not provide financial advice. It is a research and decision support tool, designed to help every buyer take a position with a clearer understanding of the market.",
         },
         {
-          q: 'Who is Nautilus for?',
-          a: "Nautilus is built for anyone who approaches art with an investment mindset: individual collectors with budgets from €500 to several million euros, family offices allocating capital to alternative assets, wealth managers advising clients with art holdings, and passionate collectors who simply want to understand the real value of what they buy.",
+          q: "Who is Nautilus for?",
+          a: "Nautilus is designed for anyone who wants a clearer picture of the market before buying a work. Whether you are preparing your first significant purchase, have been collecting actively for several years, or professionally advise clients on acquisitions, the benefit is the same: rapid access to structured analysis of any opportunity, without having to manually search through dispersed data or cross-reference dozens of past auction results.",
         },
         {
-          q: 'Is Nautilus financial advice?',
-          a: "No. Nautilus provides market intelligence and data analysis — not financial or investment advice. Our scores and analyses are informational tools to support your own research and decision-making. Art investment carries risk, and past performance does not guarantee future results.",
+          q: "Why use Nautilus before buying a work?",
+          a: "Understanding whether a price is consistent with the market takes time. You need to find comparable sales, analyse the artist's recent results, and assess whether the house's estimate aligns with historical data. Nautilus does this automatically. In a few seconds, you can see whether a lot is priced in line with the market, below it, or above — and by how much. It does not replace your judgement, but it informs it.",
         },
         {
-          q: 'Is Nautilus available in French?',
-          a: "Yes. The platform is fully available in both English and French. You can switch languages at any time using the selector in the top right of the platform.",
+          q: "Is Nautilus financial advice?",
+          a: "No. Nautilus provides market data and contextual analysis — not financial advice, investment recommendations, or any promise of return. The art market involves uncertainties that data alone cannot resolve: condition of the work, sale conditions, fees, future price evolution. All information on Nautilus is a decision support tool. The final decision is entirely yours, ideally informed by your own judgement and, where relevant, a qualified adviser.",
         },
         {
-          q: 'How is Nautilus different from a manual search?',
-          a: "A manual search gives you scattered information with no context or buy signal. Nautilus aggregates, normalises, and scores tens of thousands of lots simultaneously, automatically calculates the gap vs comparable sales, and surfaces only the most relevant opportunities for your profile — in seconds rather than hours.",
-        },
-      ],
-    },
-    {
-      category: 'Free Trial · Getting Started',
-      questions: [
-        {
-          q: 'How do I get started on Nautilus?',
-          a: "Click \"Get started for free\" from the homepage or the Pricing page. Sign up in under a minute with your email or via Google. No credit card required to start.",
+          q: "Where does your data come from?",
+          a: "Nautilus aggregates data from a broad range of public and professional art market sources. This data is normalised, structured, and compared against several years of historical records to enable coherent and contextual analysis. We do not disclose the detail of our sources — that is a core part of our methodology. What you see in Nautilus is based on observed transactions and real market data, not theoretical estimates.",
         },
         {
-          q: 'What does the 7-day free trial include?',
-          a: "From the moment you sign up, you automatically get 7 full days on the Investor plan — no commitment, no credit card. You have access to all features: complete lot feed, conviction scores, real-time alerts, artist analytics, Larry your AI analyst, portfolio tracking, and Investment Memos. After 7 days, you freely choose to subscribe to a paid plan or continue on the Explorer plan (free) with reduced features.",
+          q: "What is the difference between Nautilus and a manual search?",
+          a: "A manual search gives you access to raw data. Nautilus analyses it and puts it in context. Rather than comparing dozens of auction results yourself, Nautilus automatically calculates whether a lot is consistent with what the market has recently paid for comparable works. The difference is structure and speed: what would take hours of research is presented in seconds, in a readable and immediately usable format.",
         },
         {
-          q: 'Do I need a credit card to sign up?',
-          a: "No. Registration and the 7-day free trial require no credit card. You will never be charged without having explicitly chosen a paid subscription and entered your payment details.",
-        },
-        {
-          q: 'What happens after the 7-day trial?',
-          a: "At the end of your trial, your account automatically moves to the Explorer plan (free). There is no automatic charge. You can continue using Nautilus with 6 scored lots per day, or choose to subscribe to the Investor plan to keep full access.",
-        },
-        {
-          q: 'Can I invite others to try Nautilus?',
-          a: "Yes. You can freely share the sign-up link. Every new user gets the same free 7-day trial on the Investor plan, with no credit card required.",
+          q: "What is the difference between Nautilus and a specialist art database?",
+          a: "Specialist databases give you access to historical results. They are useful, but require significant expertise to use effectively. Nautilus goes further: it analyses the data for you, automatically identifies lots with a meaningful price gap relative to comparables, and surfaces only the most relevant opportunities for your profile. The difference is between having access to information and having access to information that has already been interpreted and prioritised.",
         },
       ],
     },
     {
-      category: 'The Platform · Features',
+      category: 'Methodology',
       questions: [
         {
-          q: 'How is the platform organised?',
-          a: "The platform is organised around several spaces accessible from the side menu: Today (your personalised daily briefing), Market (all analysed lots), Artists (market intelligence by artist), Urgent Sales (lots closing in 24–48 hours), Portfolio (track your acquisitions), Alerts (configure your notifications), and Agent (direct chat with Larry).",
+          q: "How do you calculate discounts?",
+          a: "The discount is calculated by comparing a lot's current price — or its low estimate — to observed transactions for comparable works over a recent period. We take into account criteria such as medium, dimensions, creation period, and the artist's track record on the secondary market. The discount shown reflects the gap between the current price and what the market has actually paid for similar pieces. It is a contextual indicator, not a value guarantee.",
         },
         {
-          q: "What is the Today page?",
-          a: "The Today page is your personalised daily dashboard. Larry selects each day the lots most relevant to your profile, alerts you to sales closing within 24 to 48 hours, and displays new signals detected since the day before. It's the recommended starting point every time you log in.",
+          q: "How do you choose comparables?",
+          a: "Comparables are works with characteristics close to the one being analysed: same artist, same medium, similar dimensions, similar period of creation. Nautilus identifies them automatically from the available sales history. The closer and more recent the comparables, the more relevant the analysis. When comparables are few in number or dated, the score and analyses reflect this honestly — we do not manufacture certainty where the data is insufficient.",
         },
         {
-          q: 'What is Larry?',
-          a: "Larry is your personal AI analyst built into Nautilus. He monitors the market continuously, selects the most relevant opportunities for your profile each day, and answers any question in natural language — to analyse a specific lot, understand an artist's momentum, or assess whether a work is fairly priced. Larry is accessible from the Today page or via the Agent tab.",
+          q: "How many works does Nautilus analyse?",
+          a: "Nautilus continuously analyses tens of thousands of active lots, with new lots integrated daily as soon as they are published. The exact volume varies according to the sales calendar and market activity, but coverage is broad and continuously updated. Our goal is for every relevant lot to be analysed and available within hours of publication — not after a delay of several weeks.",
         },
         {
-          q: 'How do Convictions work?',
-          a: "Convictions are Larry's highest-conviction recommendations for your specific profile. Each conviction shows the artwork, artist, auction house, conviction score from 0 to 100, discount vs low estimate, personalisation signals (tracked artist, your category, within your budget), and Larry's recommendation in a few words. A score above 65 signals meaningful undervaluation vs comparable sales.",
+          q: "Is the data updated regularly?",
+          a: "Yes. New lots are integrated as soon as they are published on the market. Scores are recalculated regularly for all active lots to reflect shifts in market context. Sale results — hammer prices and withdrawals — are integrated within hours of closing. Our goal is for the information you consult to correspond to the current state of the market, not data that is weeks old.",
         },
         {
-          q: 'What is the Urgent Sales section?',
-          a: "The Urgent Sales section groups all lots closing imminently — within the next 24 to 48 hours. They are ranked by time remaining, with an urgency indicator. This is the section to check first to avoid missing any buying window.",
-        },
-        {
-          q: 'How does the Artists section work?',
-          a: "The Artists section gives you access to the profile of any artist in our database: recent auction results, market momentum, currently available lots, and price evolution. You can follow an artist to receive alerts whenever a new lot appears.",
-        },
-        {
-          q: 'What is Collection Match?',
-          a: "Collection Match analyses your collector profile (preferred categories, followed artists, budget, history) and identifies current lots that best match your existing collection or declared preferences. It is a personalised recommendation engine, distinct from the global score ranking.",
-        },
-        {
-          q: 'What is the Investment Memo?',
-          a: "The Investment Memo is a document automatically generated for each lot, summarising the investment case: conviction score, market comparables, artist profile, buy signals, and price recommendation. It is available to Investor and Pro members.",
+          q: "How do you identify opportunities?",
+          a: "Nautilus identifies lots that show a positive gap between their current price and recent comparable transactions. This gap — the discount — is one of the main indicators used. We combine it with other signals: the artist's dynamics on the secondary market, the specific characteristics of the lot, and proximity to the sale date. This is not a manual selection: it is a systematic analysis of all available market data, without editorial bias.",
         },
       ],
     },
@@ -320,74 +255,75 @@ const FAQ_DATA = {
       category: 'The Conviction Score',
       questions: [
         {
-          q: 'How does the 0–100 score work?',
-          a: "The conviction score evaluates the quality of each opportunity across several dimensions: the gap between the current price and recent comparable sales (main component), artist market momentum (recent results, trend), lot characteristics (medium, dimensions), and timing signals (time to close, live auctions). A score above 65 flags notable undervaluation. Above 80, the opportunity is considered exceptional.",
+          q: "How does the conviction score work?",
+          a: "The conviction score is a composite indicator ranging from 0 to 100. For each lot, it summarises the combination of several market signals: the price gap relative to recent comparable sales, the artist's dynamics on the secondary market, the characteristics of the work, and sale conditions. A high score indicates that a lot shows several favourable signals simultaneously. It is a prioritisation tool — not a buying recommendation.",
         },
         {
-          q: 'What does the discount percentage shown mean?',
-          a: "The discount percentage shows the gap between the current estimated price (or the auction house's low estimate) and what the market has recently paid for comparable works. A 20% discount means the work is estimated 20% below what the market typically pays for equivalent pieces.",
+          q: "Why do some lots receive a high score?",
+          a: "A high score reflects the simultaneous presence of several favourable signals: a significant price gap relative to recent comparables, positive artist dynamics on the secondary market, and lot characteristics consistent with that price level. It may also reflect time urgency — a lot closing soon at an attractive price. It is not an aesthetic judgement. It is a structured reading of the available market data.",
         },
         {
-          q: "What is the Max Bid?",
-          a: "The Max Bid is the maximum price our model recommends paying for a given lot, including buyer's premium. It is calculated from comparable sales over 24 months, the relative rarity of the work, and estimated appreciation potential. It is the threshold beyond which the risk of overpaying becomes significant.",
+          q: "Why do some lots receive a low score?",
+          a: "A low score can indicate several things: the lot's price is already in line with — or above — what the market has recently paid for similar works; the artist shows limited recent activity on the secondary market; or the available comparables do not support the current valuation. A low score does not mean a work is without interest. It simply means it does not show a notable price gap according to current data.",
         },
         {
-          q: 'Why do some lots score 85/100 while others score 40/100?',
-          a: "A high score requires two simultaneous conditions: a significant discount vs comparables AND strong underlying artist fundamentals. A lot can be cheaper than its estimate and still score low if the artist has poor market liquidity. Conversely, a highly regarded artist with a fairly priced lot may score moderately. The price gap alone is not enough — the underlying quality matters.",
+          q: "What does the discount percentage mean?",
+          a: "The discount percentage shows the gap between the lot's low estimate and the median price observed for comparable works recently sold on the market. A discount of 25% means the lot is estimated 25% below what the market has paid on average for equivalent pieces. It is a contextual reference point. It should always be read taking into account the quality and relevance of the available comparables.",
         },
         {
-          q: 'How reliable is the score?',
-          a: "Our signals are calculated from real auction sales. The score measures the probability that a lot is undervalued relative to the current market — it does not guarantee a future outcome. Past performance does not predict future results. Nautilus is a decision support tool, not an oracle.",
-        },
-      ],
-    },
-    {
-      category: 'Plans & Pricing',
-      questions: [
-        {
-          q: 'What plans are available?',
-          a: "Nautilus offers three tiers. Explorer (free): 6 scored lots per day, score and discount visible, no alerts or AI analyst. Investor (€10/month or €8/month annually): unlimited access, auction source revealed, direct bidding links, real-time alerts, Larry AI analyst, Investment Memos, portfolio tracking. Pro: for advanced investors — unlimited AI analyst, unlimited strategies, priority support. For institutions, we offer custom configurations.",
+          q: "Does the score guarantee that a work is a good deal?",
+          a: "No. The score is a decision support tool, not a guarantee. It tells you that a lot shows certain favourable signals according to available data — not that the purchase will necessarily be profitable or risk-free. The art market involves uncertainties that data alone cannot resolve: condition of the work, sale conditions, fees, future artist liquidity. Use the score as a serious first filter, not as a final verdict.",
         },
         {
-          q: 'How much does the Investor plan cost?',
-          a: "The Investor plan is €10/month on a monthly basis, or €96/year (€8/month) on an annual basis — saving €24 per year. This is a founding member price, locked in for life, limited to 100 spots.",
-        },
-        {
-          q: 'Is the trial really free — no credit card?',
-          a: "Yes, entirely. The first 7 days on the Investor plan are free at sign-up, no credit card, no commitment. No charge is ever made without your explicit consent.",
-        },
-        {
-          q: 'Can I change plans at any time?',
-          a: "Yes. Upgrades take effect immediately. For annual plans, downgrades take effect at the end of the current billing period — you keep your current access until that date.",
-        },
-        {
-          q: 'Is billing monthly or annual?',
-          a: "Both options are available for the Investor plan. Monthly: €10/month. Annual: €96/year (€8/month), saving €24 per year. You can switch between the two from your profile.",
-        },
-        {
-          q: 'Do you offer institutional pricing?',
-          a: "Yes. For art funds, family offices, and wealth managers, contact us at contact@get-nautilus.com for tailored pricing and conditions suited to your volume.",
+          q: "How reliable is the score?",
+          a: "The score is a probabilistic indicator built on real market data. It reliably reflects the gap between a lot's price and observed transactions for comparable works. However, it does not anticipate the specific conditions of a sale, the physical state of the work, or future market movements. Like any analytical tool, it reduces uncertainty — it does not eliminate it.",
         },
       ],
     },
     {
-      category: 'Data & Coverage',
+      category: 'Opportunities',
       questions: [
         {
-          q: 'How many lots does Nautilus analyse?',
-          a: "Nautilus continuously analyses tens of thousands of active lots, with new lots ingested every day as soon as they are published. Our pipeline runs 24/7 and reflects the most current data available.",
+          q: "How are the displayed opportunities selected?",
+          a: "The displayed opportunities are lots with a conviction score above a threshold that match your profile — declared budget, preferred categories, followed artists. Nautilus makes no manual curation: every opportunity you see results from the automatic analysis of all available lots on the market. Results naturally vary depending on the period and level of market activity. No opportunity is featured or promoted for commercial reasons.",
         },
         {
-          q: 'Which sales does Nautilus cover?',
-          a: "We cover major international and regional auction houses, as well as selected primary market platforms. We regularly add new sources to extend geographic and sector coverage. The specific list of sources is not publicly disclosed.",
+          q: "Why don't I see all works available on the market?",
+          a: "Nautilus focuses on lots that show particular interest according to available data. Displaying all available lots without analysis or prioritisation would have little practical value. Our goal is to surface the most relevant opportunities for your profile — not to aggregate an exhaustive catalogue. If you want to explore more broadly, the Market section lets you adjust filters freely to access the full analysed feed.",
         },
         {
-          q: 'How often is data updated?',
-          a: "New lots are ingested as soon as they are published. Scores are recalculated regularly for all active lots. Sale results (sold lots) are integrated within hours of closing.",
+          q: "Does Nautilus recommend buying specific works?",
+          a: "No. Nautilus presents data and analyses — it does not recommend buying any particular work. A high conviction score means a lot shows favourable signals according to available data. It is not a buying recommendation. The decision is entirely yours and should always incorporate elements that data alone cannot cover: your personal taste, your actual budget, your holding horizon, and the physical condition of the work.",
         },
         {
-          q: 'How far back does the historical data go?',
-          a: "Our database covers primarily the last 24 months of auction results for active markets. This historical data is used to calculate comparable prices and detect valuation anomalies.",
+          q: "Can I use Nautilus if I intend to buy and resell?",
+          a: "Some users buy undervalued works in the hope of appreciation. Others buy for the pleasure of collecting, with a better understanding of the price paid. Nautilus can help in both cases: it identifies lots with a price gap relative to the current market. However, Nautilus does not predict future prices and makes no guarantees. The art market has uneven liquidity and prices can move in either direction.",
+        },
+      ],
+    },
+    {
+      category: 'Larry',
+      questions: [
+        {
+          q: "What exactly does Larry do?",
+          a: "Larry is a research assistant specialised in art market data. He helps you analyse a specific lot, understand an artist's context on the secondary market, compare an estimate with recent transactions, or quickly identify points to watch before bidding. Larry does not tell you what to buy. He answers your questions using available data and helps you structure your thinking before taking a position.",
+        },
+        {
+          q: "What questions can I ask Larry?",
+          a: "Larry is particularly useful for questions such as: \"Does this price seem consistent with recent sales?\", \"Is this artist liquid on the secondary market?\", \"What are the main risks on this lot?\", \"How does this lot compare to others available right now?\", or \"Are there negative signals I should know before bidding?\" He can also answer broader questions about a particular artistic movement or market segment.",
+        },
+      ],
+    },
+    {
+      category: 'Portfolio',
+      questions: [
+        {
+          q: "What is the portfolio for?",
+          a: "The portfolio lets you keep a record of your acquisitions and monitor their estimated valuation over time, based on available market data. For each registered work, Nautilus calculates a current estimated value using recent comparable sales. This is useful for maintaining a global view of your collection, tracking its evolution, and approaching future buying or selling decisions with more context and clarity.",
+        },
+        {
+          q: "Can I add works bought outside Nautilus?",
+          a: "Yes. You can manually add any acquisition to your portfolio — whether bought at auction, from a gallery, directly from an artist, or through any other channel. Simply enter the artist, title, purchase price, and acquisition date. Nautilus will then identify comparable sales and calculate an estimated current value for that work, the same way it does for lots found directly on the platform.",
         },
       ],
     },
@@ -395,58 +331,50 @@ const FAQ_DATA = {
       category: 'Alerts & Notifications',
       questions: [
         {
-          q: 'How do alerts work?',
-          a: "Nautilus sends you an email notification as soon as a lot matching your criteria is detected — budget, followed artists, minimum score, preferred categories. You configure your preferences from the Alerts page.",
+          q: "How do alerts work?",
+          a: "Alerts notify you by email when a lot matching your criteria appears on the market — followed artist, category, budget, or minimum score. They save you from manually monitoring the market continuously and allow you to act quickly when a relevant opportunity appears, rather than discovering it after the sale has closed. You configure your preferences from the Alerts page. Alerts are available from the Investor plan onwards.",
         },
         {
-          q: 'Can I receive alerts for specific artists?',
-          a: "Yes. From the Artists section, you can follow any artist in our database. Nautilus will alert you for every new lot by that artist, regardless of their score.",
+          q: "Can I follow specific artists?",
+          a: "Yes. From the Artists section, you can follow any artist in our database. You will receive a notification as soon as a new lot by that artist is available on the market, regardless of its conviction score. This is particularly useful if you are waiting for the opportunity to acquire a work by a specific artist, or simply want to stay informed of their recent market activity.",
         },
         {
-          q: 'Can I set a minimum score for alerts?',
-          a: "Yes. You can configure a minimum score threshold from your alert preferences (for example, only be alerted for lots scoring 65 and above). This filters out the noise and ensures you only receive the most relevant signals.",
-        },
-        {
-          q: 'Are alerts available on all plans?',
-          a: "Real-time alerts (score ≥ 70) are available from the Investor plan onwards. The Explorer (free) plan does not include alerts. On the Pro plan, alerts start from score 60.",
+          q: "Can I set my own alert criteria?",
+          a: "Yes. You can configure your alerts according to several cumulative criteria: your usual budget, preferred categories, followed artists, and a minimum score. This combination ensures you receive only signals that genuinely match what you are looking for — without being overwhelmed by irrelevant notifications. You can modify or deactivate your criteria at any time from the Alerts page.",
         },
       ],
     },
     {
-      category: 'Portfolio & Tracking',
+      category: 'Plans & Pricing',
       questions: [
         {
-          q: 'What does the portfolio module do?',
-          a: "The portfolio lets you record your acquisitions and track their estimated value over time, based on recent comparable sales. For each registered work, Nautilus calculates a current estimated value and an estimated return since purchase.",
+          q: "What is the difference between Explorer, Investor, and Pro?",
+          a: "Explorer (free) lets you discover the platform with 6 scored lots per day and basic scores — no alerts, no access to Larry. Investor (€10/month or €8/month annually) unlocks full access: unlimited feed, auction source, bidding links, real-time alerts, Larry, and analysis memos. Pro is designed for users who need higher volume and unrestricted access to the research assistant — particularly professionals using Nautilus to advise multiple clients.",
         },
         {
-          q: "Can I add works I didn't buy through Nautilus?",
-          a: "Yes. You can manually add any acquisition — regardless of how you bought it. Simply enter the artist, title, purchase price, and acquisition date.",
+          q: "Is the trial really free — no credit card?",
+          a: "Yes. At sign-up, you automatically receive 7 full days on the Investor plan, with no credit card and no commitment of any kind. At the end of the trial, your account moves automatically to the Explorer plan (free) — there is no automatic charge. You decide freely whether to continue with a paid plan, only if Nautilus has delivered real value for you.",
+        },
+        {
+          q: "How much does the Investor plan cost?",
+          a: "The Investor plan is €10/month on a monthly basis, or €96/year annually — €8/month, saving €24 per year. This is a founding member price, available in limited quantity during our launch phase and locked in for life for members who subscribe during this period. After the launch phase, the price will increase. No additional features are charged separately.",
+        },
+        {
+          q: "Can I change plans at any time?",
+          a: "Yes. You can upgrade at any time — the change takes effect immediately. For annual plans, a move to a lower tier takes effect at the end of the current billing period, and you keep your current access until that date. Upgrades are always processed immediately. For any billing question, our team is available at contact@get-nautilus.com.",
         },
       ],
     },
     {
-      category: 'Account & Security',
+      category: 'Security & Account',
       questions: [
         {
-          q: 'How do I create an account?',
-          a: "Click \"Get started for free\" from any page on the site. Sign up in under a minute with your email or via Google. No credit card required.",
+          q: "Is my data secure?",
+          a: "Yes. All communications between your browser and our servers are encrypted via SSL/TLS. Your personal data is neither sold nor shared with third parties for commercial purposes. Nautilus is GDPR compliant. You can at any time request access to, modification of, or deletion of your personal data by contacting us directly at contact@get-nautilus.com.",
         },
         {
-          q: 'How do I reset my password?',
-          a: "From the login page, click \"Forgot password\". You will receive a reset link by email within a few minutes.",
-        },
-        {
-          q: 'Is my data secure?',
-          a: "Yes. Nautilus uses SSL/TLS encryption for all communications. Your personal data is never sold or shared with third parties for commercial purposes. We are GDPR compliant.",
-        },
-        {
-          q: 'How do I cancel my subscription?',
-          a: "You can cancel at any time from your profile > Subscription > Cancel. You retain full access until the end of your current billing period. No further charges will be made.",
-        },
-        {
-          q: 'How do I contact support?',
-          a: "By email at contact@get-nautilus.com. Our team responds within 24 business hours. Pro members benefit from priority support access.",
+          q: "How do I delete my account?",
+          a: "You can delete your account from your profile > Settings > Delete account, or by contacting us directly at contact@get-nautilus.com. Deletion results in the permanent erasure of your personal data within the timeframes required by applicable regulations. If you have an active subscription, please cancel it first to avoid any further charges before proceeding with account deletion.",
         },
       ],
     },
