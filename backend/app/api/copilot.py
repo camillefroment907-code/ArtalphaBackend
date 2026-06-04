@@ -161,19 +161,27 @@ L'utilisateur veut comprendre un marché, une catégorie ou un artiste.
     "portfolio": """
 ## MODE : ANALYSE PORTFOLIO
 L'utilisateur parle de son portefeuille existant.
-- Commence par commenter la composition actuelle (diversification, valeur, axes)
+- Commence par commenter la composition actuelle (diversification, valeur, axes de collecte)
 - Identifie les lacunes ou surexpositions au regard du profil de risque
 - Propose des compléments logiques — pas de remplacement brutal
-- Si portfolio vide ou valeur €0 : dis-le clairement et propose une stratégie de départ
+- Si portfolio vide ou valeur €0 : dis-le clairement ("Votre portefeuille démarre à zéro — voici comment construire une base solide") et propose une stratégie de départ en 3 étapes
+- Si tu mentionnes un lot urgent (⚡), indique "Vente dans X jours" ou "Vente aujourd'hui" — pas de date vague
 """,
 
     "discovery": """
 ## MODE : DÉCOUVERTE
 L'utilisateur explore des opportunités d'achat, souvent avec un budget précis.
-- Recommande 2-3 lots concrets parmi les OPPORTUNITÉS ACTUELLES ci-dessus
-- Filtre obligatoire : respecte le budget mentionné dans la question ET dans CONTEXTE MEMBRE
-- Pour chaque lot : prix + décote + maison + urgence si applicable + 1 argument + 1 risque
+
+### Règles obligatoires
+- Filtre strict : ne cite aucun lot dont le prix dépasse le budget mentionné dans la question
+- Ne cite pas de lot dont le prix est inférieur à 5 % du budget mentionné (ex. : pour 5 000 €, ne pas recommander un lot à 30 €)
 - Ne recommande JAMAIS 2 lots du même artiste dans cette réponse
+- Pour chaque lot cité : prix + décote + maison + urgence exacte (« Vente dans Xj » ou « Vente aujourd'hui ») + 1 argument + 1 risque
+
+### Stratégie selon le budget
+- Budget ≤ 2 000 € : 2-3 estampes ou éditions de qualité ; construire la collection progressivement
+- Budget 2 000–10 000 € : 1 œuvre de référence + 1-2 petites pièces ; viser un artiste reconnu en décote
+- Budget > 10 000 € : commence par l'œuvre la plus significative disponible, puis complète avec des pièces secondaires ; si aucun lot à ce niveau dans le contexte → dis-le clairement et décris ce que tu rechercherais
 """,
 
     "validation": """
@@ -188,9 +196,10 @@ L'utilisateur veut analyser une œuvre ou un lot spécifique.
 ## MODE : URGENCE
 L'utilisateur cherche ce qu'il doit regarder maintenant.
 - Priorité absolue : lots avec ⚡ (enchère ≤ 7 jours) parmi les OPPORTUNITÉS ACTUELLES
-- Si aucun lot urgent dans le contexte : dis-le clairement ("Aucune enchère urgente en ce moment")
-- Mentionne la date de clôture pour chaque lot cité
-- Recommande 1-2 lots maximum — l'urgence appelle à la précision
+- Si aucun lot urgent dans le contexte → dis-le clairement : "Aucune enchère urgente en ce moment. Voici les plus pertinentes à suivre :"
+- Pour chaque lot, indique PRÉCISÉMENT : "Vente aujourd'hui", "Vente demain", ou "Vente dans X jours (le JJ/MM)" — jamais de formulation vague
+- Recommande 1-2 lots maximum — l'urgence appelle à la précision, pas à l'exhaustivité
+- Ajoute toujours 1 risque avant la conclusion, même en mode urgence
 """,
 }
 
@@ -379,6 +388,11 @@ async def _get_top_lots_context(db: AsyncSession, ctx: dict | None = None) -> st
                 Lot.estimate_low.is_(None),
                 Lot.current_price.is_(None),
                 Lot.estimate_low <= Lot.current_price * 8,
+            ),
+            # Exclude anecdotal lots (< €50) — too cheap to be meaningful advice
+            or_(
+                Lot.current_price.is_(None),
+                Lot.current_price >= 50,
             ),
         ]
 
