@@ -861,6 +861,105 @@ function ErrorState() {
   );
 }
 
+// ── LotStatusBanner ───────────────────────────────────────────────────────────
+function LotStatusBanner({ lot }: { lot: Lot }) {
+  const h = lot.time_left_hours;
+
+  type State = "live" | "imminent" | "soon" | "upcoming" | "sold" | "passed" | "withdrawn";
+  let state: State;
+
+  if (lot.status === "live")            state = "live";
+  else if (lot.status === "sold")       state = "sold";
+  else if (lot.status === "withdrawn")  state = "withdrawn";
+  else if (lot.status === "unsold" || (h !== null && h !== undefined && h <= 0)) state = "passed";
+  else if (h !== null && h !== undefined && h < 1)  state = "imminent";
+  else if (h !== null && h !== undefined && h < 24) state = "soon";
+  else state = "upcoming";
+
+  const upcomingDate = lot.auction_date
+    ? new Date(lot.auction_date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })
+    : null;
+
+  const configs: Record<State, {
+    bg: string; border: string; accent: string; text: string;
+    label: string; sub: string; dotClass: string; cta: boolean;
+  }> = {
+    live:      { bg: "#F0FDF4", border: "#86EFAC", accent: "#22C55E", text: "#065F46",
+                 label: "Vente en cours",   sub: "Cette vente est actuellement live — vous pouvez encore enchérir",
+                 dotClass: "live-dot",         cta: true  },
+    imminent:  { bg: "#FFF7ED", border: "#FDBA74", accent: "#F97316", text: "#C2410C",
+                 label: "Commence dans",    sub: "La vente démarre très bientôt — ne tardez pas",
+                 dotClass: "orange-dot-pulse", cta: true  },
+    soon:      { bg: "#FFFBEB", border: "#FDE68A", accent: "#F59E0B", text: "#92400E",
+                 label: "Commence dans",    sub: "La vente a lieu aujourd'hui",
+                 dotClass: "orange-dot-pulse", cta: true  },
+    upcoming:  { bg: "#F9FAFB", border: "#E5E7EB", accent: "#9CA3AF", text: "#6B7280",
+                 label: upcomingDate ? `Vente le ${upcomingDate}` : "Vente à venir",
+                 sub: "Cette vente n'a pas encore commencé",
+                 dotClass: "", cta: false },
+    sold:      { bg: "#F0FDF4", border: "#BBF7D0", accent: "#16A34A", text: "#166534",
+                 label: "✓  Adjugé",        sub: "Ce lot a été vendu aux enchères",
+                 dotClass: "",                cta: false },
+    passed:    { bg: "#F3F4F6", border: "#D1D5DB", accent: "#6B7280", text: "#374151",
+                 label: "Lot passé",         sub: "Cette vente est terminée",
+                 dotClass: "",                cta: false },
+    withdrawn: { bg: "#F9FAFB", border: "#D1D5DB", accent: "#9CA3AF", text: "#6B7280",
+                 label: "Retiré",            sub: "Ce lot a été retiré de la vente",
+                 dotClass: "",                cta: false },
+  };
+
+  const c = configs[state];
+  const showCountdown = (state === "imminent" || state === "soon") && h !== null && h !== undefined && h > 0;
+
+  return (
+    <div style={{
+      background: c.bg,
+      borderTop: `4px solid ${c.accent}`,
+      borderBottom: `1px solid ${c.border}`,
+      padding: "16px 32px",
+      display: "flex",
+      alignItems: "center",
+      gap: "16px",
+    }}>
+      {/* Status indicator dot */}
+      {c.dotClass
+        ? <span className={c.dotClass} />
+        : <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: c.accent, flexShrink: 0, display: "inline-block" }} />
+      }
+
+      {/* Label + sublabel */}
+      <div style={{ flex: 1 }}>
+        <div style={{
+          display: "flex", alignItems: "baseline", gap: "8px", flexWrap: "wrap",
+          fontSize: "16px", fontWeight: 800, color: c.text, letterSpacing: "-0.01em", lineHeight: 1.25,
+        }}>
+          <span>{c.label}</span>
+          {showCountdown && h !== null && h !== undefined && (
+            <CountdownTimer hours={h} style={{ fontSize: "16px", fontWeight: 800, color: c.text }} />
+          )}
+        </div>
+        <div style={{ fontSize: "12px", color: c.text, opacity: 0.65, marginTop: "3px" }}>
+          {c.sub}
+        </div>
+      </div>
+
+      {/* CTA */}
+      {c.cta && lot.url && (
+        <a href={lot.url} target="_blank" rel="noopener noreferrer" style={{
+          display: "inline-flex", alignItems: "center", gap: "5px",
+          padding: "9px 18px", borderRadius: "6px",
+          background: c.accent, color: "#FFFFFF",
+          fontSize: "12px", fontWeight: 700,
+          textDecoration: "none", flexShrink: 0,
+          letterSpacing: "0.02em",
+        }}>
+          {state === "live" ? "Enchérir maintenant" : "Voir le lot"} <ExternalLink size={11} />
+        </a>
+      )}
+    </div>
+  );
+}
+
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function LotPage({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -979,6 +1078,9 @@ export default function LotPage({ params }: { params: { id: string } }) {
 
               {/* ── KPI STRIP ───────────────────────────────────── */}
               <KPIStrip lot={lot} fmt={fmt} />
+
+              {/* ── STATUS BANNER ────────────────────────────────── */}
+              <LotStatusBanner lot={lot} />
 
               {/* ── PRICE VERDICT ────────────────────────────────── */}
               <PriceVerdict lot={lot} fmt={fmt} />
