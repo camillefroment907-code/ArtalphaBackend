@@ -103,30 +103,58 @@ function relativeDate(iso: string): string {
 
 interface Badge { label: string; color: string }
 
+/**
+ * Primary badge — exact mapping from rec_type to the actual signal used.
+ * Never shows "Artiste suivi" unless the lot genuinely matched an artist alert.
+ */
 function primaryBadge(pick: TopPick): Badge {
   const lot = pick.lot;
-  const h = hoursUntil(lot.auction_date);
+  const h   = hoursUntil(lot.auction_date);
 
+  // Urgency overrides all
   if (h !== null && h > 0 && h < 6 && (lot.deal_score ?? 0) >= 80) {
     return { label: `⚡ Clôture dans ${Math.round(h)}h — conviction forte`, color: '#ef4444' };
   }
-  if (pick.rec_type === 'agent_match') {
-    return { label: '◈ Artiste que vous surveillez', color: '#C6A85A' };
+
+  switch (pick.rec_type) {
+    case 'agent_match':
+      // Agent alerts can match by artist, category, or budget — use neutral strategy label
+      return { label: '◈ Correspond à votre stratégie', color: '#C6A85A' };
+    case 'preference_match':
+      return { label: '◈ Correspond à vos préférences', color: '#C6A85A' };
+    case 'artist_momentum':
+      // From CollectorDNA top_artists (behavioral, not explicit follow)
+      return { label: '◈ Artiste dans votre profil', color: '#C6A85A' };
+    case 'category_match':
+      return { label: '◈ Catégorie favorite', color: '#C6A85A' };
+    case 'budget_match':
+      return { label: '◈ Dans votre budget', color: '#C6A85A' };
+    case 'period_match':
+      return { label: '◈ Votre période de prédilection', color: '#C6A85A' };
+    case 'similar_to_saved':
+      return { label: '◈ Similaire à vos favoris', color: '#C6A85A' };
+    case 'below_estimate':
+    case 'distressed_sale': {
+      const pct = lot.pct_below_low_estimate;
+      if (pct && pct >= 10) return { label: `↓ ${Math.round(pct)}% sous l'estimation basse`, color: '#22c55e' };
+      return { label: '◈ Anomalie de prix détectée', color: '#22c55e' };
+    }
+    default: {
+      const pct = lot.pct_below_low_estimate;
+      if (pct && pct >= 15) return { label: `↓ ${Math.round(pct)}% sous l'estimation basse`, color: '#22c55e' };
+      return { label: '◈ Opportunité du moment', color: '#C6A85A' };
+    }
   }
-  if (pick.rec_type === 'preference_match') {
-    const cat = lot.category?.split(/[,/]/)[0]?.trim();
-    return { label: cat ? `◈ Correspond à votre budget · ${cat}` : '◈ Correspond à votre profil', color: '#C6A85A' };
-  }
-  const pct = lot.pct_below_low_estimate;
-  if (pct && pct >= 15) {
-    return { label: `↓ ${Math.round(pct)}% sous l'estimation basse`, color: '#22c55e' };
-  }
-  return { label: '◈ Sélection du jour', color: '#C6A85A' };
 }
 
+/**
+ * Secondary badge — only shown when genuinely additive to the primary.
+ * For preference_match: if the lot is also below estimate, show both signals.
+ */
 function secondaryBadge(pick: TopPick): Badge | null {
-  if (pick.rec_type === 'agent_match' && pick.lot.estimate_low) {
-    return { label: '✓ Dans votre budget', color: 'var(--text-3)' };
+  const pct = pick.lot.pct_below_low_estimate;
+  if (pick.rec_type === 'preference_match' && pct && pct >= 10) {
+    return { label: `↓ ${Math.round(pct)}% sous l'estimation`, color: '#22c55e' };
   }
   return null;
 }
@@ -198,9 +226,12 @@ function buildLarrySignal(brief: MarketBrief): string | null {
 export default function EnDirect() {
   const navigate  = useNavigate();
   getUser(); // ensure session check
-  const [brief, setBrief]     = useState<MarketBrief | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [fetchedAt]           = useState(() => new Date());
+  const [brief, setBrief]       = useState<MarketBrief | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [fetchedAt]             = useState(() => new Date());
+  const [showAll, setShowAll]   = useState(false);
+  const [allRecs, setAllRecs]   = useState<TopPick[]>([]);
+  const [loadingAll, setLoadingAll] = useState(false);
 
   useEffect(() => {
     const token = getToken();
@@ -211,6 +242,29 @@ export default function EnDirect() {
       .then(data => { if (data) setBrief(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
+
+  /**
+   * Load extended recommendations from the for-you engine (same strategies,
+   * more results). Deduped against top_picks so no lot appears twice.
+   */
+  function loadAllRecs() {
+    if (showAll) { setShowAll(false); return; }
+    if (allRecs.length > 0) { setShowAll(true); return; }
+    setLoadingAll(true);
+    const token = getToken();
+    fetch(`${BACKEND}/api/recommendations/for-you?limit=20`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : { recommendations: [] })
+      .then(data => {
+        const topIds = new Set((brief?.top_picks ?? []).map(p => p.lot.id));
+        const extras = (data.recommendations as TopPick[]).filter(r => !topIds.has(r.lot.id));
+        setAllRecs(extras);
+        setShowAll(true);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingAll(false));
+  }
 
   const closingImminently = brief?.closing_soon.filter(l => {
     const h = hoursUntil(l.auction_date);
@@ -318,25 +372,55 @@ export default function EnDirect() {
             <SectionHeader
               label="Pour vous"
               meta={brief.top_picks.length > 0 ? `${brief.top_picks.length} sélection${brief.top_picks.length > 1 ? 's' : ''}` : undefined}
-              action={{ label: 'Voir tout →', onClick: () => navigate('/app/today') }}
+              action={{
+                label: loadingAll ? 'Chargement…' : showAll ? 'Réduire ↑' : 'Voir tout →',
+                onClick: loadAllRecs,
+              }}
               color="var(--gold)"
             />
             {brief.top_picks.length === 0 ? (
               <OnboardingCard onClick={() => navigate('/app/profile/preferences')} />
             ) : (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                gap: '20px',
-              }}>
-                {brief.top_picks.slice(0, 4).map(pick => (
-                  <ConvictionCard
-                    key={pick.lot.id}
-                    pick={pick}
-                    onClick={() => navigate(`/app/opportunities/${pick.lot.id}`)}
-                  />
-                ))}
-              </div>
+              <>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                  gap: '20px',
+                }}>
+                  {brief.top_picks.slice(0, 4).map(pick => (
+                    <ConvictionCard
+                      key={pick.lot.id}
+                      pick={pick}
+                      onClick={() => navigate(`/app/opportunities/${pick.lot.id}`)}
+                    />
+                  ))}
+                </div>
+
+                {/* Extended recommendations — same engine, more results */}
+                {showAll && allRecs.length > 0 && (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                    gap: '20px',
+                    marginTop: '20px',
+                    paddingTop: '20px',
+                    borderTop: '1px solid var(--border)',
+                  }}>
+                    {allRecs.map(pick => (
+                      <ConvictionCard
+                        key={pick.lot.id}
+                        pick={pick}
+                        onClick={() => navigate(`/app/opportunities/${pick.lot.id}`)}
+                      />
+                    ))}
+                  </div>
+                )}
+                {showAll && allRecs.length === 0 && !loadingAll && (
+                  <div style={{ marginTop: '20px', fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic' }}>
+                    Aucune opportunité supplémentaire pour le moment.
+                  </div>
+                )}
+              </>
             )}
           </section>
 
