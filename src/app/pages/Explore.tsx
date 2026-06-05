@@ -382,7 +382,8 @@ export default function Explore() {
   const isFr = i18n.language?.startsWith('fr');
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const exploreTab = (searchParams.get('tab') || 'best') as ExploreTab;
+  const rawTab = searchParams.get('tab');
+  const exploreTab = (rawTab === 'best' || rawTab === null ? 'auctions' : rawTab) as ExploreTab;
   const searchFromUrl = searchParams.get('search') || '';
 
   // For You tab state
