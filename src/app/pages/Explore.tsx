@@ -543,6 +543,8 @@ export default function Explore() {
         if (exploreTab === 'auctions') {
           p.delete('min_score');
           p.delete('max_score');
+          const now = new Date();
+          p.set('auction_date_from', now.toISOString());
         }
         if (exploreTab === 'ended') {
           const now = new Date();
