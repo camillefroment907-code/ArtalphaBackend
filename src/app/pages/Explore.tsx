@@ -544,13 +544,13 @@ export default function Explore() {
           p.delete('min_score');
           p.delete('max_score');
           const now = new Date();
-          p.set('auction_date_from', now.toISOString());
+          p.set('auction_date_from', now.toISOString().split("T")[0]);
         }
         if (exploreTab === 'ended') {
           const now = new Date();
           const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
-          p.set('auction_date_from', sevenDaysAgo.toISOString());
-          p.set('auction_date_to', now.toISOString());
+          p.set('auction_date_from', sevenDaysAgo.toISOString().split("T")[0]);
+          p.set('auction_date_to', now.toISOString().split("T")[0]);
           p.set('sort_by', 'auction_date');
           p.set('sort_dir', 'desc');
           p.delete('min_score');
@@ -652,8 +652,8 @@ export default function Explore() {
           const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
           p.sort_by = 'auction_date';
           p.sort_dir = 'desc';
-          p.auction_date_from = sevenDaysAgo.toISOString();
-          p.auction_date_to = now.toISOString();
+          p.auction_date_from = sevenDaysAgo.toISOString().split("T")[0];
+          p.auction_date_to = now.toISOString().split("T")[0];
         } else if (minScore > 0) {
           p.min_score = minScore;
         }
