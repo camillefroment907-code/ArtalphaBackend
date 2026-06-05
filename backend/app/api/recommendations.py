@@ -654,18 +654,21 @@ async def get_market_brief(
     )
     new_lots = new_lots_result.scalars().all()
 
-    # Closing soon (< 48h) — fetch top 10 for display, count all closing today separately
+    # Closing soon (< 48h) + currently live (started < 4h ago)
     closing_result = await db.execute(
         select(Lot)
         .where(and_(
             Lot.status.cast(String).in_(["upcoming", "live"]),
             Lot.market_type == MarketType.AUCTION,
             Lot.auction_date.isnot(None),
-            Lot.auction_date >= now,
+            or_(
+                Lot.auction_date >= now,                          # upcoming
+                Lot.auction_date >= now - timedelta(hours=4),     # live: started < 4h ago
+            ),
             Lot.auction_date <= horizon_48h,
         ))
         .order_by(Lot.auction_date)
-        .limit(10)
+        .limit(20)
     )
     closing_lots = closing_result.scalars().all()
 

@@ -84,21 +84,17 @@ type LotStatus = 'live' | 'upcoming' | 'ended';
 
 function deriveLotStatus(lot: { status: string | null; auction_date: string | null }): LotStatus {
   const h = hoursUntil(lot.auction_date);
-  // Date passée de plus de 30 min → terminé, quoi que dise le status backend
-  if (h !== null && h < -0.5) return 'ended';
-  // Status backend exploitable uniquement si date cohérente
+  // Status terminal backend toujours prioritaire
   if (lot.status) {
     const s = lot.status.toLowerCase();
     if (s === 'sold' || s === 'passed' || s === 'ended' || s === 'closed') return 'ended';
-    if (s === 'live' || s === 'open' || s === 'active') {
-      // Ne faire confiance au status live que si la date est dans la fenêtre raisonnable
-      if (h !== null && h >= -0.5) return 'live';
-    }
+    if (s === 'live' || s === 'open' || s === 'active') return 'live';
   }
-  // Fallback sur auction_date uniquement
+  // Fallback sur auction_date
   if (h === null) return 'upcoming';
-  if (h < 0) return 'ended';
-  return 'upcoming';
+  if (h >= 0) return 'upcoming';
+  if (h >= -4) return 'live';  // démarré il y a moins de 4h, pas de statut terminal → en cours
+  return 'ended';
 }
 
 // ── Lot timing label — always present, no exceptions ─────────────────────────
@@ -552,7 +548,7 @@ export default function EnDirect() {
                       style={{ marginBottom: selectedSale && salesLive.some(s => s.key === selectedSale.key) ? '0' : '20px' }}
                     />
                     {selectedSale && salesLive.some(s => s.key === selectedSale.key) && (
-                      <SaleDrawer sale={selectedSale} onClose={() => setSelectedSale(null)} />
+                      <SaleDrawer sale={selectedSale} lots={allDayLots} onClose={() => setSelectedSale(null)} />
                     )}
                   </>
                 )}
@@ -568,7 +564,7 @@ export default function EnDirect() {
                       style={{ marginBottom: selectedSale && salesUpcoming.some(s => s.key === selectedSale.key) ? '0' : '20px' }}
                     />
                     {selectedSale && salesUpcoming.some(s => s.key === selectedSale.key) && (
-                      <SaleDrawer sale={selectedSale} onClose={() => setSelectedSale(null)} />
+                      <SaleDrawer sale={selectedSale} lots={allDayLots} onClose={() => setSelectedSale(null)} />
                     )}
                   </>
                 )}
@@ -599,7 +595,7 @@ export default function EnDirect() {
                           ))}
                         </div>
                         {selectedSale && salesEnded.some(s => s.key === selectedSale.key) && (
-                          <SaleDrawer sale={selectedSale} onClose={() => setSelectedSale(null)} />
+                          <SaleDrawer sale={selectedSale} lots={allDayLots} onClose={() => setSelectedSale(null)} />
                         )}
                       </>
                     )}
@@ -903,36 +899,15 @@ function SkeletonState() {
 
 // ── SaleDrawer — inline lot list for a selected sale ─────────────────────────
 
-function SaleDrawer({ sale, onClose }: { sale: SaleGroup; onClose: () => void }) {
+function SaleDrawer({ sale, lots: allDayLots, onClose }: { sale: SaleGroup; lots: LotCard[]; onClose: () => void }) {
   const navigate = useNavigate();
-  const [lots, setLots] = useState<LotCard[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setLoading(true);
-    const token = getToken();
-    const dateStr = sale.auctionDate.slice(0, 10);
-    const params = new URLSearchParams({
-      auction_house: sale.house,
-      auction_date_from: `${dateStr}T00:00:00`,
-      auction_date_to: `${dateStr}T23:59:59`,
-      sort_by: 'deal_score',
-      sort_dir: 'desc',
-      page_size: '50',
-    });
-    fetch(`${BACKEND}/api/lots?${params}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.ok ? r.json() : { items: [] })
-      .then(data => {
-        const items: LotCard[] = data.items ?? data.lots ?? data.results ?? [];
-        const scored   = items.filter(l => (l.deal_score ?? 0) > 0);
-        const unscored = items.filter(l => !((l.deal_score ?? 0) > 0));
-        setLots([...scored, ...unscored]);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [sale.key]);
+  const saleLots = allDayLots
+    .filter(l =>
+      l.auction_house_name === sale.house &&
+      l.auction_date?.slice(0, 10) === sale.auctionDate.slice(0, 10)
+    )
+    .sort((a, b) => (b.deal_score ?? 0) - (a.deal_score ?? 0));
 
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-card)', padding: 0, marginTop: '12px', marginBottom: '20px', overflow: 'hidden' }}>
@@ -940,32 +915,19 @@ function SaleDrawer({ sale, onClose }: { sale: SaleGroup; onClose: () => void })
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: 'var(--navy)' }}>{sale.house}</span>
-          {!loading && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)' }}>{lots.length} lot{lots.length > 1 ? 's' : ''}</span>}
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)' }}>{saleLots.length} lot{saleLots.length > 1 ? 's' : ''}</span>
         </div>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '16px', lineHeight: 1, padding: '2px 6px' }}>×</button>
       </div>
 
       {/* Body */}
       <div>
-        {loading ? (
-          [0, 1, 2].map(i => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '48px 1fr auto auto auto', gap: '12px', padding: '10px 16px', alignItems: 'center', borderBottom: '1px solid var(--border)', animation: 'nautilus-shimmer 1.4s ease-in-out infinite' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '4px', background: 'var(--bg-subtle)' }} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <div style={{ height: '14px', width: '60%', background: 'var(--bg-subtle)', borderRadius: '3px' }} />
-                <div style={{ height: '10px', width: '40%', background: 'var(--bg-subtle)', borderRadius: '3px' }} />
-              </div>
-              <div style={{ width: '70px', height: '12px', background: 'var(--bg-subtle)', borderRadius: '3px' }} />
-              <div style={{ width: '60px', height: '12px', background: 'var(--bg-subtle)', borderRadius: '3px' }} />
-              <div style={{ width: '50px', height: '26px', background: 'var(--bg-subtle)', borderRadius: '4px' }} />
-            </div>
-          ))
-        ) : lots.length === 0 ? (
+        {saleLots.length === 0 ? (
           <div style={{ padding: '32px 16px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>
             Aucun lot trouvé pour cette vente.
           </div>
         ) : (
-          lots.map((lot, idx) => {
+          saleLots.map((lot, idx) => {
             const isUnscored = !((lot.deal_score ?? 0) > 0);
             const sl     = lot.deal_score ? scoreLabel(lot.deal_score) : null;
             const timing = lotTimingLabel(lot);
@@ -973,7 +935,7 @@ function SaleDrawer({ sale, onClose }: { sale: SaleGroup; onClose: () => void })
               <div
                 key={lot.id}
                 onClick={() => navigate(`/app/opportunities/${lot.id}`)}
-                style={{ display: 'grid', gridTemplateColumns: '48px 1fr auto auto auto', gap: '12px', padding: '10px 16px', alignItems: 'center', borderBottom: idx < lots.length - 1 ? '1px solid var(--border)' : 'none', opacity: isUnscored ? 0.5 : 1, cursor: 'pointer', transition: 'background .1s' }}
+                style={{ display: 'grid', gridTemplateColumns: '48px 1fr auto auto auto', gap: '12px', padding: '10px 16px', alignItems: 'center', borderBottom: idx < saleLots.length - 1 ? '1px solid var(--border)' : 'none', opacity: isUnscored ? 0.5 : 1, cursor: 'pointer', transition: 'background .1s' }}
                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-subtle)'}
                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
               >
