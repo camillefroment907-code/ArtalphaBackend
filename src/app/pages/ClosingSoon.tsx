@@ -84,7 +84,9 @@ type LotStatus = 'live' | 'upcoming' | 'ended';
 
 function deriveLotStatus(lot: { status: string | null; auction_date: string | null }): LotStatus {
   const h = hoursUntil(lot.auction_date);
-  // Status terminal backend toujours prioritaire
+  // Date passée → toujours terminé, quoi que dise le backend
+  if (h !== null && h < 0) return 'ended';
+  // Status terminal backend
   if (lot.status) {
     const s = lot.status.toLowerCase();
     if (s === 'sold' || s === 'passed' || s === 'ended' || s === 'closed') return 'ended';
@@ -92,14 +94,21 @@ function deriveLotStatus(lot: { status: string | null; auction_date: string | nu
   }
   // Fallback sur auction_date
   if (h === null) return 'upcoming';
-  if (h >= 0) return 'upcoming';
-  if (h >= -4) return 'live';  // démarré il y a moins de 4h, pas de statut terminal → en cours
-  return 'ended';
+  return 'upcoming';
 }
 
 // ── Lot timing label — always present, no exceptions ─────────────────────────
 
 function lotTimingLabel(lot: { auction_date: string | null; status: string | null }): { text: string; color: string; dot: 'red' | 'orange' | 'green' | 'gray' } {
+  // Date passée → toujours terminé, quoi que dise le status backend
+  const h = hoursUntil(lot.auction_date);
+  if (h !== null && h < 0) {
+    const timeStr = lot.auction_date
+      ? new Date(parseUTC(lot.auction_date)).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      : '';
+    return { text: `Terminé${timeStr ? ' · ' + timeStr : ''}`, color: '#6B7280', dot: 'gray' };
+  }
+
   const status = deriveLotStatus(lot);
 
   if (status === 'ended') {
@@ -114,7 +123,6 @@ function lotTimingLabel(lot: { auction_date: string | null; status: string | nul
   }
 
   // upcoming — compute exact countdown
-  const h = hoursUntil(lot.auction_date);
   if (h === null) return { text: 'Date à confirmer', color: '#6B7280', dot: 'gray' };
 
   if (h < 1) {
