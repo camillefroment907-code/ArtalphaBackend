@@ -564,7 +564,8 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                             from app.jobs.quality_filter import normalize_artist_name as _norm_name_hp
                             _currency = (lot_data.currency or "EUR").upper()
                             _fx = {"USD": 0.92, "GBP": 1.17, "EUR": 1.0, "CHF": 1.05,
-                                   "HKD": 0.12, "AUD": 0.60, "CAD": 0.68, "JPY": 0.0062}
+                                   "HKD": 0.12, "AUD": 0.60, "CAD": 0.68, "JPY": 0.0062,
+                                   "SEK": 0.087, "DKK": 0.134, "NOK": 0.086}
                             _eur = round(lot_data.current_price * _fx.get(_currency, 0.92), 2)
                             _src = str(lot_data.source.value if hasattr(lot_data.source, "value") else lot_data.source)
                             await save_hammer_prices([{

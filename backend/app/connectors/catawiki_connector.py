@@ -102,7 +102,29 @@ def _parse_lot(item: dict) -> Optional[LotNormalized]:
         est_high = _safe_float(item.get("estimate_high") or item.get("buy_now_price"))
         current_price = _safe_float(item.get("current_bid") or item.get("minimum_bid"))
 
-        currency = str(item.get("currency") or "EUR").upper()
+        _raw_currency = item.get("currency")
+        if not _raw_currency:
+            _country = (
+                item.get("country")
+                or item.get("seller_country")
+                or item.get("location_country")
+                or (item.get("auction_house", {}).get("country") if isinstance(item.get("auction_house"), dict) else None)
+                or (item.get("locale") or "")[:2]
+                or ""
+            ).upper()
+            _currency_by_country = {
+                "SE": "SEK", "SWE": "SEK",
+                "DK": "DKK", "DNK": "DKK",
+                "NO": "NOK", "NOR": "NOK",
+                "GB": "GBP", "GBR": "GBP",
+                "US": "USD", "USA": "USD",
+                "CH": "CHF", "CHE": "CHF",
+                "AU": "AUD", "AUS": "AUD",
+                "CA": "CAD", "CAN": "CAD",
+                "JP": "JPY", "JPN": "JPY",
+            }
+            _raw_currency = _currency_by_country.get(_country, "EUR")
+        currency = _raw_currency.upper()
 
         # Image URL
         image_url = None
