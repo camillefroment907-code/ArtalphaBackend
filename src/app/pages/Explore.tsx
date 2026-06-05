@@ -5,7 +5,7 @@ import { getUser, getUserPlan } from "../../lib/auth";
 import { WelcomeTour } from '../components/WelcomeTour';
 
 
-type ExploreTab = "auctions" | "primary" | "convictions";
+type ExploreTab = "auctions" | "ended" | "primary";
 type ViewMode = "grid-large" | "grid" | "list";
 
 // ── Source metadata ──────────────────────────────────────────
@@ -175,6 +175,8 @@ function mapLot(lot: any) {
     platform: lot.auction_house_name?.split("—")?.[0]?.trim() || lot.source || "",
     rawPrice: price, auctionDate: lot.auction_date || "",
     upsidePercent: upside, source: lot.source || "",
+    hammerPrice: lot.hammer_price ? toEur(lot.hammer_price) : 0,
+    hammerPriceFmt: lot.hammer_price ? fmt(lot.hammer_price) : "",
   };
 }
 type MappedLot = ReturnType<typeof mapLot>;
@@ -300,8 +302,17 @@ function LiveCard({ lot, onClick }: { lot: MappedLot; onClick: () => void }) {
         <div style={{ fontSize: "12px", color: "var(--text)", marginBottom: "6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lot.title}</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "var(--text-3)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "1px" }}>Mise à prix</div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>{lot.price}</div>
+            {lot.hammerPrice > 0 ? (
+              <>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: lot.hammerPrice < lot.estimateLow ? "#059669" : "var(--text-3)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "1px" }}>Réalisé</div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: "13px", fontWeight: 600, color: lot.hammerPrice < lot.estimateLow ? "#059669" : "var(--text-3)" }}>{lot.hammerPriceFmt}</div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "var(--text-3)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "1px" }}>Mise à prix</div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>{lot.price}</div>
+              </>
+            )}
           </div>
           {lot.estimateLow > 0 && lot.rawPrice !== lot.estimateLow && <span style={{ fontSize: "10px", color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>est. {lot.estimateLowFmt}</span>}
         </div>
@@ -346,7 +357,7 @@ export default function Explore() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const rawTab = searchParams.get('tab');
-  const exploreTab = (rawTab === 'best' || rawTab === null ? 'auctions' : rawTab) as ExploreTab;
+  const exploreTab = (rawTab === 'best' || rawTab === 'convictions' || rawTab === null ? 'auctions' : rawTab) as ExploreTab;
   const searchFromUrl = searchParams.get('search') || '';
 
   // For You tab state
@@ -497,8 +508,8 @@ export default function Explore() {
   const visibleLimit = isAdmin ? 99999 : (PLAN_LIMITS[userPlan] ?? 3);
   const maxVisible = visibleLimit;
 
-  // tab alias used throughout JSX: "live" = all auctions, "alpha" = other tabs
-  const tab = exploreTab === "auctions" ? "live" : "alpha";
+  // tab alias used throughout JSX: "live" = auctions/ended, "alpha" = other tabs
+  const tab = (exploreTab === "auctions" || exploreTab === "ended") ? "live" : "alpha";
 
   const visibleLots = lots.slice(0, maxVisible);
   const lockedLots  = lots.slice(maxVisible, maxVisible + 3);
@@ -533,8 +544,14 @@ export default function Explore() {
           p.delete('min_score');
           p.delete('max_score');
         }
-        if (exploreTab === 'convictions') {
-          p.set('min_score', '75');
+        if (exploreTab === 'ended') {
+          const now = new Date();
+          const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
+          p.set('auction_date_from', sevenDaysAgo.toISOString());
+          p.set('auction_date_to', now.toISOString());
+          p.set('sort_by', 'auction_date');
+          p.set('sort_dir', 'desc');
+          p.delete('min_score');
           p.delete('max_score');
         }
 
@@ -628,7 +645,16 @@ export default function Explore() {
           artist: artist.trim() || undefined,
           auction_house: auctionHouse.trim() || undefined,
         };
-        if (minScore > 0) p.min_score = minScore;
+        if (exploreTab === 'ended') {
+          const now = new Date();
+          const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
+          p.sort_by = 'auction_date';
+          p.sort_dir = 'desc';
+          p.auction_date_from = sevenDaysAgo.toISOString();
+          p.auction_date_to = now.toISOString();
+        } else if (minScore > 0) {
+          p.min_score = minScore;
+        }
         const data = await fetchLotsFromAPI(p);
         setLots(prev => [...prev, ...data.items.map(mapLot)]);
         setCurrentPage(nextPage);
@@ -661,7 +687,8 @@ export default function Explore() {
         <div className="explore-tabs-desktop" style={{ display: 'flex', gap: '4px', flex: 1 }}>
           {([
             { key: 'auctions' as ExploreTab, label: 'Toutes les Enchères' },
-            { key: 'primary' as ExploreTab, label: 'Sélection Galerie' },
+            { key: 'ended'    as ExploreTab, label: 'Résultats · 7j' },
+            { key: 'primary'  as ExploreTab, label: 'Sélection Galerie' },
           ]).map(({ key, label }) => (
             <button
               key={key}
@@ -688,6 +715,7 @@ export default function Explore() {
           style={{ display: 'none' }}
         >
           <option value="auctions">Toutes les Enchères</option>
+          <option value="ended">Résultats · 7j</option>
           <option value="primary">Sélection Galerie</option>
         </select>
 
@@ -906,20 +934,7 @@ export default function Explore() {
 
         {/* Main */}
         <main className="explore-main" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
-          {/* Convictions paywall for free users */}
-          {exploreTab === "convictions" && !isAdmin && userPlan === "free" ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: "60px 20px", textAlign: "center" }}>
-              <div style={{ fontSize: "32px", marginBottom: "20px" }}>★</div>
-              <div style={{ fontFamily: "var(--font-serif)", fontSize: "22px", color: "var(--text)", marginBottom: "10px" }}>{t('explorer.tabConvictions')}</div>
-              <p style={{ fontSize: "13px", color: "var(--text-2)", marginBottom: "28px", lineHeight: 1.7, maxWidth: "380px" }}>
-                {t('explorer.descConvictions')}
-              </p>
-              <button onClick={() => navigate("/app/pricing")} style={{ fontSize: "13px", padding: "12px 36px", marginBottom: "10px", background: "#2563EB", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 600 }}>
-                {t('explorer.forYouPaywallCta')}
-              </button>
-            </div>
-          ) : (
-            <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "0 24px 60px" }}>
+          <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "0 24px 60px" }}>
               <div ref={gridRef} />
               {/* Active filter chips */}
               {hasActiveFilters && (
@@ -968,9 +983,8 @@ export default function Explore() {
               {!loading && (
                 <div style={{ padding: hasActiveFilters ? '4px 0 4px' : '12px 0 4px', fontSize: '12px', color: 'var(--text-3)', fontStyle: 'italic', lineHeight: 1.5 }}>
                   {exploreTab === 'auctions' && t('explorer.descAllAuctions')}
+                  {exploreTab === 'ended' && "Ventes clôturées dans les 7 derniers jours."}
                   {exploreTab === 'primary' && t('explorer.descPrimary')}
-                  {exploreTab === 'convictions' && t('explorer.descConvictions')}
-                  {exploreTab === 'for-you' && t('explorer.descForYou')}
                 </div>
               )}
               {/* Count line */}
@@ -1184,8 +1198,7 @@ export default function Explore() {
                   )}
                 </>
               )}
-            </div>
-          )}
+          </div>
         </main>
       </div>
       {showTour && <WelcomeTour onClose={() => { localStorage.removeItem('nautilus_show_tour'); setShowTour(false); }} />}
