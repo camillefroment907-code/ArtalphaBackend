@@ -1037,7 +1037,10 @@ export default function OpportunityDetail() {
                       </div>
                     )}
                     {(() => {
-                      if (bState === 'sold' || bState === 'passed') return null;
+                      const st = (lot.status || '').toLowerCase();
+                      const isOver = ['sold', 'passed', 'ended', 'closed', 'unsold', 'withdrawn'].includes(st)
+                        || (lot.auction_date != null && new Date(lot.auction_date) < new Date());
+                      if (isOver) return null;
                       const priceAgeHours = lot.updated_at
                         ? Math.round((Date.now() - new Date(lot.updated_at).getTime()) / 3_600_000)
                         : null;
