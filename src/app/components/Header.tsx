@@ -18,7 +18,7 @@ const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-produc
 
 const NAV_ITEMS = [
   { label: "Aujourd'hui",     to: '/app/today'     },
-  { label: 'Dernière chance', to: '/app/urgent'    },
+  { label: 'En direct',       to: '/app/urgent'    },
   { label: 'Le marché',       to: '/app/market'    },
   { label: 'Ma sélection',    to: '/app/dashboard' },
   { label: 'Portfolio',       to: '/app/portfolio' },

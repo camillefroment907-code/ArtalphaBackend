@@ -1,193 +1,383 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { getToken } from '../../lib/auth';
-import { parseUTC, isLiveLot, timeLabel, isActiveAuction } from '../../lib/auction';
+import { getToken, getUser } from '../../lib/auth';
+import { parseUTC, isLiveLot, timeLabel } from '../../lib/auction';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
-interface Lot {
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface TopPickLot {
   id: string;
-  title: string;
-  artist_name_raw: string;
-  current_price: number | null;
-  estimate_low: number | null;
-  estimate_high: number | null;
+  title: string | null;
+  artist_name_raw: string | null;
   deal_score: number | null;
   pct_below_low_estimate: number | null;
   image_url: string | null;
-  auction_date: string | null;
   auction_house_name: string | null;
+  auction_date: string | null;
+  estimate_low: number | null;
+  estimate_high: number | null;
   category: string | null;
   status: string | null;
 }
 
+interface TopPick {
+  rec_type: string;
+  score: number;
+  reason: string;
+  lot: TopPickLot;
+}
+
+interface LotCard {
+  id: string;
+  title: string | null;
+  artist_name_raw: string | null;
+  deal_score: number | null;
+  pct_below_low_estimate: number | null;
+  image_url: string | null;
+  auction_house_name: string | null;
+  auction_date: string | null;
+  estimate_low: number | null;
+  estimate_high: number | null;
+  category: string | null;
+  status: string | null;
+  current_price: number | null;
+}
+
+interface MarketBrief {
+  since: string;
+  generated_at: string;
+  new_lots_count: number;
+  closing_today_count: number;
+  closing_soon: LotCard[];
+  top_picks: TopPick[];
+  new_lots: LotCard[];
+  agent_unread: number;
+}
+
+interface SaleSummary {
+  house: string;
+  lotCount: number;
+  firstDate: string;
+  displayDate: string;
+  relevanceLabel: string | null;
+  isUrgent: boolean;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function fmt(n: number | null | undefined) {
+function fmt(n: number | null | undefined): string {
   if (!n) return '—';
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+  if (n >= 1_000_000) return `€${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `€${Math.round(n / 1_000)}K`;
+  return `€${n.toLocaleString('fr-FR')}`;
 }
 
-// parseUTC, isLiveLot, timeLabel, isActiveAuction imported from ../../lib/auction
+function hoursUntil(iso: string | null): number | null {
+  if (!iso) return null;
+  return (parseUTC(iso) - Date.now()) / 3_600_000;
+}
 
-// ── Signals — state-dependent ─────────────────────────────────────────────────
-// LIVE only: price / discount signals — the bid is a real market signal
-// UPCOMING:  market / artist signals — current_price is not yet meaningful
+function scoreColor(score: number | null): string {
+  if (!score) return '#B8922A';
+  if (score >= 85) return '#C0392B';
+  if (score >= 75) return '#C6A85A';
+  return '#B8922A';
+}
 
-type Signal = { label: string; color: string; bg: string; border: string };
+function relativeDate(iso: string): string {
+  const ms = parseUTC(iso);
+  const h = (ms - Date.now()) / 3_600_000;
+  if (h < 0) return 'Terminée';
+  const d = new Date(ms);
+  const t = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  if (h < 1) return `Dans ${Math.round(h * 60)} min`;
+  if (h < 6) return `Ce soir · ${t}`;
+  if (h < 24) return `Aujourd'hui · ${t}`;
+  if (h < 48) return `Demain · ${t}`;
+  return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }) + ` · ${t}`;
+}
 
-function getSignal(lot: Lot): Signal {
-  const score = lot.deal_score ?? 0;
+// ── Badge logic ───────────────────────────────────────────────────────────────
 
-  if (isLiveLot(lot.status)) {
-    const pct = lot.pct_below_low_estimate ?? 0;
-    if (pct >= 40)   return { label: 'Forte décote',           color: '#22c55e', bg: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.22)' };
-    if (pct >= 25)   return { label: 'Sous estimation',        color: '#4ade80', bg: 'rgba(74,222,128,0.08)',  border: 'rgba(74,222,128,0.18)' };
-    if (score >= 80) return { label: 'Opportunité identifiée', color: '#C6A85A', bg: 'rgba(198,168,90,0.10)',  border: 'rgba(198,168,90,0.25)' };
-    if (score >= 70) return { label: 'Forte demande',          color: '#38bdf8', bg: 'rgba(56,189,248,0.08)',  border: 'rgba(56,189,248,0.20)' };
-    if (score >= 60) return { label: 'Marché solide',          color: '#94a3b8', bg: 'rgba(148,163,184,0.07)', border: 'rgba(148,163,184,0.18)' };
-                     return { label: 'En cours',               color: '#6b7280', bg: 'rgba(107,114,128,0.05)', border: 'rgba(107,114,128,0.15)' };
-  } else {
-    if (score >= 80) return { label: 'Artiste recherché',      color: '#C6A85A', bg: 'rgba(198,168,90,0.10)',  border: 'rgba(198,168,90,0.25)' };
-    if (score >= 70) return { label: 'Historique favorable',   color: '#38bdf8', bg: 'rgba(56,189,248,0.08)',  border: 'rgba(56,189,248,0.20)' };
-    if (score >= 60) return { label: 'Marché actif',           color: '#94a3b8', bg: 'rgba(148,163,184,0.07)', border: 'rgba(148,163,184,0.18)' };
-                     return { label: 'Larry suit ce lot',      color: '#6b7280', bg: 'rgba(107,114,128,0.05)', border: 'rgba(107,114,128,0.15)' };
+interface Badge { label: string; color: string }
+
+function primaryBadge(pick: TopPick): Badge {
+  const lot = pick.lot;
+  const h = hoursUntil(lot.auction_date);
+
+  if (h !== null && h > 0 && h < 6 && (lot.deal_score ?? 0) >= 80) {
+    return { label: `⚡ Clôture dans ${Math.round(h)}h — conviction forte`, color: '#ef4444' };
   }
+  if (pick.rec_type === 'agent_match') {
+    return { label: '◈ Artiste que vous surveillez', color: '#C6A85A' };
+  }
+  if (pick.rec_type === 'preference_match') {
+    const cat = lot.category?.split(/[,/]/)[0]?.trim();
+    return { label: cat ? `◈ Correspond à votre budget · ${cat}` : '◈ Correspond à votre profil', color: '#C6A85A' };
+  }
+  const pct = lot.pct_below_low_estimate;
+  if (pct && pct >= 15) {
+    return { label: `↓ ${Math.round(pct)}% sous l'estimation basse`, color: '#22c55e' };
+  }
+  return { label: '◈ Sélection du jour', color: '#C6A85A' };
 }
 
-function priorityScore(lot: Lot): number {
-  // For upcoming lots don't use pct_below (it's based on opening bid, not market)
-  if (isLiveLot(lot.status)) return (lot.deal_score || 0) + (lot.pct_below_low_estimate ?? 0) * 0.5;
-  return lot.deal_score || 0;
+function secondaryBadge(pick: TopPick): Badge | null {
+  if (pick.rec_type === 'agent_match' && pick.lot.estimate_low) {
+    return { label: '✓ Dans votre budget', color: 'var(--text-3)' };
+  }
+  return null;
+}
+
+// ── Derive sales from closing_soon ────────────────────────────────────────────
+
+function deriveSales(closingSoon: LotCard[], topPicks: TopPick[]): SaleSummary[] {
+  const agentHouses = new Set(
+    topPicks.filter(p => p.rec_type === 'agent_match').map(p => p.lot.auction_house_name).filter(Boolean) as string[]
+  );
+  const personalHouses = new Set(
+    topPicks.map(p => p.lot.auction_house_name).filter(Boolean) as string[]
+  );
+
+  const map = new Map<string, SaleSummary>();
+
+  for (const lot of closingSoon) {
+    if (!lot.auction_house_name || !lot.auction_date) continue;
+    const dateKey = lot.auction_date.slice(0, 10);
+    const key = `${lot.auction_house_name}::${dateKey}`;
+    const h = hoursUntil(lot.auction_date);
+
+    if (!map.has(key)) {
+      map.set(key, {
+        house: lot.auction_house_name,
+        lotCount: 0,
+        firstDate: lot.auction_date,
+        displayDate: relativeDate(lot.auction_date),
+        relevanceLabel: agentHouses.has(lot.auction_house_name)
+          ? '◈ Artiste que vous surveillez'
+          : personalHouses.has(lot.auction_house_name)
+          ? '◈ Lots dans votre profil'
+          : null,
+        isUrgent: h !== null && h > 0 && h <= 6,
+      });
+    }
+    map.get(key)!.lotCount++;
+  }
+
+  return [...map.values()]
+    .sort((a, b) => {
+      if (a.relevanceLabel && !b.relevanceLabel) return -1;
+      if (!a.relevanceLabel && b.relevanceLabel) return 1;
+      return parseUTC(a.firstDate) - parseUTC(b.firstDate);
+    })
+    .slice(0, 5);
+}
+
+// ── Larry signal ──────────────────────────────────────────────────────────────
+
+function buildLarrySignal(brief: MarketBrief): string | null {
+  if (brief.agent_unread > 0) {
+    return `${brief.agent_unread} alerte${brief.agent_unread > 1 ? 's' : ''} de votre stratégie en attente de lecture.`;
+  }
+  const sinceH = Math.round((Date.now() - parseUTC(brief.since)) / 3_600_000);
+  if (brief.new_lots_count > 0 && sinceH <= 48) {
+    const t = sinceH < 1 ? "moins d'une heure" : sinceH === 1 ? '1h' : `${sinceH}h`;
+    return `${brief.new_lots_count.toLocaleString('fr-FR')} nouveaux lots analysés depuis votre dernière visite (il y a ${t}).`;
+  }
+  if (brief.closing_today_count > 0) {
+    const n = brief.closing_today_count;
+    return `${n} vente${n > 1 ? 's clôturent' : ' clôture'} dans les 24 prochaines heures.`;
+  }
+  return null;
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default function ClosingSoon() {
-  const navigate = useNavigate();
-  const [lots, setLots] = useState<Lot[]>([]);
+export default function EnDirect() {
+  const navigate  = useNavigate();
+  getUser(); // ensure session check
+  const [brief, setBrief]     = useState<MarketBrief | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchedAt]           = useState(() => new Date());
 
   useEffect(() => {
     const token = getToken();
-    fetch(`${BACKEND}/api/recommendations/closing-soon?hours=48&limit=80`, {
+    fetch(`${BACKEND}/api/recommendations/market-brief`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then(r => r.ok ? r.json() : { lots: [] })
-      .then(data => { setLots(data.lots || []); setLoading(false); })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setBrief(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
-  // Backend already guarantees auction_date >= now — no client-side date filter needed
-  const activeLots = lots;
+  const closingImminently = brief?.closing_soon.filter(l => {
+    const h = hoursUntil(l.auction_date);
+    return h !== null && h > 0 && h <= 6;
+  }) ?? [];
 
-  // Live lots are more immediately actionable — surface them first in top picks
-  const byPriority = [
-    ...activeLots.filter(l => isLiveLot(l.status)).sort((a, b) => priorityScore(b) - priorityScore(a)),
-    ...activeLots.filter(l => !isLiveLot(l.status)).sort((a, b) => priorityScore(b) - priorityScore(a)),
-  ];
+  const sales  = brief ? deriveSales(brief.closing_soon, brief.top_picks) : [];
+  const signal = brief ? buildLarrySignal(brief) : null;
 
-  const TOP_N = Math.min(5, activeLots.length);
-  const topPicks = byPriority.slice(0, TOP_N);
-  const topPickIds = new Set(topPicks.map(l => l.id));
+  const chips = brief ? [
+    brief.top_picks.length > 0 && {
+      label: `${brief.top_picks.length} opportunité${brief.top_picks.length > 1 ? 's' : ''} pour vous`,
+      urgent: false,
+    },
+    brief.agent_unread > 0 && {
+      label: `${brief.agent_unread} alerte${brief.agent_unread > 1 ? 's' : ''} stratégie`,
+      urgent: false,
+    },
+    brief.new_lots_count > 0 && {
+      label: `${brief.new_lots_count.toLocaleString('fr-FR')} nouveaux lots`,
+      urgent: false,
+    },
+    brief.closing_today_count > 0 && {
+      label: `⚡ ${brief.closing_today_count} clôture${brief.closing_today_count > 1 ? 's' : ''} aujourd'hui`,
+      urgent: true,
+    },
+  ].filter((c): c is { label: string; urgent: boolean } => Boolean(c)) : [];
 
-  // Remaining — chronological
-  const remaining = activeLots
-    .filter(l => !topPickIds.has(l.id))
-    .sort((a, b) => {
-      if (!a.auction_date) return 1;
-      if (!b.auction_date) return -1;
-      return parseUTC(a.auction_date) - parseUTC(b.auction_date);
-    });
-
-  const liveCount     = activeLots.filter(l => isLiveLot(l.status)).length;
-  const upcomingCount = activeLots.length - liveCount;
+  const minsAgo  = Math.round((Date.now() - fetchedAt.getTime()) / 60_000);
+  const updatedStr = minsAgo < 1 ? "À l'instant" : `Il y a ${minsAgo} min`;
 
   return (
-    <main style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 20px 80px' }}>
+    <main style={{ maxWidth: '1520px', margin: '0 auto', padding: '36px 24px 80px' }}>
 
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div style={{ marginBottom: '32px' }}>
-        <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '10px' }}>
-          Nautilus · Dernière chance
+      {/* ── Page header ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '24px' }}>
+        <div>
+          <div style={{
+            fontFamily: 'var(--font-mono)', fontSize: '9px',
+            letterSpacing: '0.16em', textTransform: 'uppercase',
+            color: 'var(--text-3)', marginBottom: '8px',
+          }}>
+            Nautilus · Marché en temps réel
+          </div>
+          <h1 style={{
+            fontFamily: 'var(--font-serif)', fontSize: '28px',
+            fontWeight: 400, color: 'var(--navy)', margin: 0, lineHeight: 1.2,
+          }}>
+            En direct
+          </h1>
         </div>
-        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 400, color: 'var(--navy)', lineHeight: 1.2, margin: '0 0 10px' }}>
-          Clôtures dans les 48 prochaines heures
-        </h1>
-        {!loading && activeLots.length > 0 && (
-          <div style={{ display: 'flex', gap: '16px' }}>
-            {liveCount > 0 && (
-              <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: '#22c55e' }}>
-                ● {liveCount} vente{liveCount > 1 ? 's' : ''} en cours
-              </span>
-            )}
-            {upcomingCount > 0 && (
-              <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-3)' }}>
-                ○ {upcomingCount} à venir
-              </span>
-            )}
+        {!loading && (
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', letterSpacing: '0.04em' }}>
+            {updatedStr}
           </div>
         )}
       </div>
 
-      {/* ── States ──────────────────────────────────────────────────────────── */}
-      {loading ? (
-        <SkeletonState />
-      ) : activeLots.length === 0 ? (
-        <EmptyState />
-      ) : (
+      {/* ── States ── */}
+      {loading ? <SkeletonState /> : !brief ? <ErrorState /> : (
         <>
-          {/* ── Section 1 : Larry + top picks ─────────────────────────────── */}
-          <div style={{ marginBottom: '48px' }}>
-            {/* Larry banner */}
+          {/* Synthesis chips */}
+          {chips.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: signal ? '12px' : '32px' }}>
+              {chips.map((chip, i) => (
+                <div key={i} style={{
+                  padding: '0 12px', height: '32px',
+                  display: 'flex', alignItems: 'center',
+                  background: chip.urgent ? 'rgba(239,68,68,0.07)' : 'rgba(26,42,68,0.05)',
+                  border: `1px solid ${chip.urgent ? 'rgba(239,68,68,0.2)' : 'rgba(26,42,68,0.09)'}`,
+                  borderRadius: '16px',
+                  fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.04em',
+                  color: chip.urgent ? '#ef4444' : 'var(--text-2)',
+                  whiteSpace: 'nowrap' as const,
+                }}>
+                  {chip.label}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Larry signal */}
+          {signal && (
             <div style={{
-              padding: '14px 20px',
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '10px 16px', marginBottom: '32px',
               background: 'rgba(198,168,90,0.05)',
-              border: '1px solid rgba(198,168,90,0.22)',
-              borderBottom: topPicks.length > 0 ? 'none' : '1px solid rgba(198,168,90,0.22)',
-              borderRadius: topPicks.length > 0 ? '8px 8px 0 0' : '8px',
-              display: 'flex', alignItems: 'flex-start', gap: '14px',
+              border: '1px solid rgba(198,168,90,0.18)',
+              borderRadius: '6px',
             }}>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--gold)', flexShrink: 0, paddingTop: '1px' }}>
+              <span style={{
+                fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700,
+                color: 'var(--gold)', letterSpacing: '0.1em', flexShrink: 0,
+              }}>
                 ◆ LARRY
               </span>
-              <span style={{ fontSize: '13px', color: 'var(--text)', fontFamily: 'var(--font-sans)', lineHeight: 1.6 }}>
-                Larry surveille <strong>{activeLots.length}</strong> lot{activeLots.length > 1 ? 's' : ''} en clôture imminente.
-                {topPicks.length > 0 && <> <strong>{topPicks.length}</strong> méritent particulièrement votre attention.</>}
+              <span style={{ fontSize: '12px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)', lineHeight: 1.5 }}>
+                {signal}
               </span>
             </div>
+          )}
 
-            {/* Premium cards */}
-            {topPicks.length > 0 && (
-              <div style={{ border: '1px solid rgba(198,168,90,0.22)', borderTop: 'none', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
-                {topPicks.map((lot, i) => (
-                  <PremiumCard
-                    key={lot.id}
-                    lot={lot}
-                    isLast={i === topPicks.length - 1}
-                    onClick={() => navigate(`/app/opportunities/${lot.id}`)}
+          {/* ── POUR VOUS ── */}
+          <section style={{ marginBottom: '52px' }}>
+            <SectionHeader
+              label="Pour vous"
+              meta={brief.top_picks.length > 0 ? `${brief.top_picks.length} sélection${brief.top_picks.length > 1 ? 's' : ''}` : undefined}
+              action={{ label: 'Voir tout →', onClick: () => navigate('/app/today') }}
+              color="var(--gold)"
+            />
+            {brief.top_picks.length === 0 ? (
+              <OnboardingCard onClick={() => navigate('/app/profile/preferences')} />
+            ) : (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                gap: '20px',
+              }}>
+                {brief.top_picks.slice(0, 4).map(pick => (
+                  <ConvictionCard
+                    key={pick.lot.id}
+                    pick={pick}
+                    onClick={() => navigate(`/app/opportunities/${pick.lot.id}`)}
                   />
                 ))}
               </div>
             )}
-          </div>
+          </section>
 
-          {/* ── Section 2 : All remaining lots ────────────────────────────── */}
-          {remaining.length > 0 && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
-                <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                  Toutes les clôtures — {remaining.length} lot{remaining.length > 1 ? 's' : ''}
-                </span>
-                <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-              </div>
+          {/* ── CLÔTURE IMMINENTE ── */}
+          {closingImminently.length > 0 && (
+            <section style={{ marginBottom: '52px' }}>
+              <SectionHeader
+                label="Clôture imminente"
+                meta="Dans les 6 prochaines heures"
+                color="#ef4444"
+              />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                {remaining.map(lot => (
-                  <CompactRow key={lot.id} lot={lot} onClick={() => navigate(`/app/opportunities/${lot.id}`)} />
+                {closingImminently.slice(0, 8).map(lot => (
+                  <TimerRow
+                    key={lot.id}
+                    lot={lot}
+                    onClick={() => navigate(`/app/opportunities/${lot.id}`)}
+                  />
                 ))}
               </div>
-            </div>
+            </section>
+          )}
+
+          {/* ── VENTES EN COURS ── */}
+          {sales.length > 0 && (
+            <section>
+              <SectionHeader
+                label="Ventes en cours"
+                action={{ label: 'Calendrier →', onClick: () => navigate('/app/calendar') }}
+                color="var(--text-3)"
+              />
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 280px))',
+                gap: '16px',
+              }}>
+                {sales.map((sale, i) => (
+                  <SaleCard key={i} sale={sale} />
+                ))}
+              </div>
+            </section>
           )}
         </>
       )}
@@ -195,148 +385,245 @@ export default function ClosingSoon() {
   );
 }
 
-// ── Premium Card ──────────────────────────────────────────────────────────────
+// ── Section header ────────────────────────────────────────────────────────────
 
-function PremiumCard({ lot, isLast, onClick }: { lot: Lot; isLast: boolean; onClick: () => void }) {
-  const live   = isLiveLot(lot.status);
-  const signal = getSignal(lot);
-  const time   = lot.auction_date ? timeLabel(lot.auction_date, live) : null;
+function SectionHeader({
+  label, meta, action, color,
+}: {
+  label: string;
+  meta?: string;
+  action?: { label: string; onClick: () => void };
+  color: string;
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span style={{
+          fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700,
+          letterSpacing: '0.12em', textTransform: 'uppercase', color,
+        }}>
+          {label}
+        </span>
+        {meta && (
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)' }}>
+            {meta}
+          </span>
+        )}
+      </div>
+      {action && (
+        <button
+          onClick={action.onClick}
+          style={{
+            fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.06em',
+            color: 'var(--text-3)', background: 'none', border: 'none',
+            cursor: 'pointer', padding: 0,
+          }}
+        >
+          {action.label}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ── Conviction card ───────────────────────────────────────────────────────────
+
+function ConvictionCard({ pick, onClick }: { pick: TopPick; onClick: () => void }) {
+  const lot   = pick.lot;
+  const pb    = primaryBadge(pick);
+  const sb    = secondaryBadge(pick);
+  const score = lot.deal_score ?? pick.score;
+  const sColor = scoreColor(score);
+  const h     = hoursUntil(lot.auction_date);
+  const live  = isLiveLot(lot.status);
+  const time  = lot.auction_date ? timeLabel(lot.auction_date, live) : null;
+  const isUrgent = h !== null && h > 0 && h < 24;
 
   return (
     <div
       onClick={onClick}
-      role="button" tabIndex={0} onKeyDown={e => e.key === 'Enter' && onClick()}
-      style={{ display: 'flex', cursor: 'pointer', background: 'var(--bg-card)', borderBottom: isLast ? 'none' : '1px solid var(--border)', transition: 'background 0.12s' }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-subtle)')}
-      onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-card)')}
+      role="button" tabIndex={0}
+      onKeyDown={e => e.key === 'Enter' && onClick()}
+      style={{
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border)',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        transition: 'border-color 0.15s, box-shadow 0.15s',
+        display: 'flex', flexDirection: 'column',
+      }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(26,42,68,0.25)';
+        (e.currentTarget as HTMLDivElement).style.boxShadow  = '0 4px 16px rgba(10,18,36,0.08)';
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)';
+        (e.currentTarget as HTMLDivElement).style.boxShadow  = 'none';
+      }}
     >
-      {/* Image + live badge */}
-      <div style={{ width: '110px', height: '110px', flexShrink: 0, background: 'var(--bg-subtle)', overflow: 'hidden', position: 'relative' }}>
+      {/* Image */}
+      <div style={{
+        width: '100%', aspectRatio: '4/3',
+        position: 'relative', overflow: 'hidden',
+        background: 'rgba(26,42,68,0.06)', flexShrink: 0,
+      }}>
         {lot.image_url
-          ? <img src={lot.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.88 }} />
-          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--border)', fontSize: '24px' }}>◇</div>
+          ? <img
+              src={lot.image_url} alt=""
+              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
+            />
+          : <div style={{
+              width: '100%', height: '100%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'rgba(26,42,68,0.14)', fontSize: '40px',
+            }}>◇</div>
         }
-        {/* Status overlay */}
+
+        {/* Score badge — bottom left */}
         <div style={{
-          position: 'absolute', bottom: '6px', left: '6px',
-          fontSize: '8px', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.08em',
-          color: live ? '#22c55e' : 'var(--text-3)',
-          background: 'rgba(0,0,0,0.65)', borderRadius: '2px', padding: '2px 5px',
+          position: 'absolute', bottom: '10px', left: '10px',
+          background: 'rgba(10,18,36,0.72)', backdropFilter: 'blur(6px)',
+          borderRadius: '4px', padding: '4px 8px',
+          display: 'flex', alignItems: 'baseline', gap: '2px',
         }}>
-          {live ? '● EN COURS' : '○ À VENIR'}
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '16px', fontWeight: 700, color: sColor, lineHeight: 1 }}>
+            {Math.round(score)}
+          </span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.35)' }}>/100</span>
         </div>
+
+        {/* Urgency chip — bottom right */}
+        {isUrgent && h !== null && (
+          <div style={{
+            position: 'absolute', bottom: '10px', right: '10px',
+            background: 'rgba(239,68,68,0.85)', backdropFilter: 'blur(6px)',
+            borderRadius: '4px', padding: '4px 8px',
+            fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700,
+            color: 'white', letterSpacing: '0.06em',
+          }}>
+            ⚡ {Math.round(h)}H
+          </div>
+        )}
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, padding: '14px 20px', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-        {/* Top: artist / title / signal */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '10px' }}>
-          <div style={{ minWidth: 0 }}>
-            {lot.artist_name_raw && (
-              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '4px' }}>
-                {lot.artist_name_raw}
-              </div>
-            )}
-            <div style={{ fontSize: '14px', fontFamily: 'var(--font-serif)', color: 'var(--navy)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {lot.title || 'Sans titre'}
-            </div>
-          </div>
-          <span style={{
-            flexShrink: 0, fontSize: '10px', fontFamily: 'var(--font-mono)', fontWeight: 700,
-            letterSpacing: '0.08em', color: signal.color, background: signal.bg,
-            border: `1px solid ${signal.border}`, borderRadius: '3px', padding: '3px 9px', whiteSpace: 'nowrap',
+      <div style={{ padding: '14px 16px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+
+        {/* Primary badge */}
+        <div style={{
+          fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700,
+          color: pb.color, letterSpacing: '0.04em',
+          marginBottom: sb ? '2px' : '10px',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {pb.label}
+        </div>
+
+        {/* Secondary badge */}
+        {sb && (
+          <div style={{
+            fontFamily: 'var(--font-mono)', fontSize: '9px',
+            color: sb.color, letterSpacing: '0.04em', marginBottom: '10px',
           }}>
-            {signal.label.toUpperCase()}
-          </span>
+            {sb.label}
+          </div>
+        )}
+
+        {/* Artist */}
+        <div style={{
+          fontFamily: 'var(--font-serif)', fontSize: '17px', fontWeight: 400,
+          color: 'var(--navy)', lineHeight: 1.2, marginBottom: '4px',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {lot.artist_name_raw || '—'}
         </div>
 
-        {/* Bottom: price row — differs by state */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '24px', flexWrap: 'wrap' }}>
-          {live ? (
-            // LIVE: show current bid and compare to estimate
-            <>
-              <div>
-                <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginBottom: '2px' }}>Enchère actuelle</div>
-                <div style={{ fontSize: '16px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--navy)' }}>
-                  {fmt(lot.current_price)}
-                </div>
-              </div>
-              {lot.estimate_low && (
-                <div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginBottom: '2px' }}>Estimation basse</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text-3)', textDecoration: lot.current_price && lot.current_price < lot.estimate_low ? 'line-through' : 'none' }}>
-                      {fmt(lot.estimate_low)}
-                    </span>
-                    {lot.pct_below_low_estimate && lot.pct_below_low_estimate > 5 && (
-                      <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: '#22c55e', fontWeight: 700 }}>
-                        -{lot.pct_below_low_estimate.toFixed(0)}%
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            // UPCOMING: show estimate only — current_price is not yet meaningful
-            <div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginBottom: '2px' }}>Estimation</div>
-              <div style={{ fontSize: '15px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--navy)' }}>
-                {lot.estimate_low && lot.estimate_high
-                  ? `${fmt(lot.estimate_low)} — ${fmt(lot.estimate_high)}`
-                  : fmt(lot.estimate_low)
-                }
-              </div>
-            </div>
-          )}
+        {/* Title */}
+        <div style={{
+          fontFamily: 'var(--font-serif)', fontSize: '12px', fontStyle: 'italic',
+          color: 'var(--text-2)', lineHeight: 1.4,
+          marginBottom: '12px', minHeight: '16px',
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}>
+          {lot.title || ''}
+        </div>
 
-          {/* Maison */}
+        {/* Meta */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
+          fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-3)',
+          marginBottom: '14px', marginTop: 'auto',
+        }}>
+          {(lot.estimate_low || lot.estimate_high) && (
+            <span>Est. {fmt(lot.estimate_low)}{lot.estimate_high ? ` – ${fmt(lot.estimate_high)}` : ''}</span>
+          )}
           {lot.auction_house_name && (
-            <div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginBottom: '2px' }}>Maison de vente</div>
-              <div style={{ fontSize: '12px', color: 'var(--text)', fontFamily: 'var(--font-sans)' }}>{lot.auction_house_name}</div>
-            </div>
+            <span>· {lot.auction_house_name}</span>
           )}
-
-          {/* Countdown — always pushed right */}
           {time && (
-            <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginBottom: '2px' }}>
-                {live ? 'Clôture' : 'Passage au marteau'}
-              </div>
-              <div style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: time.color }}>
-                {time.urgent && '⚡ '}{time.label}
-              </div>
-            </div>
+            <span style={{ color: time.urgent ? time.color : 'inherit' }}>
+              · {time.urgent ? '⚡ ' : ''}{time.label}
+            </span>
           )}
         </div>
+
+        {/* CTA */}
+        <button
+          onClick={e => { e.stopPropagation(); onClick(); }}
+          style={{
+            width: '100%', padding: '10px',
+            background: 'var(--navy)', color: '#fff',
+            border: 'none', borderRadius: '5px',
+            fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+            fontFamily: 'var(--font-sans)', letterSpacing: '0.01em',
+            transition: 'background 0.15s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = '#0f1f3a')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'var(--navy)')}
+        >
+          Voir cette conviction →
+        </button>
       </div>
     </div>
   );
 }
 
-// ── Compact Row ───────────────────────────────────────────────────────────────
+// ── Timer row ─────────────────────────────────────────────────────────────────
 
-function CompactRow({ lot, onClick }: { lot: Lot; onClick: () => void }) {
-  const live   = isLiveLot(lot.status);
-  const signal = getSignal(lot);
-  const time   = lot.auction_date ? timeLabel(lot.auction_date, live) : null;
+function TimerRow({ lot, onClick }: { lot: LotCard; onClick: () => void }) {
+  const live = isLiveLot(lot.status);
+  const h    = hoursUntil(lot.auction_date);
+  const time = lot.auction_date ? timeLabel(lot.auction_date, live) : null;
+  const progressFraction = h !== null ? Math.max(0, Math.min(1, h / 6)) : 0;
+  const barColor = h !== null ? (h < 1 ? '#ef4444' : h < 3 ? '#f97316' : '#C6A85A') : '#C6A85A';
 
   return (
     <div
       onClick={onClick}
-      role="button" tabIndex={0} onKeyDown={e => e.key === 'Enter' && onClick()}
-      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', transition: 'background 0.1s' }}
+      role="button" tabIndex={0}
+      onKeyDown={e => e.key === 'Enter' && onClick()}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '44px 1fr 100px 150px',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '10px 14px',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border)',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        transition: 'background 0.1s',
+      }}
       onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-subtle)')}
       onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-card)')}
     >
-      {/* Status dot */}
-      <span style={{ fontSize: '8px', flexShrink: 0, color: live ? '#22c55e' : 'var(--text-3)' }}>
-        {live ? '●' : '○'}
-      </span>
-
       {/* Thumbnail */}
-      <div style={{ width: '38px', height: '38px', flexShrink: 0, borderRadius: '3px', overflow: 'hidden', background: 'var(--bg-subtle)' }}>
+      <div style={{
+        width: '44px', height: '44px', borderRadius: '4px',
+        overflow: 'hidden', background: 'var(--bg-subtle)', flexShrink: 0,
+      }}>
         {lot.image_url
           ? <img src={lot.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--border)', fontSize: '14px' }}>◇</div>
@@ -344,74 +631,173 @@ function CompactRow({ lot, onClick }: { lot: Lot; onClick: () => void }) {
       </div>
 
       {/* Artist + title */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--navy)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-sans)' }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{
+          fontSize: '13px', fontWeight: 600, color: 'var(--navy)',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          fontFamily: 'var(--font-sans)',
+        }}>
           {lot.artist_name_raw || '—'}
         </div>
-        <div style={{ fontSize: '11px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {lot.title}
-        </div>
-      </div>
-
-      {/* Signal badge */}
-      <span style={{
-        flexShrink: 0, fontSize: '9px', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.07em',
-        color: signal.color, background: signal.bg, border: `1px solid ${signal.border}`,
-        borderRadius: '2px', padding: '2px 7px', whiteSpace: 'nowrap',
-      }}>
-        {signal.label.toUpperCase()}
-      </span>
-
-      {/* Price — state-dependent */}
-      <div style={{ flexShrink: 0, textAlign: 'right', minWidth: '80px' }}>
-        {live ? (
-          <>
-            <div style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--navy)' }}>
-              {fmt(lot.current_price)}
-            </div>
-            {lot.pct_below_low_estimate && lot.pct_below_low_estimate > 5 && (
-              <div style={{ fontSize: '10px', color: '#22c55e', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-                -{lot.pct_below_low_estimate.toFixed(0)}%
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginBottom: '1px' }}>Est.</div>
-            <div style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--navy)' }}>
-              {fmt(lot.estimate_low)}
-            </div>
-          </>
+        {lot.title && (
+          <div style={{
+            fontSize: '11px', color: 'var(--text-3)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {lot.title}
+          </div>
         )}
       </div>
 
-      {/* Countdown */}
-      {time && (
-        <div style={{ flexShrink: 0, minWidth: '130px', textAlign: 'right' }}>
-          <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: time.color }}>
-            {time.urgent && '⚡ '}{time.label}
-          </div>
+      {/* Estimate + house */}
+      <div style={{ textAlign: 'right', minWidth: 0 }}>
+        <div style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--navy)', marginBottom: '2px' }}>
+          {fmt(lot.estimate_low)}
         </div>
-      )}
+        {lot.auction_house_name && (
+          <div style={{
+            fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {lot.auction_house_name.length > 18 ? lot.auction_house_name.slice(0, 16) + '…' : lot.auction_house_name}
+          </div>
+        )}
+      </div>
+
+      {/* Timer + progress bar */}
+      <div style={{ flexShrink: 0 }}>
+        <div style={{
+          fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 700,
+          color: time?.urgent ? time.color : barColor,
+          marginBottom: '5px', textAlign: 'right',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {time ? `${time.urgent ? '⚡ ' : ''}${time.label}` : '—'}
+        </div>
+        <div style={{ width: '100%', height: '2px', background: 'rgba(26,42,68,0.1)', borderRadius: '1px', overflow: 'hidden' }}>
+          <div style={{
+            width: `${progressFraction * 100}%`, height: '100%',
+            background: barColor, borderRadius: '1px',
+          }} />
+        </div>
+      </div>
     </div>
   );
 }
 
-// ── Loading skeleton ──────────────────────────────────────────────────────────
+// ── Sale card ─────────────────────────────────────────────────────────────────
+
+function SaleCard({ sale }: { sale: SaleSummary }) {
+  const hasRelevance = Boolean(sale.relevanceLabel);
+
+  return (
+    <div style={{
+      background: 'var(--bg-card)',
+      border: `1px solid ${hasRelevance ? 'rgba(198,168,90,0.28)' : 'var(--border)'}`,
+      borderRadius: '8px',
+      padding: '18px 20px',
+      opacity: hasRelevance ? 1 : 0.6,
+    }}>
+      <div style={{
+        fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700,
+        letterSpacing: '0.12em', textTransform: 'uppercase',
+        color: 'var(--navy)', marginBottom: '8px',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }}>
+        {sale.house}
+      </div>
+
+      {hasRelevance ? (
+        <div style={{
+          fontFamily: 'var(--font-mono)', fontSize: '10px',
+          color: 'var(--gold)', marginBottom: '10px', fontWeight: 600,
+        }}>
+          {sale.relevanceLabel}
+        </div>
+      ) : (
+        <div style={{
+          fontFamily: 'var(--font-mono)', fontSize: '10px',
+          color: 'var(--text-3)', fontStyle: 'italic', marginBottom: '10px',
+        }}>
+          Hors de votre profil
+        </div>
+      )}
+
+      <div style={{ fontSize: '12px', color: 'var(--text-2)', marginBottom: '10px' }}>
+        {sale.lotCount} lot{sale.lotCount > 1 ? 's' : ''} en clôture
+      </div>
+
+      <div style={{
+        fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700,
+        color: sale.isUrgent ? '#ef4444' : 'var(--text-3)',
+      }}>
+        {sale.isUrgent ? '⚡ ' : ''}{sale.displayDate}
+      </div>
+    </div>
+  );
+}
+
+// ── Onboarding card ───────────────────────────────────────────────────────────
+
+function OnboardingCard({ onClick }: { onClick: () => void }) {
+  return (
+    <div style={{
+      background: 'rgba(26,42,68,0.03)',
+      border: '1px dashed rgba(26,42,68,0.15)',
+      borderRadius: '8px',
+      padding: '48px 32px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px',
+      textAlign: 'center',
+    }}>
+      <div style={{ fontSize: '28px', opacity: 0.2 }}>◇</div>
+      <div style={{
+        fontFamily: 'var(--font-serif)', fontSize: '18px',
+        color: 'var(--navy)', fontWeight: 400,
+      }}>
+        Votre radar est inactif.
+      </div>
+      <div style={{ fontSize: '13px', color: 'var(--text-2)', maxWidth: '380px', lineHeight: 1.65 }}>
+        Nautilus ne connaît pas encore vos catégories ni votre budget.
+        Configurez vos préférences pour activer la personnalisation.
+      </div>
+      <button
+        onClick={onClick}
+        style={{
+          marginTop: '4px', padding: '10px 22px',
+          background: 'var(--navy)', color: '#fff',
+          border: 'none', borderRadius: '6px',
+          fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+          fontFamily: 'var(--font-sans)', transition: 'background 0.15s',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.background = '#0f1f3a')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'var(--navy)')}
+      >
+        Configurer mes préférences →
+      </button>
+    </div>
+  );
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
 
 function SkeletonState() {
   return (
     <>
-      <style>{`@keyframes shimmer{0%{opacity:0.4}50%{opacity:0.7}100%{opacity:0.4}}`}</style>
-      <div style={{ border: '1px solid rgba(198,168,90,0.22)', borderRadius: '8px', overflow: 'hidden', marginBottom: '48px' }}>
-        <div style={{ height: '46px', background: 'rgba(198,168,90,0.05)', borderBottom: '1px solid rgba(198,168,90,0.22)' }} />
+      <style>{`@keyframes shimmer{0%,100%{opacity:0.4}50%{opacity:0.7}}`}</style>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '32px' }}>
+        {[90, 130, 110, 120].map((w, i) => (
+          <div key={i} style={{ height: '32px', width: `${w}px`, background: 'var(--bg-subtle)', borderRadius: '16px', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
         {[0, 1, 2].map(i => (
-          <div key={i} style={{ display: 'flex', height: '110px', borderBottom: i < 2 ? '1px solid var(--border)' : 'none', background: 'var(--bg-card)' }}>
-            <div style={{ width: '110px', background: 'var(--bg-subtle)', animation: 'shimmer 1.4s ease-in-out infinite' }} />
-            <div style={{ flex: 1, padding: '14px 20px', display: 'flex', flexDirection: 'column', gap: '8px', justifyContent: 'center' }}>
-              <div style={{ height: '10px', width: '100px', background: 'var(--bg-subtle)', borderRadius: '3px', animation: 'shimmer 1.4s ease-in-out infinite' }} />
-              <div style={{ height: '14px', width: '60%', background: 'var(--bg-subtle)', borderRadius: '3px', animation: 'shimmer 1.4s ease-in-out infinite' }} />
-              <div style={{ height: '10px', width: '40%', background: 'var(--bg-subtle)', borderRadius: '3px', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+          <div key={i} style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+            <div style={{ aspectRatio: '4/3', background: 'var(--bg-subtle)', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+            <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ height: '10px', width: '70%', background: 'var(--bg-subtle)', borderRadius: '3px', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+              <div style={{ height: '17px', width: '85%', background: 'var(--bg-subtle)', borderRadius: '3px', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+              <div style={{ height: '12px', width: '55%', background: 'var(--bg-subtle)', borderRadius: '3px', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+              <div style={{ height: '36px', background: 'var(--bg-subtle)', borderRadius: '5px', marginTop: '8px', animation: 'shimmer 1.4s ease-in-out infinite' }} />
             </div>
           </div>
         ))}
@@ -420,14 +806,16 @@ function SkeletonState() {
   );
 }
 
-// ── Empty state ───────────────────────────────────────────────────────────────
+// ── Error state ───────────────────────────────────────────────────────────────
 
-function EmptyState() {
+function ErrorState() {
   return (
     <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-3)' }}>
       <div style={{ fontSize: '32px', marginBottom: '12px' }}>◇</div>
-      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--navy)', marginBottom: '8px' }}>Aucune vente imminente</div>
-      <div style={{ fontSize: '13px' }}>Aucune vente ne clôture dans les 48 prochaines heures.</div>
+      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--navy)', marginBottom: '8px' }}>
+        Données momentanément indisponibles
+      </div>
+      <div style={{ fontSize: '13px' }}>Réessayez dans quelques instants.</div>
     </div>
   );
 }
