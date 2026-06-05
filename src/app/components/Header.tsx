@@ -17,7 +17,7 @@ function useIsMobile(breakpoint = 900) {
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 const NAV_ITEMS = [
-  { label: "Aujourd'hui",     to: '/app/today'     },
+  { label: 'Accueil',          to: '/app/today'     },
   { label: 'En direct',       to: '/app/urgent'    },
   { label: 'Le marché',       to: '/app/market'    },
   { label: 'Ma sélection',    to: '/app/dashboard' },

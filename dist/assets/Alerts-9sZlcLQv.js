@@ -1,0 +1,1 @@
+import{j as t}from"./index-BdhT37Eo.js";import{N as r}from"./router-Byz_4G-x.js";import"./charts-BO8EO0sX.js";import"./i18n-BtEExYVz.js";function n(){return t.jsx(r,{to:"/app/agent",replace:!0})}function s(){return t.jsx(r,{to:"/app/agent",replace:!0})}export{n as AlertsContent,s as default};
