@@ -322,7 +322,7 @@ export function MarketBriefModal() {
               transition: 'background 0.15s',
             }}
           >
-            Voir cette conviction →
+            Voir le lot →
           </button>
           <button
             onClick={openToday}

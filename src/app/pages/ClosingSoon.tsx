@@ -667,7 +667,7 @@ function ConvictionCard({ pick, onClick }: { pick: TopPick; onClick: () => void 
           onMouseEnter={e => (e.currentTarget.style.background = '#0f1f3a')}
           onMouseLeave={e => (e.currentTarget.style.background = 'var(--navy)')}
         >
-          Voir cette conviction →
+          Voir le lot →
         </button>
       </div>
     </div>

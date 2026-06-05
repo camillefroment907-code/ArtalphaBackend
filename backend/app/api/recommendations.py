@@ -86,15 +86,20 @@ async def _get_dismissed_ids(user_id, db: AsyncSession) -> set:
 
 
 def _base_lot_query():
-    """Base filter: upcoming/live auction lots with a deal score."""
-    horizon = datetime.utcnow() + timedelta(days=_UPCOMING_DAYS)
+    """Base filter: upcoming/live auction lots with a deal score, not yet adjudicated."""
+    now = datetime.utcnow()
+    horizon = now + timedelta(days=_UPCOMING_DAYS)
     return and_(
         Lot.status.cast(String).in_(['upcoming', 'live']),
         Lot.market_type == MarketType.AUCTION,
         Lot.deal_score >= _SCORE_FLOOR,
+        Lot.hammer_price.is_(None),          # exclude adjudicated lots
         or_(
             Lot.auction_date.is_(None),
-            Lot.auction_date <= horizon,
+            and_(
+                Lot.auction_date >= now,      # exclude past/expired lots
+                Lot.auction_date <= horizon,
+            ),
         ),
     )
 
@@ -279,18 +284,62 @@ async def _strategy_global_fallback(excluded: set, db: AsyncSession, limit: int)
     No-DNA fallback: top lots by deal_score globally.
     Ensures For You tab is never empty for any user.
     """
+    now = datetime.utcnow()
     result = await db.execute(
         select(Lot)
         .where(and_(
             Lot.status.cast(String).in_(['upcoming', 'live']),
             Lot.market_type == MarketType.AUCTION,
             Lot.deal_score.isnot(None),
+            Lot.hammer_price.is_(None),
+            or_(
+                Lot.auction_date.is_(None),
+                Lot.auction_date >= now,
+            ),
         ))
         .order_by(desc(Lot.deal_score))
         .limit(limit * 3)
     )
     lots = [l for l in result.scalars().all() if str(l.id) not in excluded]
     return [_lot_to_card(l, "deal_alert", "Top opportunity on Nautilus right now", l.deal_score or 50) for l in lots[:limit]]
+
+
+# ── Composite scoring ─────────────────────────────────────────────────────────
+
+def _composite_score(card: dict, now: datetime) -> float:
+    """
+    Boost base deal_score with urgency, live status, and price anomaly signals.
+    Urgency: +15 if < 6h, +8 if < 24h, +3 if < 48h.
+    Live:    +10 if status == 'live'.
+    Anomaly: +12 if pct_below ≥ 25%, +6 if ≥ 15%.
+    """
+    score = card["score"]
+    lot = card["lot"]
+
+    auction_date_str = lot.get("auction_date")
+    if auction_date_str:
+        try:
+            ad = datetime.fromisoformat(auction_date_str)
+            h = (ad - now).total_seconds() / 3600
+            if 0 < h < 6:
+                score += 15
+            elif 0 < h < 24:
+                score += 8
+            elif 0 < h < 48:
+                score += 3
+        except Exception:
+            pass
+
+    if lot.get("status") == "live":
+        score += 10
+
+    pct = lot.get("pct_below_low_estimate") or 0
+    if pct >= 25:
+        score += 12
+    elif pct >= 15:
+        score += 6
+
+    return min(round(score, 1), 100)
 
 
 # ── Conviction strategies (market-brief only) ────────────────────────────────
@@ -480,9 +529,22 @@ async def get_for_you(
         except Exception:
             pass
 
-    # Sort by score descending, then trim
+    # Apply composite scoring boosts (urgency, live, price anomaly), then re-sort
+    now_for_boost = datetime.utcnow()
+    for card in results:
+        card["score"] = _composite_score(card, now_for_boost)
     results.sort(key=lambda c: c["score"], reverse=True)
-    final = results[:limit]
+
+    # Diversification: max 2 lots per artist to avoid artist-level repetition
+    artist_count: dict = {}
+    diversified = []
+    for card in results:
+        artist = (card["lot"].get("artist_name_raw") or "").lower().strip()
+        cnt = artist_count.get(artist, 0)
+        if not artist or cnt < 2:
+            artist_count[artist] = cnt + 1
+            diversified.append(card)
+    final = diversified[:limit]
 
     # Log impression events (non-blocking)
     try:
@@ -673,6 +735,12 @@ async def get_market_brief(
     # Level 4 — global deal_score fallback (guarantees 3 convictions are always returned)
     if len(top_picks) < 3:
         await _fill(_strategy_deal_alert(dna, excluded, db, 3 - len(top_picks)))
+
+    # Apply composite scoring to top_picks — most urgent/live conviction surfaces first
+    now_for_boost = datetime.utcnow()
+    for card in top_picks:
+        card["score"] = _composite_score(card, now_for_boost)
+    top_picks.sort(key=lambda c: c["score"], reverse=True)
 
     # Deduplicate new_lots against convictions to avoid the same lot appearing twice
     conviction_ids = {c["lot"]["id"] for c in top_picks}
