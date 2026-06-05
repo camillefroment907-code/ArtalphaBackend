@@ -36,25 +36,11 @@ const SOURCE_LABEL: Record<string, string> = {
 
 // ── Sort maps ────────────────────────────────────────────────
 const LIVE_SORT_MAP: Record<string, { by: string; dir: string }> = {
+  "deal_score_desc":   { by: "deal_score",    dir: "desc" },
   "auction_date_asc":  { by: "auction_date",  dir: "asc"  },
   "estimate_asc":      { by: "current_price", dir: "asc"  },
   "estimate_desc":     { by: "current_price", dir: "desc" },
   "created_at_desc":   { by: "created_at",    dir: "desc" },
-};
-const ALPHA_SORT_MAP: Record<string, { by: string; dir: string }> = {
-  "deal_score_desc":   { by: "deal_score",    dir: "desc" },
-  "upside_desc":       { by: "deal_score",    dir: "desc" },
-  "auction_date_asc":  { by: "auction_date",  dir: "asc"  },
-  "price_asc":         { by: "current_price", dir: "asc"  },
-  "created_at_desc":   { by: "created_at",    dir: "desc" },
-};
-
-// Alpha tab: label → API source value
-const PLATFORM_API: Record<string, string> = {
-  "Drouot": "drouot", "Interenchères": "interencheres",
-  "Invaluable": "invaluable", "Sothebys": "sothebys",
-  "Christies": "christies", "Bonhams": "bonhams",
-  "Christie's": "christies", "Sotheby's": "sothebys",
 };
 
 // ── Source stats type ────────────────────────────────────────
@@ -109,23 +95,6 @@ async function loadLots(params: Record<string, any>) {
   const d = await res.json();
   const items = Array.isArray(d) ? d : (d.items || []);
   return { items, total: d.total || items.length, pages: d.pages || 1 };
-}
-
-async function fetchInvestorLots(budgetMin?: number, budgetMax?: number | null, horizon?: string): Promise<{ items: any[], total: number, pages: number }> {
-  const qs = new URLSearchParams();
-  if (budgetMin != null && budgetMin > 0) qs.set('budget_min', String(budgetMin));
-  if (budgetMax != null) qs.set('budget_max', String(budgetMax));
-  if (horizon) qs.set('horizon', horizon);
-  qs.set('limit', '12');
-
-  const token = getToken();
-  const headers: Record<string, string> = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const res = await fetch(`${BACKEND}/api/lots/for-investor?${qs}`, { headers });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const d = await res.json();
-  return { items: d.items || [], total: d.total || 0, pages: 1 };
 }
 
 async function loadSourceStats(): Promise<SourceStat[]> {
@@ -194,19 +163,6 @@ function mapLot(lot: any) {
 type MappedLot = ReturnType<typeof mapLot>;
 
 // ── Skeleton components ──────────────────────────────────────
-function AlphaSkeleton() {
-  return (
-    <div style={{ borderRadius: "10px", overflow: "hidden", border: "1px solid var(--border)" }}>
-      <div className="skeleton" style={{ paddingTop: "133%", position: "relative" }} />
-      <div style={{ padding: "12px" }}>
-        <div className="skeleton" style={{ height: "10px", width: "60%", borderRadius: "4px", marginBottom: "8px" }} />
-        <div className="skeleton" style={{ height: "14px", width: "90%", borderRadius: "4px", marginBottom: "8px" }} />
-        <div className="skeleton" style={{ height: "18px", width: "40%", borderRadius: "4px" }} />
-      </div>
-    </div>
-  );
-}
-
 function LiveSkeleton() {
   return (
     <div style={{ borderRadius: "8px", overflow: "hidden", border: "1px solid var(--border)" }}>
@@ -214,166 +170,6 @@ function LiveSkeleton() {
       <div style={{ padding: "10px" }}>
         <div className="skeleton" style={{ height: "12px", width: "80%", borderRadius: "3px", marginBottom: "6px" }} />
         <div className="skeleton" style={{ height: "14px", width: "50%", borderRadius: "3px" }} />
-      </div>
-    </div>
-  );
-}
-
-// ── AlphaCard ────────────────────────────────────────────────
-function AlphaCard({ lot, onClick, locked }: { lot: MappedLot; onClick: () => void; locked: boolean }) {
-  const ds = lot.dealScore;
-  const tier      = ds >= 83 ? "EXCEPTIONNEL" : ds >= 77 ? "FORT" : ds >= 70 ? "INTÉRESSANT" : null;
-  const tierColor = tier === "EXCEPTIONNEL" ? "#C0392B" : tier === "FORT" ? "var(--navy)" : "var(--gold-dim)";
-  const tierBg    = tier === "EXCEPTIONNEL" ? "rgba(192,57,43,0.08)" : tier === "FORT" ? "rgba(26,42,68,0.08)" : "rgba(198,168,90,0.06)";
-
-  return (
-    <div
-      onClick={locked ? undefined : onClick}
-      onMouseEnter={e => {
-        if (locked) return;
-        const el = e.currentTarget as HTMLDivElement;
-        el.style.transform = "translateY(-4px)";
-        el.style.boxShadow = "0 12px 40px rgba(0,0,0,0.1)";
-        el.style.borderColor = "rgba(26,42,68,0.2)";
-        const img = el.querySelector("img") as HTMLImageElement | null;
-        if (img) img.style.transform = "scale(1.05)";
-      }}
-      onMouseLeave={e => {
-        const el = e.currentTarget as HTMLDivElement;
-        el.style.transform = "translateY(0)";
-        el.style.boxShadow = "none";
-        el.style.borderColor = "var(--border)";
-        const img = el.querySelector("img") as HTMLImageElement | null;
-        if (img) img.style.transform = "scale(1)";
-      }}
-      style={{
-        background: "white", border: "1px solid var(--border)", borderRadius: "10px",
-        overflow: "hidden", cursor: locked ? "default" : "pointer",
-        transition: "transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease",
-      }}
-    >
-      {/* Image + badges */}
-      <div style={{ position: "relative", paddingTop: "75%", background: "var(--bg-subtle)", overflow: "hidden" }}>
-        {lot.imageUrl ? (
-          <img
-            src={lot.imageUrl} alt=""
-            style={{
-              position: "absolute", inset: 0, width: "100%", height: "100%",
-              objectFit: "cover", objectPosition: "center top",
-              transition: "transform 0.5s ease",
-            }}
-            loading="lazy"
-            decoding="async"
-          />
-        ) : (
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontFamily: "var(--font-serif)", fontSize: "22px", color: "var(--border)" }}>◇</span>
-          </div>
-        )}
-
-        {/* Tier badge top-left */}
-        <div style={{
-          position: "absolute", top: "10px", left: "10px",
-          padding: "4px 10px",
-          background: tierBg,
-          border: `1px solid ${tierColor}40`,
-          borderRadius: "4px",
-        }}>
-          <span style={{ fontSize: "10px", fontWeight: 800, color: tierColor, letterSpacing: "0.1em" }}>{tier}</span>
-        </div>
-
-
-        {/* Low supply badge */}
-        {lot.isLowSupply && (
-          <div style={{
-            position: "absolute", bottom: "10px", left: "10px",
-            padding: "3px 8px",
-            background: "rgba(217,119,6,0.12)",
-            border: "1px solid rgba(217,119,6,0.4)",
-            borderRadius: "4px",
-          }}>
-            <span style={{ fontSize: "9px", fontWeight: 800, color: "#D97706", letterSpacing: "0.1em" }}>
-              ◆ LOW SUPPLY
-            </span>
-          </div>
-        )}
-
-        {/* Bottom gradient */}
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "60px", background: "linear-gradient(to top, rgba(250,250,248,0.9), transparent)" }} />
-      </div>
-
-      {/* Info */}
-      <div style={{ padding: "14px 16px" }}>
-        {lot.artistName !== "Unknown Artist" && (
-          <div style={{
-            fontSize: "10px", fontWeight: 700, color: "var(--navy)",
-            letterSpacing: "0.1em", textTransform: "uppercase",
-            marginBottom: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          }}>
-            {lot.artistName}
-          </div>
-        )}
-        <div style={{
-          fontFamily: "var(--font-serif)", fontSize: "14px", color: "var(--text)",
-          marginBottom: "10px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        }}>
-          {lot.title}
-        </div>
-
-        {/* Price + upside */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "10px" }}>
-          <div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "var(--text-3)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2px" }}>Mise à prix</div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "15px", fontWeight: 700, color: "var(--text)" }}>
-              {lot.price}
-            </div>
-            {lot.estimateLow > 0 && lot.rawPrice !== lot.estimateLow && (
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--text-3)" }}>
-                est. {lot.estimateLowFmt}
-              </div>
-            )}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
-            {lot.potentialEur > 0 && (
-              <div style={{ padding: "3px 8px", background: "rgba(26,42,68,0.08)", border: "1px solid rgba(26,42,68,0.15)", borderRadius: "4px" }}>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 700, color: "var(--navy)" }}>
-                  +{lot.potentialEur.toLocaleString('fr-FR')} € de potentiel
-                </span>
-              </div>
-            )}
-            {lot.potentialEur > 0 && (
-              <div style={{ fontSize: "11px", color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>
-                Top {Math.round((1 - ds / 100) * 100)}% des opportunités
-              </div>
-            )}
-          </div>
-        </div>
-        {lot.real_cost && (
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "rgba(184,152,90,0.7)", marginTop: "-4px", marginBottom: "6px", letterSpacing: "0.05em" }}>
-            Break-even: {lot.real_cost.breakeven_hammer >= 1_000_000
-              ? `€${(lot.real_cost.breakeven_hammer / 1_000_000).toFixed(1)}M`
-              : `€${(lot.real_cost.breakeven_hammer / 1_000).toFixed(0)}K`} (+{lot.real_cost.needed_gain_pct}%)
-          </div>
-        )}
-
-        {/* AI Rationale */}
-        {lot.score_rationale && (
-          <div style={{ fontSize: "10px", color: "var(--text-3)", fontStyle: "italic", marginBottom: "10px", lineHeight: 1.45, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
-            {lot.score_rationale}
-          </div>
-        )}
-
-        {/* Footer */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "10px", borderTop: "1px solid var(--border-light)" }}>
-          <span style={{ fontSize: "11px", color: "var(--text-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "140px" }}>
-            {lot.platform}
-          </span>
-          {lot.auctionDate && (
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--text-3)", flexShrink: 0 }}>
-              {new Date(lot.auctionDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
-            </span>
-          )}
-        </div>
       </div>
     </div>
   );
@@ -654,7 +450,7 @@ const DEFAULT_FILTERS: Filters = {
 
 // ── Main component ───────────────────────────────────────────
 export default function Opportunities() {
-  useSEO({ title: "Meilleures Opportunités — Nautilus", description: "Lots sous-évalués sélectionnés par Nautilus Intelligence." });
+  useSEO({ title: "Toutes les Enchères — Nautilus", description: "Tous les lots d'art aux enchères, triés par score Nautilus." });
   const navigate = useNavigate();
   const [lots, setLots] = useState<MappedLot[]>([]);
   const [total, setTotal] = useState(0);
@@ -667,7 +463,7 @@ export default function Opportunities() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid4");
   const [dateFilter, setDateFilter] = useState("all");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
-  const [tab, setTab] = useState<"alpha" | "live" | "ended">("alpha");
+  const [tab, setTab] = useState<"live" | "ended">("live");
   const [sourceStats, setSourceStats] = useState<SourceStat[]>([]);
   const [lowSupply, setLowSupply] = useState(false);
 
@@ -688,17 +484,8 @@ export default function Opportunities() {
   const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevSearchRef = useRef({ q: "", artist: "", house: "" });
 
-  // ── Tier separation (alpha only) ─────────────────────────
-  const alphaLots   = tab === "alpha" ? lots.filter(l => l.dealScore >= 60) : lots;
-  const EXCEPTIONAL = alphaLots.filter(l => l.dealScore >= 83);
-  const STRONG      = alphaLots.filter(l => l.dealScore >= 77 && l.dealScore < 83);
-  const INTERESTING = alphaLots.filter(l => l.dealScore >= 70 && l.dealScore < 77);
-  const avgScore    = alphaLots.length > 0
-    ? alphaLots.reduce((a, l) => a + l.dealScore, 0) / alphaLots.length
-    : 0;
-
-  const visibleLots = tab === "alpha" ? alphaLots.slice(0, maxVisible) : lots.slice(0, maxVisible);
-  const lockedLots  = tab === "alpha" ? alphaLots.slice(maxVisible, maxVisible + 3) : lots.slice(maxVisible, maxVisible + 3);
+  const visibleLots = lots.slice(0, maxVisible);
+  const lockedLots  = lots.slice(maxVisible, maxVisible + 3);
 
   // ── Build fetch params ───────────────────────────────────
   const buildFetchParams = useCallback((page = 1): Record<string, any> => {
@@ -714,7 +501,7 @@ export default function Opportunities() {
       };
     }
     if (tab === "live") {
-      const sort = LIVE_SORT_MAP[filters.sortBy || "created_at_desc"] || { by: "created_at", dir: "desc" };
+      const sort = LIVE_SORT_MAP[filters.sortBy || "deal_score_desc"] || { by: "deal_score", dir: "desc" };
       const _today = new Date().toISOString().split("T")[0];
       const dateFrom = filters.auctionDateFrom || getDateParams(dateFilter).auction_date_from || _today;
       const dateTo   = filters.auctionDateTo   || getDateParams(dateFilter).auction_date_to;
@@ -733,34 +520,8 @@ export default function Opportunities() {
         medium:            filters.mediums?.length === 1 ? filters.mediums[0] : undefined,
         auction_house:     filters.auctionHouseSearch || undefined,
       };
-    } else {
-      const sort = ALPHA_SORT_MAP[filters.sortBy || "deal_score_desc"] || { by: "deal_score", dir: "desc" };
-      const scoreMin = filters.scoreRange?.[0] > 0 ? filters.scoreRange[0] * 20 : undefined;
-      const sourceKey = filters.platforms?.length === 1 ? filters.platforms[0] : null;
-      const source = sourceKey ? (PLATFORM_API[sourceKey] || sourceKey.toLowerCase()) : undefined;
-      const today = new Date().toISOString().split("T")[0];
-      const timingDates = filters.auctionTiming && filters.auctionTiming !== "all"
-        ? getDateParams(filters.auctionTiming === "24h" ? "today" : filters.auctionTiming === "week" ? "week" : "month")
-        : getDateParams(dateFilter);
-      // Default: exclude past lots — only send upcoming/active lots
-      const effectiveDates = {
-        auction_date_from: today,
-        ...timingDates,
-      };
-      return {
-        page, page_size: 48,
-        sort_by: sort.by, sort_dir: sort.dir,
-        search:      filters.searchQuery || undefined,
-        source,
-        min_score:   scoreMin,
-        min_price:   filters.minPrice > 0 ? filters.minPrice : undefined,
-        max_price:   filters.maxPrice > 0 ? filters.maxPrice : undefined,
-        category:    filters.categories?.length === 1 ? filters.categories[0] : undefined,
-        artist_tier: filters.artistRating !== "all" ? filters.artistRating : undefined,
-        low_supply: lowSupply || undefined,
-        ...effectiveDates,
-      };
     }
+    return { page, page_size: 24, sort_by: "deal_score", sort_dir: "desc" };
   }, [filters, dateFilter, tab, lowSupply]);
 
   const buildFetchParamsRef = useRef(buildFetchParams);
@@ -775,26 +536,8 @@ export default function Opportunities() {
       setHasError(false);
       setCurrentPage(1);
 
-      let fetchPromise: Promise<{ items: any[], total: number, pages: number }>;
-      if (tab === 'alpha') {
-        const savedBudget = localStorage.getItem('artalpha-budget');
-        const savedHorizon = localStorage.getItem('artalpha-horizon');
-        if (savedBudget && savedHorizon) {
-          try {
-            const b = JSON.parse(savedBudget);
-            fetchPromise = fetchInvestorLots(b.min, b.max, savedHorizon);
-          } catch {
-            fetchPromise = loadLots(buildFetchParamsRef.current(1));
-          }
-        } else {
-          fetchPromise = loadLots(buildFetchParamsRef.current(1));
-        }
-      } else {
-        fetchPromise = loadLots(buildFetchParamsRef.current(1));
-      }
-
       const _tab = tab;
-      fetchPromise
+      loadLots(buildFetchParamsRef.current(1))
         .then(data => {
           if (id !== fetchIdRef.current) return;
           const now = new Date();
@@ -887,18 +630,13 @@ export default function Opportunities() {
 
   // Browser tab title
   useEffect(() => {
-    document.title = tab === "alpha"
-      ? "Best Lots · Nautilus"
-      : tab === "ended"
-      ? "Ventes terminées · Nautilus"
-      : "All Auctions · Nautilus";
+    document.title = tab === "ended" ? "Ventes terminées · Nautilus" : "All Auctions · Nautilus";
   }, [tab]);
 
   // ── Derived values ───────────────────────────────────────
   const activeFilterCount = [
     filters.searchQuery,
     ...(filters.sources || []),
-    ...(tab === "alpha" ? (filters.platforms || []) : []),
     ...(filters.categories || []),
     ...(filters.mediums || []),
     ...(filters.countries || []),
@@ -912,7 +650,7 @@ export default function Opportunities() {
     filters.auctionHouseSearch,
   ].filter(Boolean).length;
 
-  const cols = viewMode === "list" ? 1 : viewMode === "grid6" ? 6 : tab === "live" ? 5 : 4;
+  const cols = viewMode === "list" ? 1 : viewMode === "grid6" ? 6 : 5;
   const gap  = cols >= 5 ? "12px" : "16px";
 
   const VIEW_MODES: { mode: ViewMode; icon: React.ReactNode; title: string }[] = [
@@ -1035,7 +773,7 @@ export default function Opportunities() {
           {/* Title + count */}
           <div style={{ display: "flex", alignItems: "baseline", gap: "10px", flex: 1, minWidth: 0 }}>
             <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "20px", fontWeight: 600, color: "var(--navy)", whiteSpace: "nowrap" }}>
-              {tab === "live" ? "All Auctions" : "Best Lots"}
+              {tab === "ended" ? "Ventes terminées" : "Toutes les Enchères"}
             </h1>
             <span style={{ fontSize: "12px", color: "var(--text-3)" }}>
               {loading ? "…" : `${total.toLocaleString()} lots`}
@@ -1105,9 +843,8 @@ export default function Opportunities() {
           background: "white", flexShrink: 0, paddingLeft: "20px",
         }}>
           {([
-            { id: "alpha"  as const, label: "Best Lots",         desc: "AI-detected undervalued artworks", icon: "◆" },
-            { id: "live"   as const, label: "All Auctions",       desc: "All upcoming lots worldwide",      icon: "◉" },
-            { id: "ended"  as const, label: "Ventes terminées",   desc: "Résultats des 7 derniers jours",   icon: "◷" },
+            { id: "live"   as const, label: "Toutes les Enchères", desc: "Tous les lots à venir dans le monde", icon: "◉" },
+            { id: "ended"  as const, label: "Ventes terminées",    desc: "Résultats des 7 derniers jours",     icon: "◷" },
           ] as const).map(({ id, label, desc, icon }) => (
             <button
               key={id}
@@ -1144,31 +881,6 @@ export default function Opportunities() {
         {/* ── SCROLLABLE CONTENT ──────────────────────────── */}
         <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "20px 24px 60px" }}>
 
-          {/* Alpha stats bar */}
-          {tab === "alpha" && !loading && alphaLots.length > 0 && tab !== "ended" && (
-            <div style={{
-              display: "flex", gap: "24px", padding: "12px 0 16px",
-              marginBottom: "8px", borderBottom: "1px solid var(--border-light)",
-              flexWrap: "wrap", alignItems: "center",
-            }}>
-              {[
-                { label: "Exceptionnel", value: EXCEPTIONAL.length, color: "#C0392B" },
-                { label: "Fort",         value: STRONG.length,      color: "var(--navy)" },
-                { label: "Intéressant",  value: INTERESTING.length,  color: "var(--gold-dim)" },
-                { label: "Avg score",   value: `${avgScore.toFixed(0)}/100`, color: "var(--text-2)" },
-              ].map(({ label, value, color }) => (
-                <div key={label}>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "20px", fontWeight: 700, color }}>{value}</div>
-                  <div className="label-caps" style={{ marginTop: "2px" }}>{label}</div>
-                </div>
-              ))}
-              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "6px" }}>
-                <div className="pulse-dot" />
-                <span style={{ fontSize: "11px", color: "var(--text-3)" }}>LIVE · 15min</span>
-              </div>
-            </div>
-          )}
-
           {/* Live stats bar */}
           {tab === "live" && !loading && tab !== "ended" && (
             <div style={{
@@ -1199,7 +911,7 @@ export default function Opportunities() {
           {loading && viewMode !== "list" && (
             <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap }}>
               {Array.from({ length: cols * 2 }).map((_, i) => (
-                tab === "live" ? <LiveSkeleton key={i} /> : <AlphaSkeleton key={i} />
+                <LiveSkeleton key={i} />
               ))}
             </div>
           )}
@@ -1217,108 +929,38 @@ export default function Opportunities() {
           {/* ── LIST VIEW ────────────────────────────────── */}
           {!loading && !hasError && lots.length > 0 && viewMode === "list" && tab !== "ended" && (
             <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: "10px", overflow: "hidden" }}>
-              {tab === "live" ? (
-                <>
-                  <div style={{ display: "grid", gridTemplateColumns: "48px 1fr 160px 100px 130px 80px", gap: "12px", padding: "9px 16px", background: "var(--bg-subtle)", borderBottom: "1px solid var(--border)" }}>
-                    {["", "Artwork", "House", "Date", "Estimate", "Category"].map(h => (
-                      <div key={h} className="label-caps">{h}</div>
-                    ))}
+              <div style={{ display: "grid", gridTemplateColumns: "48px 1fr 160px 100px 130px 80px", gap: "12px", padding: "9px 16px", background: "var(--bg-subtle)", borderBottom: "1px solid var(--border)" }}>
+                {["", "Artwork", "House", "Date", "Estimate", "Category"].map(h => (
+                  <div key={h} className="label-caps">{h}</div>
+                ))}
+              </div>
+              {visibleLots.map(lot => (
+                <LiveListRow
+                  key={lot.id}
+                  lot={lot}
+                  onClick={() => navigate(`/app/opportunities/${lot.id}`)}
+                />
+              ))}
+              {lockedLots.map(lot => (
+                <div key={lot.id} style={{ position: "relative" }}>
+                  <div style={{ filter: "blur(3px)", userSelect: "none", pointerEvents: "none" }}>
+                    <LiveListRow lot={lot} onClick={() => {}} />
                   </div>
-                  {visibleLots.map(lot => (
-                    <LiveListRow
-                      key={lot.id}
-                      lot={lot}
-                      onClick={() => navigate(`/app/opportunities/${lot.id}`)}
-                    />
-                  ))}
-                  {lockedLots.map(lot => (
-                    <div key={lot.id} style={{ position: "relative" }}>
-                      <div style={{ filter: "blur(3px)", userSelect: "none", pointerEvents: "none" }}>
-                        <LiveListRow lot={lot} onClick={() => {}} />
-                      </div>
-                      <div
-                        onClick={() => navigate("/app/pricing")}
-                        style={{
-                          position: "absolute", inset: 0,
-                          display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                          background: "rgba(250,250,248,0.88)", backdropFilter: "blur(2px)",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <span style={{ fontSize: "14px" }}>🔒</span>
-                        <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text)" }}>Investor plan</span>
-                        <span style={{ fontSize: "11px", color: "var(--text-3)" }}>from €10/month</span>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <>
-                  <div style={{ display: "grid", gridTemplateColumns: "52px 2fr 1fr 90px 72px 64px", gap: "12px", padding: "10px 16px", background: "var(--bg-subtle)", borderBottom: "1px solid var(--border)" }}>
-                    {["", "Artwork", "Price", "Score", "Upside", "Date"].map(h => (
-                      <div key={h} className="label-caps">{h}</div>
-                    ))}
+                  <div
+                    onClick={() => navigate("/app/pricing")}
+                    style={{
+                      position: "absolute", inset: 0,
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                      background: "rgba(250,250,248,0.88)", backdropFilter: "blur(2px)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <span style={{ fontSize: "14px" }}>🔒</span>
+                    <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text)" }}>Investor plan</span>
+                    <span style={{ fontSize: "11px", color: "var(--text-3)" }}>from €10/month</span>
                   </div>
-                  {[...visibleLots, ...lockedLots].map((lot, i) => {
-                    const isLocked = i >= visibleLots.length;
-                    return (
-                      <div key={lot.id} style={{ position: "relative" }}>
-                        <div
-                          onClick={isLocked ? undefined : () => navigate(`/app/opportunities/${lot.id}`)}
-                          style={{
-                            display: "grid", gridTemplateColumns: "52px 2fr 1fr 90px 72px 64px",
-                            gap: "12px", padding: "11px 16px",
-                            borderBottom: "1px solid var(--border-light)",
-                            cursor: isLocked ? "default" : "pointer", transition: "background 0.1s",
-                            filter: isLocked ? "blur(3px)" : "none",
-                            userSelect: isLocked ? "none" : "auto",
-                            alignItems: "center",
-                          }}
-                          onMouseEnter={e => { if (!isLocked) (e.currentTarget as HTMLDivElement).style.background = "var(--bg-subtle)"; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "white"; }}
-                        >
-                          <div style={{ width: "44px", height: "44px", borderRadius: "4px", overflow: "hidden", background: "var(--bg-subtle)" }}>
-                            {lot.imageUrl && <img src={lot.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />}
-                          </div>
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: "10px", fontWeight: 700, color: "var(--navy)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lot.artistName}</div>
-                            <div style={{ fontSize: "12px", color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lot.title}</div>
-                          </div>
-                          <div style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-2)" }}>{lot.price}</div>
-                          <div style={{ display: "flex", gap: "3px", alignItems: "center" }}>
-                            {Array.from({ length: 5 }).map((_, j) => (
-                              <div key={j} className={j < lot.score ? "score-dot filled" : "score-dot unfilled"} />
-                            ))}
-                          </div>
-                          <div>
-                            {lot.potentialEur > 0
-                              ? <span className="upside-badge">+{lot.potentialEur.toLocaleString('fr-FR')} €</span>
-                              : <span style={{ color: "var(--text-3)" }}>—</span>}
-                          </div>
-                          <div style={{ fontSize: "11px", color: "var(--text-3)" }}>
-                            {lot.auctionDate ? new Date(lot.auctionDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : "—"}
-                          </div>
-                        </div>
-                        {isLocked && (
-                          <div
-                            onClick={() => navigate("/app/pricing")}
-                            style={{
-                              position: "absolute", inset: 0,
-                              display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                              background: "rgba(250,250,248,0.88)", backdropFilter: "blur(2px)",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <span style={{ fontSize: "14px" }}>🔒</span>
-                            <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text)" }}>Investor plan</span>
-                            <span style={{ fontSize: "11px", color: "var(--text-3)" }}>from €10/month</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </>
-              )}
+                </div>
+              ))}
             </div>
           )}
 
@@ -1328,21 +970,14 @@ export default function Opportunities() {
               <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap, width: "100%" }}>
                 {visibleLots.map((lot, i) => (
                   <div key={lot.id} className="fade-up" style={{ animationDelay: `${Math.min(i * 0.04, 0.4)}s`, minWidth: 0 }}>
-                    {tab === "live" ? (
-                      <LiveCard lot={lot} onClick={() => navigate(`/app/opportunities/${lot.id}`)} />
-                    ) : (
-                      <AlphaCard lot={lot} onClick={() => navigate(`/app/opportunities/${lot.id}`)} locked={false} />
-                    )}
+                    <LiveCard lot={lot} onClick={() => navigate(`/app/opportunities/${lot.id}`)} />
                   </div>
                 ))}
 
-                {/* Locked cards (both tabs) */}
+                {/* Locked cards */}
                 {lockedLots.map(lot => (
                   <div key={lot.id} style={{ position: "relative", minWidth: 0 }}>
-                    {tab === "live"
-                      ? <LiveCard lot={lot} onClick={() => {}} />
-                      : <AlphaCard lot={lot} onClick={() => {}} locked={true} />
-                    }
+                    <LiveCard lot={lot} onClick={() => {}} />
                     <div
                       onClick={() => navigate("/app/pricing")}
                       style={{
@@ -1361,15 +996,15 @@ export default function Opportunities() {
                 ))}
               </div>
 
-              {/* Upgrade banner — both tabs */}
-              {!isAdmin && (tab === "alpha" ? alphaLots.length : lots.length) > maxVisible && (
+              {/* Upgrade banner */}
+              {!isAdmin && lots.length > maxVisible && (
                 <div style={{
                   marginTop: "32px", padding: "32px 40px",
                   background: "white", border: "1px solid var(--border)",
                   borderRadius: "12px", textAlign: "center", boxShadow: "var(--shadow-sm)",
                 }}>
                   <div style={{ fontFamily: "var(--font-serif)", fontSize: "22px", color: "var(--navy)", marginBottom: "8px" }}>
-                    {(tab === "alpha" ? alphaLots.length : lots.length) - maxVisible} more opportunities available
+                    {lots.length - maxVisible} more opportunities available
                   </div>
                   <p style={{ fontSize: "14px", color: "var(--text-2)", margin: "0 auto 24px", maxWidth: "420px", lineHeight: 1.7 }}>
                     Upgrade to Investor to unlock all AI-screened opportunities, full analysis, and real-time alerts.
