@@ -9,7 +9,7 @@ import { GalleryCard } from "@/components/lots/GalleryCard";
 import { LotRow } from "@/components/lots/LotCard";
 
 type ViewMode = "masonry" | "grid" | "list";
-type FeedMode = "all" | "deals" | "trending" | "ended";
+type FeedMode = "all" | "deals" | "trending";
 
 const CATEGORIES = [
   { value: "",                     label: "All Markets" },
@@ -50,25 +50,10 @@ export default function DashboardPage() {
       const qs = new URLSearchParams();
       qs.set("page", String(page));
       qs.set("page_size", viewMode === "list" ? "30" : "24");
+      qs.set("sort_by", feedMode === "trending" ? "auction_date" : "deal_score");
+      qs.set("sort_dir", "desc");
       qs.set("market_type", "auction");  // All Auctions = auction lots only (no gallery/primary)
-
-      const today = new Date().toISOString().split("T")[0];
-      const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0];
-
-      if (feedMode === "ended") {
-        // Past lots from the last 7 days
-        qs.set("sort_by", "auction_date");
-        qs.set("sort_dir", "desc");
-        qs.set("auction_date_from", sevenDaysAgo);
-        qs.set("auction_date_to", today);
-      } else {
-        // Active/upcoming lots only — exclude past lots
-        qs.set("sort_by", feedMode === "trending" ? "auction_date" : "deal_score");
-        qs.set("sort_dir", "desc");
-        qs.set("auction_date_from", today);
-        if (feedMode === "deals") qs.set("is_deal", "true");
-      }
-
+      if (feedMode === "deals") qs.set("is_deal", "true");
       if (category)     qs.set("category", category);
       if (searchQuery)  qs.set("search", searchQuery);
       if (sourceFilter) qs.set("source", sourceFilter);
@@ -138,10 +123,9 @@ export default function DashboardPage() {
         {/* Feed mode tabs */}
         <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: "4px", overflow: "hidden" }}>
           {([
-            { mode: "all"      as FeedMode, icon: <Zap size={12} />,        label: "All"       },
-            { mode: "deals"    as FeedMode, icon: <Flame size={12} />,      label: "Deals"     },
-            { mode: "trending" as FeedMode, icon: <TrendingUp size={12} />, label: "Trending"  },
-            { mode: "ended"    as FeedMode, icon: <span style={{ fontSize: "11px" }}>◷</span>, label: "Terminées" },
+            { mode: "all"      as FeedMode, icon: <Zap size={12} />,        label: "All"      },
+            { mode: "deals"    as FeedMode, icon: <Flame size={12} />,      label: "Deals"    },
+            { mode: "trending" as FeedMode, icon: <TrendingUp size={12} />, label: "Trending" },
           ]).map(({ mode, icon, label }) => (
             <button
               key={mode}
