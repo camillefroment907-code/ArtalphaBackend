@@ -65,6 +65,8 @@ def compute_max_bid(
     auction_house: str | None,
     profit_margin: float = 0.10,
     holding_years: int = 3,
+    estimate_high: float | None = None,
+    estimate_low: float | None = None,
 ) -> int:
     """
     Max hammer price to bid given a target resale market value.
@@ -72,6 +74,9 @@ def compute_max_bid(
     Solves breakeven backwards:
         market_value = bid × (1 + premium) × (1 + holding_rate) / (1 - seller_fee)
     Then applies profit_margin safety factor.
+
+    Safety cap: result cannot exceed estimate_high × 4 (or estimate_low × 8 as fallback)
+    to guard against comparables from a different price tier contaminating the output.
     """
     house_key = (auction_house or "").lower()
     premium_rate = _DEFAULT_PREMIUM
@@ -82,4 +87,10 @@ def compute_max_bid(
     seller_fee = 0.15
     holding_rate = 0.006 * holding_years
     breakeven_bid = market_value * (1 - seller_fee) / ((1 + premium_rate) * (1 + holding_rate))
-    return round(breakeven_bid * (1 - profit_margin))
+    result = round(breakeven_bid * (1 - profit_margin))
+    # Safety cap: max_bid cannot exceed estimate_high × 4, or estimate_low × 8
+    if estimate_high and estimate_high > 0:
+        result = min(result, round(estimate_high * 4))
+    elif estimate_low and estimate_low > 0:
+        result = min(result, round(estimate_low * 8))
+    return result

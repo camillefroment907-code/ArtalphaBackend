@@ -2232,33 +2232,33 @@ def _price_band(
 def _anchor_comps(
     pairs: list[tuple[int, float]],
     est_hi: float | None,
+    est_lo: float | None = None,
     ratio: float = 3.0,
 ) -> list[tuple[int, float]]:
     """
-    Secondary post-SQL guard: drop comps above ratio × estimate_high.
+    Secondary post-SQL guard: drop comps above ratio × effective_cap.
 
-    The SQL price band (×4) is the primary filter. This tightens it further
-    to ×3, providing defence-in-depth for cases where estimate_high shifts
-    between query time and evaluation time.
-    Returns the full list unchanged when est_hi is unknown.
+    effective_cap = estimate_high when available, else estimate_low × 2 as proxy.
+    Returns the full list unchanged only when both estimates are absent.
     """
-    if not est_hi or est_hi <= 0:
+    effective_cap = est_hi if (est_hi and est_hi > 0) else (est_lo * 2 if est_lo and est_lo > 0 else None)
+    if not effective_cap or effective_cap <= 0:
         return pairs
-    ceiling = est_hi * ratio
+    ceiling = effective_cap * ratio
     return [(s, p) for s, p in pairs if p <= ceiling]
 
 
-def _value_is_sane(market_value: float, est_hi: float | None, ratio: float = 5.0) -> bool:
+def _value_is_sane(market_value: float, est_hi: float | None, est_lo: float | None = None, ratio: float = 5.0) -> bool:
     """
-    Final backstop: reject any market_value > ratio × estimate_high.
+    Final backstop: reject any market_value > ratio × effective_cap.
 
-    Should rarely trigger after SQL filtering and _anchor_comps; exists
-    as a last-resort guard against edge cases (e.g. missing estimate at
-    query time, integer overflow, unexpected data).
+    effective_cap = estimate_high when available, else estimate_low × 2 as proxy.
+    Returns True (pass) only when both estimates are absent.
     """
-    if not est_hi or est_hi <= 0:
+    effective_cap = est_hi if (est_hi and est_hi > 0) else (est_lo * 2 if est_lo and est_lo > 0 else None)
+    if not effective_cap or effective_cap <= 0:
         return True
-    return market_value <= est_hi * ratio
+    return market_value <= effective_cap * ratio
 
 
 def _confidence_label(comp_level: int, comp_count: int) -> str:
@@ -2396,6 +2396,7 @@ async def _compute_weighted_max_bid(lot, db) -> dict:
     lot_medium_cat = _medium_category(lot.medium) or _medium_category(lot.title or "")
     lot_house_tier = _house_tier_num(lot.auction_house_name)
     lot_est_hi = float(lot.estimate_high) if lot.estimate_high else None
+    lot_est_lo = float(lot.estimate_low) if lot.estimate_low else None
 
     _2D_CATS = {"print", "drawing", "photo", "watercolor"}
 
@@ -2453,7 +2454,7 @@ async def _compute_weighted_max_bid(lot, db) -> dict:
 
     def _eval(pairs: list[tuple[int, float]], min_count: int = 3) -> list[tuple[int, float]] | None:
         """Secondary anchor + outlier filter; return None if too few comps survive."""
-        anchored = _anchor_comps(pairs, lot_est_hi)   # module-level, ratio=3.0
+        anchored = _anchor_comps(pairs, lot_est_hi, lot_est_lo)   # module-level, ratio=3.0
         clean = _remove_outliers(anchored)
         return clean if len(clean) >= min_count else None
 
@@ -2461,7 +2462,7 @@ async def _compute_weighted_max_bid(lot, db) -> dict:
     l1 = _eval([(s, p) for s, p in same_medium if s >= 60])
     if l1:
         mv = _wavg(l1)
-        if _value_is_sane(mv, lot_est_hi):
+        if _value_is_sane(mv, lot_est_hi, lot_est_lo):
             return {"market_value": mv, "comp_count": len(l1),
                     "comp_level": 1, "max_bid_source": "comparables_proches",
                     "confidence": _confidence_label(1, len(l1))}
@@ -2470,7 +2471,7 @@ async def _compute_weighted_max_bid(lot, db) -> dict:
     l2 = _eval(same_medium)
     if l2:
         mv = _wavg(l2)
-        if _value_is_sane(mv, lot_est_hi):
+        if _value_is_sane(mv, lot_est_hi, lot_est_lo):
             return {"market_value": mv, "comp_count": len(l2),
                     "comp_level": 2, "max_bid_source": "comparables_meme_technique",
                     "confidence": _confidence_label(2, len(l2))}
@@ -2479,26 +2480,26 @@ async def _compute_weighted_max_bid(lot, db) -> dict:
     l3 = _eval(cross_2d)
     if l3:
         mv = _wavg(l3)
-        if _value_is_sane(mv, lot_est_hi):
+        if _value_is_sane(mv, lot_est_hi, lot_est_lo):
             return {"market_value": mv, "comp_count": len(l3),
                     "comp_level": 3, "max_bid_source": "comparables_technique_proche",
                     "confidence": _confidence_label(3, len(l3))}
 
     # Level 4 — 1–2 exact-medium sales (real data but below L2 threshold).
     # Use simple average — no coefficient applied, it's actual same-medium data.
-    anchored_same = _anchor_comps(same_medium, lot_est_hi)
+    anchored_same = _anchor_comps(same_medium, lot_est_hi, lot_est_lo)
     if anchored_same:
         avg = sum(p for _, p in anchored_same) / len(anchored_same)
-        if _value_is_sane(avg, lot_est_hi):
+        if _value_is_sane(avg, lot_est_hi, lot_est_lo):
             return {"market_value": avg, "comp_count": len(anchored_same),
                     "comp_level": 4, "max_bid_source": "ventes_meme_technique_limite",
                     "confidence": _confidence_label(4, len(anchored_same))}
 
     # Level 5 — 1–2 cross-2D sales (adjacent medium, real data).
-    anchored_cross = _anchor_comps(cross_2d, lot_est_hi)
+    anchored_cross = _anchor_comps(cross_2d, lot_est_hi, lot_est_lo)
     if anchored_cross:
         avg = sum(p for _, p in anchored_cross) / len(anchored_cross)
-        if _value_is_sane(avg, lot_est_hi):
+        if _value_is_sane(avg, lot_est_hi, lot_est_lo):
             return {"market_value": avg, "comp_count": len(anchored_cross),
                     "comp_level": 5, "max_bid_source": "comparables_2d_limite",
                     "confidence": _confidence_label(5, len(anchored_cross))}
@@ -2509,7 +2510,7 @@ async def _compute_weighted_max_bid(lot, db) -> dict:
         l6 = _eval(all_scored, min_count=5)
         if l6:
             mv = _wavg(l6)
-            if _value_is_sane(mv, lot_est_hi):
+            if _value_is_sane(mv, lot_est_hi, lot_est_lo):
                 return {"market_value": mv, "comp_count": len(l6),
                         "comp_level": 6, "max_bid_source": "ventes_artiste_sans_medium",
                         "confidence": _confidence_label(6, len(l6))}
@@ -2741,7 +2742,11 @@ async def get_comparables(
     use_comp_value = weighted and comp_confidence not in (None, "insuffisante")
 
     if use_comp_value:
-        max_bid = compute_max_bid(weighted["market_value"], lot.auction_house_name)
+        max_bid = compute_max_bid(
+            weighted["market_value"], lot.auction_house_name,
+            estimate_high=float(lot.estimate_high) if lot.estimate_high else None,
+            estimate_low=float(lot.estimate_low) if lot.estimate_low else None,
+        )
         max_bid_source = weighted["max_bid_source"]
         max_bid_comp_count = weighted["comp_count"]
         max_bid_comp_level = weighted["comp_level"]
@@ -2753,7 +2758,11 @@ async def get_comparables(
         # Production data shows p50 realized = 0.966× estimate_high, so estimate_high
         # is a sound anchor. The × 0.85 multiplier was an unjustified double-discount
         # on top of the real-cost discounts already applied by compute_max_bid.
-        max_bid = compute_max_bid(float(lot.estimate_high), lot.auction_house_name)
+        max_bid = compute_max_bid(
+            float(lot.estimate_high), lot.auction_house_name,
+            estimate_high=float(lot.estimate_high) if lot.estimate_high else None,
+            estimate_low=float(lot.estimate_low) if lot.estimate_low else None,
+        )
         max_bid_source = "estimate"
         max_bid_confidence = "insuffisante"
         max_bid_comp_count = weighted["comp_count"] if weighted else None
