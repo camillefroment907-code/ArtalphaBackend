@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type RefObject } from 'react';
 import { useNavigate } from 'react-router';
 import { getToken, getUser } from '../../lib/auth';
 import { parseUTC, isLiveLot, timeLabel } from '../../lib/auction';
@@ -399,6 +399,7 @@ export default function EnDirect() {
   const [endedOpen, setEndedOpen]     = useState(false);
   const [selectedSale, setSelectedSale] = useState<SaleGroup | null>(null);
   const [, setTick] = useState(0); // force re-render for countdowns
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   const doFetch = useCallback(() => {
     const token = getToken();
@@ -426,6 +427,12 @@ export default function EnDirect() {
   useEffect(() => { const id = setInterval(doFetch, 120_000); return () => clearInterval(id); }, [doFetch]);
   // Countdown tick every 30s
   useEffect(() => { const id = setInterval(() => setTick(t => t + 1), 30_000); return () => clearInterval(id); }, []);
+  // Auto-scroll to drawer when a sale is selected
+  useEffect(() => {
+    if (selectedSale && drawerRef.current) {
+      setTimeout(() => { drawerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 80);
+    }
+  }, [selectedSale]);
 
   function loadAllRecs() {
     if (allRecs.length > 0) { setShowAllPicks(true); return; }
@@ -548,7 +555,7 @@ export default function EnDirect() {
                       style={{ marginBottom: selectedSale && salesLive.some(s => s.key === selectedSale.key) ? '0' : '20px' }}
                     />
                     {selectedSale && salesLive.some(s => s.key === selectedSale.key) && (
-                      <SaleDrawer sale={selectedSale} lots={allDayLots} onClose={() => setSelectedSale(null)} />
+                      <SaleDrawer sale={selectedSale} lots={allDayLots} onClose={() => setSelectedSale(null)} containerRef={drawerRef} />
                     )}
                   </>
                 )}
@@ -564,7 +571,7 @@ export default function EnDirect() {
                       style={{ marginBottom: selectedSale && salesUpcoming.some(s => s.key === selectedSale.key) ? '0' : '20px' }}
                     />
                     {selectedSale && salesUpcoming.some(s => s.key === selectedSale.key) && (
-                      <SaleDrawer sale={selectedSale} lots={allDayLots} onClose={() => setSelectedSale(null)} />
+                      <SaleDrawer sale={selectedSale} lots={allDayLots} onClose={() => setSelectedSale(null)} containerRef={drawerRef} />
                     )}
                   </>
                 )}
@@ -595,7 +602,7 @@ export default function EnDirect() {
                           ))}
                         </div>
                         {selectedSale && salesEnded.some(s => s.key === selectedSale.key) && (
-                          <SaleDrawer sale={selectedSale} lots={allDayLots} onClose={() => setSelectedSale(null)} />
+                          <SaleDrawer sale={selectedSale} lots={allDayLots} onClose={() => setSelectedSale(null)} containerRef={drawerRef} />
                         )}
                       </>
                     )}
@@ -897,10 +904,32 @@ function SkeletonState() {
   );
 }
 
+// ── lotReason — simple badge for a LotCard in the drawer ─────────────────────
+
+function lotReason(lot: LotCard): { label: string; color: string } | null {
+  if (!lot.deal_score || lot.deal_score === 0) return null;
+  const pct = lot.pct_below_low_estimate ?? 0;
+  if (pct >= 15) return { label: `↓ ${Math.round(pct)}% sous l'estimation`, color: '#1A6B3C' };
+  if (pct >= 5)  return { label: "◈ Sous l'estimation basse",                color: '#B8922A' };
+  return                 { label: '◈ Opportunité détectée',                   color: '#B8922A' };
+}
+
 // ── SaleDrawer — inline lot list for a selected sale ─────────────────────────
 
-function SaleDrawer({ sale, lots: allDayLots, onClose }: { sale: SaleGroup; lots: LotCard[]; onClose: () => void }) {
+function SaleDrawer({ sale, lots: allDayLots, onClose, containerRef }: {
+  sale: SaleGroup;
+  lots: LotCard[];
+  onClose: () => void;
+  containerRef?: RefObject<HTMLDivElement>;
+}) {
   const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 600);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const saleLots = allDayLots
     .filter(l =>
@@ -909,75 +938,148 @@ function SaleDrawer({ sale, lots: allDayLots, onClose }: { sale: SaleGroup; lots
     )
     .sort((a, b) => (b.deal_score ?? 0) - (a.deal_score ?? 0));
 
+  const imgSize = isMobile ? '64px' : '96px';
+  const headerTiming = sale.urgentLot
+    ? lotTimingLabel(sale.urgentLot)
+    : sale.bestLot ? lotTimingLabel(sale.bestLot) : null;
+  const scoredCount = saleLots.filter(l => (l.deal_score ?? 0) > 0).length;
+
   return (
-    <div style={{ border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-card)', padding: 0, marginTop: '12px', marginBottom: '20px', overflow: 'hidden' }}>
+    <div
+      ref={containerRef}
+      style={{
+        border: '1px solid var(--border)',
+        borderRadius: '10px',
+        background: 'var(--bg-card)',
+        maxWidth: '780px',
+        marginTop: '12px',
+        marginBottom: '20px',
+        overflow: 'hidden',
+      }}
+    >
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: 'var(--navy)' }}>{sale.house}</span>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)' }}>{saleLots.length} lot{saleLots.length > 1 ? 's' : ''}</span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+          <StatusDot status={sale.status} />
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: 'var(--navy)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {sale.house}
+          </span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            {saleLots.length} lot{saleLots.length > 1 ? 's' : ''}
+            {headerTiming ? ` · ${headerTiming.text}` : ''}
+          </span>
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '16px', lineHeight: 1, padding: '2px 6px' }}>×</button>
+        <button
+          onClick={onClose}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '18px', lineHeight: 1, padding: '2px 6px', flexShrink: 0, marginLeft: '12px' }}
+        >×</button>
       </div>
 
       {/* Body */}
       <div>
         {saleLots.length === 0 ? (
-          <div style={{ padding: '32px 16px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>
+          <div style={{ padding: '32px 18px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>
             Aucun lot trouvé pour cette vente.
           </div>
         ) : (
           saleLots.map((lot, idx) => {
             const isUnscored = !((lot.deal_score ?? 0) > 0);
-            const sl     = lot.deal_score ? scoreLabel(lot.deal_score) : null;
-            const timing = lotTimingLabel(lot);
+            const sl = lot.deal_score ? scoreLabel(lot.deal_score) : null;
+            const lotTiming = lotTimingLabel(lot);
+            const reason = lotReason(lot);
+
             return (
               <div
                 key={lot.id}
                 onClick={() => navigate(`/app/opportunities/${lot.id}`)}
-                style={{ display: 'grid', gridTemplateColumns: '48px 1fr auto auto auto', gap: '12px', padding: '10px 16px', alignItems: 'center', borderBottom: idx < saleLots.length - 1 ? '1px solid var(--border)' : 'none', opacity: isUnscored ? 0.5 : 1, cursor: 'pointer', transition: 'background .1s' }}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: `${imgSize} 1fr auto`,
+                  gap: isMobile ? '10px' : '14px',
+                  padding: isMobile ? '10px 12px' : '12px 18px',
+                  alignItems: 'center',
+                  borderBottom: idx < saleLots.length - 1 ? '1px solid var(--border)' : 'none',
+                  opacity: isUnscored ? 0.5 : 1,
+                  cursor: 'pointer',
+                  transition: 'background .1s',
+                }}
                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-subtle)'}
                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
               >
-                {/* Image */}
-                <div style={{ width: '48px', height: '48px', borderRadius: '4px', overflow: 'hidden', background: 'var(--bg-subtle)', flexShrink: 0 }}>
+                {/* Image with score badge overlay */}
+                <div style={{ width: imgSize, height: imgSize, borderRadius: '6px', overflow: 'hidden', background: 'var(--bg-subtle)', flexShrink: 0, position: 'relative' }}>
                   {lot.image_url
                     ? <img src={lot.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
-                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(26,42,68,.15)', fontSize: '16px' }}>◇</div>
+                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(26,42,68,.15)', fontSize: '18px' }}>◇</div>
                   }
+                  {sl && (
+                    <div style={{ position: 'absolute', bottom: '4px', right: '4px', background: 'rgba(10,18,36,.72)', backdropFilter: 'blur(3px)', borderRadius: '3px', padding: '2px 5px' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: sl.color }}>{Math.round(lot.deal_score!)} / 100</span>
+                    </div>
+                  )}
                 </div>
-                {/* Artist + title */}
+
+                {/* Middle: reason + artist + title + meta */}
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '14px', fontWeight: 400, color: 'var(--navy)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {reason && (
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: reason.color, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {reason.label}
+                    </div>
+                  )}
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? '13px' : '15px', fontWeight: 400, color: 'var(--navy)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>
                     {lot.artist_name_raw || '—'}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '11px', fontStyle: 'italic', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '11px', fontStyle: 'italic', color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px' }}>
                     {lot.title || ''}
                   </div>
-                </div>
-                {/* Score + estimation */}
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  {sl && <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: sl.color, whiteSpace: 'nowrap' }}>{sl.label}</div>}
-                  {lot.estimate_low && <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{fmt(lot.estimate_low)}{lot.estimate_high ? ` – ${fmt(lot.estimate_high)}` : ''}</div>}
-                </div>
-                {/* Timing */}
-                <div style={{ flexShrink: 0, minWidth: '90px', textAlign: 'right' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                    {timing.dot === 'green' && <span style={{ display: 'inline-block', width: '5px', height: '5px', borderRadius: '50%', background: '#16a34a', animation: 'nautilus-pulse 1.4s ease-in-out infinite', flexShrink: 0 }} />}
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 600, color: timing.color, whiteSpace: 'nowrap' }}>{timing.text}</span>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {lot.estimate_low && <span>Est. {fmt(lot.estimate_low)}{lot.estimate_high ? ` – ${fmt(lot.estimate_high)}` : ''}</span>}
+                    {lot.category && <span>· {lot.category}</span>}
                   </div>
                 </div>
-                {/* CTA */}
-                <div style={{ flexShrink: 0 }}>
-                  <button style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--navy)', background: 'none', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                    Voir →
-                  </button>
+
+                {/* Right: score label + timing + CTA */}
+                <div style={{ flexShrink: 0, textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                  {sl && (
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: sl.color, whiteSpace: 'nowrap' }}>{sl.label}</div>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                    {lotTiming.dot === 'green' && (
+                      <span style={{ display: 'inline-block', width: '5px', height: '5px', borderRadius: '50%', background: '#16a34a', animation: 'nautilus-pulse 1.4s ease-in-out infinite', flexShrink: 0 }} />
+                    )}
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 600, color: lotTiming.color, whiteSpace: 'nowrap' }}>{lotTiming.text}</span>
+                  </div>
+                  {!isMobile && (
+                    <button style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--navy)', background: 'none', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap', marginTop: '2px' }}>
+                      Voir le lot →
+                    </button>
+                  )}
                 </div>
               </div>
             );
           })
         )}
       </div>
+
+      {/* Footer */}
+      {saleLots.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 18px', borderTop: '1px solid var(--border)', background: 'rgba(26,42,68,.015)' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)' }}>
+            {scoredCount > 0
+              ? `${scoredCount} opportunité${scoredCount > 1 ? 's' : ''} détectée${scoredCount > 1 ? 's' : ''} sur ${saleLots.length} lot${saleLots.length > 1 ? 's' : ''}`
+              : `${saleLots.length} lot${saleLots.length > 1 ? 's' : ''}`
+            }
+          </div>
+          {headerTiming && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              {headerTiming.dot === 'green' && (
+                <span style={{ display: 'inline-block', width: '5px', height: '5px', borderRadius: '50%', background: '#16a34a', animation: 'nautilus-pulse 1.4s ease-in-out infinite' }} />
+              )}
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: headerTiming.color, fontWeight: 600 }}>{headerTiming.text}</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
