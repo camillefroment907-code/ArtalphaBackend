@@ -92,7 +92,6 @@ function deriveLotStatus(lot: { status: string | null; auction_date: string | nu
     const h = hoursUntil(lot.auction_date);
     if (h === null) return 'upcoming';
     if (h < 0) return 'ended';
-    if (h < 0.25) return 'live';
   }
   return 'upcoming';
 }
@@ -389,6 +388,7 @@ export default function EnDirect() {
   const [loadingAll, setLoadingAll]   = useState(false);
   const [showAllPicks, setShowAllPicks] = useState(false);
   const [endedOpen, setEndedOpen]     = useState(false);
+  const [selectedSale, setSelectedSale] = useState<SaleGroup | null>(null);
   const [, setTick] = useState(0); // force re-render for countdowns
 
   const doFetch = useCallback(() => {
@@ -530,24 +530,34 @@ export default function EnDirect() {
 
                 {/* EN COURS */}
                 {salesLive.length > 0 && (
-                  <SaleGroup
-                    status="live"
-                    label="En cours"
-                    sales={salesLive}
-                    onClickSale={s => navigate(`/app/opportunities/${s.bestLot?.id ?? ''}`)}
-                    style={{ marginBottom: '20px' }}
-                  />
+                  <>
+                    <SaleGroup
+                      status="live"
+                      label="En cours"
+                      sales={salesLive}
+                      onClickSale={s => setSelectedSale(prev => prev?.key === s.key ? null : s)}
+                      style={{ marginBottom: selectedSale && salesLive.some(s => s.key === selectedSale.key) ? '0' : '20px' }}
+                    />
+                    {selectedSale && salesLive.some(s => s.key === selectedSale.key) && (
+                      <SaleDrawer sale={selectedSale} onClose={() => setSelectedSale(null)} />
+                    )}
+                  </>
                 )}
 
                 {/* À VENIR */}
                 {salesUpcoming.length > 0 && (
-                  <SaleGroup
-                    status="upcoming"
-                    label="À venir"
-                    sales={salesUpcoming}
-                    onClickSale={s => navigate(`/app/opportunities/${s.bestLot?.id ?? ''}`)}
-                    style={{ marginBottom: '20px' }}
-                  />
+                  <>
+                    <SaleGroup
+                      status="upcoming"
+                      label="À venir"
+                      sales={salesUpcoming}
+                      onClickSale={s => setSelectedSale(prev => prev?.key === s.key ? null : s)}
+                      style={{ marginBottom: selectedSale && salesUpcoming.some(s => s.key === selectedSale.key) ? '0' : '20px' }}
+                    />
+                    {selectedSale && salesUpcoming.some(s => s.key === selectedSale.key) && (
+                      <SaleDrawer sale={selectedSale} onClose={() => setSelectedSale(null)} />
+                    )}
+                  </>
                 )}
 
                 {/* TERMINÉES — collapsible */}
@@ -569,11 +579,16 @@ export default function EnDirect() {
                       </span>
                     </button>
                     {endedOpen && (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px' }}>
-                        {salesEnded.map(s => (
-                          <SaleCard key={s.key} sale={s} status="ended" onClick={() => navigate(`/app/opportunities/${s.bestLot?.id ?? ''}`)} />
-                        ))}
-                      </div>
+                      <>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px' }}>
+                          {salesEnded.map(s => (
+                            <SaleCard key={s.key} sale={s} status="ended" onClick={() => setSelectedSale(prev => prev?.key === s.key ? null : s)} />
+                          ))}
+                        </div>
+                        {selectedSale && salesEnded.some(s => s.key === selectedSale.key) && (
+                          <SaleDrawer sale={selectedSale} onClose={() => setSelectedSale(null)} />
+                        )}
+                      </>
                     )}
                   </div>
                 )}
@@ -869,6 +884,125 @@ function SkeletonState() {
         ))}
       </div>
     </>
+  );
+}
+
+// ── SaleDrawer — inline lot list for a selected sale ─────────────────────────
+
+function SaleDrawer({ sale, onClose }: { sale: SaleGroup; onClose: () => void }) {
+  const navigate = useNavigate();
+  const [lots, setLots] = useState<LotCard[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    const token = getToken();
+    const dateStr = sale.auctionDate.slice(0, 10);
+    const params = new URLSearchParams({
+      auction_house: sale.house,
+      auction_date_from: `${dateStr}T00:00:00`,
+      auction_date_to: `${dateStr}T23:59:59`,
+      sort_by: 'deal_score',
+      sort_dir: 'desc',
+      page_size: '50',
+    });
+    fetch(`${BACKEND}/api/lots?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : { items: [] })
+      .then(data => {
+        const items: LotCard[] = data.items ?? data.lots ?? data.results ?? [];
+        const scored   = items.filter(l => (l.deal_score ?? 0) > 0);
+        const unscored = items.filter(l => !((l.deal_score ?? 0) > 0));
+        setLots([...scored, ...unscored]);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [sale.key]);
+
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-card)', padding: 0, marginTop: '12px', marginBottom: '20px', overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: 'var(--navy)' }}>{sale.house}</span>
+          {!loading && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)' }}>{lots.length} lot{lots.length > 1 ? 's' : ''}</span>}
+        </div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '16px', lineHeight: 1, padding: '2px 6px' }}>×</button>
+      </div>
+
+      {/* Body */}
+      <div>
+        {loading ? (
+          [0, 1, 2].map(i => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '48px 1fr auto auto auto', gap: '12px', padding: '10px 16px', alignItems: 'center', borderBottom: '1px solid var(--border)', animation: 'nautilus-shimmer 1.4s ease-in-out infinite' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '4px', background: 'var(--bg-subtle)' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <div style={{ height: '14px', width: '60%', background: 'var(--bg-subtle)', borderRadius: '3px' }} />
+                <div style={{ height: '10px', width: '40%', background: 'var(--bg-subtle)', borderRadius: '3px' }} />
+              </div>
+              <div style={{ width: '70px', height: '12px', background: 'var(--bg-subtle)', borderRadius: '3px' }} />
+              <div style={{ width: '60px', height: '12px', background: 'var(--bg-subtle)', borderRadius: '3px' }} />
+              <div style={{ width: '50px', height: '26px', background: 'var(--bg-subtle)', borderRadius: '4px' }} />
+            </div>
+          ))
+        ) : lots.length === 0 ? (
+          <div style={{ padding: '32px 16px', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>
+            Aucun lot trouvé pour cette vente.
+          </div>
+        ) : (
+          lots.map((lot, idx) => {
+            const isUnscored = !((lot.deal_score ?? 0) > 0);
+            const sl     = lot.deal_score ? scoreLabel(lot.deal_score) : null;
+            const timing = lotTimingLabel(lot);
+            return (
+              <div
+                key={lot.id}
+                onClick={() => navigate(`/app/opportunities/${lot.id}`)}
+                style={{ display: 'grid', gridTemplateColumns: '48px 1fr auto auto auto', gap: '12px', padding: '10px 16px', alignItems: 'center', borderBottom: idx < lots.length - 1 ? '1px solid var(--border)' : 'none', opacity: isUnscored ? 0.5 : 1, cursor: 'pointer', transition: 'background .1s' }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-subtle)'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+              >
+                {/* Image */}
+                <div style={{ width: '48px', height: '48px', borderRadius: '4px', overflow: 'hidden', background: 'var(--bg-subtle)', flexShrink: 0 }}>
+                  {lot.image_url
+                    ? <img src={lot.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(26,42,68,.15)', fontSize: '16px' }}>◇</div>
+                  }
+                </div>
+                {/* Artist + title */}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '14px', fontWeight: 400, color: 'var(--navy)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {lot.artist_name_raw || '—'}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '11px', fontStyle: 'italic', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {lot.title || ''}
+                  </div>
+                </div>
+                {/* Score + estimation */}
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  {sl && <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: sl.color, whiteSpace: 'nowrap' }}>{sl.label}</div>}
+                  {lot.estimate_low && <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{fmt(lot.estimate_low)}{lot.estimate_high ? ` – ${fmt(lot.estimate_high)}` : ''}</div>}
+                </div>
+                {/* Timing */}
+                <div style={{ flexShrink: 0, minWidth: '90px', textAlign: 'right' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                    {timing.dot === 'green' && <span style={{ display: 'inline-block', width: '5px', height: '5px', borderRadius: '50%', background: '#16a34a', animation: 'nautilus-pulse 1.4s ease-in-out infinite', flexShrink: 0 }} />}
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 600, color: timing.color, whiteSpace: 'nowrap' }}>{timing.text}</span>
+                  </div>
+                </div>
+                {/* CTA */}
+                <div style={{ flexShrink: 0 }}>
+                  <button style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--navy)', background: 'none', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    Voir →
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
   );
 }
 
