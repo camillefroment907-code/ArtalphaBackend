@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, desc, String
 from sqlalchemy.orm import selectinload
 from typing import Optional, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from app.database import get_db
 from app.api.auth_utils import get_current_user
@@ -24,6 +24,7 @@ from app.models.db_models import (
     User, Lot, LotStatus, MarketType,
     CollectorDNA, RecommendationEvent,
     AgentAlert, AgentRecommendation,
+    UserPreference,
 )
 from app.utils.cache import get_cached, set_cached
 
@@ -292,6 +293,118 @@ async def _strategy_global_fallback(excluded: set, db: AsyncSession, limit: int)
     return [_lot_to_card(l, "deal_alert", "Top opportunity on Nautilus right now", l.deal_score or 50) for l in lots[:limit]]
 
 
+# ── Conviction strategies (market-brief only) ────────────────────────────────
+
+async def _strategy_preferences(
+    pref,
+    excluded: set,
+    db: AsyncSession,
+    limit: int,
+) -> List[dict]:
+    """
+    Primary conviction source — explicitly declared profile preferences.
+    Uses categories + budget set at onboarding / preferences page.
+    Available from day 1 for every user who completed onboarding.
+    """
+    if not pref or not pref.categories:
+        return []
+
+    cats = pref.categories[:6]
+    cat_filter = or_(*[Lot.category.ilike(f"%{c}%") for c in cats])
+    conditions = [_base_lot_query(), cat_filter]
+
+    # Budget filter — use tightest bound available
+    budget_max = pref.max_lot_budget_eur or pref.budget_max
+    budget_min = pref.min_lot_budget_eur or 0
+    if budget_max:
+        conditions.append(
+            or_(
+                and_(Lot.estimate_low >= budget_min, Lot.estimate_low <= budget_max),
+                and_(Lot.estimate_high >= budget_min, Lot.estimate_high <= budget_max),
+            )
+        )
+
+    # Respect user's minimum score preference (default 65)
+    min_score = pref.min_deal_score if pref.min_deal_score is not None else 65
+    conditions.append(Lot.deal_score >= min_score)
+
+    result = await db.execute(
+        select(Lot)
+        .where(and_(*conditions))
+        .order_by(desc(Lot.deal_score))
+        .limit(limit * 4)
+    )
+    lots = [l for l in result.scalars().all() if str(l.id) not in excluded]
+
+    def _reason(l: Lot) -> str:
+        parts = []
+        if l.category:
+            parts.append(l.category)
+        if l.pct_below_low_estimate and l.pct_below_low_estimate > 0:
+            parts.append(f"{l.pct_below_low_estimate:.0f}% sous l'estimation")
+        elif l.deal_score:
+            parts.append(f"Score {l.deal_score:.0f}/100")
+        return " · ".join(parts) if parts else "Correspond à vos préférences"
+
+    return [
+        _lot_to_card(l, "preference_match", _reason(l), l.deal_score or 65)
+        for l in lots[:limit]
+    ]
+
+
+async def _strategy_from_agent_alerts(
+    user_id,
+    excluded: set,
+    db: AsyncSession,
+    limit: int,
+) -> List[dict]:
+    """
+    Enrichment layer — matches user's active agent strategies.
+    Most specific signal available; Investor+ only in practice.
+    """
+    alerts_result = await db.execute(
+        select(AgentAlert).where(
+            and_(AgentAlert.user_id == user_id, AgentAlert.is_active == True)  # noqa: E712
+        ).limit(5)
+    )
+    alerts = alerts_result.scalars().all()
+    if not alerts:
+        return []
+
+    parts = []
+    for a in alerts:
+        conds = [_base_lot_query()]
+        if a.artist_name:
+            conds.append(Lot.artist_name_raw.ilike(f"%{a.artist_name}%"))
+        if a.category:
+            conds.append(Lot.category.ilike(f"%{a.category}%"))
+        if a.budget_max_eur:
+            conds.append(Lot.estimate_low <= a.budget_max_eur)
+        if a.min_conviction_score:
+            conds.append(Lot.deal_score >= a.min_conviction_score)
+        if len(conds) > 1:
+            parts.append(and_(*conds))
+
+    if not parts:
+        return []
+
+    result = await db.execute(
+        select(Lot)
+        .where(or_(*parts))
+        .order_by(desc(Lot.deal_score))
+        .limit(limit * 3)
+    )
+    lots = [l for l in result.scalars().all() if str(l.id) not in excluded]
+    return [
+        _lot_to_card(
+            l, "agent_match",
+            f"Correspond à votre stratégie · Score {l.deal_score:.0f}/100",
+            l.deal_score or 70,
+        )
+        for l in lots[:limit]
+    ]
+
+
 # ── Main endpoint ─────────────────────────────────────────────────────────────
 
 STRATEGIES = [
@@ -405,19 +518,43 @@ async def get_market_brief(
     """
     Daily market brief — one-stop summary for the user.
     Returns: new lots since last visit, closing soon, top picks, agent unread count, top deal.
-    Cached 30 min per user. Updates CollectorDNA.last_active_at on cache miss.
+
+    Cache strategy: date-based key guarantees a fresh brief every morning at midnight.
+    TTL = 1h within the same day — balances freshness with DB load.
+
+    Conviction hierarchy:
+      1. preference_match  — profile categories + budget (day-1 personalization)
+      2. agent_match       — active agent strategies (Investor+ enrichment)
+      3. artist_momentum   — DNA top artists (behavioural, builds over time)
+      4. deal_alert        — global fallback (ensures 3 convictions always returned)
     """
-    _key = f"market_brief:{current_user.id}"
-    _cached = get_cached(_key, ttl=1800)
+    # Date-based key → brief regenerates automatically every morning at midnight
+    _today = date.today().isoformat()
+    _key = f"market_brief:{current_user.id}:{_today}"
+    _cached = get_cached(_key, ttl=3600)
     if _cached is not None:
         return _cached
 
+    # Load DNA and preferences in parallel
     dna = await _get_dna(current_user.id, db)
+    pref_result = await db.execute(
+        select(UserPreference).where(UserPreference.user_id == current_user.id)
+    )
+    pref = pref_result.scalar_one_or_none()
+
     now = datetime.utcnow()
 
-    # "Since last visit" window — default 24h if never computed
+    # "Since last visit" window — uses previous last_active_at before updating
     since = (dna.last_active_at if dna and dna.last_active_at else now - timedelta(hours=24))
     horizon_48h = now + timedelta(hours=48)
+
+    # Update last_active_at now (marks this visit regardless of cache state)
+    if dna:
+        dna.last_active_at = now
+        try:
+            await db.commit()
+        except Exception:
+            pass
 
     def _lot_card(lot: Lot) -> dict:
         return {
@@ -451,7 +588,7 @@ async def get_market_brief(
         select(Lot)
         .where(and_(_new_filter, Lot.deal_score.isnot(None)))
         .order_by(desc(Lot.deal_score))
-        .limit(6)
+        .limit(9)  # fetch extra — some will be deduplicated against convictions
     )
     new_lots = new_lots_result.scalars().all()
 
@@ -482,7 +619,7 @@ async def get_market_brief(
     )
     closing_today_count = closing_today_result.scalar() or 0
 
-    # Top deal globally
+    # Top deal globally (used as emergency fallback on frontend if top_picks empty)
     top_deal_result = await db.execute(
         select(Lot)
         .where(and_(
@@ -506,34 +643,47 @@ async def get_market_brief(
     )
     agent_unread = agent_count_result.scalar() or 0
 
-    # Top picks — run 3 strategies, deduplicate, take 5
+    # ── Conviction engine — 4-level hierarchy ──────────────────────────────────
     excluded: set = set()
     top_picks: list = []
-    for strategy in [_strategy_deal_alert, _strategy_artist_momentum, _strategy_category_match]:
-        try:
-            cards = await strategy(dna, excluded, db, 3)
-            for card in cards:
-                lid = card["lot"]["id"]
-                if lid not in excluded and len(top_picks) < 5:
-                    excluded.add(lid)
-                    top_picks.append(card)
-        except Exception:
-            continue
 
-    # Update last_active_at to now (marks this visit)
-    if dna:
-        dna.last_active_at = now
+    async def _fill(cards_coro, target: int = 3):
+        """Pull cards from a strategy coroutine until top_picks reaches target."""
         try:
-            await db.commit()
+            cards = await cards_coro
         except Exception:
-            pass
+            return
+        for card in cards:
+            lid = card["lot"]["id"]
+            if lid not in excluded and len(top_picks) < target:
+                excluded.add(lid)
+                top_picks.append(card)
+
+    # Level 1 — profile preferences (categories + budget) — day-1 personalization
+    await _fill(_strategy_preferences(pref, excluded, db, 3))
+
+    # Level 2 — active agent strategies (Investor+ enrichment, most specific signal)
+    if len(top_picks) < 3:
+        await _fill(_strategy_from_agent_alerts(current_user.id, excluded, db, 3 - len(top_picks)))
+
+    # Level 3 — DNA behavioural affinity (builds over time from engagement)
+    if len(top_picks) < 3:
+        await _fill(_strategy_artist_momentum(dna, excluded, db, 3 - len(top_picks)))
+
+    # Level 4 — global deal_score fallback (guarantees 3 convictions are always returned)
+    if len(top_picks) < 3:
+        await _fill(_strategy_deal_alert(dna, excluded, db, 3 - len(top_picks)))
+
+    # Deduplicate new_lots against convictions to avoid the same lot appearing twice
+    conviction_ids = {c["lot"]["id"] for c in top_picks}
+    new_lots_deduped = [l for l in new_lots if str(l.id) not in conviction_ids][:6]
 
     result = {
         "since":                since.isoformat(),
         "generated_at":         now.isoformat(),
         "new_lots_count":       new_lots_total,
         "closing_today_count":  closing_today_count,
-        "new_lots":             [_lot_card(l) for l in new_lots],
+        "new_lots":             [_lot_card(l) for l in new_lots_deduped],
         "closing_soon":         [_lot_card(l) for l in closing_lots],
         "top_picks":            top_picks,
         "top_deal":             _lot_card(top_deal_lot) if top_deal_lot else None,
