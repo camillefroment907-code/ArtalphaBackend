@@ -5,7 +5,7 @@ import { getUser, getUserPlan } from "../../lib/auth";
 import { WelcomeTour } from '../components/WelcomeTour';
 
 
-type ExploreTab = "best" | "auctions" | "primary" | "convictions";
+type ExploreTab = "auctions" | "primary" | "convictions";
 type ViewMode = "grid-large" | "grid" | "list";
 
 // ── Source metadata ──────────────────────────────────────────
@@ -28,19 +28,6 @@ const LIVE_SORT_MAP: Record<string, { by: string; dir: string }> = {
   "estimate_asc":      { by: "current_price", dir: "asc"  },
   "estimate_desc":     { by: "current_price", dir: "desc" },
   "created_at_desc":   { by: "created_at",    dir: "desc" },
-};
-const ALPHA_SORT_MAP: Record<string, { by: string; dir: string }> = {
-  "deal_score_desc":   { by: "deal_score",    dir: "desc" },
-  "upside_desc":       { by: "pct_below_low_estimate", dir: "desc" },
-  "auction_date_asc":  { by: "auction_date",  dir: "asc"  },
-  "price_asc":         { by: "current_price", dir: "asc"  },
-  "created_at_desc":   { by: "created_at",    dir: "desc" },
-};
-const PLATFORM_API: Record<string, string> = {
-  "Drouot": "drouot", "Interenchères": "interencheres",
-  "Invaluable": "invaluable", "Sothebys": "sothebys",
-  "Christies": "christies", "Bonhams": "bonhams",
-  "Christie's": "christies", "Sotheby's": "sothebys",
 };
 
 // Maps sidebar pill labels to exact DB category values
@@ -130,18 +117,6 @@ async function fetchLotsFromAPI(params: Record<string, any>) {
   return { items, total: d.total || items.length, pages: d.pages || 1 };
 }
 
-async function fetchInvestorLots(budgetMin?: number, budgetMax?: number | null, horizon?: string) {
-  const qs = new URLSearchParams();
-  if (budgetMin != null && budgetMin > 0) qs.set("budget_min", String(budgetMin));
-  if (budgetMax != null) qs.set("budget_max", String(budgetMax));
-  if (horizon) qs.set("horizon", horizon);
-  qs.set("limit", "12");
-  const token = getToken();
-  const headers: Record<string, string> = {};
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-  const d = await cachedFetch(`${BACKEND}/api/lots/for-investor?${qs}`, { headers });
-  return { items: d.items || [], total: d.total || 0, pages: 1 };
-}
 
 async function loadSourceStats(): Promise<SourceStat[]> {
   try {
@@ -217,18 +192,6 @@ function NautilusLoader({ label = "SCANNING..." }: { label?: string }) {
 }
 
 // ── Skeleton ─────────────────────────────────────────────────
-function AlphaSkeleton() {
-  return (
-    <div style={{ borderRadius: "10px", overflow: "hidden", border: "1px solid var(--border)" }}>
-      <div className="skeleton" style={{ paddingTop: "133%", position: "relative" }} />
-      <div style={{ padding: "12px" }}>
-        <div className="skeleton" style={{ height: "10px", width: "60%", borderRadius: "4px", marginBottom: "8px" }} />
-        <div className="skeleton" style={{ height: "14px", width: "90%", borderRadius: "4px", marginBottom: "8px" }} />
-        <div className="skeleton" style={{ height: "18px", width: "40%", borderRadius: "4px" }} />
-      </div>
-    </div>
-  );
-}
 function LiveSkeleton() {
   return (
     <div style={{ borderRadius: "8px", overflow: "hidden", border: "1px solid var(--border)" }}>
@@ -534,20 +497,12 @@ export default function Explore() {
   const visibleLimit = isAdmin ? 99999 : (PLAN_LIMITS[userPlan] ?? 3);
   const maxVisible = visibleLimit;
 
-  // tab alias used throughout JSX: "alpha" = best lots, "live" = all auctions
+  // tab alias used throughout JSX: "live" = all auctions, "alpha" = other tabs
   const tab = exploreTab === "auctions" ? "live" : "alpha";
 
-  const alphaLots   = lots;
-  const EXCEPTIONAL = alphaLots.filter(l => l.dealScore >= 83);
-  const STRONG      = alphaLots.filter(l => l.dealScore >= 77 && l.dealScore < 83);
-  const INTERESTING = alphaLots.filter(l => l.dealScore >= 70 && l.dealScore < 77);
-  const avgScore    = alphaLots.length > 0
-    ? alphaLots.reduce((a, l) => a + l.dealScore, 0) / alphaLots.length : 0;
-  const visibleLots = tab === "alpha" ? alphaLots.slice(0, maxVisible) : lots.slice(0, maxVisible);
-  const lockedLots  = tab === "alpha" ? alphaLots.slice(maxVisible, maxVisible + 3) : [];
-  const isLimited   = !isAdmin && visibleLimit < 99999 && (
-    tab === "alpha" ? alphaLots.length > maxVisible : lots.length > maxVisible
-  );
+  const visibleLots = lots.slice(0, maxVisible);
+  const lockedLots  = lots.slice(maxVisible, maxVisible + 3);
+  const isLimited   = !isAdmin && visibleLimit < 99999 && lots.length > maxVisible;
 
   const [refreshKey, setRefreshKey] = useState(0);
   const doFetch = () => { sessionStorage.removeItem(`lots_${exploreTab}`); setRefreshKey(k => k + 1); };
@@ -673,8 +628,7 @@ export default function Explore() {
           artist: artist.trim() || undefined,
           auction_house: auctionHouse.trim() || undefined,
         };
-        if (exploreTab === 'best') p.min_score = Math.max(minScore, 60);
-        else if (minScore > 0) p.min_score = minScore;
+        if (minScore > 0) p.min_score = minScore;
         const data = await fetchLotsFromAPI(p);
         setLots(prev => [...prev, ...data.items.map(mapLot)]);
         setCurrentPage(nextPage);
@@ -706,7 +660,6 @@ export default function Explore() {
         {/* LEFT: Tab pills — desktop */}
         <div className="explore-tabs-desktop" style={{ display: 'flex', gap: '4px', flex: 1 }}>
           {([
-            { key: 'best' as ExploreTab, label: 'Meilleures Opportunités' },
             { key: 'auctions' as ExploreTab, label: 'Toutes les Enchères' },
             { key: 'primary' as ExploreTab, label: 'Sélection Galerie' },
           ]).map(({ key, label }) => (
@@ -734,7 +687,6 @@ export default function Explore() {
           onChange={e => setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('tab', e.target.value); return p; })}
           style={{ display: 'none' }}
         >
-          <option value="best">Meilleures Opportunités</option>
           <option value="auctions">Toutes les Enchères</option>
           <option value="primary">Sélection Galerie</option>
         </select>
@@ -1015,7 +967,6 @@ export default function Explore() {
               {/* Per-tab description */}
               {!loading && (
                 <div style={{ padding: hasActiveFilters ? '4px 0 4px' : '12px 0 4px', fontSize: '12px', color: 'var(--text-3)', fontStyle: 'italic', lineHeight: 1.5 }}>
-                  {exploreTab === 'best' && t('explorer.descBestLots')}
                   {exploreTab === 'auctions' && t('explorer.descAllAuctions')}
                   {exploreTab === 'primary' && t('explorer.descPrimary')}
                   {exploreTab === 'convictions' && t('explorer.descConvictions')}
@@ -1028,7 +979,7 @@ export default function Explore() {
                   <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
                     {total.toLocaleString()} lots
                   </div>
-                  {(exploreTab === 'best' || exploreTab === 'auctions') && (
+                  {exploreTab === 'auctions' && (
                     <div className="explore-auction-note" style={{ fontSize: '11px', color: '#C9C5BC', fontFamily: 'var(--font-mono)', marginTop: '2px', letterSpacing: '0.03em', opacity: 0.7 }}>
                       {t('explorer.auctionHousesNote')}
                     </div>
