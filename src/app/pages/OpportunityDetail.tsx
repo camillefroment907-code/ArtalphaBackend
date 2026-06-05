@@ -930,7 +930,8 @@ export default function OpportunityDetail() {
                 else if (st === 'sold') bState = 'sold';
                 else if (st === 'withdrawn') bState = 'withdrawn';
                 else if (st === 'unsold') bState = 'passed';
-                else if (h !== null && h <= 0) bState = 'live'; // auction_date passed, no terminal status → assume in progress
+                else if (h !== null && h < -0.5) bState = 'passed';
+                else if (h !== null && h <= 0) bState = 'live';
                 else if (h !== null && h < 1) bState = 'imminent';
                 else if (h !== null && h < 24) bState = 'soon';
 
