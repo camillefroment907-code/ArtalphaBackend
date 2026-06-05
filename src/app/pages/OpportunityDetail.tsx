@@ -236,6 +236,7 @@ export default function OpportunityDetail() {
   const [purchaseDate, setPurchaseDate]         = useState(() => new Date().toISOString().split('T')[0]);
   const [purchaseSource, setPurchaseSource]     = useState<'auction' | 'gallery' | 'private'>('auction');
   const heroRef = useRef<HTMLDivElement>(null);
+  const [secsUntilClose, setSecsUntilClose] = useState<number | null>(null);
   const isFr = i18n.language?.startsWith('fr');
 
   useSEO({
@@ -468,6 +469,15 @@ export default function OpportunityDetail() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  useEffect(() => {
+    if (!lot?.auction_date) { setSecsUntilClose(null); return; }
+    const epoch = (d: string) => new Date(d.endsWith('Z') ? d : d + 'Z').getTime();
+    const update = () => setSecsUntilClose(Math.round((epoch(String(lot.auction_date)) - Date.now()) / 1000));
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [lot?.auction_date]);
+
   if (loading) return (
     <div style={{position:'fixed',inset:0,background:'#FAFAF8',display:'flex',alignItems:'center',justifyContent:'center',zIndex:50}}>
       <span style={{fontFamily:'Georgia,serif',fontSize:13,letterSpacing:'0.3em',color:'#1A2A44',opacity:0.5,textTransform:'uppercase',animation:'fade 1.4s ease-in-out infinite'}}>
@@ -629,6 +639,9 @@ export default function OpportunityDetail() {
   // avoidAbove computed after sameArtistComps below
   const daysUntilClose = lot.auction_date
     ? Math.max(0, Math.round((new Date(lot.auction_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null;
+  const hoursUntilClose: number | null = lot.auction_date
+    ? (new Date(String(lot.auction_date).endsWith('Z') ? String(lot.auction_date) : String(lot.auction_date) + 'Z').getTime() - Date.now()) / 3_600_000
     : null;
   const timingSignal = lot.oracle?.signal === 'BUY_NOW'
     ? (isFr ? 'Signal fort — meilleur moment pour acheter' : 'Strong signal — optimal entry')
@@ -907,6 +920,72 @@ export default function OpportunityDetail() {
                   </div>
                 )}
               </div>
+
+              {/* ── STATUS BANNER ─────────────────────────────────── */}
+              {(() => {
+                const h = hoursUntilClose;
+                const st = lot.status;
+                let bState = 'upcoming';
+                if (st === 'live') bState = 'live';
+                else if (st === 'sold') bState = 'sold';
+                else if (st === 'withdrawn') bState = 'withdrawn';
+                else if (st === 'unsold' || (h !== null && h <= 0)) bState = 'passed';
+                else if (h !== null && h < 1) bState = 'imminent';
+                else if (h !== null && h < 24) bState = 'soon';
+
+                const secs = secsUntilClose !== null ? Math.max(0, secsUntilClose) : null;
+                const cH = secs !== null ? Math.floor(secs / 3600) : null;
+                const cM = secs !== null ? Math.floor((secs % 3600) / 60) : null;
+                const cS = secs !== null ? secs % 60 : null;
+                const cntStr = secs !== null && secs > 0
+                  ? (cH! > 0 ? `${cH}h ${String(cM).padStart(2, '0')}m` : `${cM}m ${String(cS).padStart(2, '0')}s`)
+                  : null;
+
+                const cfgMap: Record<string, { accent: string; bg: string; border: string; label: string; sub: string }> = {
+                  live:      { accent: '#4ade80', bg: 'rgba(34,197,94,0.1)',            border: 'rgba(34,197,94,0.3)',            label: isFr ? 'Vente en cours' : 'Sale live',   sub: isFr ? 'Cette vente est actuellement live — enchérissez maintenant' : 'This sale is live — bid now'      },
+                  imminent:  { accent: '#fb923c', bg: 'rgba(249,115,22,0.12)',           border: 'rgba(249,115,22,0.3)',           label: isFr ? 'Commence dans'  : 'Starts in',   sub: isFr ? 'La vente démarre très bientôt — ne tardez pas'              : 'Sale starts very soon — act now'  },
+                  soon:      { accent: '#fbbf24', bg: 'rgba(251,191,36,0.1)',            border: 'rgba(251,191,36,0.25)',          label: isFr ? 'Commence dans'  : 'Starts in',   sub: isFr ? "La vente a lieu aujourd'hui"                                 : 'Sale is today'                    },
+                  upcoming:  { accent: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.07)',  label: isFr ? 'Vente à venir' : 'Upcoming',    sub: isFr ? "Cette vente n'a pas encore commencé"                        : 'This sale has not started yet'    },
+                  sold:      { accent: '#4ade80', bg: 'rgba(34,197,94,0.08)',            border: 'rgba(34,197,94,0.2)',            label: isFr ? '✓  Adjugé'      : '✓  Sold',     sub: isFr ? 'Ce lot a été vendu aux enchères'                           : 'This lot was sold at auction'     },
+                  passed:    { accent: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.07)', label: isFr ? 'Lot passé'     : 'Sale ended',   sub: isFr ? 'Cette vente est terminée'                                  : 'This sale has ended'              },
+                  withdrawn: { accent: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.07)', label: isFr ? 'Retiré'        : 'Withdrawn',    sub: isFr ? 'Ce lot a été retiré de la vente'                           : 'This lot was withdrawn'           },
+                };
+                const c = cfgMap[bState] || cfgMap.upcoming;
+                const showCnt = (bState === 'imminent' || bState === 'soon') && cntStr;
+                const showCta = (bState === 'live' || bState === 'imminent' || bState === 'soon') && externalUrl;
+                const anim = bState === 'live'
+                  ? 'lot-status-pulse-green 2s ease-in-out infinite'
+                  : (bState === 'imminent' || bState === 'soon')
+                  ? 'lot-status-pulse-orange 1.8s ease-in-out infinite'
+                  : 'none';
+
+                return (
+                  <div style={{ margin: '0 0 16px' }}>
+                    <style>{`
+                      @keyframes lot-status-pulse-green  { 0%{box-shadow:0 0 0 0 rgba(74,222,128,0.55)} 70%{box-shadow:0 0 0 9px rgba(74,222,128,0)} 100%{box-shadow:0 0 0 0 rgba(74,222,128,0)} }
+                      @keyframes lot-status-pulse-orange { 0%{box-shadow:0 0 0 0 rgba(251,146,60,0.55)}  70%{box-shadow:0 0 0 9px rgba(251,146,60,0)}  100%{box-shadow:0 0 0 0 rgba(251,146,60,0)} }
+                    `}</style>
+                    <div style={{ borderRadius: 8, background: c.bg, border: `1px solid ${c.border}`, borderLeft: `4px solid ${c.accent}`, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: c.accent, flexShrink: 0, animation: anim }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: c.accent, letterSpacing: '-0.01em', display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' as const }}>
+                          <span>{c.label}</span>
+                          {showCnt && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 800 }}>{cntStr}</span>}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 3, fontFamily: 'var(--font-mono)', letterSpacing: '0.02em' }}>
+                          {c.sub}
+                        </div>
+                      </div>
+                      {showCta && (
+                        <a href={externalUrl} target="_blank" rel="noopener noreferrer"
+                          style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 4, background: c.accent, color: '#0C1622', fontSize: 11, fontWeight: 800, textDecoration: 'none', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
+                          {bState === 'live' ? (isFr ? 'Enchérir →' : 'Bid now →') : (isFr ? 'Voir le lot →' : 'View lot →')}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Q1 — Verdict */}
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 16, marginBottom: 16 }}>
