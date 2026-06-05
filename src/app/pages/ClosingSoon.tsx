@@ -83,16 +83,21 @@ interface MarketBrief {
 type LotStatus = 'live' | 'upcoming' | 'ended';
 
 function deriveLotStatus(lot: { status: string | null; auction_date: string | null }): LotStatus {
+  const h = hoursUntil(lot.auction_date);
+  // Date passée de plus de 30 min → terminé, quoi que dise le status backend
+  if (h !== null && h < -0.5) return 'ended';
+  // Status backend exploitable uniquement si date cohérente
   if (lot.status) {
     const s = lot.status.toLowerCase();
     if (s === 'sold' || s === 'passed' || s === 'ended' || s === 'closed') return 'ended';
-    if (s === 'live' || s === 'open' || s === 'active') return 'live';
+    if (s === 'live' || s === 'open' || s === 'active') {
+      // Ne faire confiance au status live que si la date est dans la fenêtre raisonnable
+      if (h !== null && h >= -0.5) return 'live';
+    }
   }
-  if (lot.auction_date) {
-    const h = hoursUntil(lot.auction_date);
-    if (h === null) return 'upcoming';
-    if (h < 0) return 'ended';
-  }
+  // Fallback sur auction_date uniquement
+  if (h === null) return 'upcoming';
+  if (h < 0) return 'ended';
   return 'upcoming';
 }
 
@@ -149,6 +154,7 @@ interface SaleGroup {
   lots: LotCard[];
   status: LotStatus;
   bestLot: LotCard | null;
+  urgentLot: LotCard | null;
   maxScore: number;
   scoredLotCount: number;
 }
@@ -170,6 +176,7 @@ function groupIntoSales(lots: LotCard[]): SaleGroup[] {
         lots: [],
         status: deriveLotStatus(lot),
         bestLot: null,
+        urgentLot: null,
         maxScore: 0,
         scoredLotCount: 0,
       });
@@ -190,7 +197,13 @@ function groupIntoSales(lots: LotCard[]): SaleGroup[] {
     else if (ls === 'upcoming' && group.status !== 'live') group.status = 'upcoming';
   }
 
-  return [...map.values()].sort((a, b) => parseUTC(a.auctionDate) - parseUTC(b.auctionDate));
+  const groups = [...map.values()];
+  for (const group of groups) {
+    group.urgentLot = group.lots
+      .filter(l => { const h = hoursUntil(l.auction_date); return h !== null && h >= 0; })
+      .sort((a, b) => parseUTC(a.auction_date ?? '') - parseUTC(b.auction_date ?? ''))[0] ?? null;
+  }
+  return groups.sort((a, b) => parseUTC(a.auctionDate) - parseUTC(b.auctionDate));
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -730,7 +743,8 @@ function SaleGroup({ status, label, sales, onClickSale, style }: {
 // ── SaleCard — mini-card incarnating a sale with its best lot ─────────────────
 
 function SaleCard({ sale, status, onClick }: { sale: SaleGroup; status: LotStatus; onClick: () => void }) {
-  const timing = sale.bestLot ? lotTimingLabel(sale.bestLot) : null;
+  const timingLot = sale.urgentLot ?? sale.bestLot;
+  const timing = timingLot ? lotTimingLabel(timingLot) : null;
   const scoreLot = sale.maxScore > 0 ? scoreLabel(sale.maxScore) : null;
 
   const bgCfg = {
