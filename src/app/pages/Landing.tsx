@@ -250,7 +250,8 @@ export default function Landing() {
         <div className="landing-sticky-cta" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100, background: 'var(--navy)', borderTop: '1px solid rgba(255,255,255,0.1)', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', boxShadow: '0 -4px 20px rgba(10,22,40,0.2)' }}>
           <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-sans)' }}>
             {isFr ? (
-              <><span style={{ color: 'var(--gold)', fontWeight: 700 }}>{closingSoonCount > 0 ? closingSoonCount : '—'} opportunités à fort potentiel</span> clôturent dans 48h</>
+              <><span style={{ color: 'var(--gold)', fontWeight: 700 }}>{closingSoonCount > 0 ? closingSoonCount : '—'} {closingSoonCount === 1 ? 'lot' : 'lots'} à fort potentiel</span> passent en vente aujourd&apos;hui — ne manquez pas ces opportunités</>
+
             ) : (
               <><span style={{ color: 'var(--gold)', fontWeight: 700 }}>{t('landing.stickyExceptional')}</span> {t('landing.stickyClosing')} {t('landing.stickyCta')}</>
             )}
