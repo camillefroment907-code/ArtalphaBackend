@@ -186,6 +186,8 @@ function mapLot(lot: any) {
     real_cost: lot.real_cost || null,
     supplyCount: lot.supply_count ?? null,
     isLowSupply: lot.is_low_supply ?? false,
+    status: lot.status || '',
+    hammerPrice: lot.hammer_price || null,
   };
 }
 
@@ -665,7 +667,7 @@ export default function Opportunities() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid4");
   const [dateFilter, setDateFilter] = useState("all");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
-  const [tab, setTab] = useState<"alpha" | "live">("alpha");
+  const [tab, setTab] = useState<"alpha" | "live" | "ended">("alpha");
   const [sourceStats, setSourceStats] = useState<SourceStat[]>([]);
   const [lowSupply, setLowSupply] = useState(false);
 
@@ -700,6 +702,17 @@ export default function Opportunities() {
 
   // ── Build fetch params ───────────────────────────────────
   const buildFetchParams = useCallback((page = 1): Record<string, any> => {
+    if (tab === "ended") {
+      const now = new Date();
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      return {
+        page, page_size: 48,
+        sort_by: "auction_date", sort_dir: "desc",
+        auction_date_from: sevenDaysAgo.toISOString().split("T")[0],
+        auction_date_to: now.toISOString().split("T")[0],
+      };
+    }
     if (tab === "live") {
       const sort = LIVE_SORT_MAP[filters.sortBy || "created_at_desc"] || { by: "created_at", dir: "desc" };
       const dateFrom = filters.auctionDateFrom || getDateParams(dateFilter).auction_date_from;
@@ -773,10 +786,17 @@ export default function Opportunities() {
         fetchPromise = loadLots(buildFetchParamsRef.current(1));
       }
 
+      const _tab = tab;
       fetchPromise
         .then(data => {
           if (id !== fetchIdRef.current) return;
-          setLots(data.items.map(mapLot));
+          const now = new Date();
+          const raw = data.items.map(mapLot);
+          // For alpha/live tabs: exclude past lots (they go in the "ended" tab)
+          const filtered = _tab === "ended"
+            ? raw
+            : raw.filter(l => !l.auctionDate || new Date(l.auctionDate) >= now);
+          setLots(filtered);
           setTotal(data.total);
           setTotalPages(data.pages);
         })
@@ -857,6 +877,8 @@ export default function Opportunities() {
   useEffect(() => {
     document.title = tab === "alpha"
       ? "Best Lots · Nautilus"
+      : tab === "ended"
+      ? "Ventes terminées · Nautilus"
       : "All Auctions · Nautilus";
   }, [tab]);
 
@@ -1009,7 +1031,7 @@ export default function Opportunities() {
           </div>
 
           {/* Date chips */}
-          <div style={{ display: "flex", gap: "5px", flexShrink: 0 }}>
+          {tab !== "ended" && <div style={{ display: "flex", gap: "5px", flexShrink: 0 }}>
             {DATE_CHIPS.map(({ v, l }) => (
               <button
                 key={v}
@@ -1025,10 +1047,10 @@ export default function Opportunities() {
                 }}
               >{l}</button>
             ))}
-          </div>
+          </div>}
 
           {/* Low Supply filter chip */}
-          <button
+          {tab !== "ended" && <button
             onClick={() => setLowSupply(v => !v)}
             style={{
               display: "flex", alignItems: "center", gap: "5px",
@@ -1043,7 +1065,7 @@ export default function Opportunities() {
           >
             <span style={{ fontSize: "9px" }}>◆</span>
             Low Supply
-          </button>
+          </button>}
 
           {/* View mode switcher */}
           <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: "6px", overflow: "hidden", flexShrink: 0 }}>
@@ -1071,8 +1093,9 @@ export default function Opportunities() {
           background: "white", flexShrink: 0, paddingLeft: "20px",
         }}>
           {([
-            { id: "alpha" as const, label: "Best Lots",    desc: "AI-detected undervalued artworks", icon: "◆" },
-            { id: "live"  as const, label: "All Auctions", desc: "All upcoming lots worldwide",      icon: "◉" },
+            { id: "alpha"  as const, label: "Best Lots",         desc: "AI-detected undervalued artworks", icon: "◆" },
+            { id: "live"   as const, label: "All Auctions",       desc: "All upcoming lots worldwide",      icon: "◉" },
+            { id: "ended"  as const, label: "Ventes terminées",   desc: "Résultats des 7 derniers jours",   icon: "◷" },
           ] as const).map(({ id, label, desc, icon }) => (
             <button
               key={id}
@@ -1110,7 +1133,7 @@ export default function Opportunities() {
         <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "20px 24px 60px" }}>
 
           {/* Alpha stats bar */}
-          {tab === "alpha" && !loading && alphaLots.length > 0 && (
+          {tab === "alpha" && !loading && alphaLots.length > 0 && tab !== "ended" && (
             <div style={{
               display: "flex", gap: "24px", padding: "12px 0 16px",
               marginBottom: "8px", borderBottom: "1px solid var(--border-light)",
@@ -1135,7 +1158,7 @@ export default function Opportunities() {
           )}
 
           {/* Live stats bar */}
-          {tab === "live" && !loading && (
+          {tab === "live" && !loading && tab !== "ended" && (
             <div style={{
               display: "flex", gap: "32px", padding: "14px 0", marginBottom: "16px",
               borderBottom: "1px solid var(--border)",
@@ -1180,7 +1203,7 @@ export default function Opportunities() {
 
 
           {/* ── LIST VIEW ────────────────────────────────── */}
-          {!loading && !hasError && lots.length > 0 && viewMode === "list" && (
+          {!loading && !hasError && lots.length > 0 && viewMode === "list" && tab !== "ended" && (
             <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: "10px", overflow: "hidden" }}>
               {tab === "live" ? (
                 <>
@@ -1288,7 +1311,7 @@ export default function Opportunities() {
           )}
 
           {/* ── GRID VIEWS ──────────────────────────────── */}
-          {!loading && !hasError && lots.length > 0 && viewMode !== "list" && (
+          {!loading && !hasError && lots.length > 0 && viewMode !== "list" && tab !== "ended" && (
             <>
               <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap, width: "100%" }}>
                 {visibleLots.map((lot, i) => (
@@ -1370,6 +1393,54 @@ export default function Opportunities() {
                   </button>
                 </div>
               )}
+            </>
+          )}
+
+          {/* ── ENDED TAB ───────────────────────────────── */}
+          {tab === "ended" && !loading && !hasError && lots.length === 0 && (
+            <div style={{ textAlign: "center", padding: "80px 20px" }}>
+              <div style={{ fontFamily: "var(--font-serif)", fontSize: "36px", color: "var(--border)", marginBottom: "16px" }}>◇</div>
+              <div style={{ fontSize: "15px", color: "var(--text-2)" }}>Aucune vente terminée sur les 7 derniers jours</div>
+            </div>
+          )}
+          {tab === "ended" && !loading && !hasError && lots.length > 0 && (
+            <>
+              {/* Ended stats bar */}
+              <div style={{
+                display: "flex", gap: "24px", padding: "12px 0 16px",
+                marginBottom: "8px", borderBottom: "1px solid var(--border-light)",
+                flexWrap: "wrap", alignItems: "center",
+              }}>
+                <div>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "20px", fontWeight: 700, color: "var(--text-2)" }}>{lots.length}</div>
+                  <div className="label-caps" style={{ marginTop: "2px" }}>Ventes clôturées</div>
+                </div>
+                <div>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "20px", fontWeight: 700, color: "var(--text-2)" }}>7j</div>
+                  <div className="label-caps" style={{ marginTop: "2px" }}>Fenêtre</div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap, width: "100%" }}>
+                {visibleLots.map((lot, i) => (
+                  <div key={lot.id} className="fade-up" style={{ animationDelay: `${Math.min(i * 0.04, 0.4)}s`, minWidth: 0, position: "relative" }}>
+                    <LiveCard lot={lot} onClick={() => navigate(`/app/opportunities/${lot.id}`)} />
+                    {/* Sold overlay badge */}
+                    <div style={{
+                      position: "absolute", top: "8px", left: "50%", transform: "translateX(-50%)",
+                      padding: "3px 10px",
+                      background: "rgba(107,114,128,0.85)", backdropFilter: "blur(4px)",
+                      borderRadius: "20px",
+                      fontSize: "10px", fontWeight: 700, color: "white", letterSpacing: "0.08em",
+                      pointerEvents: "none",
+                    }}>
+                      {lot.hammerPrice
+                        ? `RÉALISÉ · ${new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(lot.hammerPrice)}`
+                        : "TERMINÉ"}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </>
           )}
         </div>
