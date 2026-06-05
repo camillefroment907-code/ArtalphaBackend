@@ -715,7 +715,8 @@ export default function Opportunities() {
     }
     if (tab === "live") {
       const sort = LIVE_SORT_MAP[filters.sortBy || "created_at_desc"] || { by: "created_at", dir: "desc" };
-      const dateFrom = filters.auctionDateFrom || getDateParams(dateFilter).auction_date_from;
+      const _today = new Date().toISOString().split("T")[0];
+      const dateFrom = filters.auctionDateFrom || getDateParams(dateFilter).auction_date_from || _today;
       const dateTo   = filters.auctionDateTo   || getDateParams(dateFilter).auction_date_to;
       const sourcesStr = filters.sources?.length ? filters.sources.join(",") : undefined;
       return {
@@ -737,9 +738,15 @@ export default function Opportunities() {
       const scoreMin = filters.scoreRange?.[0] > 0 ? filters.scoreRange[0] * 20 : undefined;
       const sourceKey = filters.platforms?.length === 1 ? filters.platforms[0] : null;
       const source = sourceKey ? (PLATFORM_API[sourceKey] || sourceKey.toLowerCase()) : undefined;
+      const today = new Date().toISOString().split("T")[0];
       const timingDates = filters.auctionTiming && filters.auctionTiming !== "all"
         ? getDateParams(filters.auctionTiming === "24h" ? "today" : filters.auctionTiming === "week" ? "week" : "month")
         : getDateParams(dateFilter);
+      // Default: exclude past lots — only send upcoming/active lots
+      const effectiveDates = {
+        auction_date_from: today,
+        ...timingDates,
+      };
       return {
         page, page_size: 48,
         sort_by: sort.by, sort_dir: sort.dir,
@@ -751,7 +758,7 @@ export default function Opportunities() {
         category:    filters.categories?.length === 1 ? filters.categories[0] : undefined,
         artist_tier: filters.artistRating !== "all" ? filters.artistRating : undefined,
         low_supply: lowSupply || undefined,
-        ...timingDates,
+        ...effectiveDates,
       };
     }
   }, [filters, dateFilter, tab, lowSupply]);
@@ -792,10 +799,15 @@ export default function Opportunities() {
           if (id !== fetchIdRef.current) return;
           const now = new Date();
           const raw = data.items.map(mapLot);
+          const ENDED_STATUSES = new Set(['sold','passed','ended','closed','unsold','withdrawn','adjugé','vendu']);
           // For alpha/live tabs: exclude past lots (they go in the "ended" tab)
           const filtered = _tab === "ended"
             ? raw
-            : raw.filter(l => !l.auctionDate || new Date(l.auctionDate) >= now);
+            : raw.filter(l => {
+                if (ENDED_STATUSES.has((l.status || '').toLowerCase())) return false;
+                if (l.auctionDate && new Date(l.auctionDate) < now) return false;
+                return true;
+              });
           setLots(filtered);
           setTotal(data.total);
           setTotalPages(data.pages);
