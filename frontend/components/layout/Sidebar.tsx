@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   Zap, Flame, Star, TrendingUp, Clock, Heart,
-  BarChart3, Briefcase, User, LogOut, Shield, Activity, Crown,
+  BarChart3, Briefcase, User, LogOut, Shield, Activity, Crown, Radio,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
@@ -14,7 +14,8 @@ const NAV_SECTIONS = [
   {
     label: "Market",
     items: [
-      { href: "/dashboard",         icon: Zap,       label: "Live Feed",        },
+      { href: "/urgent",            icon: Radio,      label: "En direct",        },
+      { href: "/dashboard",         icon: Zap,        label: "Live Feed",        },
       { href: "/hot-deals",         icon: Flame,      label: "Hot Deals",        },
       { href: "/artists/blue-chip", icon: Star,       label: "Blue Chip",        },
       { href: "/artists/emerging",  icon: TrendingUp, label: "Emerging",         },
