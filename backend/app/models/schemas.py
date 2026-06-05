@@ -187,6 +187,7 @@ class LotOut(BaseModel):
     is_deal: bool
     url: Optional[str]
     image_url: Optional[str]
+    hammer_price: Optional[float] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     # Computed fields extracted from score_breakdown or derived

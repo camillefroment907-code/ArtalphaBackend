@@ -388,10 +388,10 @@ async def list_lots(
     resolved_from = auction_date_from or auction_from
     resolved_to   = auction_date_to   or auction_to
 
+    _7d_ago = datetime.utcnow() - timedelta(days=7)
     filters = [
-        # Only show upcoming/live lots in main feed — past lots go to /missed.
+        # Upcoming/live lots + recently sold lots (visible for 7 days after auction).
         # NULL auction_date is only allowed for primary/gallery lots (no auction date by nature).
-        # Auction lots must have a future date. Sold lots (hammer_price set) are excluded.
         or_(
             and_(
                 Lot.auction_date.is_(None),
@@ -401,9 +401,17 @@ async def list_lots(
                 ),
             ),
             Lot.auction_date >= datetime.utcnow(),
-            Lot.status.cast(String) == 'live',  # live lots visible even if auction_date passed
+            Lot.status.cast(String) == 'live',        # live lots visible even if auction_date passed
+            and_(                                      # recently ended: keep for 7 days
+                Lot.auction_date >= _7d_ago,
+                Lot.auction_date < datetime.utcnow(),
+            ),
         ),
-        Lot.hammer_price.is_(None),
+        # Allow hammer_price for lots within the 7-day window
+        or_(
+            Lot.hammer_price.is_(None),
+            Lot.auction_date >= _7d_ago,
+        ),
     ]
     # Free-tier delay: only show lots ingested >5 min ago (prevents API racing)
     if plan == "free":
