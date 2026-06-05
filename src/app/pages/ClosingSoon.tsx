@@ -158,20 +158,19 @@ function saleTimeLabel(h: number, status: SaleEvent['status']): string {
 
 interface StatusChip { label: string; color: string; pulse: 'green' | 'orange' | null }
 
-function lotStatusChip(status: string | null, auction_date: string | null): StatusChip | null {
+function lotStatusChip(status: string | null, auction_date: string | null): StatusChip {
   if (status === 'sold')      return { label: 'Adjugé',         color: 'var(--text-3)', pulse: null };
   if (status === 'unsold')    return { label: 'Terminé',        color: 'var(--text-3)', pulse: null };
   if (status === 'withdrawn') return { label: 'Retiré',         color: 'var(--text-3)', pulse: null };
   const h = hoursUntil(auction_date);
   if (status === 'live' || (h !== null && h <= 0)) return { label: 'Vente en cours', color: '#22c55e', pulse: 'green' };
-  if (h === null) return null;
+  if (h === null) return { label: 'Date à confirmer',            color: 'var(--text-3)', pulse: null };
   if (h < 1 / 20) return { label: `Dans ${Math.round(h * 3600)}s`, color: '#ef4444', pulse: 'orange' };
   if (h < 1)      return { label: `Dans ${Math.round(h * 60)} min`, color: '#f97316', pulse: 'orange' };
   if (h < 6)      return { label: `Dans ${Math.round(h)}h`,          color: '#f97316', pulse: null };
   if (h < 24)     return { label: "Aujourd'hui",                     color: 'var(--gold)', pulse: null };
   const d = Math.ceil(h / 24);
-  if (d <= 7)     return { label: `Dans ${d}j`,                      color: 'var(--text-3)', pulse: null };
-  return null;
+  return            { label: `Dans ${d}j`,                           color: 'var(--text-3)', pulse: null };
 }
 
 // ── Badge logic ───────────────────────────────────────────────────────────────
@@ -535,14 +534,12 @@ function ConvictionCard({ pick, onClick }: { pick: TopPick; onClick: () => void 
 
       {/* Content */}
       <div style={{ padding: '14px 16px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {chip && (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginBottom: 10 }}>
-            {chip.pulse && (
-              <div style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: chip.color, animation: chip.pulse === 'green' ? 'ed-s-green 2s ease-in-out infinite' : 'ed-s-orange 1.8s ease-in-out infinite' }} />
-            )}
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, color: chip.color, letterSpacing: '0.06em' }}>{chip.label}</span>
-          </div>
-        )}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginBottom: 10 }}>
+          {chip.pulse && (
+            <div style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: chip.color, animation: chip.pulse === 'green' ? 'ed-s-green 2s ease-in-out infinite' : 'ed-s-orange 1.8s ease-in-out infinite' }} />
+          )}
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, color: chip.color, letterSpacing: '0.06em' }}>{chip.label}</span>
+        </div>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, color: pb.color, letterSpacing: '0.04em', marginBottom: sb ? 2 : 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {pb.label}
         </div>
