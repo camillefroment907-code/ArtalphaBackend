@@ -1036,6 +1036,18 @@ export default function OpportunityDetail() {
                         –{Math.round(upsidePct)}% {isFr ? 'sous estimation basse' : 'below low estimate'}
                       </div>
                     )}
+                    {(() => {
+                      if (bState === 'sold' || bState === 'passed') return null;
+                      const priceAgeHours = lot.updated_at
+                        ? Math.round((Date.now() - new Date(lot.updated_at).getTime()) / 3_600_000)
+                        : null;
+                      if (priceAgeHours === null || priceAgeHours <= 3) return null;
+                      return (
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#9CA3AF', marginTop: '4px' }}>
+                          Mis à jour il y a {priceAgeHours}h · peut différer du prix live
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div>
                     {/* Label + dynamic tooltip */}

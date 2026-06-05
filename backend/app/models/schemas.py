@@ -188,6 +188,7 @@ class LotOut(BaseModel):
     url: Optional[str]
     image_url: Optional[str]
     created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     # Computed fields extracted from score_breakdown or derived
     rationale: List[str] = []
     ai_insight: Optional[str] = None
