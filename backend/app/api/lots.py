@@ -93,6 +93,7 @@ def lot_to_list_dict(lot) -> dict:
         "auction_date": lot.auction_date.isoformat() if lot.auction_date else None,
         "category": lot.category,
         "source": lot.source.value if lot.source else None,
+        "status": lot.status.value if lot.status else None,
         "currency": lot.currency,
         "medium": lot.medium,
         "real_cost": real_cost,
@@ -400,6 +401,7 @@ async def list_lots(
                 ),
             ),
             Lot.auction_date >= datetime.utcnow(),
+            Lot.status.cast(String) == 'live',  # live lots visible even if auction_date passed
         ),
         Lot.hammer_price.is_(None),
     ]

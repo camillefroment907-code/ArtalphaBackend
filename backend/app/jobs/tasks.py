@@ -840,13 +840,33 @@ async def _rescore_live_async():
             except Exception as e:
                 logger.warning("Re-score failed for lot", lot_id=str(lot.id), error=str(e))
 
-        # ── Mark expired upcoming lots as SOLD (hourly, same as daily_cleanup) ──
+        # ── Status transitions (hourly) ───────────────────────────────────────
         from sqlalchemy import and_ as _and_
+        now = datetime.utcnow()
+        window_start = now - timedelta(hours=4)
+
+        # upcoming + auction_date in the last 4h → LIVE (sale just started)
+        live_result = await session.execute(
+            select(Lot).where(
+                _and_(
+                    Lot.auction_date < now,
+                    Lot.auction_date >= window_start,
+                    Lot.status.cast(String) == 'upcoming',
+                )
+            )
+        )
+        live_lots = live_result.scalars().all()
+        for lot in live_lots:
+            lot.status = LotStatus.LIVE
+        if live_lots:
+            logger.info("Marked lots as LIVE", count=len(live_lots))
+
+        # upcoming or live + auction_date older than 4h → SOLD (sale ended)
         expired_result = await session.execute(
             select(Lot).where(
                 _and_(
-                    Lot.auction_date < datetime.utcnow(),
-                    Lot.status.cast(String) == 'upcoming',
+                    Lot.auction_date < window_start,
+                    Lot.status.cast(String).in_(['upcoming', 'live']),
                 )
             )
         )
