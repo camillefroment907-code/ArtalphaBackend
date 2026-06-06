@@ -94,8 +94,6 @@ function deriveLotStatus(lot: { status: string | null; auction_date: string | nu
   // Fallback sur auction_date
   if (h !== null && h < 0) return 'ended';
   if (h === null) return 'upcoming';
-  // Timed auctions : clôture dans ≤ 1h = EN COURS (accepte encore des enchères)
-  if (h <= 1) return 'live';
   return 'upcoming';
 }
 
@@ -484,12 +482,9 @@ export default function EnDirect() {
   const rest     = allPicks.slice(3);
 
   // Section 2 — sales grouped
-  // Borne gauche = minuit aujourd'hui (pas -24h) pour ne pas afficher les ventes de la nuit passée
-  const midnightToday = new Date(); midnightToday.setHours(0, 0, 0, 0);
-  const hoursSinceMidnight = (Date.now() - midnightToday.getTime()) / 3_600_000;
   const dayLots = allDayLots.filter(l => {
     const h = hoursUntil(l.auction_date);
-    return h !== null && h >= -hoursSinceMidnight && h <= 24;
+    return h !== null && h >= -24 && h <= 24;
   });
 
   const sales       = groupIntoSales(dayLots);
