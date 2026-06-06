@@ -94,8 +94,6 @@ function deriveLotStatus(lot: { status: string | null; auction_date: string | nu
   }
   // Fallback sur auction_date
   if (h === null) return 'upcoming';
-  // Timed auctions (eBay etc.) : clôture dans ≤6h = en cours
-  if (h <= 6) return 'live';
   return 'upcoming';
 }
 
@@ -294,37 +292,37 @@ function primaryBadge(pick: TopPick): Badge {
 interface BriefingData {
   verdict: string;
   tone: 'urgent' | 'active' | 'calm';
-  stats: { value: string; label: string; highlight: boolean; urgent?: boolean; onClick?: () => void }[];
+  stats: { value: string; label: string; highlight: boolean; urgent?: boolean; onClick?: () => void; cta?: boolean }[];
 }
 
 function buildBriefing(brief: MarketBrief, allDayLots: LotCard[], navigate: (p: string) => void): BriefingData {
-  // Compte tous les lots (profil + marché) qui clôturent dans 6h
-  const urgent = allDayLots.filter(l => {
-    const h = hoursUntil(l.auction_date);
-    return h !== null && h > 0 && h <= 6;
-  });
   const highConviction = brief.top_picks.filter(p => (p.lot.deal_score ?? p.score ?? 0) >= 77);
   const sinceH = Math.round((Date.now() - parseUTC(brief.since)) / 3_600_000);
-  // Compte les ventes distinctes ouvertes (house + heure) — fonctionne pour timed auctions eBay etc.
-  const activeSaleKeys = new Set(
+
+  // Ventes en cours (backend status officiel)
+  const liveSaleKeys = new Set(
     allDayLots
-      .filter(l => { const h = hoursUntil(l.auction_date); return h !== null && h >= 0 && l.auction_house_name && l.auction_date; })
+      .filter(l => deriveLotStatus(l) === 'live' && l.auction_house_name && l.auction_date)
       .map(l => `${l.auction_house_name}::${l.auction_date!.slice(0, 13)}`)
   );
-  const liveNow = activeSaleKeys.size;
+  const liveNow = liveSaleKeys.size;
+
+  // Ventes à venir (h > 0, pas encore live)
+  const upcomingSaleKeys = new Set(
+    allDayLots
+      .filter(l => {
+        const h = hoursUntil(l.auction_date);
+        return h !== null && h > 0 && deriveLotStatus(l) === 'upcoming' && l.auction_house_name && l.auction_date;
+      })
+      .map(l => `${l.auction_house_name}::${l.auction_date!.slice(0, 13)}`)
+  );
+  const upcomingNow = upcomingSaleKeys.size;
 
   let verdict: string;
   let tone: BriefingData['tone'];
 
-  if (liveNow > 0 && urgent.length > 0) {
-    verdict = `${liveNow} vente${liveNow > 1 ? 's' : ''} en cours. ${urgent.length} opportunité${urgent.length > 1 ? 's' : ''} haute conviction clôture${urgent.length > 1 ? 'nt' : ''} dans les 6 prochaines heures.`;
-    tone = 'urgent';
-  } else if (urgent.length >= 2) {
-    verdict = `${urgent.length} opportunités haute conviction clôturent dans les 6 prochaines heures. Action requise.`;
-    tone = 'urgent';
-  } else if (urgent.length === 1) {
-    const h = Math.floor(hoursUntil(urgent[0].auction_date) ?? 0);
-    verdict = `${urgent[0].artist_name_raw ?? 'Un lot haute conviction'} clôture dans ${h}h. C'est le signal du moment.`;
+  if (liveNow > 0) {
+    verdict = `${liveNow} vente${liveNow > 1 ? 's' : ''} en cours.${upcomingNow > 0 ? ` ${upcomingNow} vente${upcomingNow > 1 ? 's' : ''} à venir aujourd'hui.` : ''}`;
     tone = 'urgent';
   } else if (brief.agent_unread > 0) {
     verdict = `${brief.agent_unread} alerte${brief.agent_unread > 1 ? 's' : ''} de votre stratégie d'investissement attendent votre lecture.`;
@@ -332,11 +330,11 @@ function buildBriefing(brief: MarketBrief, allDayLots: LotCard[], navigate: (p: 
   } else if (highConviction.length >= 4) {
     verdict = `Le marché est actif aujourd'hui. Larry a identifié ${highConviction.length} opportunités correspondant à votre profil.`;
     tone = 'active';
+  } else if (upcomingNow > 0) {
+    verdict = `${upcomingNow} vente${upcomingNow > 1 ? 's prévues' : ' prévue'} aujourd'hui.${highConviction.length > 0 ? ` ${highConviction.length} lot${highConviction.length > 1 ? 's correspondent' : ' correspond'} à votre profil.` : ''}`;
+    tone = 'calm';
   } else if (brief.new_lots_count > 100 && sinceH <= 24) {
     verdict = `${brief.new_lots_count.toLocaleString('fr-FR')} nouveaux lots analysés depuis votre dernière visite.${highConviction.length > 0 ? ` ${highConviction.length} correspondent à votre profil.` : ''}`;
-    tone = 'calm';
-  } else if (getTimeOfDay() === 'morning' && brief.closing_today_count > 0) {
-    verdict = `${brief.closing_today_count} vente${brief.closing_today_count > 1 ? 's clôturent' : ' clôture'} aujourd'hui. Bonne session.`;
     tone = 'calm';
   } else if (brief.top_picks.length === 0) {
     verdict = 'Aucune opportunité ne correspond encore à votre profil. Configurez vos préférences pour activer Larry.';
@@ -350,14 +348,9 @@ function buildBriefing(brief: MarketBrief, allDayLots: LotCard[], navigate: (p: 
     verdict, tone,
     stats: [
       { value: String(brief.top_picks.length), label: 'pour votre profil', highlight: brief.top_picks.length > 0, onClick: () => navigate('/app/live') },
-      { value: String(urgent.length), label: 'action < 6h', highlight: urgent.length > 0, urgent: urgent.length > 0 },
+      { value: String(upcomingNow), label: 'ventes à venir', highlight: upcomingNow > 0 },
       { value: String(liveNow), label: 'ventes en cours', highlight: liveNow > 0 },
-      {
-        value: brief.agent_unread > 0 ? String(brief.agent_unread) : String(brief.closing_today_count),
-        label: brief.agent_unread > 0 ? 'alertes stratégie' : 'clôtures aujourd\'hui',
-        highlight: brief.agent_unread > 0 || brief.closing_today_count > 0,
-        onClick: brief.agent_unread > 0 ? () => navigate('/app/agent') : undefined,
-      },
+      { value: '', label: 'Configurer ma stratégie', highlight: false, cta: true, onClick: () => navigate('/app/profile/preferences') },
     ],
   };
 }
@@ -879,16 +872,24 @@ function LarryBriefing({ briefing }: { briefing: BriefingData }) {
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '1px', background: 'var(--border)', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
         {stats.map((s, i) => (
-          <div key={i} onClick={s.onClick} style={{ background: s.urgent ? 'rgba(220,38,38,.05)' : 'var(--bg-card)', padding: '13px 16px', cursor: s.onClick ? 'pointer' : 'default', transition: 'background .1s' }}
+          <div key={i} onClick={s.onClick} style={{ background: s.urgent ? 'rgba(220,38,38,.05)' : 'var(--bg-card)', padding: '13px 16px', cursor: s.onClick ? 'pointer' : 'default', transition: 'background .1s', display: 'flex', flexDirection: 'column', justifyContent: s.cta ? 'center' : 'flex-start' }}
             onMouseEnter={e => { if (s.onClick) (e.currentTarget as HTMLElement).style.background = 'var(--bg-subtle)'; }}
             onMouseLeave={e => { if (s.onClick) (e.currentTarget as HTMLElement).style.background = s.urgent ? 'rgba(220,38,38,.05)' : 'var(--bg-card)'; }}
           >
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '21px', fontWeight: 700, color: s.urgent ? '#dc2626' : s.highlight ? 'var(--navy)' : 'var(--text-3)', lineHeight: 1, marginBottom: '4px', letterSpacing: '-.02em' }}>
-              <AnimatedNumber value={s.value} />
-            </div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: s.urgent ? '#dc2626' : 'var(--text-3)', letterSpacing: '.02em' }}>
-              {s.label}{s.onClick && <span style={{ marginLeft: '3px', opacity: .5 }}>→</span>}
-            </div>
+            {s.cta ? (
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 600, color: 'var(--navy)', letterSpacing: '.04em' }}>
+                ◈ {s.label} →
+              </div>
+            ) : (
+              <>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '21px', fontWeight: 700, color: s.urgent ? '#dc2626' : s.highlight ? 'var(--navy)' : 'var(--text-3)', lineHeight: 1, marginBottom: '4px', letterSpacing: '-.02em' }}>
+                  <AnimatedNumber value={s.value} />
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: s.urgent ? '#dc2626' : 'var(--text-3)', letterSpacing: '.02em' }}>
+                  {s.label}{s.onClick && !s.cta && <span style={{ marginLeft: '3px', opacity: .5 }}>→</span>}
+                </div>
+              </>
+            )}
           </div>
         ))}
       </div>
