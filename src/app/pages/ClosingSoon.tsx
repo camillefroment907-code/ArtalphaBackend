@@ -84,15 +84,15 @@ type LotStatus = 'live' | 'upcoming' | 'ended';
 
 function deriveLotStatus(lot: { status: string | null; auction_date: string | null }): LotStatus {
   const h = hoursUntil(lot.auction_date);
-  // Date passée → toujours terminé, quoi que dise le backend
-  if (h !== null && h < 0) return 'ended';
-  // Status terminal backend
+  // Status backend en priorité — pour les live auctions, auction_date = heure de début
+  // donc h < 0 ne signifie pas "terminé" si le backend dit encore "live"
   if (lot.status) {
     const s = lot.status.toLowerCase();
     if (s === 'sold' || s === 'passed' || s === 'ended' || s === 'closed') return 'ended';
     if (s === 'live' || s === 'open' || s === 'active') return 'live';
   }
   // Fallback sur auction_date
+  if (h !== null && h < 0) return 'ended';
   if (h === null) return 'upcoming';
   return 'upcoming';
 }
