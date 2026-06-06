@@ -94,6 +94,8 @@ function deriveLotStatus(lot: { status: string | null; auction_date: string | nu
   }
   // Fallback sur auction_date
   if (h === null) return 'upcoming';
+  // Timed auctions (eBay etc.) : clôture dans ≤6h = en cours
+  if (h <= 6) return 'live';
   return 'upcoming';
 }
 
