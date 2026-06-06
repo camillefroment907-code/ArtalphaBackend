@@ -175,6 +175,7 @@ query FetchLots($cursor: String) {
         sale {
           name
           endAt
+          liveStartAt
           isAuction
         }
         partner { name }
@@ -263,12 +264,18 @@ async def fetch_lots(limit: int = 5000) -> List[LotNormalized]:
                         currency = (sale_artwork.get("currency") or "USD").upper()
 
                         sale = node.get("sale") or {}
+                        end_at = sale.get("endAt")
+                        live_start_at = sale.get("liveStartAt")
+
+                        # Pour les live auctions, liveStartAt est plus précis
+                        raw_date = live_start_at or end_at
+
                         auction_date = None
-                        if sale.get("endAt"):
+                        if raw_date:
                             try:
-                                auction_date = datetime.fromisoformat(str(sale["endAt"])[:19])
+                                auction_date = datetime.fromisoformat(str(raw_date)[:19])
                             except Exception:
-                                pass
+                                auction_date = None
 
                         image = node.get("image") or {}
                         image_url = image.get("url")
