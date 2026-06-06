@@ -380,6 +380,21 @@ async def list_lots(
     count_key  = f"lots_count:{_filter_sig}"
     cached = get_cached(cache_key, ttl=120)
     if cached:
+        # Refresh deal_score for all items in bulk — single cheap query, prevents stale score vs detail page
+        try:
+            _ids = [item["id"] for item in cached.get("items", []) if item.get("id")]
+            if _ids:
+                _rows = await db.execute(select(Lot.id, Lot.deal_score).where(Lot.id.in_(_ids)))
+                _score_map = {str(r.id): r.deal_score for r in _rows.fetchall()}
+                cached = {
+                    **cached,
+                    "items": [
+                        {**item, "deal_score": _score_map.get(str(item["id"]), item.get("deal_score"))}
+                        for item in cached["items"]
+                    ],
+                }
+        except Exception:
+            pass
         response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=120"
         response.headers["Vary"] = "Accept-Encoding"
         return cached
