@@ -296,13 +296,20 @@ interface BriefingData {
 }
 
 function buildBriefing(brief: MarketBrief, allDayLots: LotCard[], navigate: (p: string) => void): BriefingData {
-  const urgent = brief.closing_soon.filter(l => {
+  // Compte tous les lots (profil + marché) qui clôturent dans 6h
+  const urgent = allDayLots.filter(l => {
     const h = hoursUntil(l.auction_date);
     return h !== null && h > 0 && h <= 6;
   });
   const highConviction = brief.top_picks.filter(p => (p.lot.deal_score ?? p.score ?? 0) >= 77);
   const sinceH = Math.round((Date.now() - parseUTC(brief.since)) / 3_600_000);
-  const liveNow = allDayLots.filter(l => deriveLotStatus(l) === 'live').length;
+  // Compte les ventes distinctes ouvertes (house + heure) — fonctionne pour timed auctions eBay etc.
+  const activeSaleKeys = new Set(
+    allDayLots
+      .filter(l => { const h = hoursUntil(l.auction_date); return h !== null && h >= 0 && l.auction_house_name && l.auction_date; })
+      .map(l => `${l.auction_house_name}::${l.auction_date!.slice(0, 13)}`)
+  );
+  const liveNow = activeSaleKeys.size;
 
   let verdict: string;
   let tone: BriefingData['tone'];
