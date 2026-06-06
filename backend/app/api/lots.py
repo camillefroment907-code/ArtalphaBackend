@@ -1712,6 +1712,15 @@ async def get_lot(
             await db.commit()
         except Exception:
             pass
+        # Always override deal_score from DB to avoid stale cache discrepancy with list endpoint
+        try:
+            _score_row = await db.execute(select(Lot.deal_score).where(Lot.id == lot_id))
+            _fresh_score = _score_row.scalar_one_or_none()
+            if _fresh_score is not None:
+                _lot_cached = dict(_lot_cached)
+                _lot_cached["deal_score"] = _fresh_score
+        except Exception:
+            pass
         return _lot_cached
 
     # Serialize via schema then inject parsed dimension fields.
@@ -2068,6 +2077,17 @@ async def get_lot_bundle(
     comp_cached = get_cached(f"comparables:{lot_id}", ttl=3600)
     hh_cached   = get_cached(f"hammer_history:{lot_id}", ttl=600)
     up_cached   = get_cached(f"upside_signal:{lot_id}", ttl=300)
+
+    # ── Always refresh deal_score from DB to stay in sync with list endpoint ──
+    if lot_cached:
+        try:
+            _sr = await db.execute(select(Lot.deal_score).where(Lot.id == lot_id))
+            _fs = _sr.scalar_one_or_none()
+            if _fs is not None:
+                lot_cached = dict(lot_cached)
+                lot_cached["deal_score"] = _fs
+        except Exception:
+            pass
 
     # ── Full cache hit — zero DB queries ──────────────────────────────────────
     if lot_cached and comp_cached and hh_cached and up_cached:
