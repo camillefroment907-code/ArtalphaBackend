@@ -298,7 +298,7 @@ interface BriefingData {
 function buildBriefing(brief: MarketBrief, allDayLots: LotCard[], navigate: (p: string) => void): BriefingData {
   const urgent = brief.closing_soon.filter(l => {
     const h = hoursUntil(l.auction_date);
-    return h !== null && h > 0 && h <= 6 && (l.deal_score ?? 0) >= 77;
+    return h !== null && h > 0 && h <= 6;
   });
   const highConviction = brief.top_picks.filter(p => (p.lot.deal_score ?? p.score ?? 0) >= 77);
   const sinceH = Math.round((Date.now() - parseUTC(brief.since)) / 3_600_000);
