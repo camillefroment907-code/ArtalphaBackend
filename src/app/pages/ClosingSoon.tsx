@@ -411,23 +411,38 @@ export default function EnDirect() {
 
   const doFetch = useCallback(() => {
     const token = getToken();
-    fetch(`${BACKEND}/api/recommendations/market-brief`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then((data: MarketBrief | null) => {
-        if (!data) return;
-        setBrief(data);
-        const incoming = [...data.closing_soon, ...data.new_lots];
+    const headers = { Authorization: `Bearer ${token}` };
+    const now = new Date();
+    const in24h = new Date(Date.now() + 24 * 3600 * 1000);
+
+    Promise.all([
+      fetch(`${BACKEND}/api/recommendations/market-brief`, { headers })
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null),
+      fetch(
+        `${BACKEND}/api/lots?auction_date_from=${now.toISOString().split("T")[0]}&auction_date_to=${in24h.toISOString().split("T")[0]}&sort_by=auction_date&sort_dir=asc&page_size=100`,
+        { headers }
+      )
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null),
+    ]).then(([briefData, lotsData]: [MarketBrief | null, { items?: LotCard[] } | null]) => {
+      if (briefData) setBrief(briefData);
+      const allIncoming: LotCard[] = [
+        ...(briefData?.closing_soon ?? []),
+        ...(briefData?.new_lots ?? []),
+        ...(lotsData?.items ?? []),
+      ];
+      if (allIncoming.length > 0) {
         setAllDayLots(prev => {
-          const merged = mergeLots(prev, incoming);
+          const merged = mergeLots(prev, allIncoming);
           persistLots(merged);
           return merged;
         });
-        setLastRefresh(new Date());
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      }
+      setLastRefresh(new Date());
+    })
+    .catch(() => {})
+    .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { doFetch(); }, [doFetch]);
