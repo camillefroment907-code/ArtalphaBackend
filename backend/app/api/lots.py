@@ -2064,7 +2064,7 @@ async def get_lot_bundle(
     plan = await get_user_plan(current_user, db)
 
     # ── Cache lookups ─────────────────────────────────────────────────────────
-    lot_cached  = get_cached(f"lot_detail:{lot_id}:{plan}", ttl=120)
+    lot_cached  = get_cached(f"lot_detail:{lot_id}:{plan}", ttl=60)  # réduit temporairement pour propagation auction_date
     comp_cached = get_cached(f"comparables:{lot_id}", ttl=3600)
     hh_cached   = get_cached(f"hammer_history:{lot_id}", ttl=600)
     up_cached   = get_cached(f"upside_signal:{lot_id}", ttl=300)

@@ -465,11 +465,18 @@ export default function EnDirect() {
   const rest     = allPicks.slice(3);
 
   // Section 2 — sales grouped
-  const sales       = groupIntoSales(allDayLots);
+  const dayLots = allDayLots.filter(l => {
+    const h = hoursUntil(l.auction_date);
+    return h !== null && h >= -24 && h <= 24;
+  });
+
+  const lotsForSales = dayLots.length > 0 ? dayLots : allDayLots;
+  const sales       = groupIntoSales(lotsForSales);
   const salesLive    = sales.filter(s => s.status === 'live');
   const salesUpcoming = sales.filter(s => s.status === 'upcoming');
   const salesEnded   = sales.filter(s => s.status === 'ended');
 
+  const sectionLabel = dayLots.length > 0 ? "📡 Ventes du jour" : "📡 Ventes à venir";
   const briefing = brief ? buildBriefing(brief, allDayLots, navigate) : null;
   const minsAgo  = Math.round((Date.now() - lastRefresh.getTime()) / 60_000);
   const updatedStr = minsAgo < 1 ? "À l'instant" : `Il y a ${minsAgo} min`;
@@ -545,7 +552,7 @@ export default function EnDirect() {
               <section>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--text-2)' }}>
-                    📡 Ventes du jour
+                    {sectionLabel}
                   </span>
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-3)' }}>
                     {sales.length} vente{sales.length > 1 ? 's' : ''} · 24h
