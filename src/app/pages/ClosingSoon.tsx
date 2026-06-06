@@ -470,8 +470,7 @@ export default function EnDirect() {
     return h !== null && h >= -24 && h <= 24;
   });
 
-  const lotsForSales = dayLots.length > 0 ? dayLots : allDayLots;
-  const sales       = groupIntoSales(lotsForSales);
+  const sales       = groupIntoSales(dayLots);
   const salesLive    = sales.filter(s => s.status === 'live');
   const salesUpcoming = sales.filter(s => s.status === 'upcoming');
   const salesEnded   = sales.filter(s => s.status === 'ended');
