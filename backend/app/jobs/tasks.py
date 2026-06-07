@@ -539,9 +539,10 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                     # and on_conflict_do_nothing cases where _lot_uuid wasn't used).
                     if lot_data.auction_date and _lot_status != LotStatus.SOLD:
                         from app.models.db_models import Lot as _Lot
+                        _src_val = lot_obj.source.value if hasattr(lot_obj.source, 'value') else str(lot_obj.source)
                         _id_r = await session.execute(
                             select(_Lot.id).where(
-                                _Lot.source == lot_obj.source,
+                                _Lot.source == cast(literal(_src_val), PGEnum(name='auctionhouse', create_constraint=False)),
                                 _Lot.external_id == lot_obj.external_id,
                             )
                         )
@@ -590,6 +591,7 @@ async def _poll_and_score_inner(lots_per_source: int = 2000, skip_purge: bool = 
                     # Batch commit every 100 lots — avoids single huge transaction
                     if processed % 100 == 0:
                         await session.commit()
+                        artist_cache.clear()  # prevent greenlet_spawn: ORM objects expire after commit
                         logger.info("Batch committed", processed=processed)
                 except Exception as insert_err:
                     logger.error("Insert failed — rolling back lot", title=(lot_data.title or "")[:50], error=str(insert_err))
