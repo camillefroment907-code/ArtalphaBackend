@@ -51,6 +51,8 @@ function buildFetchUrl(
   url.searchParams.set('page_size', '12');
   url.searchParams.set('page', String(pageNum));
   url.searchParams.set('min_score', '50');
+  // Only upcoming lots — past auctions belong in "Résultats 7J"
+  url.searchParams.set('auction_date_from', new Date().toISOString().split('T')[0]);
   if (searchTerm.trim()) url.searchParams.set('search', searchTerm.trim());
   const cats = cat ? [cat] : (profile?.preferred_categories || []);
   if (cats.length === 1) url.searchParams.set('category', cats[0]);
@@ -516,13 +518,20 @@ export default function Dashboard() {
 
   // Client-side budget safety filter — belt-and-suspenders in case API cache serves stale results
   const budgetCap = userProfile?.investment_budget ? BUDGET_MAX[userProfile.investment_budget] ?? 999999 : 999999;
-  const displayLots = budgetCap < 999999
+  const displayLots = (budgetCap < 999999
     ? lots.filter((lot: any) => {
         if (!lot.estimate_low) return true;
         const rate = FX_TO_EUR[lot.currency?.toUpperCase() || 'EUR'] ?? 1;
         return Math.round(lot.estimate_low * rate) <= budgetCap;
       })
-    : lots;
+    : lots
+  ).filter((lot: any) => {
+    // Exclude lots whose auction has already passed (unless still live)
+    if (!lot.auction_date) return true; // gallery/primary lots — no auction date
+    if (new Date(lot.auction_date).getTime() > Date.now()) return true; // upcoming
+    const s = (lot.status || '').toLowerCase();
+    return s === 'live' || s === 'open' || s === 'active'; // currently running
+  });
 
   const SORT_OPTIONS = [
     { key: 'deal_score' as const,   label: 'Meilleures opportunités' },

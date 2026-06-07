@@ -5,7 +5,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, text
+from sqlalchemy import select, and_, or_, text, String
 from typing import Optional
 from datetime import datetime
 from uuid import UUID
@@ -272,35 +272,54 @@ async def get_watchlist(
     db: AsyncSession = Depends(get_db),
 ):
     """Return user's watchlist with lot details."""
+    from datetime import datetime as _dt, timedelta as _td
+    _now = _dt.utcnow()
+    _7d_ago = _now - _td(days=7)
+
     result = await db.execute(
         select(Wishlist, Lot)
         .join(Lot, Wishlist.lot_id == Lot.id)
-        .where(Wishlist.user_id == current_user.id)
+        .where(
+            Wishlist.user_id == current_user.id,
+            # Drop lots whose auction ended more than 7 days ago
+            or_(
+                Lot.auction_date.is_(None),
+                Lot.auction_date >= _7d_ago,
+                Lot.status.cast(String).in_(["live", "upcoming"]),
+            ),
+        )
         .order_by(Wishlist.created_at.desc())
     )
     rows = result.all()
-    return [
-        {
-            "watchlist_id": str(w.id),
-            "lot_id": str(w.lot_id),
-            "note": w.note,
-            "added_at": w.created_at.isoformat() if w.created_at else None,
-            "lot": {
-                "id": str(l.id),
-                "title": l.title,
-                "artist_name": l.artist_name_raw,
-                "image_url": l.image_url,
-                "auction_house": l.auction_house_name,
-                "estimate_low": l.estimate_low,
-                "estimate_high": l.estimate_high,
-                "current_price": l.current_price,
-                "deal_score": l.deal_score,
-                "auction_date": l.auction_date.isoformat() if l.auction_date else None,
-                "status": l.status.value if l.status else None,
-            },
+
+    def _lot_card(l):
+        return {
+            "id": str(l.id),
+            "title": l.title,
+            "artist_name": l.artist_name_raw,
+            "image_url": l.image_url,
+            "auction_house": l.auction_house_name,
+            "estimate_low": l.estimate_low,
+            "estimate_high": l.estimate_high,
+            "current_price": l.current_price,
+            "hammer_price": l.hammer_price,
+            "deal_score": l.deal_score,
+            "auction_date": l.auction_date.isoformat() if l.auction_date else None,
+            "status": l.status.value if l.status else None,
         }
-        for w, l in rows
-    ]
+
+    active, recent = [], []
+    for w, l in rows:
+        entry = {"watchlist_id": str(w.id), "lot_id": str(w.lot_id), "note": w.note,
+                 "added_at": w.created_at.isoformat() if w.created_at else None, "lot": _lot_card(l)}
+        is_past = l.auction_date and l.auction_date < _now
+        is_live = l.status and l.status.value in ("live", "upcoming")
+        if is_past and not is_live:
+            recent.append(entry)
+        else:
+            active.append(entry)
+
+    return {"active": active, "recent": recent}
 
 
 @router.delete("/watchlist/{lot_id}", status_code=204)

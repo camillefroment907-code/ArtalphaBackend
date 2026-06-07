@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, or_, and_, String, func
@@ -157,21 +158,67 @@ async def get_wishlist_ids(
     return [str(row) for row in result.scalars().all()]
 
 
-@router.get("", response_model=List[LotOut])
+@router.get("")
 async def get_wishlist(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Return all lots in the user's wishlist."""
+    """Return wishlist lots split into active (upcoming/live) and recent (ended ≤7 days).
+    Lots whose auction ended more than 7 days ago are silently dropped."""
+    now = datetime.utcnow()
+    _7d_ago = now - timedelta(days=7)
+
     stmt = (
         select(Lot)
         .join(Wishlist, Wishlist.lot_id == Lot.id)
         .options(selectinload(Lot.artist))
-        .where(Wishlist.user_id == current_user.id)
+        .where(
+            Wishlist.user_id == current_user.id,
+            # Drop lots that ended more than 7 days ago
+            or_(
+                Lot.auction_date.is_(None),
+                Lot.auction_date >= _7d_ago,
+                Lot.status.cast(String).in_(["live", "upcoming"]),
+            ),
+        )
         .order_by(Wishlist.created_at.desc())
     )
     result = await db.execute(stmt)
-    return result.scalars().all()
+    lots = result.scalars().all()
+
+    active, recent = [], []
+    for lot in lots:
+        if lot.auction_date is None:
+            active.append(lot)
+        elif lot.auction_date >= now:
+            active.append(lot)
+        elif (lot.status and lot.status.value in ("live", "upcoming")):
+            active.append(lot)
+        else:
+            recent.append(lot)  # ended within 7 days
+
+    def _card(l: Lot) -> dict:
+        return {
+            "id": str(l.id),
+            "title": l.title,
+            "artist_name_raw": l.artist_name_raw,
+            "image_url": l.image_url,
+            "auction_house_name": l.auction_house_name,
+            "estimate_low": l.estimate_low,
+            "estimate_high": l.estimate_high,
+            "current_price": l.current_price,
+            "hammer_price": l.hammer_price,
+            "deal_score": l.deal_score,
+            "auction_date": l.auction_date.isoformat() if l.auction_date else None,
+            "status": l.status.value if l.status else None,
+            "category": l.category,
+            "url": l.url,
+        }
+
+    return {
+        "active": [_card(l) for l in active],
+        "recent": [_card(l) for l in recent],
+    }
 
 
 @router.post("/{lot_id}", status_code=201)

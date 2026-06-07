@@ -326,7 +326,8 @@ export default function Portfolio() {
   } | null>(null);
 
   // ── Watchlist ──────────────────────────────────────────────
-  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
+  const [watchlist, setWatchlist]       = useState<WatchlistItem[]>([]);
+  const [watchlistRecent, setWatchlistRecent] = useState<WatchlistItem[]>([]);
   const [watchlistLoading, setWatchlistLoading] = useState(false);
 
   // ── J'ai acheté — inline purchase form in watchlist ────────
@@ -412,7 +413,7 @@ export default function Portfolio() {
   const TABS = [
     { key: 'collection', label: t('portfolio.collection') },
     // { key: 'risk', label: t('portfolio.riskAnalysis'), soon: true }, // hidden for launch
-    { key: 'watchlist', label: watchlist.length > 0 ? `${t('portfolio.watchlist')} (${watchlist.length})` : t('portfolio.watchlist') },
+    { key: 'watchlist', label: (watchlist.length + watchlistRecent.length) > 0 ? `${t('portfolio.watchlist')} (${watchlist.length + watchlistRecent.length})` : t('portfolio.watchlist') },
     { key: 'artists', label: favoriteArtists.length > 0 ? `${t('portfolio.artists')} (${favoriteArtists.length})` : t('portfolio.artists') },
     // { key: 'alerts', label: t('portfolio.alerts') }, // hidden for launch
     { key: 'settings', label: t('portfolio.settings') },
@@ -459,7 +460,14 @@ export default function Portfolio() {
       const res = await fetch(`${BACKEND}/api/portfolio/watchlist`, { headers: authHeaders() });
       if (res.ok) {
         const d = await res.json();
-        setWatchlist(Array.isArray(d) ? d : (d.items || []));
+        if (Array.isArray(d)) {
+          // legacy flat array
+          setWatchlist(d);
+          setWatchlistRecent([]);
+        } else {
+          setWatchlist(d.active || []);
+          setWatchlistRecent(d.recent || []);
+        }
       }
     } catch { /* silent */ } finally { setWatchlistLoading(false); }
   }
@@ -2495,7 +2503,7 @@ export default function Portfolio() {
               </button>
             </div>
 
-            {watchlist.length === 0 ? (
+            {watchlist.length === 0 && watchlistRecent.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '80px 40px', background: 'var(--bg-subtle)', borderRadius: '12px', border: '2px dashed var(--border)' }}>
                 <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--navy)', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <span style={{ color: 'white', fontSize: '22px' }}>◎</span>
@@ -2698,6 +2706,40 @@ export default function Portfolio() {
                     </div>
                   );
                 })}
+
+                {/* ── Résultats · 7j — past lots from watchlist ── */}
+                {watchlistRecent.length > 0 && (
+                  <div style={{ marginTop: '28px' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid var(--border)' }}>
+                      Résultats · 7j — ventes clôturées
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', opacity: 0.7 }}>
+                      {watchlistRecent.map((item: any) => {
+                        const auctionDate = item.lot?.auction_date ? new Date(item.lot.auction_date) : null;
+                        return (
+                          <div key={item.watchlist_id} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 16px' }}>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
+                              {auctionDate ? auctionDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '—'}
+                            </span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {item.lot?.title || '—'}
+                              </div>
+                              <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>
+                                {item.lot?.artist_name || item.lot?.auction_house}
+                              </div>
+                            </div>
+                            {item.lot?.hammer_price && (
+                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: '#1A6B3C', whiteSpace: 'nowrap' }}>
+                                Vendu {item.lot.hammer_price.toLocaleString('fr-FR')} €
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
