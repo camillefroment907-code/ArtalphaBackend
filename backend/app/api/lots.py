@@ -872,6 +872,11 @@ async def get_lot_count(request: Request, db: AsyncSession = Depends(get_db)):
 async def get_dashboard_stats(
     db: AsyncSession = Depends(get_db),
 ):
+    _stats_key = f"lots_stats:{datetime.utcnow().strftime('%Y-%m-%d-%H-%M')[:16]}"  # 1-min key
+    _cached_stats = get_cached(_stats_key, ttl=60)
+    if _cached_stats is not None:
+        return DashboardStats(**_cached_stats)
+
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
     total = await db.execute(select(func.count(Lot.id)))
@@ -896,7 +901,7 @@ async def get_dashboard_stats(
         select(func.count(Alert.id)).where(Alert.sent_at >= today_start)
     )
 
-    return DashboardStats(
+    _result = DashboardStats(
         total_lots_tracked=total.scalar() or 0,
         deals_detected_today=deals_today.scalar() or 0,
         avg_deal_score=round(avg_score.scalar() or 0, 1),
@@ -904,6 +909,8 @@ async def get_dashboard_stats(
         alerts_sent_today=alerts_today.scalar() or 0,
         sources_active=3,
     )
+    set_cached(_stats_key, _result.model_dump())
+    return _result
 
 
 @router.get("/trending", response_model=LotListResponse)

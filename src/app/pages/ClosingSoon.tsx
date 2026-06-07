@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, type RefObject } from 'react';
 import { useNavigate } from 'react-router';
 import { getToken, getUser } from '../../lib/auth';
+import { cachedFetch } from '../../lib/apiCache';
 import { parseUTC, isLiveLot, timeLabel } from '../../lib/auction';
 
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
@@ -418,15 +419,12 @@ export default function EnDirect() {
     const in24h = new Date(Date.now() + 24 * 3600 * 1000);
 
     Promise.all([
-      fetch(`${BACKEND}/api/recommendations/market-brief`, { headers })
-        .then(r => r.ok ? r.json() : null)
-        .catch(() => null),
-      fetch(
+      cachedFetch(`${BACKEND}/api/recommendations/market-brief`, { headers }, 300_000),
+      cachedFetch(
         `${BACKEND}/api/lots?auction_date_from=${now.toISOString().split("T")[0]}&auction_date_to=${in24h.toISOString().split("T")[0]}&sort_by=auction_date&sort_dir=asc&page_size=100`,
-        { headers }
-      )
-        .then(r => r.ok ? r.json() : null)
-        .catch(() => null),
+        { headers },
+        60_000, // 1 min for live lot list
+      ),
     ]).then(([briefData, lotsData]: [MarketBrief | null, { items?: LotCard[] } | null]) => {
       if (briefData) setBrief(briefData);
       const allIncoming: LotCard[] = [

@@ -19,7 +19,8 @@ from sqlalchemy.orm import selectinload
 from typing import Optional, List
 from datetime import datetime, timedelta, date
 
-from app.database import get_db
+import asyncio
+from app.database import get_db, AsyncSessionLocal
 from app.api.auth_utils import get_current_user
 from app.models.db_models import (
     User, Lot, LotStatus, MarketType,
@@ -509,17 +510,24 @@ async def get_for_you(
     seen_lot_ids: set = set()
     per_strategy = max(2, limit // len(STRATEGIES))
 
-    for strategy in STRATEGIES:
-        try:
-            cards = await strategy(dna, excluded | seen_lot_ids, db, per_strategy)
-            for card in cards:
-                lid = card["lot"]["id"]
-                if lid not in seen_lot_ids:
-                    seen_lot_ids.add(lid)
-                    results.append(card)
-        except Exception:
-            continue  # single strategy failure never breaks the whole feed
+    # Run all strategies in parallel — each gets its own session to avoid
+    # SQLAlchemy asyncio concurrency restrictions on a shared session.
+    _excl_snapshot = frozenset(excluded)
 
+    async def _run(strategy):
+        try:
+            async with AsyncSessionLocal() as _s:
+                return await strategy(dna, set(_excl_snapshot), _s, per_strategy)
+        except Exception:
+            return []
+
+    strategy_batches = await asyncio.gather(*[_run(s) for s in STRATEGIES])
+    for cards in strategy_batches:
+        for card in (cards or []):
+            lid = card["lot"]["id"]
+            if lid not in seen_lot_ids and lid not in _excl_snapshot:
+                seen_lot_ids.add(lid)
+                results.append(card)
         if len(results) >= limit:
             break
 

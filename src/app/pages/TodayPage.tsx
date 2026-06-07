@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { getToken } from '../../lib/auth';
+import { cachedFetch } from '../../lib/apiCache';
 import { CopilotBar } from '../components/CopilotBar';
 import { parseUTC, isLiveLot, timeLabel, isActiveAuction } from '../../lib/auction';
 
@@ -612,26 +613,44 @@ export default function TodayPage() {
 
   useEffect(() => {
     const token = getToken();
-    fetch(`${BACKEND}/api/recommendations/market-brief`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { setBrief(data); setLoading(false); })
-      .catch(() => setLoading(false));
+    cachedFetch<Brief>(
+      `${BACKEND}/api/recommendations/market-brief`,
+      { headers: { Authorization: `Bearer ${token}` } },
+      300_000, // 5 min — re-navigation is instant
+    ).then(data => { setBrief(data); setLoading(false); });
   }, []);
 
   if (loading) {
     return (
-      <div style={{ height: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{
-          fontFamily: 'var(--font-mono)', fontSize: '11px',
-          letterSpacing: '0.12em', textTransform: 'uppercase',
-          color: 'var(--text-3)',
-          animation: 'todayFade 1.6s ease-in-out infinite',
-        }}>
-          Analyse en cours…
-        </span>
-        <style>{'@keyframes todayFade{0%,100%{opacity:0.2}50%{opacity:0.8}}'}</style>
+      <div style={{ padding: '24px 16px', maxWidth: 900, margin: '0 auto' }}>
+        <style>{`
+          @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+          .skel{background:linear-gradient(90deg,var(--bg-2,#f0f0f0) 25%,var(--bg-3,#e0e0e0) 50%,var(--bg-2,#f0f0f0) 75%);background-size:800px 100%;animation:shimmer 1.4s infinite;border-radius:6px}
+        `}</style>
+        {/* Conviction cards skeleton */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 12, marginBottom: 24 }}>
+          {[0,1,2].map(i => (
+            <div key={i} style={{ borderRadius: 10, border: '1px solid var(--border,#e5e7eb)', padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div className="skel" style={{ height: 140, borderRadius: 8 }} />
+              <div className="skel" style={{ height: 14, width: '70%' }} />
+              <div className="skel" style={{ height: 12, width: '45%' }} />
+            </div>
+          ))}
+        </div>
+        {/* Stats bar skeleton */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+          {[0,1,2,3].map(i => <div key={i} className="skel" style={{ flex: 1, height: 52, borderRadius: 8 }} />)}
+        </div>
+        {/* List skeleton */}
+        {[0,1,2,3,4].map(i => (
+          <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--border,#e5e7eb)' }}>
+            <div className="skel" style={{ width: 56, height: 56, borderRadius: 6, flexShrink: 0 }} />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="skel" style={{ height: 13, width: '60%' }} />
+              <div className="skel" style={{ height: 11, width: '40%' }} />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
