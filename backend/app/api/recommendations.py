@@ -716,7 +716,7 @@ async def get_market_brief(
     top_picks: list = []
 
     # Daily seed — different per user per day, drives conviction rotation
-    _today_seed = int(date.today().isoformat().replace("-", "")) * 1000 + (current_user.id % 1000)
+    _today_seed = int(date.today().isoformat().replace("-", "")) * 1000 + (hash(str(current_user.id)) % 1000)
 
     async def _fill(cards_coro, target: int = 3):
         """Pull cards from a strategy coroutine until top_picks reaches target.
