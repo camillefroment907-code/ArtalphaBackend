@@ -11,6 +11,7 @@ Each recommendation has a `rec_type` from the 20-type taxonomy:
   conviction_match, gallery_crossover, period_match, region_match,
   trophy_lot, distressed_sale, similar_to_saved
 """
+import random
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, desc, String
@@ -591,8 +592,9 @@ async def get_market_brief(
       4. deal_alert        — global fallback (ensures 3 convictions always returned)
     """
     # Date-based key → brief regenerates automatically every morning at midnight
+    # v2 suffix busts any cached result with incorrect new_lots_count=0
     _today = date.today().isoformat()
-    _key = f"market_brief:{current_user.id}:{_today}"
+    _key = f"market_brief_v2:{current_user.id}:{_today}"
     _cached = get_cached(_key, ttl=3600)
     if _cached is not None:
         return _cached
@@ -606,8 +608,9 @@ async def get_market_brief(
 
     now = datetime.utcnow()
 
-    # "Since last visit" window — uses previous last_active_at before updating
-    since = (dna.last_active_at if dna and dna.last_active_at else now - timedelta(hours=24))
+    # "Since last visit" window — floor at 24h so same-day revisits still show new lots
+    _floor = now - timedelta(hours=24)
+    since = min(dna.last_active_at, _floor) if dna and dna.last_active_at else _floor
     horizon_48h = now + timedelta(hours=48)
 
     # Update last_active_at now (marks this visit regardless of cache state)
@@ -712,32 +715,42 @@ async def get_market_brief(
     excluded: set = set()
     top_picks: list = []
 
+    # Daily seed — different per user per day, drives conviction rotation
+    _today_seed = int(date.today().isoformat().replace("-", "")) * 1000 + (current_user.id % 1000)
+
     async def _fill(cards_coro, target: int = 3):
-        """Pull cards from a strategy coroutine until top_picks reaches target."""
+        """Pull cards from a strategy coroutine until top_picks reaches target.
+        Shuffles the candidate pool with a daily seed so convictions rotate each day."""
         try:
             cards = await cards_coro
         except Exception:
             return
+        if len(cards) > target:
+            rng = random.Random(_today_seed)
+            rng.shuffle(cards)
         for card in cards:
             lid = card["lot"]["id"]
             if lid not in excluded and len(top_picks) < target:
                 excluded.add(lid)
                 top_picks.append(card)
 
+    # Fetch a larger pool (9) per strategy so the daily shuffle has candidates to rotate through
+    _pool = 9
+
     # Level 1 — profile preferences (categories + budget) — day-1 personalization
-    await _fill(_strategy_preferences(pref, excluded, db, 3))
+    await _fill(_strategy_preferences(pref, excluded, db, _pool))
 
     # Level 2 — active agent strategies (Investor+ enrichment, most specific signal)
     if len(top_picks) < 3:
-        await _fill(_strategy_from_agent_alerts(current_user.id, excluded, db, 3 - len(top_picks)))
+        await _fill(_strategy_from_agent_alerts(current_user.id, excluded, db, _pool))
 
     # Level 3 — DNA behavioural affinity (builds over time from engagement)
     if len(top_picks) < 3:
-        await _fill(_strategy_artist_momentum(dna, excluded, db, 3 - len(top_picks)))
+        await _fill(_strategy_artist_momentum(dna, excluded, db, _pool))
 
     # Level 4 — global deal_score fallback (guarantees 3 convictions are always returned)
     if len(top_picks) < 3:
-        await _fill(_strategy_deal_alert(dna, excluded, db, 3 - len(top_picks)))
+        await _fill(_strategy_deal_alert(dna, excluded, db, _pool))
 
     # Apply composite scoring to top_picks — most urgent/live conviction surfaces first
     now_for_boost = datetime.utcnow()
