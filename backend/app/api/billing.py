@@ -29,6 +29,7 @@ from app.database import get_db
 from app.models.db_models import User, Subscription, SubscriptionPlan, SubscriptionStatus
 from app.api.auth_utils import get_current_user
 from app.config import get_settings
+from app.utils.slack_events import notify_new_payment, notify_new_trial, notify_cancellation
 
 settings = get_settings()
 logger = structlog.get_logger().bind(module="billing")
@@ -1005,6 +1006,19 @@ async def _handle_subscription_update(db: AsyncSession, stripe_sub: dict):
     except Exception:
         pass
 
+    # Slack — trial ou paiement actif
+    try:
+        status_val = stripe_sub.get("status", "")
+        _plan_str = plan.value if hasattr(plan, "value") else str(plan)
+        if status_val == "trialing":
+            trial_end_ts = stripe_sub.get("trial_end")
+            _trial_end_str = datetime.fromtimestamp(trial_end_ts).strftime("%d/%m/%Y") if trial_end_ts else "7j"
+            asyncio.create_task(notify_new_trial(email=customer_email or "", plan=_plan_str, trial_end_date=_trial_end_str))
+        elif status_val == "active":
+            asyncio.create_task(notify_new_payment(email=customer_email or "", plan=_plan_str, amount_eur=0))
+    except Exception:
+        pass
+
     # Notify admin of new/updated subscription
     try:
         status_val = stripe_sub.get("status", "")
@@ -1054,6 +1068,11 @@ async def _handle_subscription_canceled(db: AsyncSession, stripe_sub: dict):
                 access_until=end_date_str,
                 lang=getattr(canceled_user, 'language', 'fr'),
             )
+            # Slack — désabonnement
+            try:
+                asyncio.create_task(notify_cancellation(email=canceled_user.email, plan=previous_plan_name))
+            except Exception:
+                pass
             # Notify admin of cancellation
             asyncio.create_task(send_admin_notification(
                 subject=f"❌ Nautilus cancellation — {sub.plan.value} plan",
@@ -1146,6 +1165,11 @@ async def _handle_payment_succeeded(db: AsyncSession, invoice: dict):
             amount_str = f"€{amount_paid / 100:.2f}" if currency == "EUR" else f"{amount_paid / 100:.2f} {currency}"
             period_end_ts = invoice.get("period_end")
             period_end_str = datetime.fromtimestamp(period_end_ts).strftime("%d %B %Y") if period_end_ts else ""
+            # Slack — paiement réussi
+            try:
+                asyncio.create_task(notify_new_payment(email=paid_user.email, plan=sub.plan.value, amount_eur=amount_paid / 100))
+            except Exception:
+                pass
             asyncio.create_task(send_payment_success_email(
                 to_email=paid_user.email,
                 name=paid_user.full_name or paid_user.email,

@@ -21,6 +21,7 @@ from app.models.db_models import User, UserPreference, AlertChannel, Subscriptio
 from app.models.schemas import UserRegister, UserLogin, TokenResponse, UserOut
 from app.api.auth_utils import hash_password, verify_password, create_access_token, get_current_user
 from app.services.email_service import send_welcome_email, send_verification_email, send_password_reset_email
+from app.utils.slack_events import notify_new_trial
 
 settings = get_settings()
 
@@ -145,6 +146,17 @@ async def register(request: Request, body: UserRegister, db: AsyncSession = Depe
             except Exception:
                 pass
         asyncio.create_task(_send_trial_started())
+    except Exception:
+        pass
+
+    # Slack — nouveau trial
+    try:
+        _slack_trial_end = user.trial_end.strftime("%d/%m/%Y") if user.trial_end else "7j"
+        asyncio.create_task(notify_new_trial(
+            email=user.email,
+            plan="investor",
+            trial_end_date=_slack_trial_end,
+        ))
     except Exception:
         pass
 
