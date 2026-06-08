@@ -133,19 +133,7 @@ def _find_in_db(artist_name: str) -> Optional[Dict[str, Any]]:
         if key in normalized or normalized in key:
             return data
 
-    # Word overlap match
-    query_words = set(normalized.split())
-    best_match = None
-    best_overlap = 0
-
-    for key, data in ARTIST_MARKET_DB.items():
-        key_words = set(key.split())
-        overlap = len(query_words & key_words)
-        if overlap > best_overlap and overlap >= 1:
-            best_overlap = overlap
-            best_match = data
-
-    return best_match
+    return None
 
 
 async def _enrich_with_openai(artist_name: str) -> Optional[Dict[str, Any]]:
