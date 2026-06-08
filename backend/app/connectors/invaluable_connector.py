@@ -195,7 +195,12 @@ def _parse_item(item: dict) -> Optional[LotNormalized]:
             auction_house_name=house_name[:300],
             url=lot_url,
             image_url=image_url,
-            raw_data={"real": True, "source": "invaluable", "ref": ref},
+            raw_data={
+                "real": True,
+                "source": "invaluable",
+                "ref": ref,
+                "lot_performance": "sold" if price_result and price_result > 0 else "",
+            },
         )
     except Exception as e:
         logger.debug("parse error", error=str(e))
