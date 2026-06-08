@@ -23,7 +23,7 @@ Run:
 """
 
 import asyncio
-from sqlalchemy import select, update
+from sqlalchemy import select
 from app.database import AsyncSessionLocal
 from app.models.db_models import Artist, HammerArtistStats, ArtsperArtistSnapshot
 from app.jobs.quality_filter import normalize_artist_name
@@ -31,92 +31,112 @@ import structlog
 
 logger = structlog.get_logger()
 
+BATCH_SIZE = 500
+
 
 async def backfill():
+    # Fetch IDs only — fast single query, avoids loading 57K ORM objects at once
     async with AsyncSessionLocal() as session:
-        # Fetch all artists that likely have heuristic data (low confidence or suspicious values)
-        result = await session.execute(
-            select(Artist).where(
+        id_result = await session.execute(
+            select(Artist.id).where(
                 (Artist.data_confidence < 0.3)
                 | Artist.data_confidence.is_(None)
                 | (Artist.cagr_source == 'TIER_FALLBACK')
             )
         )
-        artists = result.scalars().all()
-        logger.info("Artists to backfill", count=len(artists))
+        all_ids = [row[0] for row in id_result.all()]
 
-        updated_with_real = 0
-        nulled_out = 0
+    logger.info("Artists to backfill", count=len(all_ids))
 
-        for artist in artists:
-            name_norm = artist.name_normalized or (artist.name or "").lower().strip()
-            if not name_norm:
-                continue
+    updated_with_real = 0
+    nulled_out = 0
 
-            real_avg = None
-            real_median = None
-            real_lots = None
-            real_confidence = 0.05  # default: no data
-
-            # 1. ArtsperArtistSnapshot — primary market
-            artsper_res = await session.execute(
-                select(ArtsperArtistSnapshot)
-                .where(ArtsperArtistSnapshot.artist_name_normalized == name_norm)
-                .limit(1)
+    # Process in batches — new session per batch avoids Neon connection timeout
+    for batch_start in range(0, len(all_ids), BATCH_SIZE):
+        batch_ids = all_ids[batch_start:batch_start + BATCH_SIZE]
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                select(Artist).where(Artist.id.in_(batch_ids))
             )
-            artsper = artsper_res.scalar_one_or_none()
-            if artsper and artsper.price_avg and artsper.price_avg > 0:
-                real_avg = artsper.price_avg
-                real_confidence = min(real_confidence + 0.20, 1.0)
+            artists = result.scalars().all()
 
-            # 2. HammerArtistStats — auction history
-            hn = normalize_artist_name(artist.name or "")
-            if hn:
-                hs_res = await session.execute(
-                    select(HammerArtistStats)
-                    .where(HammerArtistStats.artist_name_normalized == hn)
+            for artist in artists:
+                name_norm = artist.name_normalized or (artist.name or "").lower().strip()
+                if not name_norm:
+                    continue
+
+                real_avg = None
+                real_median = None
+                real_lots = None
+                real_confidence = 0.05  # default: no data
+
+                # 1. ArtsperArtistSnapshot — primary market
+                artsper_res = await session.execute(
+                    select(ArtsperArtistSnapshot)
+                    .where(ArtsperArtistSnapshot.artist_name_normalized == name_norm)
+                    .limit(1)
                 )
-                hs = hs_res.scalar_one_or_none()
-                if hs and hs.sale_count >= 5 and hs.avg_eur:
-                    if not real_avg:
-                        real_avg = hs.avg_eur
-                    real_median = hs.median_eur
-                    real_lots = hs.sale_count
-                    real_confidence = min(real_confidence + 0.25, 1.0)
+                artsper = artsper_res.scalar_one_or_none()
+                if artsper and artsper.price_avg and artsper.price_avg > 0:
+                    real_avg = artsper.price_avg
+                    real_confidence = min(real_confidence + 0.20, 1.0)
 
-            if real_avg:
-                artist.avg_auction_price = real_avg
-                artist.median_auction_price = real_median
-                if real_lots is not None:
-                    artist.total_lots_sold = real_lots
-                # Clear other fake heuristic fields — we don't have real values for these
-                artist.popularity_score = None
-                artist.liquidity_score = None
-                artist.trend = None
-                artist.sell_through_rate = None
-                artist.price_volatility = None
-                artist.data_confidence = real_confidence
-                updated_with_real += 1
-            else:
-                # No real data: null out all heuristic market metrics
-                artist.avg_auction_price = None
-                artist.median_auction_price = None
-                artist.popularity_score = None
-                artist.liquidity_score = None
-                artist.trend = None
-                artist.sell_through_rate = None
-                artist.price_volatility = None
-                artist.data_confidence = 0.05
-                nulled_out += 1
+                # 2. HammerArtistStats — auction history
+                hn = normalize_artist_name(artist.name or "")
+                if hn:
+                    hs_res = await session.execute(
+                        select(HammerArtistStats)
+                        .where(HammerArtistStats.artist_name_normalized == hn)
+                    )
+                    hs = hs_res.scalar_one_or_none()
+                    if hs and hs.sale_count >= 5 and hs.avg_eur:
+                        if not real_avg:
+                            real_avg = hs.avg_eur
+                        real_median = hs.median_eur
+                        real_lots = hs.sale_count
+                        real_confidence = min(real_confidence + 0.25, 1.0)
 
-        await session.commit()
-        logger.info(
-            "Backfill complete",
-            updated_with_real=updated_with_real,
-            nulled_out=nulled_out,
-            total=len(artists),
-        )
-        return updated_with_real, nulled_out
+                if real_avg:
+                    artist.avg_auction_price = real_avg
+                    artist.median_auction_price = real_median
+                    if real_lots is not None:
+                        artist.total_lots_sold = real_lots
+                    # Clear other fake heuristic fields — we don't have real values for these
+                    artist.popularity_score = None
+                    artist.liquidity_score = None
+                    artist.trend = None
+                    artist.sell_through_rate = None
+                    artist.price_volatility = None
+                    artist.data_confidence = real_confidence
+                    updated_with_real += 1
+                else:
+                    # No real data: null out all heuristic market metrics
+                    artist.avg_auction_price = None
+                    artist.median_auction_price = None
+                    artist.popularity_score = None
+                    artist.liquidity_score = None
+                    artist.trend = None
+                    artist.sell_through_rate = None
+                    artist.price_volatility = None
+                    artist.data_confidence = 0.05
+                    nulled_out += 1
+
+            await session.commit()
+            logger.info(
+                "batch committed",
+                batch_start=batch_start,
+                batch_end=batch_start + len(artists),
+                updated_with_real=updated_with_real,
+                nulled_out=nulled_out,
+            )
+
+    logger.info(
+        "Backfill complete",
+        updated_with_real=updated_with_real,
+        nulled_out=nulled_out,
+        total=len(all_ids),
+    )
+    return updated_with_real, nulled_out
 
 
 if __name__ == "__main__":
