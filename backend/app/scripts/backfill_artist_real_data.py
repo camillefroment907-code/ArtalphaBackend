@@ -37,7 +37,9 @@ async def backfill():
         # Fetch all artists that likely have heuristic data (low confidence or suspicious values)
         result = await session.execute(
             select(Artist).where(
-                (Artist.data_confidence < 0.3) | Artist.data_confidence.is_(None)
+                (Artist.data_confidence < 0.3)
+                | Artist.data_confidence.is_(None)
+                | (Artist.cagr_source == 'TIER_FALLBACK')
             )
         )
         artists = result.scalars().all()
