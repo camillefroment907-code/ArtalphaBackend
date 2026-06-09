@@ -41,6 +41,10 @@ async def upsert_score_performance(
     if auction_date is None:
         return
 
+    # Strip timezone info — score_performance.auction_date is TIMESTAMP WITHOUT TIME ZONE
+    if auction_date.tzinfo is not None:
+        auction_date = auction_date.replace(tzinfo=None)
+
     # Self-heal: pick up ML prediction if one exists for this lot.
     ml_upside_prob: "float | None" = None
     try:
