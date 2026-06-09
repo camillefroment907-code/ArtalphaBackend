@@ -164,6 +164,12 @@ query FetchLots($cursor: String) {
         title
         medium
         category
+        date
+        dimensions { cm { text } in { text } }
+        provenance
+        conditionDescription { details }
+        signatureInfo { details }
+        attributionClass { name }
         image { url(version: "large") }
         artists { name }
         saleArtwork {
@@ -171,6 +177,9 @@ query FetchLots($cursor: String) {
           lowEstimate { display }
           highEstimate { display }
           currentBid { display }
+          lotLabel
+          lotID
+          counts { bidderPositions }
         }
         sale {
           name
@@ -285,6 +294,17 @@ async def fetch_lots(limit: int = 5000) -> List[LotNormalized]:
                         house_name = sale.get("name") or gallery_name or "Artsy"
                         is_auction = sale.get("isAuction", True)
 
+                        # New enrichment fields
+                        dims = node.get("dimensions") or {}
+                        dimensions = (dims.get("cm") or {}).get("text")
+                        provenance = node.get("provenance") or None
+                        condition = (node.get("conditionDescription") or {}).get("details") or None
+                        period = node.get("date") or None
+                        lot_number = sale_artwork.get("lotLabel") or None
+                        signature = (node.get("signatureInfo") or {}).get("details") or None
+                        rarity = (node.get("attributionClass") or {}).get("name") or None
+                        watchers = (sale_artwork.get("counts") or {}).get("bidderPositions")
+
                         lots.append(LotNormalized(
                             external_id=f"artsy-{artwork_id}",
                             source=AuctionHouseEnum.ARTSY,
@@ -300,10 +320,22 @@ async def fetch_lots(limit: int = 5000) -> List[LotNormalized]:
                             url=f"https://www.artsy.net/artwork/{artwork_id}",
                             category=node.get("category") or node.get("medium"),
                             medium=node.get("medium"),
+                            dimensions=dimensions,
+                            provenance=provenance,
+                            condition=condition,
+                            period=period,
+                            lot_number=lot_number,
                             market_type="AUCTION" if is_auction else "PRIMARY",
                             is_buy_now=not is_auction,
                             gallery_name=gallery_name[:300] if gallery_name else None,
-                            raw_data={"real": True, "source": "artsy", "slug": artwork_id},
+                            raw_data={
+                                "real": True,
+                                "source": "artsy",
+                                "slug": artwork_id,
+                                **({"signature": signature} if signature else {}),
+                                **({"rarity": rarity} if rarity else {}),
+                                **({"watchers_count": watchers} if watchers is not None else {}),
+                            },
                         ))
                         if len(lots) >= limit:
                             break
