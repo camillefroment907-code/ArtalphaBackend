@@ -20,7 +20,7 @@ import {
   Radius,
   Shadow,
 } from '@/constants/theme';
-import { portfolioService, alertService, PortfolioItem, Alert } from '@/services/api';
+import { portfolioService, collectionService, alertService, PortfolioItem, Alert } from '@/services/api';
 import { useAuthStore } from '@/store/auth';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -86,7 +86,7 @@ export default function CollectionDashboard() {
   const load = useCallback(async () => {
     try {
       const [its, als] = await Promise.all([
-        portfolioService.list().catch(() => [] as PortfolioItem[]),
+        collectionService.list().catch(() => [] as PortfolioItem[]),
         alertService.list().catch(() => [] as Alert[]),
       ]);
       setItems(Array.isArray(its) ? its : []);

@@ -10,11 +10,11 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontFamily, FontSize, Spacing, Radius, Shadow } from '@/constants/theme';
-import { PortfolioItem } from '@/lib/types';
-import { api } from '@/lib/api';
+import { collectionService, PortfolioItem } from '@/services/api';
+import { useValuation } from '@/hooks/useValuation';
 
 type Tab = 'infos' | 'valeur' | 'docs';
 
@@ -42,14 +42,23 @@ export default function CollectionItemDetail() {
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('infos');
+  const { revalue, loading: revalueLoading } = useValuation();
 
-  useEffect(() => {
+  const fetchItem = useCallback(() => {
     if (!id) return;
-    api.get<PortfolioItem>(`/api/portfolio/items/${id}`)
+    collectionService.get(id)
       .then(setItem)
       .catch(() => setError('Impossible de charger cette œuvre.'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => { fetchItem(); }, [fetchItem]);
+
+  const handleRevalue = async () => {
+    if (!id) return;
+    await revalue(id);
+    fetchItem();
+  };
 
   if (loading) return <View style={s.loader}><ActivityIndicator color={Colors.gold} /></View>;
 
@@ -64,7 +73,7 @@ export default function CollectionItemDetail() {
     );
   }
 
-  const artistName  = (item.artist_name_display ?? item.artist_name ?? '').toUpperCase();
+  const artistName  = (item.artist_name ?? '').toUpperCase();
   const titleLine   = [item.title, item.year_created].filter(Boolean).join(', ');
   const mediumLine  = [item.medium, item.dimensions].filter(Boolean).join(' · ');
   const isValued    = item.estimated_current_value_eur != null;
@@ -153,7 +162,7 @@ export default function CollectionItemDetail() {
               <InfoRow label="Année"         value={item.year_created?.toString() ?? '—'} />
               <InfoRow label="Medium"        value={item.medium ?? '—'} />
               <InfoRow label="Dimensions"    value={item.dimensions ?? '—'} />
-              <InfoRow label="Provenance"    value={item.provenance ?? item.purchase_auction_house ?? '—'} />
+              <InfoRow label="Provenance"    value={item.provenance ?? '—'} />
               <InfoRow label="Prix d'achat"  value={item.purchase_price_eur ? `${Math.round(item.purchase_price_eur).toLocaleString('fr-FR')} €` : '—'} />
               <InfoRow label="Date d'achat"  value={purchaseDateStr ?? '—'} />
               <InfoRow label="État"          value={item.condition ?? '—'} last />
@@ -174,9 +183,9 @@ export default function CollectionItemDetail() {
                         {gainPct >= 0 ? '+' : ''}{gainPct}% depuis l'acquisition
                       </Text>
                     )}
-                    {item.last_estimated_at && (
+                    {item.last_valuation_at && (
                       <Text style={s.valDate}>
-                        Mis à jour le {new Date(item.last_estimated_at).toLocaleDateString('fr-FR')}
+                        Mis à jour le {new Date(item.last_valuation_at).toLocaleDateString('fr-FR')}
                       </Text>
                     )}
                   </View>
@@ -191,6 +200,17 @@ export default function CollectionItemDetail() {
                       />
                     </>
                   )}
+
+                  <Pressable
+                    style={s.revalueBtn}
+                    onPress={handleRevalue}
+                    disabled={revalueLoading}
+                  >
+                    {revalueLoading
+                      ? <ActivityIndicator size="small" color={Colors.textOnDark} />
+                      : <Text style={s.revalueBtnTxt}>Revaloriser →</Text>
+                    }
+                  </Pressable>
 
                   <Pressable
                     style={s.larryLink}
@@ -308,7 +328,9 @@ const s = StyleSheet.create({
   valGain:   { fontSize: FontSize.sm, fontFamily: FontFamily.sansSemibold, marginTop: 6 },
   valDate:   { fontSize: FontSize.xs, fontFamily: FontFamily.sans, color: Colors.textOnDarkSubtle, marginTop: 4 },
 
-  larryLink:    { marginTop: Spacing.md, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md },
+  revalueBtn:     { marginTop: Spacing.md, paddingVertical: 11, alignItems: 'center', backgroundColor: Colors.navy, borderRadius: Radius.md },
+  revalueBtnTxt:  { fontSize: FontSize.sm, fontFamily: FontFamily.sansSemibold, color: Colors.textOnDark },
+  larryLink:    { marginTop: Spacing.sm, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md },
   larryLinkTxt: { fontSize: FontSize.sm, fontFamily: FontFamily.sansSemibold, color: Colors.textSecondary },
 
   emptyState:    { paddingVertical: Spacing.lg, alignItems: 'center' },

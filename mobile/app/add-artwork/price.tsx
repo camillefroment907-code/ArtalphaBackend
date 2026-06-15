@@ -65,7 +65,7 @@ export default function PriceScreen() {
         title:               params.title?.trim() || params.artistName?.trim() || 'Sans titre',
         artist_name:         params.artistName?.trim() ?? '',
         artist_id:           params.artistId?.trim() || null,
-        year:                params.year ? parseInt(params.year, 10) : null,
+        year_created:        params.year ? parseInt(params.year, 10) : null,
         medium:              params.medium?.trim() || null,
         dimensions:          params.dimensions?.trim() || null,
         purchase_price_eur:  (!skipPrice && price) ? parseFloat(price) : null,
@@ -74,12 +74,7 @@ export default function PriceScreen() {
         import_mode:         'manuel',
       };
 
-      // Attach market-derived estimated value — powers gain/loss calculations
-      if (estMedian) {
-        payload.estimated_current_value_eur = estMedian;
-      }
-
-      const item = await api.post<PortfolioItem>('/api/portfolio/items', payload);
+      const item = await api.post<PortfolioItem>('/api/collection/items', payload);
 
       router.replace({
         pathname: '/add-artwork/success',

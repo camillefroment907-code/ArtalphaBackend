@@ -7,8 +7,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Radius } from '@/lib/tokens';
-import { PortfolioItem } from '@/lib/types';
-import { api } from '@/lib/api';
+import { marketService, AuctionLot } from '@/services/api';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -25,38 +24,28 @@ const TABS: { key: Tab; label: string }[] = [
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 /** Generate a formatted histoire text with **bold** markers */
-function getHistoire(item: PortfolioItem): string {
-  const medium = item.medium?.toLowerCase() || 'cette œuvre';
-  const artist = item.artist_name || 'cet artiste';
+function getHistoire(lot: AuctionLot): string {
+  const medium = lot.medium?.toLowerCase() || 'ce lot';
+  const artist = lot.artist_name || 'cet artiste';
   let text = '';
 
-  if (item.purchase_auction_house && item.purchase_date) {
-    const d = new Date(item.purchase_date);
+  if (lot.auction_house && lot.auction_date) {
+    const d = new Date(lot.auction_date);
     const dateStr = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-    text += `Acquise chez **${item.purchase_auction_house} en ${dateStr}**, cette ${medium}`;
-  } else if (item.purchase_auction_house) {
-    text += `Acquise chez **${item.purchase_auction_house}**, cette ${medium}`;
+    text += `Mis en vente chez **${lot.auction_house}** en **${dateStr}**, ce ${medium}`;
+  } else if (lot.auction_house) {
+    text += `Mis en vente chez **${lot.auction_house}**, ce ${medium}`;
   } else {
-    text = `Cette ${medium.charAt(0).toUpperCase() + medium.slice(1)}`;
+    text = `Ce lot`;
   }
 
-  if (item.year_created) {
-    const decade = Math.floor(item.year_created / 10) * 10;
-    text += ` appartient à la période des **années ${decade}** de **${artist}**`;
-  } else {
-    text += ` appartient à la collection de **${artist}**`;
-  }
-  text += '.';
+  text += ` appartient à l'œuvre de **${artist}**.`;
 
-  if (
-    item.estimated_current_value_eur != null &&
-    item.purchase_price_eur != null &&
-    item.estimated_current_value_eur > item.purchase_price_eur
-  ) {
-    const gain = Math.round(
-      (item.estimated_current_value_eur - item.purchase_price_eur) / item.purchase_price_eur * 100
-    );
-    text += ` Les œuvres de ce format bénéficient d'une forte demande sur le marché secondaire — valeur en hausse de **+${gain}%** depuis l'acquisition.`;
+  if (lot.lot_performance === 'sold' && lot.price_result_eur != null && lot.estimate_low_eur != null && lot.estimate_low_eur > 0) {
+    const ratio = Math.round((lot.price_result_eur / lot.estimate_low_eur - 1) * 100);
+    if (ratio > 20) {
+      text += ` Adjugé **+${ratio}% au-dessus de la mise à prix** — forte demande pour cet artiste.`;
+    }
   }
 
   return text;
@@ -85,16 +74,16 @@ function BoldText({ children, style }: { children: string; style?: object }) {
 export default function ArtworkDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [item, setItem] = useState<PortfolioItem | null>(null);
+  const [item, setItem] = useState<AuctionLot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('infos');
 
   useEffect(() => {
     if (!id) return;
-    api.get<PortfolioItem>(`/api/portfolio/items/${id}`)
+    marketService.lotDetail(id)
       .then(setItem)
-      .catch(() => setError('Impossible de charger cette œuvre.'))
+      .catch(() => setError('Impossible de charger ce lot.'))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -114,24 +103,32 @@ export default function ArtworkDetailScreen() {
   }
 
   // ── Computed values ──────────────────────────────────────────────────────
-  const artistDisplay = (item.artist_name_display ?? item.artist_name ?? '').toUpperCase();
-  const titleLine = [item.title, item.year_created].filter(Boolean).join(', ');
-  const mediumLine = [item.medium, item.dimensions].filter(Boolean).join(' · ');
-  const docCount = item.document_urls?.length ?? 0;
-  const isValued  = item.estimated_current_value_eur != null;
-  const isFollowed = item.artist_id != null;
+  const artistDisplay = (item.artist_name ?? '').toUpperCase();
+  const titleLine     = item.title ?? '—';
+  const mediumLine    = [item.medium, item.dimensions].filter(Boolean).join(' · ');
+  const isSold        = item.lot_performance === 'sold';
+  const isValued      = isSold && item.price_result_eur != null;
+  const isFollowed    = item.artist_id != null;
 
-  const gainPct = isValued && item.purchase_price_eur != null
-    ? Math.round((item.estimated_current_value_eur! - item.purchase_price_eur) / item.purchase_price_eur * 100)
+  // Mise à prix = estimate_low_eur ; prix final = price_result_eur
+  const miseAPrix = item.estimate_low_eur ?? null;
+  const prixFinal = item.price_result_eur ?? null;
+
+  const gainPct = (isValued && miseAPrix != null && miseAPrix > 0)
+    ? Math.round((prixFinal! - miseAPrix) / miseAPrix * 100)
     : null;
 
-  const purchaseDateShort = item.purchase_date
-    ? new Date(item.purchase_date).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
+  // Frais acheteur ≈ 25 % du prix marteau
+  const fraisAcheteur = isValued ? Math.round(prixFinal! * 0.25) : null;
+
+  const purchaseDateShort = item.auction_date
+    ? new Date(item.auction_date).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
     : null;
 
+  const docCount  = 0; // AuctionLot has no attached documents
   const histoire = getHistoire(item);
 
-  const larryPrompt = `Analyser le meilleur moment pour vendre ${item.title || item.artist_name || 'cette œuvre'}`;
+  const larryPrompt = `Analyser le marché de ${item.artist_name || 'cet artiste'} et ce lot`;
 
   return (
     <View style={s.container}>
@@ -214,20 +211,20 @@ export default function ArtworkDetailScreen() {
               {/* 3-col stats */}
               <View style={s.stats}>
                 <View style={s.stat}>
-                  <Text style={s.statL}>Acquise</Text>
+                  <Text style={s.statL}>Mise à prix</Text>
                   <Text style={s.statV}>
-                    {item.purchase_price_eur != null
-                      ? `${Math.round(item.purchase_price_eur).toLocaleString('fr-FR')} €`
+                    {miseAPrix != null
+                      ? `${Math.round(miseAPrix).toLocaleString('fr-FR')} €`
                       : '—'}
                   </Text>
                   <Text style={s.statD}>{purchaseDateShort ?? '—'}</Text>
                 </View>
                 <View style={s.stat}>
-                  <Text style={s.statL}>Valeur est.</Text>
-                  <Text style={[s.statV, isValued && { color: '#0F6E56' }]}>
-                    {isValued
-                      ? `${Math.round(item.estimated_current_value_eur!).toLocaleString('fr-FR')} €`
-                      : '—'}
+                  <Text style={s.statL}>Prix final</Text>
+                  <Text style={[s.statV, isSold && { color: '#0F6E56' }]}>
+                    {prixFinal != null
+                      ? `${Math.round(prixFinal).toLocaleString('fr-FR')} €`
+                      : isSold ? '—' : 'N/A'}
                   </Text>
                   {gainPct != null && (
                     <Text style={[s.statD, { color: gainPct >= 0 ? '#0F6E56' : Colors.error }]}>
@@ -236,56 +233,55 @@ export default function ArtworkDetailScreen() {
                   )}
                 </View>
                 <View style={s.stat}>
-                  <Text style={s.statL}>Comparables</Text>
+                  <Text style={s.statL}>Frais acq.</Text>
                   <Text style={s.statV}>
-                    {item.estimation_confidence != null ? Math.round(item.estimation_confidence * 10) : '—'}
+                    {fraisAcheteur != null
+                      ? `${fraisAcheteur.toLocaleString('fr-FR')} €`
+                      : '—'}
                   </Text>
-                  <Text style={s.statD}>24 mois</Text>
+                  <Text style={s.statD}>≈ 25%</Text>
                 </View>
               </View>
 
               {/* Info rows */}
-              <InfoRow label="Artiste"     value={item.artist_name ?? '—'} />
-              <InfoRow label="Année"       value={item.year_created?.toString() ?? '—'} />
-              <InfoRow label="Medium"      value={item.medium ?? '—'} />
-              <InfoRow label="Dimensions"  value={item.dimensions ?? '—'} />
-              <InfoRow label="Provenance"  value={item.provenance ?? item.purchase_auction_house ?? '—'} last />
+              <InfoRow label="Artiste"          value={item.artist_name ?? '—'} />
+              <InfoRow label="Medium"           value={item.medium ?? '—'} />
+              <InfoRow label="Dimensions"       value={item.dimensions ?? '—'} />
+              <InfoRow label="Maison de vente"  value={item.auction_house ?? '—'} />
+              <InfoRow label="Provenance"       value={item.provenance ?? '—'} last />
             </>
           )}
 
           {activeTab === 'valeur' && (
             <View style={s.comingSoon}>
-              {isValued ? (
+              {isSold && prixFinal != null ? (
                 <>
                   <View style={s.valCard}>
-                    <Text style={s.valLabel}>Valeur estimée</Text>
+                    <Text style={s.valLabel}>Prix d'adjudication</Text>
                     <Text style={s.valAmt}>
-                      {Math.round(item.estimated_current_value_eur!).toLocaleString('fr-FR')} €
+                      {Math.round(prixFinal).toLocaleString('fr-FR')} €
                     </Text>
                     {gainPct != null && (
                       <Text style={[s.valGain, { color: gainPct >= 0 ? '#0F6E56' : Colors.error }]}>
-                        {gainPct >= 0 ? '+' : ''}{gainPct}% depuis l'acquisition
+                        {gainPct >= 0 ? '+' : ''}{gainPct}% vs mise à prix
                       </Text>
                     )}
-                    {item.last_estimated_at && (
+                    {item.auction_date && (
                       <Text style={s.valDate}>
-                        Mis à jour le {new Date(item.last_estimated_at).toLocaleDateString('fr-FR')}
+                        {new Date(item.auction_date).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
                       </Text>
                     )}
                   </View>
-                  {item.purchase_price_eur != null && (
-                    <>
-                      <InfoRow label="Prix d'acquisition" value={`${Math.round(item.purchase_price_eur).toLocaleString('fr-FR')} €`} />
-                      <InfoRow label="Plus-value estimée" value={
-                        gainPct != null
-                          ? `${Math.round(item.estimated_current_value_eur! - item.purchase_price_eur).toLocaleString('fr-FR')} €`
-                          : '—'
-                      } last />
-                    </>
-                  )}
+                  <InfoRow label="Mise à prix" value={miseAPrix != null ? `${Math.round(miseAPrix).toLocaleString('fr-FR')} €` : '—'} />
+                  <InfoRow label="Frais acheteur (≈ 25%)" value={fraisAcheteur != null ? `${fraisAcheteur.toLocaleString('fr-FR')} €` : '—'} />
+                  <InfoRow label="Coût total acquéreur" value={
+                    fraisAcheteur != null ? `${Math.round(prixFinal + fraisAcheteur).toLocaleString('fr-FR')} €` : '—'
+                  } last />
                 </>
               ) : (
-                <Text style={s.soonTxt}>Valorisation non disponible pour cette œuvre.</Text>
+                <Text style={s.soonTxt}>
+                  {item.lot_performance === 'unsold' ? 'Lot non vendu.' : 'Résultat non disponible.'}
+                </Text>
               )}
             </View>
           )}
@@ -298,9 +294,9 @@ export default function ArtworkDetailScreen() {
 
           {activeTab === 'docs' && (
             <>
-              <InfoRow label="Certificat d'authenticité" value={item.certificate_of_authenticity ? 'Oui' : 'Non'} />
-              <InfoRow label="Documents" value={docCount > 0 ? `${docCount} fichier${docCount > 1 ? 's' : ''}` : 'Aucun'} />
-              <InfoRow label="État de conservation" value={item.condition ?? '—'} last />
+              <InfoRow label="Maison de vente" value={item.auction_house ?? '—'} />
+              <InfoRow label="Source"          value={item.source ?? '—'} />
+              <InfoRow label="Provenance"      value={item.provenance ?? '—'} last />
             </>
           )}
 
@@ -322,17 +318,10 @@ export default function ArtworkDetailScreen() {
       <View style={s.bottomBar}>
         <Pressable
           style={s.btnSecondary}
-          onPress={() => router.push({
-            pathname: '/add-artwork/manual',
-            params: {
-              artistName: item.artist_name ?? '',
-              title:      item.title ?? '',
-              year:       item.year_created?.toString() ?? '',
-              medium:     item.medium ?? '',
-            },
-          })}
+          onPress={() => item.artist_id && router.push(`/artist/${item.artist_id}`)}
+          disabled={!item.artist_id}
         >
-          <Text style={s.btnSecondaryTxt}>Modifier</Text>
+          <Text style={s.btnSecondaryTxt}>Voir artiste</Text>
         </Pressable>
         <Pressable
           style={s.btnPrimary}

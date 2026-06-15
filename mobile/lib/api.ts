@@ -29,6 +29,8 @@ async function request<T>(
 
   if (res.status === 401) {
     await clearStoredAuth();
+    const { logout } = (await import('@/store/auth')).useAuthStore.getState();
+    logout();  // ← nettoyage complet + user→null → guard _layout.tsx redirige vers login
     throw new Error('Session expirée. Reconnectez-vous.');
   }
 

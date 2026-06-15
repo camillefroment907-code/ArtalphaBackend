@@ -9,25 +9,83 @@ export interface AuthUser {
   id: string;
   email: string;
   name?: string;
-  plan: 'free' | 'starter' | 'investor' | 'pro';
+  plan: 'free' | 'starter' | 'investor' | 'pro' | 'institutional';
   token: string;
   is_verified?: boolean;
 }
 
 export interface PortfolioItem {
   id: string;
-  title?: string;
-  artist_name?: string;
+  title?: string | null;
+  artist_name?: string | null;
   artist_id?: string | null;
-  medium?: string;
-  year?: number | null;
+  medium?: string | null;
+  year_created?: number | null;  // colonne canonique backend
+  year?: number | null;          // alias compat (anciens écrans)
   dimensions?: string | null;
-  estimated_current_value_eur?: number | null;
+  estimated_current_value_eur?: number | null;  // ← colonne canonique valeur
+  last_valuation_at?: string | null;            // timestamp dernière valorisation
   purchase_price_eur?: number | null;
   purchase_date?: string | null;
   document_urls?: string[];
   image_url?: string | null;
   notes?: string | null;
+  condition?: string | null;
+  provenance?: string | null;
+  certificate_of_authenticity?: boolean | null;
+}
+
+// Payload de création — NE JAMAIS inclure estimated_current_value_eur
+// Le backend calcule automatiquement via le trigger auto-valorisation
+export interface CreateItemPayload {
+  artist_id: string | null;
+  artist_name: string | null;
+  title: string | null;
+  medium: string | null;
+  dimensions: string | null;
+  year_created: number | null;
+  purchase_price_eur: number | null;
+  image_url?: string | null;
+  notes?: string | null;
+  acquisition_source?: string | null;
+  acquisition_date?: string | null;
+  import_mode?: string;
+}
+
+// Résultat réel de l'API /collection/valuate et /collection/items/{id}/revaluate
+export interface ValuationResult {
+  valuation_low: number | null;
+  valuation_median: number | null;
+  valuation_high: number | null;
+  confidence: 'high' | 'medium' | 'low' | 'none' | 'error';
+  confidence_float: number | null;
+  comparables_count: number;
+  method: string;
+  comparables: ComparableLot[];
+  warning: string | null;
+}
+
+export interface ComparableLot {
+  id?: string;
+  hammer_price_eur: number;
+  medium?: string | null;
+  medium_category?: string | null;
+  dimensions?: string | null;
+  sale_date?: string | null;
+  auction_house?: string | null;
+  year_created?: number | null;
+}
+
+export interface ArtistSearchResult {
+  id?: string | null;          // null pour les entrées "unresolved" (fallback Lot)
+  name: string;
+  nationality?: string | null;
+  birth_year?: number | null;
+  death_year?: number | null;
+  trend?: string | null;
+  liquidity_score?: number | null;
+  similarity?: number;
+  confidence?: 'confirmed' | 'suggested' | 'unresolved';
 }
 
 export interface ArtistProfile {
@@ -39,6 +97,10 @@ export interface ArtistProfile {
   bio?: string | null;
   image_url?: string | null;
   tier?: string | null;
+  investment_tier?: string | null;
+  momentum_score?: number | null;
+  liquidity_score?: number | null;
+  institutional_score?: number | null;
   // Stats
   total_lots?: number;
   sold_lots?: number;
@@ -66,8 +128,11 @@ export interface AuctionLot {
   artist_id?: string | null;
   auction_house?: string;
   auction_date?: string | null;
+  estimate_low?: number | null;
   estimate_low_eur?: number | null;
+  estimate_high?: number | null;
   estimate_high_eur?: number | null;
+  current_price?: number | null;
   price_result_eur?: number | null;
   lot_performance?: 'sold' | 'unsold' | 'withdrawn' | null;
   currency?: string;
@@ -76,6 +141,7 @@ export interface AuctionLot {
   medium?: string | null;
   dimensions?: string | null;
   provenance?: string | null;
+  deal_score?: number | null;
 }
 
 export interface Alert {
@@ -88,14 +154,6 @@ export interface Alert {
   is_read?: boolean;
   artist_id?: string | null;
   artist_name?: string | null;
-}
-
-export interface ValuationResult {
-  estimated_value_eur: number | null;
-  confidence?: 'high' | 'medium' | 'low' | null;
-  methodology?: string | null;
-  comparables_count?: number | null;
-  last_updated?: string | null;
 }
 
 export interface PricePoint {
@@ -164,8 +222,11 @@ export const artistService = {
   priceHistory: (id: string) =>
     api.get<PricePoint[]>(`/api/artists/${id}/price-history`),
 
+  // Autocomplete artiste — retourne id + name + nationality + birth_year
   search: (query: string) =>
-    api.get<ArtistProfile[]>(`/api/artists/search?q=${encodeURIComponent(query)}`),
+    api.get<{ suggestions: ArtistSearchResult[] }>(
+      `/api/artist-profiles/autocomplete?q=${encodeURIComponent(query)}&limit=8`
+    ),
 };
 
 // ─── Market ───────────────────────────────────────────────────────────────────
@@ -207,6 +268,40 @@ export interface ChatResponse {
   message: string;
   sources?: string[];
 }
+
+// ─── Collection (Collection Value Engine) ────────────────────────────────────
+// Endpoints corrects : /api/collection/... (pas /api/portfolio/...)
+
+export const collectionService = {
+  list: () =>
+    api.get<PortfolioItem[]>('/api/collection/items'),
+
+  get: (id: string) =>
+    api.get<PortfolioItem>(`/api/collection/items/${id}`),
+
+  // NE PAS passer estimated_current_value_eur — le trigger backend calcule automatiquement
+  create: (data: CreateItemPayload) =>
+    api.post<PortfolioItem>('/api/collection/items', data),
+
+  delete: (id: string) =>
+    api.delete<void>(`/api/collection/items/${id}`),
+
+  // Estimation à la volée (sans persistance si pas d'item_id)
+  valuate: (params: {
+    artist_id: string;
+    medium?: string | null;
+    dimensions?: string | null;
+    year_created?: number | null;
+    item_id?: string;
+  }) =>
+    api.post<ValuationResult>('/api/collection/valuate', params),
+
+  // Revalorisation d'un item existant (persiste en collection_valuations)
+  revaluate: (itemId: string) =>
+    api.post<ValuationResult>(`/api/collection/items/${itemId}/revaluate`, {}),
+};
+
+// ─── Larry (AI advisor) ───────────────────────────────────────────────────────
 
 export const larryService = {
   chat: (messages: ChatMessage[], context?: { portfolio_summary?: string }) =>

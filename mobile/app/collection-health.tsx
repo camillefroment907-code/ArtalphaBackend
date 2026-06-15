@@ -7,8 +7,7 @@ import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Radius } from '@/lib/tokens';
-import { api } from '@/lib/api';
-import { PortfolioItem } from '@/lib/types';
+import { collectionService, PortfolioItem } from '@/services/api';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -228,7 +227,7 @@ export default function CollectionHealthScreen() {
   const [openKeys, setOpenKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    api.get<PortfolioItem[]>('/api/portfolio/items')
+    collectionService.list()
       .then(items => setHealth(computeHealth(items ?? [])))
       .catch(() => setHealth(computeHealth([])))
       .finally(() => setLoading(false));
