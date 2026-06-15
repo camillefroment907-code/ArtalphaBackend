@@ -1,0 +1,15 @@
+../node_modules/
+../frontend/
+../backend/
+../src/
+../dist/
+../ArtAlpha/
+../public/
+../__MACOSX/
+../.next/
+../.git/
+../n8n-workflows/
+../models/
+../docs/
+../reports/
+../infra/

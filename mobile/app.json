@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "Nautilus",
+    "slug": "nautilusapp",
+    "version": "1.0.0",
+    "owner": "cachou",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.nautilus.collection",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Nautilus utilise l'appareil photo pour identifier vos œuvres d'art.",
+        "NSPhotoLibraryUsageDescription": "Nautilus accède à vos photos pour ajouter des œuvres à votre collection.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "package": "com.nautilus.collection",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-asset",
+      "expo-font",
+      "expo-secure-store"
+    ],
+    "scheme": "nautilus",
+    "extra": {
+      "apiUrl": "https://artalpha-backend-production.up.railway.app",
+      "router": {},
+      "eas": {
+        "projectId": "1a1571b8-bae0-4a4d-8f3f-10142fbeb279"
+      }
+    }
+  }
+}

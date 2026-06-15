@@ -1,0 +1,35 @@
+{
+  "cli": {
+    "version": ">= 5.0.0"
+  },
+  "build": {
+    "preview": {
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "EXPO_NO_DOCTOR": "1"
+      }
+    },
+    "testflight": {
+      "distribution": "store",
+      "ios": {
+        "simulator": false
+      },
+      "env": {
+        "EXPO_NO_DOCTOR": "1"
+      }
+    },
+    "production": {
+      "distribution": "store",
+      "env": {
+        "EXPO_NO_DOCTOR": "1"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {}
+    }
+  }
+}
