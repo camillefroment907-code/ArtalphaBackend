@@ -384,7 +384,11 @@ async def revaluate_item(
     if not item:
         raise HTTPException(404, "Item introuvable.")
 
-    return await valuate_item(db, item, update_item=True)
+    try:
+        return await valuate_item(db, item, update_item=True)
+    except Exception as e:
+        logger.error(f"[revaluate] item={item_id} error={type(e).__name__}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}")
 
 
 # ── Collection item endpoints ─────────────────────────────────────────────────
