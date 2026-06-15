@@ -99,8 +99,9 @@ def _item_dict(item: PortfolioItem) -> dict:
 
 def _item_dict_with_proj(item: PortfolioItem) -> dict:
     est_value = item.estimated_current_value_eur or item.purchase_price_eur
-    gain_eur = est_value - item.purchase_price_eur
-    gain_pct = (gain_eur / item.purchase_price_eur * 100) if item.purchase_price_eur > 0 else 0
+    has_price = item.purchase_price_eur is not None and item.purchase_price_eur > 0
+    gain_eur = round(est_value - item.purchase_price_eur, 2) if (est_value is not None and has_price) else None
+    gain_pct = round(gain_eur / item.purchase_price_eur * 100, 1) if (gain_eur is not None and has_price) else 0
     proj = project_value(
         purchase_price_eur=item.purchase_price_eur,
         artist_name=item.artist_name,
@@ -176,9 +177,7 @@ async def create_item(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    price_eur = body.purchase_price_eur or body.purchase_price
-    if price_eur is None:
-        raise HTTPException(422, "purchase_price_eur is required")
+    price_eur = body.purchase_price_eur or body.purchase_price  # None autorisé (mobile)
 
     acq_date = body.purchase_date
     if acq_date is None and body.acquisition_date:
