@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useAuthStore } from '@/store/auth';
+import { collectionService } from '@/services/api';
 import {
   Colors,
   FontFamily,
@@ -38,7 +39,13 @@ export default function LoginScreen() {
     setError(null);
     try {
       await storeLogin(email.trim(), password);
-      router.replace('/(tabs)');
+      // If user has no items yet → guide them to add first artwork
+      const items = await collectionService.list().catch(() => []);
+      if (items.length === 0) {
+        router.replace('/add-artwork');
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (e: unknown) {
       const err = e as { message?: string };
       setError(err?.message ?? 'Email ou mot de passe incorrect.');
@@ -64,7 +71,6 @@ export default function LoginScreen() {
           <Text style={s.tagline}>
             Connaissez la valeur{'\n'}de ce que vous possédez.
           </Text>
-          <Text style={s.socialProof}>Rejoint par 4 200 collectionneurs</Text>
         </View>
 
         {/* ── Form ── */}
@@ -114,11 +120,11 @@ export default function LoginScreen() {
 
         {/* ── Footer ── */}
         <Pressable
-          onPress={() => Linking.openURL('https://get-nautilus.com')}
+          onPress={() => router.push('/auth/register')}
           style={s.footerLink}
         >
           <Text style={s.footerTxt}>Pas encore de compte ? </Text>
-          <Text style={[s.footerTxt, s.footerUnderline]}>get-nautilus.com</Text>
+          <Text style={[s.footerTxt, s.footerUnderline]}>Créer un compte gratuit</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -161,13 +167,6 @@ const s = StyleSheet.create({
     lineHeight: FontSize.lg * 1.5,
     marginBottom: 10,
   },
-  socialProof: {
-    fontSize: FontSize.sm,
-    fontFamily: FontFamily.sans,
-    color: Colors.textOnDarkSubtle,
-    letterSpacing: 0.2,
-  },
-
   // Form
   form: { gap: 10 },
   input: {

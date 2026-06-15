@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from '@/services/api';
 import { setStoredAuth } from '@/lib/auth';
 import { useAuthStore } from '@/store/auth';
@@ -27,11 +28,12 @@ export default function RegisterScreen() {
   const router   = useRouter();
   const setUser  = useAuthStore((s) => s.setUser);
 
-  const [name,     setName]     = useState('');
-  const [email,    setEmail]    = useState('');
-  const [password, setPassword] = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState<string | null>(null);
+  const [name,        setName]        = useState('');
+  const [email,       setEmail]       = useState('');
+  const [password,    setPassword]    = useState('');
+  const [loading,     setLoading]     = useState(false);
+  const [error,       setError]       = useState<string | null>(null);
+  const [emailTaken,  setEmailTaken]  = useState(false);
 
   const canSubmit = name.trim().length > 0 && email.trim().length > 0 && password.length >= 8;
 
@@ -39,14 +41,23 @@ export default function RegisterScreen() {
     if (!canSubmit || loading) return;
     setLoading(true);
     setError(null);
+    setEmailTaken(false);
     try {
       const user = await authService.register(email.trim(), password, name.trim());
       await setStoredAuth(user);
       setUser(user);
-      router.replace('/onboarding');
+      await AsyncStorage.setItem('show_welcome_banner', '1');
+      router.replace('/add-artwork');
     } catch (e: unknown) {
-      const err = e as { message?: string };
-      setError(err?.message ?? 'Erreur lors de la création du compte.');
+      const msg = (e as { message?: string })?.message ?? '';
+      if (msg.toLowerCase().includes('déjà') || msg.includes('409') || msg.toLowerCase().includes('exist')) {
+        setEmailTaken(true);
+        setError('Cet email est déjà utilisé.');
+      } else if (msg.toLowerCase().includes('réseau') || msg.toLowerCase().includes('network') || msg.includes('fetch')) {
+        setError('Connexion indisponible. Réessayez.');
+      } else {
+        setError('Erreur lors de la création du compte. Réessayez.');
+      }
     } finally {
       setLoading(false);
     }
@@ -116,7 +127,16 @@ export default function RegisterScreen() {
             />
           </View>
 
-          {error ? <Text style={s.errorText}>{error}</Text> : null}
+          {error ? (
+            <View>
+              <Text style={s.errorText}>{error}</Text>
+              {emailTaken && (
+                <Pressable onPress={() => router.replace('/auth/login')} style={s.loginHint}>
+                  <Text style={s.loginHintTxt}>Se connecter avec cet email →</Text>
+                </Pressable>
+              )}
+            </View>
+          ) : null}
 
           <Pressable
             style={[s.btn, (!canSubmit || loading) && s.btnDisabled]}
@@ -127,10 +147,14 @@ export default function RegisterScreen() {
               {loading ? 'Création…' : 'Créer mon compte'}
             </Text>
           </Pressable>
+
+          <Text style={s.cgu}>
+            En créant un compte, vous acceptez nos CGU et notre politique de confidentialité.
+          </Text>
         </View>
 
         {/* ── Back to login ── */}
-        <Pressable style={s.backLink} onPress={() => router.back()}>
+        <Pressable style={s.backLink} onPress={() => router.replace('/auth/login')}>
           <Text style={s.backTxt}>Déjà un compte ? Se connecter</Text>
         </Pressable>
       </ScrollView>
@@ -183,6 +207,10 @@ const s = StyleSheet.create({
     color: Colors.bgDark,
     letterSpacing: 0.2,
   },
+
+  cgu:       { fontSize: FontSize.xs, fontFamily: FontFamily.sans, color: Colors.textOnDarkSubtle, textAlign: 'center', lineHeight: 16, marginTop: 10 },
+  loginHint:    { alignItems: 'center', marginTop: 6 },
+  loginHintTxt: { fontSize: FontSize.sm, fontFamily: FontFamily.sansMedium, color: Colors.gold, textDecorationLine: 'underline' },
 
   // Back link
   backLink: { marginTop: 32, alignItems: 'center' },

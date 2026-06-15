@@ -1,9 +1,10 @@
 // app/_layout.tsx — Root layout
 // Auth guard + onboarding guard + font loading + Zustand hydration
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   useFonts,
   PlayfairDisplay_400Regular,
@@ -17,8 +18,10 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { useAuthStore } from '@/store/auth';
-import { isOnboardingComplete } from '@/lib/onboarding';
 import { Colors } from '@/constants/theme';
+
+// Key shared with lib/onboarding.ts
+const ONBOARDING_KEY = 'nautilus_onboarding_complete';
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -37,26 +40,38 @@ export default function RootLayout() {
   const router    = useRouter();
   const segments  = useSegments();
 
+  // null = not yet loaded from AsyncStorage
+  const [onboardingSeen, setOnboardingSeen] = useState<boolean | null>(null);
+
   // Hydrate auth store once on mount
   useEffect(() => { hydrate(); }, [hydrate]);
 
-  // Auth + onboarding guard
+  // Load onboarding flag once on mount
   useEffect(() => {
-    if (isLoading || !fontsLoaded) return;
+    AsyncStorage.getItem(ONBOARDING_KEY).then((val) => {
+      setOnboardingSeen(val === 'true');
+    });
+  }, []);
+
+  // Auth + onboarding guard
+  // Priority: 1. user authenticated → stay/go to app
+  //           2. user not authenticated + onboarding seen → /auth/login
+  //           3. user not authenticated + onboarding not seen → /onboarding
+  useEffect(() => {
+    if (isLoading || !fontsLoaded || onboardingSeen === null) return;
     const root = segments[0] as string | undefined;
     if (root === 'auth' || root === 'onboarding') return;
 
-    if (!user?.token) {
+    if (user?.token) return; // authenticated — no redirect needed from guard
+
+    if (!onboardingSeen) {
+      router.replace('/onboarding');
+    } else {
       router.replace('/auth/login');
-      return;
     }
+  }, [isLoading, fontsLoaded, user, segments, onboardingSeen]);
 
-    isOnboardingComplete().then((done) => {
-      if (!done) router.replace('/onboarding');
-    });
-  }, [isLoading, fontsLoaded, user, segments]);
-
-  const ready = !isLoading && fontsLoaded;
+  const ready = !isLoading && fontsLoaded && onboardingSeen !== null;
 
   if (!ready) {
     return (

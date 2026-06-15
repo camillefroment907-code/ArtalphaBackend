@@ -2,6 +2,8 @@
 
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Fonts, Radius } from '@/lib/tokens';
 
 const MODES = [
@@ -13,6 +15,16 @@ const MODES = [
 
 export default function AddArtworkScreen() {
   const router = useRouter();
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem('show_welcome_banner').then((val) => {
+      if (val) {
+        setShowWelcome(true);
+        AsyncStorage.removeItem('show_welcome_banner');
+      }
+    });
+  }, []);
 
   const handleMode = (id: string) => {
     if (id === 'photo')      router.push('/add-artwork/photo');
@@ -32,6 +44,11 @@ export default function AddArtworkScreen() {
       <View style={s.progBg}><View style={[s.progFill, { width: '12%' }]} /></View>
 
       <ScrollView style={s.scroll} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+        {showWelcome && (
+          <View style={s.welcomeBanner}>
+            <Text style={s.welcomeTxt}>Bienvenue ! Ajoutez votre première œuvre pour découvrir ce qu'elle vaut.</Text>
+          </View>
+        )}
         <Text style={s.heading}>Choisissez ce que vous avez.</Text>
         <Text style={s.sub}>Nous nous occupons du reste.</Text>
 
@@ -77,6 +94,8 @@ const s = StyleSheet.create({
   modeTitle: { fontSize: Fonts.md, fontWeight: Fonts.medium, color: Colors.textPrimary, marginBottom: 2 },
   modeDesc:  { fontSize: 11, color: Colors.textTertiary, lineHeight: 15 },
   modeSoon:  { fontSize: 10, color: Colors.textTertiary, marginTop: 4, fontStyle: 'italic' },
+  welcomeBanner: { backgroundColor: Colors.greenLight, borderRadius: Radius.md, padding: 12, marginBottom: 16, borderLeftWidth: 3, borderLeftColor: Colors.green },
+  welcomeTxt:    { fontSize: Fonts.sm, color: Colors.greenDark, lineHeight: 18 },
   manualLnk: { alignItems: 'center', paddingVertical: 7 },
   manualTxt: { fontSize: Fonts.base, color: Colors.textTertiary },
 });

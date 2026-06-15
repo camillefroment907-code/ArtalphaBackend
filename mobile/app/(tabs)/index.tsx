@@ -130,110 +130,115 @@ export default function CollectionDashboard() {
         </Pressable>
       </View>
 
-      {/* ── Hero Collection card (navy) ── */}
-      <Pressable style={s.hero} onPress={() => router.push('/(tabs)/collection')}>
-        <Text style={s.heroLabel}>MA COLLECTION</Text>
-
-        {totalValue > 0 ? (
-          <Text style={s.heroValue}>{fmtTotal(totalValue)} €</Text>
-        ) : (
-          <Text style={s.heroValueEmpty}>
-            {items.length > 0 ? `${items.length} œuvre${items.length !== 1 ? 's' : ''}` : '—'}
+      {items.length === 0 ? (
+        /* ── État vide — plein écran, CTA proéminent ── */
+        <View style={s.emptyWrap}>
+          <View style={s.emptyFrame}>
+            <Text style={s.emptyFrameSymbol}>⬡</Text>
+          </View>
+          <Text style={s.emptyTitle}>Votre collection{'\n'}vous attend.</Text>
+          <Text style={s.emptySub}>
+            Ajoutez votre première œuvre pour{'\n'}découvrir combien elle vaut.
           </Text>
-        )}
+          <Pressable style={s.emptyBtn} onPress={() => router.push('/add-artwork')}>
+            <Text style={s.emptyBtnTxt}>+ Ajouter une œuvre</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <>
+          {/* ── Hero Collection card (navy) ── */}
+          <Pressable style={s.hero} onPress={() => router.push('/(tabs)/collection')}>
+            <Text style={s.heroLabel}>MA COLLECTION</Text>
 
-        <Text style={s.heroMeta}>
-          {artistCount} artiste{artistCount !== 1 ? 's' : ''}
-          {' · '}{items.length} œuvre{items.length !== 1 ? 's' : ''}
-          {totalValue === 0 && items.length > 0 ? ' · estimation en cours' : ''}
-        </Text>
+            {totalValue > 0 ? (
+              <Text style={s.heroValue}>{fmtTotal(totalValue)} €</Text>
+            ) : (
+              <Text style={s.heroValueEmpty}>
+                {items.length} œuvre{items.length !== 1 ? 's' : ''}
+              </Text>
+            )}
 
-        {/* Mini grid preview (6 items) */}
-        <View style={s.miniRow}>
-          {previews.map((item) => (
-            <View key={item.id} style={s.mini}>
-              <Text style={s.miniInitial}>
-                {(item.artist_name ?? item.title ?? '?').charAt(0).toUpperCase()}
+            <Text style={s.heroMeta}>
+              {artistCount} artiste{artistCount !== 1 ? 's' : ''}
+              {' · '}{items.length} œuvre{items.length !== 1 ? 's' : ''}
+              {totalValue === 0 ? ' · estimation en cours' : ''}
+            </Text>
+
+            {/* Mini grid preview (6 items) */}
+            <View style={s.miniRow}>
+              {previews.map((item) => (
+                <View key={item.id} style={s.mini}>
+                  <Text style={s.miniInitial}>
+                    {(item.artist_name ?? item.title ?? '?').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              ))}
+              {Array.from({ length: Math.max(0, 6 - previews.length) }).map((_, i) => (
+                <View key={`ph-${i}`} style={[s.mini, s.miniEmpty]} />
+              ))}
+            </View>
+
+            <View style={s.heroFooter}>
+              <Text style={s.heroFooterTxt}>Voir tout →</Text>
+            </View>
+          </Pressable>
+
+          {/* ── Collection Health ── */}
+          <Pressable style={s.healthCard} onPress={() => router.push('/collection-health')}>
+            <View style={s.healthTop}>
+              <Text style={s.healthTitle}>Collection Health</Text>
+              <Text style={[s.healthScore, { color: healthInfo.color }]}>
+                {healthScore}/100
               </Text>
             </View>
-          ))}
-          {Array.from({ length: Math.max(0, 6 - previews.length) }).map((_, i) => (
-            <View key={`ph-${i}`} style={[s.mini, s.miniEmpty]} />
-          ))}
-        </View>
+            <View style={s.healthBar}>
+              <View style={[s.healthBarFill, { width: `${healthScore}%`, backgroundColor: healthInfo.color }]} />
+            </View>
+            <Text style={[s.healthLabel, { color: healthInfo.color }]}>{healthInfo.label} →</Text>
+          </Pressable>
 
-        <View style={s.heroFooter}>
-          <Text style={s.heroFooterTxt}>Voir tout →</Text>
-        </View>
-      </Pressable>
-
-      {/* ── Collection Health ── */}
-      {items.length > 0 && (
-        <Pressable style={s.healthCard} onPress={() => router.push('/collection-health')}>
-          <View style={s.healthTop}>
-            <Text style={s.healthTitle}>Collection Health</Text>
-            <Text style={[s.healthScore, { color: healthInfo.color }]}>
-              {healthScore}/100
-            </Text>
-          </View>
-          <View style={s.healthBar}>
-            <View style={[s.healthBarFill, { width: `${healthScore}%`, backgroundColor: healthInfo.color }]} />
-          </View>
-          <Text style={[s.healthLabel, { color: healthInfo.color }]}>{healthInfo.label} →</Text>
-        </Pressable>
-      )}
-
-      {/* ── Alertes ── */}
-      {alerts.length > 0 && (
-        <>
-          <View style={s.secHdr}>
-            <Text style={s.secTitle}>Alertes marché</Text>
-            <Pressable onPress={() => router.push('/alerts')}>
-              <Text style={s.secLink}>Tout voir →</Text>
-            </Pressable>
-          </View>
-          <View style={s.alertsCard}>
-            {alerts.map((a, i) => (
-              <View key={a.id} style={[s.alertRow, i < alerts.length - 1 && s.alertBorder]}>
-                <View style={[s.alertDot, { backgroundColor: a.is_read ? Colors.textTertiary : Colors.gold }]} />
-                <View style={s.alertBody}>
-                  <Text style={s.alertTitle} numberOfLines={2}>{a.title}</Text>
-                  <Text style={s.alertMeta}>{timeAgo(a.created_at)}</Text>
-                </View>
+          {/* ── Alertes ── */}
+          {alerts.length > 0 && (
+            <>
+              <View style={s.secHdr}>
+                <Text style={s.secTitle}>Alertes marché</Text>
+                <Pressable onPress={() => router.push('/alerts')}>
+                  <Text style={s.secLink}>Tout voir →</Text>
+                </Pressable>
               </View>
-            ))}
+              <View style={s.alertsCard}>
+                {alerts.map((a, i) => (
+                  <View key={a.id} style={[s.alertRow, i < alerts.length - 1 && s.alertBorder]}>
+                    <View style={[s.alertDot, { backgroundColor: a.is_read ? Colors.textTertiary : Colors.gold }]} />
+                    <View style={s.alertBody}>
+                      <Text style={s.alertTitle} numberOfLines={2}>{a.title}</Text>
+                      <Text style={s.alertMeta}>{timeAgo(a.created_at)}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
+
+          {/* ── Larry AI ── */}
+          <View style={s.secHdr}>
+            <Text style={s.secTitle}>Demandez à Larry</Text>
+          </View>
+          <View style={s.larryCard}>
+            <Text style={s.larryLabel}>NAUTILUS INTELLIGENCE</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
+              {LARRY_CHIPS.map((q) => (
+                <Pressable
+                  key={q}
+                  style={s.chip}
+                  onPress={() => router.push({ pathname: '/(tabs)/larry', params: { q } })}
+                >
+                  <Text style={s.chipTxt}>{q}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
           </View>
         </>
-      )}
-
-      {/* ── Larry AI ── */}
-      <View style={s.secHdr}>
-        <Text style={s.secTitle}>Demandez à Larry</Text>
-      </View>
-      <View style={s.larryCard}>
-        <Text style={s.larryLabel}>NAUTILUS INTELLIGENCE</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
-          {LARRY_CHIPS.map((q) => (
-            <Pressable
-              key={q}
-              style={s.chip}
-              onPress={() => router.push({ pathname: '/(tabs)/larry', params: { q } })}
-            >
-              <Text style={s.chipTxt}>{q}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* ── Empty state ── */}
-      {items.length === 0 && (
-        <Pressable style={s.emptyCard} onPress={() => router.push('/add-artwork')}>
-          <Text style={s.emptyTitle}>Ajoutez votre première œuvre</Text>
-          <Text style={s.emptySub}>Obtenez sa valeur de marché en quelques secondes.</Text>
-          <View style={s.emptyBtn}>
-            <Text style={s.emptyBtnTxt}>Commencer →</Text>
-          </View>
-        </Pressable>
       )}
 
     </ScrollView>
@@ -335,17 +340,12 @@ const s = StyleSheet.create({
   },
   chipTxt: { fontSize: FontSize.sm, fontFamily: FontFamily.sansMedium, color: Colors.textSecondary },
 
-  // Empty state
-  emptyCard: {
-    margin: Spacing.md,
-    backgroundColor: Colors.bgDark,
-    borderRadius: Radius.xl,
-    padding: Spacing.lg,
-    alignItems: 'center',
-    ...Shadow.md,
-  },
-  emptyTitle: { fontSize: FontSize.xl, fontFamily: FontFamily.serifBold, color: Colors.textOnDark, textAlign: 'center', marginBottom: 8, letterSpacing: -0.2 },
-  emptySub:   { fontSize: FontSize.sm, fontFamily: FontFamily.sans, color: Colors.textOnDarkMuted, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
-  emptyBtn:   { backgroundColor: Colors.gold, borderRadius: Radius.md, paddingVertical: 12, paddingHorizontal: 24, ...Shadow.gold },
-  emptyBtnTxt: { fontSize: FontSize.base, fontFamily: FontFamily.sansSemibold, color: Colors.bgDark },
+  // Empty state — plein écran, CTA proéminent
+  emptyWrap:        { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.xl, marginTop: Spacing.xl },
+  emptyFrame:       { width: 80, height: 80, borderRadius: Radius.full, borderWidth: 1.5, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.lg },
+  emptyFrameSymbol: { fontSize: FontSize['3xl'], color: Colors.textTertiary },
+  emptyTitle:       { fontSize: FontSize['3xl'], fontFamily: FontFamily.serifBold, color: Colors.textPrimary, textAlign: 'center', lineHeight: FontSize['3xl'] * 1.2, letterSpacing: -0.3, marginBottom: 12 },
+  emptySub:         { fontSize: FontSize.base, fontFamily: FontFamily.sans, color: Colors.textSecondary, textAlign: 'center', lineHeight: FontSize.base * 1.6, marginBottom: Spacing.xl },
+  emptyBtn:         { backgroundColor: Colors.bgDark, borderRadius: Radius.md, paddingVertical: 15, paddingHorizontal: Spacing.xl, alignSelf: 'stretch', alignItems: 'center', ...Shadow.md },
+  emptyBtnTxt:      { fontSize: FontSize.md, fontFamily: FontFamily.sansSemibold, color: Colors.textOnDark, letterSpacing: 0.2 },
 });
