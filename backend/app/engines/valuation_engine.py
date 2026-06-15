@@ -16,7 +16,7 @@ RÈGLES :
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -75,7 +75,7 @@ async def valuate_item(
         year_created=item.year_created,   # colonne réelle dans PortfolioItem
     )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     median_value = result.get("valuation_median")
 
     # Persister pour traçabilité et historique
