@@ -1380,7 +1380,7 @@ class CollectionValuation(Base):
     estimated_value_eur   = Column(Float, nullable=False)
     estimation_date       = Column(DateTime, nullable=False)
     method                = Column(String(100), nullable=True)   # comparables/gpt/hybrid
-    confidence            = Column(Float, nullable=True)
+    confidence            = Column(Float, nullable=True)         # numeric: 0.9/0.6/0.3/0.0
     comparables_used      = Column(JSON, default=list)
     comparable_lots_ids   = Column(JSON, default=list)
     market_trend_3m       = Column(Float, nullable=True)
@@ -1388,6 +1388,14 @@ class CollectionValuation(Base):
     liquidity_score       = Column(Float, nullable=True)         # 0-100
     best_time_to_sell     = Column(String(50), nullable=True)    # now/q1/q2/q3/q4/wait
     market_context        = Column(Text, nullable=True)
+    # Valuation engine columns
+    # value_low / value_high / comparables_count pre-existed in DB (no _eur suffix)
+    # source / warning added by migration d5e6f7a8b9c0
+    value_low             = Column(Float, nullable=True)         # P25 of comparable prices
+    value_high            = Column(Float, nullable=True)         # P75 of comparable prices
+    comparables_count     = Column(Integer, nullable=True)       # number of lots used
+    source                = Column(String(200), nullable=True)   # engine version identifier
+    warning               = Column(Text, nullable=True)          # user-facing caveat
     created_at            = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (

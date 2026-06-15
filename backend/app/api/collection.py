@@ -9,10 +9,16 @@ from typing import Optional, List
 from datetime import datetime
 from pydantic import BaseModel, model_validator
 
+import logging
+
 from app.database import get_db
 from app.api.auth_utils import get_current_user
 from app.models.db_models import User, PortfolioItem, CollectionValuation, SaleRequest
 from app.api.billing import _get_user_plan, PLAN_LIMITS
+from app.engines.valuation_engine import valuate_item
+from app.engines.comparable_engine import find_comparables_and_estimate
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/collection", tags=["collection"])
 
@@ -302,6 +308,85 @@ class SaleRequestUpdate(BaseModel):
     commission_rate: Optional[float] = None
 
 
+# ── Valuation schemas ─────────────────────────────────────────────────────────
+
+class ValuateRequest(BaseModel):
+    artist_id: str
+    medium: Optional[str] = None
+    dimensions: Optional[str] = None
+    year_created: Optional[int] = None
+    item_id: Optional[str] = None   # si fourni, persiste la valorisation sur l'item
+
+
+# ── Valuation endpoints ───────────────────────────────────────────────────────
+
+@router.post("/valuate")
+async def valuate_artwork(
+    body: ValuateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Estime la valeur d'une œuvre à partir de ses caractéristiques.
+
+    Peut être appelé :
+    - Avant création (flow "add artwork" — estimation immédiate)
+    - Sur un item existant via item_id (persiste et met à jour estimated_current_value_eur)
+
+    Returns:
+        JSON avec valuation_low, valuation_median, valuation_high,
+        confidence (str), comparables_count, method, comparables (list).
+        Jamais une 500 : retourne confidence='none' si aucune donnée.
+    """
+    # Si item_id fourni et appartient à l'utilisateur → persister la valorisation
+    if body.item_id:
+        result = await db.execute(
+            select(PortfolioItem).where(
+                and_(
+                    PortfolioItem.id == body.item_id,
+                    PortfolioItem.user_id == current_user.id,
+                )
+            )
+        )
+        item = result.scalar_one_or_none()
+        if item:
+            return await valuate_item(db, item, update_item=True)
+
+    # Estimation à la volée sans persistance
+    return await find_comparables_and_estimate(
+        db=db,
+        artist_id=body.artist_id,
+        medium=body.medium,
+        dimensions=body.dimensions,
+        year_created=body.year_created,
+    )
+
+
+@router.post("/items/{item_id}/revaluate")
+async def revaluate_item(
+    item_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Revalorise un item existant de la collection.
+    Met à jour estimated_current_value_eur avec les données de marché actuelles.
+    """
+    result = await db.execute(
+        select(PortfolioItem).where(
+            and_(
+                PortfolioItem.id == item_id,
+                PortfolioItem.user_id == current_user.id,
+            )
+        )
+    )
+    item = result.scalar_one_or_none()
+    if not item:
+        raise HTTPException(404, "Item introuvable.")
+
+    return await valuate_item(db, item, update_item=True)
+
+
 # ── Collection item endpoints ─────────────────────────────────────────────────
 
 @router.get("/items")
@@ -342,6 +427,16 @@ async def create_item(
     db.add(item)
     await db.commit()
     await db.refresh(item)
+
+    # Trigger valorisation automatique si aucune valeur saisie manuellement et artiste connu.
+    # Ce bloc ne doit JAMAIS bloquer la création de l'item — try/except obligatoire.
+    if not data.get("estimated_current_value_eur") and item.artist_id:
+        try:
+            await valuate_item(db, item, update_item=True)
+            await db.refresh(item)
+        except Exception as e:
+            logger.warning(f"[collection] Auto-valuation failed for item {item.id}: {e}")
+
     return _serialize_item(item)
 
 

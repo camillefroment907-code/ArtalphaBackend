@@ -46,6 +46,9 @@ __all__ = [
     "parse_dimensions_cm",
     "SIZE_BUCKETS",
     "size_bucket",
+    # Valuation engine helpers
+    "is_size_comparable",
+    "mediums_are_compatible",
 ]
 
 
@@ -310,6 +313,62 @@ SIZE_BUCKETS: list[tuple[str, float, float]] = [
     ("large",       5000.0,  15000.0),  # ~70×70–120×125 (standard oil canvas)
     ("very_large",  15000.0, float("inf")),  # ≥ ~120×125 (large-format works)
 ]
+
+
+# ── Valuation engine helpers ──────────────────────────────────────────────────
+
+def is_size_comparable(
+    ref_cm2: float,
+    candidate_cm2: float,
+    tolerance: float = 0.40,
+) -> bool:
+    """
+    Vérifie si deux surfaces sont dans la tolérance de taille.
+
+    Utilisé par le moteur de comparable pour filtrer les lots de taille similaire.
+    Tolérance par défaut : ±40%.
+
+    Args:
+        ref_cm2: surface de l'œuvre de référence (cm²)
+        candidate_cm2: surface du lot comparable candidat (cm²)
+        tolerance: tolérance relative (0.40 = ±40%)
+
+    Returns:
+        True si |candidate - ref| / ref <= tolerance.
+        False si l'un des deux est <= 0.
+    """
+    if ref_cm2 <= 0 or candidate_cm2 <= 0:
+        return False
+    ratio = abs(candidate_cm2 - ref_cm2) / ref_cm2
+    return ratio <= tolerance
+
+
+def mediums_are_compatible(
+    medium_a: Optional[str],
+    medium_b: Optional[str],
+) -> bool:
+    """
+    Vérifie si deux catégories de médium sont compatibles pour un comparable.
+
+    Règles :
+    - None ou "other" (non reconnu) = pas de filtre (compatible avec tout)
+    - Deux catégories connues identiques = compatible
+    - Deux catégories connues différentes = incompatible
+
+    "other" est traité comme inconnu car normalize_medium_category() retourne
+    "other" pour tout médium non reconnu — ce n'est pas une catégorie réelle.
+
+    Args:
+        medium_a: catégorie normalisée (résultat de normalize_medium_category)
+        medium_b: catégorie normalisée (résultat de normalize_medium_category)
+
+    Returns:
+        bool
+    """
+    _UNKNOWN = {None, "other"}
+    if medium_a in _UNKNOWN or medium_b in _UNKNOWN:
+        return True
+    return medium_a == medium_b
 
 
 def size_bucket(width_cm: Optional[float], height_cm: Optional[float]) -> str:

@@ -127,6 +127,12 @@ celery_app.conf.update(
             "schedule": crontab(minute="0", hour="2", day_of_week="0"),
             "options": {"queue": "scoring"},
         },
+        # Nightly 4am UTC: revalue stale collection items (> 30 days without valuation)
+        "revalue-stale-collection-items-nightly": {
+            "task": "app.jobs.tasks.revalue_stale_collection_items",
+            "schedule": crontab(minute="0", hour="4"),
+            "options": {"queue": "default"},
+        },
         # 1st of month 3am UTC: Poush Manifesto artist sync
         "poush-sync-monthly": {
             "task": "app.jobs.tasks.sync_poush_artists",

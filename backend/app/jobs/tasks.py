@@ -1600,6 +1600,23 @@ async def _check_auction_reminders_async():
         break
 
 
+# ── Nightly Collection Revaluation ───────────────────────────────────────────
+
+@celery_app.task(name="app.jobs.tasks.revalue_stale_collection_items")
+def revalue_stale_collection_items():
+    """
+    Revalorise les items de collection dont la dernière valorisation
+    date de plus de 30 jours. Planifié toutes les nuits à 4h UTC.
+    """
+    asyncio.run(_revalue_stale_async())
+
+
+async def _revalue_stale_async():
+    from app.jobs.revalue_collection import revalue_stale_items
+    stats = await revalue_stale_items()
+    logger.info("revalue_collection_done", **stats)
+
+
 # ── Weekly Blog Generation ────────────────────────────────────────────────────
 
 @celery_app.task(name="generate_weekly_blog_post")
