@@ -161,11 +161,20 @@ async def _query_hammer_prices(
     """
     cutoff_date = datetime.utcnow() - timedelta(days=days_back)
 
+    EXCLUDED_CURRENCIES = ('KRW', 'INR', 'CNY', 'HUF', 'TWD', 'NGN', 'PHP')
+    SEK_SENTINEL_VALUE = 276.0
+
     conditions = [
         HammerPrice.artist_name_normalized == artist_name_normalized,
         HammerPrice.hammer_price_eur.isnot(None),
-        HammerPrice.hammer_price_eur > 0,
+        HammerPrice.hammer_price_eur >= 50,
+        HammerPrice.hammer_price_eur <= 15_000_000,
         HammerPrice.sale_date >= cutoff_date,
+        HammerPrice.currency.notin_(EXCLUDED_CURRENCIES),
+        ~(
+            (HammerPrice.currency == 'SEK') &
+            (HammerPrice.hammer_price_eur == SEK_SENTINEL_VALUE)
+        ),
     ]
 
     # Filtre médium via medium_category (déjà normalisé en DB)
