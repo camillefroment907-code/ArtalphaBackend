@@ -22,7 +22,7 @@ import {
 } from '@/constants/theme';
 import { useAuthStore, isPaidPlan } from '@/store/auth';
 import { api } from '@/lib/api';
-import { PortfolioItem } from '@/lib/types';
+import { PortfolioItem } from '@/services/api';
 
 interface Me {
   full_name?: string;

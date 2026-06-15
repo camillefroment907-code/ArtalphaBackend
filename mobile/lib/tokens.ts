@@ -1,10 +1,10 @@
 // lib/tokens.ts
-// Design tokens Nautilus Collection OS
+// Design tokens Nautilus Collection OS — V2 (Bleu Sèvres)
 
 export const Colors = {
   // Backgrounds
   bgPrimary: '#FFFFFF',
-  bgSecondary: '#F5F5F5',
+  bgSecondary: '#F7F4EE',
   bgTertiary: '#EBEBEB',
 
   // Text
@@ -21,8 +21,8 @@ export const Colors = {
   warning: '#BA7517',
   warningLight: '#FAEEDA',
   error: '#A32D2D',
-  blue: '#378ADD',
-  blueLight: '#E6F1FB',
+  blue: '#1B4FCC',
+  blueLight: '#E6ECF7',
 
   // Dark moments
   night: '#111111',

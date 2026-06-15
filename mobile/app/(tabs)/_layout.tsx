@@ -1,47 +1,15 @@
-// app/(tabs)/_layout.tsx — Option B: Collection · [+] · Market · Larry · Profile
+// app/(tabs)/_layout.tsx — 4 tabs: Collection · Découvrir · Assistant · Profil
 
-import { Tabs, useRouter } from 'expo-router';
-import { Pressable, View, Text, StyleSheet } from 'react-native';
+import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontFamily, FontSize, Radius, Shadow } from '@/constants/theme';
-
-function FABButton() {
-  const router = useRouter();
-  return (
-    <Pressable
-      style={({ pressed }) => [fab.btn, { opacity: pressed ? 0.85 : 1 }]}
-      onPress={() => router.push('/add-artwork')}
-    >
-      <Text style={fab.plus}>＋</Text>
-    </Pressable>
-  );
-}
-
-const fab = StyleSheet.create({
-  btn: {
-    width: 52,
-    height: 52,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.navy,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-    ...Shadow.md,
-  },
-  plus: {
-    fontSize: 22,
-    color: Colors.gold,
-    lineHeight: 24,
-    marginTop: -1,
-  },
-});
+import { Colors, FontFamily, FontSize } from '@/constants/theme';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor:   Colors.navy,
-        tabBarInactiveTintColor: '#B0A99A',
+        tabBarActiveTintColor:   Colors.gold,
+        tabBarInactiveTintColor: Colors.textSecondary,
         tabBarStyle: {
           backgroundColor: Colors.bg,
           borderTopColor: Colors.border,
@@ -68,21 +36,18 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Placeholder route for the FAB — uses custom tabBarButton */}
+      {/* Collection grid — hidden from tab bar, accessible via hero card */}
       <Tabs.Screen
         name="collection"
-        options={{
-          title: '',
-          tabBarButton: () => <FABButton />,
-        }}
+        options={{ href: null }}
       />
 
       <Tabs.Screen
         name="market"
         options={{
-          title: 'Marché',
+          title: 'Découvrir',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="trending-up-outline" size={size} color={color} />
+            <Ionicons name="compass-outline" size={size} color={color} />
           ),
         }}
       />
@@ -90,7 +55,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="larry"
         options={{
-          title: 'Larry',
+          title: 'Assistant',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="sparkles-outline" size={size} color={color} />
           ),
@@ -107,7 +72,7 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Hide alerts from tab bar — accessible via alerts link */}
+      {/* Alerts — hidden from tab bar, accessible via bell icon */}
       <Tabs.Screen
         name="alerts"
         options={{ href: null }}

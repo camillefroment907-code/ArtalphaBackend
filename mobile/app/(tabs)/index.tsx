@@ -35,7 +35,7 @@ function fmtValue(n?: number | null): string {
 }
 
 function fmtTotal(n: number): string {
-  return Math.round(n).toLocaleString('fr-FR');
+  return new Intl.NumberFormat('fr-FR').format(Math.round(n));
 }
 
 function timeAgo(iso?: string): string {
@@ -47,24 +47,6 @@ function timeAgo(iso?: string): string {
   const d = Math.floor(diff / 86_400_000);
   if (d < 7) return `Il y a ${d}j`;
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-}
-
-// Health score (client-side)
-function computeHealthScore(items: PortfolioItem[]): number {
-  if (items.length === 0) return 0;
-  const withVal  = items.filter((i) => i.estimated_current_value_eur != null).length / items.length;
-  const withPric = items.filter((i) => i.purchase_price_eur != null).length / items.length;
-  const withDocs = items.filter((i) => (i.document_urls?.length ?? 0) > 0).length / items.length;
-  const artists  = new Set(items.map((i) => i.artist_id).filter(Boolean)).size;
-  const divScore = Math.min(artists / 5, 1);
-  return Math.round((withVal * 30 + withPric * 25 + withDocs * 25 + divScore * 20));
-}
-
-function healthLabel(score: number): { label: string; color: string } {
-  if (score >= 80) return { label: 'Excellente',    color: Colors.green };
-  if (score >= 60) return { label: 'Bonne',         color: Colors.green };
-  if (score >= 40) return { label: 'À renforcer',   color: Colors.warning };
-  return               { label: 'Incomplète',    color: Colors.error };
 }
 
 const LARRY_CHIPS = [
@@ -107,8 +89,6 @@ export default function CollectionDashboard() {
   const totalValue   = items.reduce((sum, i) => sum + (i.estimated_current_value_eur ?? 0), 0);
   const artistCount  = new Set(items.map((i) => i.artist_name).filter(Boolean)).size;
   const previews     = items.slice(0, 6);
-  const healthScore  = computeHealthScore(items);
-  const healthInfo   = healthLabel(healthScore);
   const unreadAlerts = alerts.filter((a) => !a.is_read).length;
 
   return (
@@ -183,20 +163,6 @@ export default function CollectionDashboard() {
             </View>
           </Pressable>
 
-          {/* ── Collection Health ── */}
-          <Pressable style={s.healthCard} onPress={() => router.push('/collection-health')}>
-            <View style={s.healthTop}>
-              <Text style={s.healthTitle}>Collection Health</Text>
-              <Text style={[s.healthScore, { color: healthInfo.color }]}>
-                {healthScore}/100
-              </Text>
-            </View>
-            <View style={s.healthBar}>
-              <View style={[s.healthBarFill, { width: `${healthScore}%`, backgroundColor: healthInfo.color }]} />
-            </View>
-            <Text style={[s.healthLabel, { color: healthInfo.color }]}>{healthInfo.label} →</Text>
-          </Pressable>
-
           {/* ── Alertes ── */}
           {alerts.length > 0 && (
             <>
@@ -258,7 +224,7 @@ const s = StyleSheet.create({
 
   // Hero card
   hero: {
-    backgroundColor: Colors.bgDark,
+    backgroundColor: Colors.gold,
     borderRadius: Radius.xl,
     padding: Spacing.md,
     marginHorizontal: Spacing.md,
@@ -275,26 +241,8 @@ const s = StyleSheet.create({
   miniEmpty:  { opacity: 0.2 },
   miniInitial: { fontSize: 12, fontFamily: FontFamily.sansSemibold, color: 'rgba(255,255,255,0.6)' },
 
-  heroFooter:    { borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,0.10)', paddingTop: 10 },
-  heroFooterTxt: { fontSize: FontSize.sm, fontFamily: FontFamily.sansSemibold, color: Colors.gold, letterSpacing: 0.2 },
-
-  // Health card
-  healthCard: {
-    backgroundColor: Colors.bgSurface,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadow.sm,
-  },
-  healthTop:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  healthTitle:   { fontSize: FontSize.base, fontFamily: FontFamily.sansSemibold, color: Colors.textPrimary },
-  healthScore:   { fontSize: FontSize.base, fontFamily: FontFamily.sansBold },
-  healthBar:     { height: 4, backgroundColor: Colors.bgElevated, borderRadius: 2, overflow: 'hidden', marginBottom: 8 },
-  healthBarFill: { height: '100%', borderRadius: 2 },
-  healthLabel:   { fontSize: FontSize.sm, fontFamily: FontFamily.sansMedium },
+  heroFooter:    { borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,0.20)', paddingTop: 10 },
+  heroFooterTxt: { fontSize: FontSize.sm, fontFamily: FontFamily.sansSemibold, color: Colors.textOnDark, letterSpacing: 0.2 },
 
   // Section header
   secHdr:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.md, marginTop: Spacing.md, marginBottom: Spacing.xs },
@@ -346,6 +294,6 @@ const s = StyleSheet.create({
   emptyFrameSymbol: { fontSize: FontSize['3xl'], color: Colors.textTertiary },
   emptyTitle:       { fontSize: FontSize['3xl'], fontFamily: FontFamily.serifBold, color: Colors.textPrimary, textAlign: 'center', lineHeight: FontSize['3xl'] * 1.2, letterSpacing: -0.3, marginBottom: 12 },
   emptySub:         { fontSize: FontSize.base, fontFamily: FontFamily.sans, color: Colors.textSecondary, textAlign: 'center', lineHeight: FontSize.base * 1.6, marginBottom: Spacing.xl },
-  emptyBtn:         { backgroundColor: Colors.bgDark, borderRadius: Radius.md, paddingVertical: 15, paddingHorizontal: Spacing.xl, alignSelf: 'stretch', alignItems: 'center', ...Shadow.md },
+  emptyBtn:         { backgroundColor: Colors.gold, borderRadius: Radius.md, paddingVertical: 15, paddingHorizontal: Spacing.xl, alignSelf: 'stretch', alignItems: 'center', ...Shadow.md },
   emptyBtnTxt:      { fontSize: FontSize.md, fontFamily: FontFamily.sansSemibold, color: Colors.textOnDark, letterSpacing: 0.2 },
 });

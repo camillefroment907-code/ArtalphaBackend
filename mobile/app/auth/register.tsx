@@ -204,7 +204,7 @@ const s = StyleSheet.create({
   btnText: {
     fontSize: FontSize.md,
     fontFamily: FontFamily.sansSemibold,
-    color: Colors.bgDark,
+    color: Colors.textOnDark,
     letterSpacing: 0.2,
   },
 

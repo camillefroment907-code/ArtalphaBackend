@@ -7,7 +7,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Colors, Fonts, Radius } from '@/lib/tokens';
 import { api } from '@/lib/api';
-import { PortfolioItem } from '@/lib/types';
+import { PortfolioItem } from '@/services/api';
 
 function fmtEur(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace('.', ',')} M€`;
@@ -246,9 +246,9 @@ const s = StyleSheet.create({
   recapMeta:      { fontSize: Fonts.sm, color: Colors.textTertiary, marginTop: 3 },
 
   // Market card
-  marketCard:     { borderWidth: 1.5, borderColor: Colors.green, borderRadius: Radius.lg, padding: 14, marginBottom: 18, backgroundColor: Colors.greenLight },
+  marketCard:     { borderWidth: 1.5, borderColor: Colors.blue, borderRadius: Radius.lg, padding: 14, marginBottom: 18, backgroundColor: Colors.blueLight },
   marketTopRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  marketCardTitle:{ fontSize: Fonts.base, color: Colors.greenDark, fontWeight: Fonts.medium },
+  marketCardTitle:{ fontSize: Fonts.base, color: Colors.textPrimary, fontWeight: Fonts.medium },
   gradeBadge:     { borderWidth: 1, borderRadius: Radius.sm, paddingHorizontal: 7, paddingVertical: 2 },
   gradeTxt:       { fontSize: Fonts.xs, fontWeight: '700', letterSpacing: 0.3 },
   marketRange:    { fontSize: Fonts['3xl'], fontWeight: '700', color: Colors.textPrimary, letterSpacing: -0.5, marginBottom: 2 },
@@ -269,7 +269,7 @@ const s = StyleSheet.create({
   hintTxt:        { fontSize: 11, color: Colors.textTertiary, lineHeight: 16 },
 
   footer:         { padding: 16, borderTopWidth: 0.5, borderTopColor: Colors.borderTertiary, gap: 8 },
-  primaryBtn:     { backgroundColor: Colors.textPrimary, borderRadius: Radius.md, padding: 13, alignItems: 'center' },
+  primaryBtn:     { backgroundColor: Colors.blue, borderRadius: Radius.md, padding: 13, alignItems: 'center' },
   primaryBtnTxt:  { color: Colors.bgPrimary, fontSize: Fonts.lg, fontWeight: Fonts.medium },
   skipBtn:        { alignItems: 'center', paddingVertical: 8 },
   skipBtnTxt:     { fontSize: Fonts.md, color: Colors.textTertiary },

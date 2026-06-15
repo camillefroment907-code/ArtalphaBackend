@@ -10,9 +10,13 @@ import { Colors, Fonts, Radius } from '@/lib/tokens';
 import { api } from '@/lib/api';
 
 type SearchResult = {
+  id?: string | null;
   name: string;
+  nationality?: string | null;
+  birth_year?: number | null;
   lot_count?: number;
   avg_price?: number;
+  confidence?: string;
 };
 
 function fmtPrice(n?: number): string {
@@ -37,37 +41,26 @@ export default function SearchScreen() {
     setLoading(true); setSearched(true);
     const enc = encodeURIComponent(q.trim());
 
-    const [acRes, srRes] = await Promise.allSettled([
-      api.get<{ suggestions: Array<{ name: string }> }>(
-        `/api/artist-profiles/autocomplete?q=${enc}&limit=8`
-      ),
-      api.get<{ artists: SearchResult[] }>(
-        `/api/artist-profiles/search/${enc}`
-      ),
-    ]);
-
-    const merged: SearchResult[] = [];
-    const seen = new Set<string>();
-
-    if (acRes.status === 'fulfilled') {
-      for (const s of acRes.value.suggestions ?? []) {
-        if (!seen.has(s.name.toLowerCase())) {
-          merged.push({ name: s.name });
-          seen.add(s.name.toLowerCase());
+    try {
+      const res = await api.get<{ suggestions: SearchResult[] }>(
+        `/api/artist-profiles/autocomplete?q=${enc}&limit=10`
+      );
+      // Dedup by id (primary) then normalized name (fallback for unresolved entries)
+      const seen = new Set<string>();
+      const deduped: SearchResult[] = [];
+      for (const s of res.suggestions ?? []) {
+        const key = s.id ?? s.name.toLowerCase();
+        if (!seen.has(key)) {
+          deduped.push(s);
+          seen.add(key);
         }
       }
+      setResults(deduped.slice(0, 10));
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
     }
-    if (srRes.status === 'fulfilled') {
-      for (const a of srRes.value.artists ?? []) {
-        if (!seen.has(a.name.toLowerCase())) {
-          merged.push(a);
-          seen.add(a.name.toLowerCase());
-        }
-      }
-    }
-
-    setResults(merged.slice(0, 10));
-    setLoading(false);
   }, []);
 
   const handleChange = (text: string) => {
@@ -78,7 +71,13 @@ export default function SearchScreen() {
   };
 
   const selectResult = (r: SearchResult) =>
-    router.push({ pathname: '/add-artwork/manual', params: { artistName: r.name } });
+    router.push({
+      pathname: '/add-artwork/manual',
+      params: {
+        artistName: r.name,
+        ...(r.id ? { artistId: r.id } : {}),
+      },
+    });
 
   return (
     <View style={s.container}>
@@ -138,12 +137,11 @@ export default function SearchScreen() {
                     </View>
                     <View style={s.srInfo}>
                       <Text style={s.srName} numberOfLines={1}>{r.name}</Text>
-                      {r.lot_count != null && (
+                      {(r.nationality || r.birth_year) ? (
                         <Text style={s.srMeta}>
-                          {r.lot_count} vente{r.lot_count > 1 ? 's' : ''}
-                          {r.avg_price ? ` · moy. ${fmtPrice(r.avg_price)}` : ''}
+                          {[r.nationality, r.birth_year ? `né en ${r.birth_year}` : null].filter(Boolean).join(' · ')}
                         </Text>
-                      )}
+                      ) : null}
                     </View>
                     <Text style={s.srArrow}>→</Text>
                   </Pressable>

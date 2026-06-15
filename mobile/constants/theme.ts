@@ -1,18 +1,18 @@
-// constants/theme.ts — Nautilus Design System
-// Navy #0A1628 · Gold #B8922A · Cream #FAF8F5
+// constants/theme.ts — Nautilus Design System V2
+// Dark #111111 · Bleu Sèvres #1B4FCC · Cream #F7F4EE
 
 // ─── Palette ─────────────────────────────────────────────────────────────────
 
 export const palette = {
   // Brand
-  navy:       '#0A1628',
-  navyLight:  '#162038',
-  navyDeep:   '#060E1A',
-  gold:       '#B8922A',
-  goldLight:  '#D4AB4A',
-  goldMuted:  '#8A6D20',
-  cream:      '#FAF8F5',
-  creamDark:  '#F0EDE8',
+  navy:       '#111111',    // dark bg for auth / onboarding screens
+  navyLight:  '#1C1C1C',
+  navyDeep:   '#000000',
+  gold:       '#1B4FCC',    // Bleu Sèvres — primary accent
+  goldLight:  '#3D6AE8',    // lighter Sèvres blue
+  goldMuted:  '#1240A8',    // deeper Sèvres blue
+  cream:      '#F7F4EE',    // warm beige background
+  creamDark:  '#EDE9E1',
 
   // Neutrals
   white:      '#FFFFFF',
@@ -35,8 +35,8 @@ export const palette = {
   redLight:   '#FAE8E8',
   amber:      '#BA7517',
   amberLight: '#FAEEDA',
-  blue:       '#378ADD',
-  blueLight:  '#E6F1FB',
+  blue:       '#1B4FCC',
+  blueLight:  '#E6ECF7',
 } as const;
 
 // ─── Colors (semantic) ───────────────────────────────────────────────────────
@@ -80,8 +80,8 @@ export const Colors = {
   borderOnDark:  'rgba(255,255,255,0.12)',
 
   // Overlays
-  overlay:      'rgba(10,22,40,0.55)',  // navy overlay
-  overlayLight: 'rgba(10,22,40,0.30)',
+  overlay:      'rgba(17,17,17,0.55)',
+  overlayLight: 'rgba(17,17,17,0.30)',
 } as const;
 
 // ─── Typography ──────────────────────────────────────────────────────────────
@@ -180,7 +180,7 @@ export const Shadow = {
 // ─── Component tokens ────────────────────────────────────────────────────────
 
 export const Button = {
-  // Primary: navy bg, cream text
+  // Primary: dark bg, cream text
   primary: {
     bg:     palette.navy,
     text:   palette.cream,
@@ -189,7 +189,7 @@ export const Button = {
     py:     14,
     px:     24,
   },
-  // Secondary: cream bg, navy text, navy border
+  // Secondary: cream bg, dark text, dark border
   secondary: {
     bg:     palette.cream,
     text:   palette.navy,
@@ -198,10 +198,10 @@ export const Button = {
     py:     13,
     px:     24,
   },
-  // Gold: paywall CTA, gold bg, navy text
+  // Gold (Bleu Sèvres): CTA, blue bg, white text
   gold: {
     bg:     palette.gold,
-    text:   palette.navy,
+    text:   palette.white,
     border: 'transparent',
     radius: Radius.md,
     py:     14,
@@ -226,7 +226,7 @@ export const Card = {
     radius: Radius.lg,
     ...Shadow.sm,
   },
-  // Navy card (hero, wow moments)
+  // Dark card (hero, wow moments)
   dark: {
     bg:     palette.navy,
     border: 'transparent',

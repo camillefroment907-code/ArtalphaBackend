@@ -50,7 +50,7 @@ function MockEstimationCard() {
 }
 
 const mock = StyleSheet.create({
-  card:      { borderWidth: 1.5, borderColor: Colors.gold, borderRadius: Radius.lg, padding: 16, backgroundColor: 'rgba(201,163,93,0.08)', width: SW - Spacing.xl * 2 - 16 },
+  card:      { borderWidth: 1.5, borderColor: Colors.gold, borderRadius: Radius.lg, padding: 16, backgroundColor: 'rgba(27,79,204,0.08)', width: SW - Spacing.xl * 2 - 16 },
   topRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   cardTitle: { fontSize: FontSize.sm, color: Colors.gold, fontFamily: FontFamily.sansSemibold },
   grade:     { borderWidth: 1, borderColor: Colors.gold, borderRadius: Radius.sm, paddingHorizontal: 7, paddingVertical: 2 },
@@ -87,7 +87,7 @@ const SLIDES: Slide[] = [
   {
     id:       2,
     symbol:   '◈',
-    title:    '1,5 million de ventes\naux enchères analysées.',
+    title:    '1,5 million de données\nde marché analysées.',
     sub:      'Nautilus estime chaque œuvre que vous possédez grâce aux données du marché réel.',
     ctaLabel: 'Voir comment →',
   },
@@ -253,7 +253,7 @@ const s = StyleSheet.create({
   btnText: {
     fontSize: FontSize.md,
     fontFamily: FontFamily.sansSemibold,
-    color: Colors.bgDark,
+    color: Colors.textOnDark,
     letterSpacing: 0.2,
   },
 });

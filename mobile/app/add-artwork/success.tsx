@@ -74,8 +74,8 @@ export default function SuccessScreen() {
 const s = StyleSheet.create({
   container:    { flex: 1, backgroundColor: Colors.night, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
 
-  logoRing:     { width: 64, height: 64, borderRadius: 32, borderWidth: 1.5, borderColor: Colors.green, alignItems: 'center', justifyContent: 'center', marginBottom: 28 },
-  logoMark:     { fontSize: 24, fontWeight: '700', color: Colors.green, letterSpacing: -0.5 },
+  logoRing:     { width: 64, height: 64, borderRadius: 32, borderWidth: 1.5, borderColor: Colors.blue, alignItems: 'center', justifyContent: 'center', marginBottom: 28 },
+  logoMark:     { fontSize: 24, fontWeight: '700', color: Colors.blue, letterSpacing: -0.5 },
 
   artist:       { fontSize: Fonts['2xl'], fontWeight: '700', color: '#FFFFFF', textAlign: 'center', letterSpacing: -0.3, marginBottom: 4 },
   workTitle:    { fontSize: Fonts.lg, color: 'rgba(255,255,255,0.55)', textAlign: 'center', fontStyle: 'italic', marginBottom: 8 },
@@ -90,7 +90,7 @@ const s = StyleSheet.create({
   valLabelDim:  { fontSize: Fonts.md, color: 'rgba(255,255,255,0.35)', textAlign: 'center', lineHeight: 20 },
 
   ctaWrap:      { width: '100%', gap: 10 },
-  primaryBtn:   { backgroundColor: Colors.green, borderRadius: Radius.md, padding: 16, alignItems: 'center' },
+  primaryBtn:   { backgroundColor: Colors.blue, borderRadius: Radius.md, padding: 16, alignItems: 'center' },
   primaryBtnTxt:{ color: '#FFFFFF', fontSize: Fonts.lg, fontWeight: '700', letterSpacing: 0.2 },
   secBtn:       { padding: 12, alignItems: 'center' },
   secBtnTxt:    { fontSize: Fonts.base, color: 'rgba(255,255,255,0.4)' },

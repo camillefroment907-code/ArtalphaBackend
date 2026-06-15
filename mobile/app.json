@@ -19,7 +19,8 @@
         "NSCameraUsageDescription": "Nautilus utilise l'appareil photo pour identifier vos œuvres d'art.",
         "NSPhotoLibraryUsageDescription": "Nautilus accède à vos photos pour ajouter des œuvres à votre collection.",
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "runtimeVersion": "1.0.0"
     },
     "android": {
       "adaptiveIcon": {
@@ -29,8 +30,13 @@
       "package": "com.nautilus.collection",
       "permissions": [
         "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "CAMERA",
         "READ_EXTERNAL_STORAGE"
-      ]
+      ],
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -49,6 +55,9 @@
       "eas": {
         "projectId": "1a1571b8-bae0-4a4d-8f3f-10142fbeb279"
       }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/1a1571b8-bae0-4a4d-8f3f-10142fbeb279"
     }
   }
 }

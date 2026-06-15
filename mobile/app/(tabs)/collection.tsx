@@ -13,23 +13,11 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useCallback } from 'react';
 import { Colors, Fonts } from '@/lib/tokens';
-import { api } from '@/lib/api';
+import { collectionService, PortfolioItem } from '@/services/api';
 
 const { width: SW } = Dimensions.get('window');
 // 3 colonnes · gap 2px × 2 · padding 2px × 2 = 8px
 const CELL = (SW - 8) / 3;
-
-interface PortfolioItem {
-  id: string;
-  title?: string;
-  artist_name?: string;
-  artist_id?: string | null;
-  medium?: string;
-  estimated_current_value_eur?: number | null;
-  purchase_price_eur?: number | null;
-  document_urls?: string[];
-  image_url?: string | null;
-}
 
 function fmtValue(n?: number | null): string {
   if (!n) return '';
@@ -51,7 +39,7 @@ export default function CollectionScreen() {
 
   const loadItems = useCallback(async () => {
     try {
-      const data = await api.get<PortfolioItem[]>('/api/portfolio/items');
+      const data = await collectionService.list();
       setItems(Array.isArray(data) ? data : []);
     } catch {}
     finally {
@@ -118,7 +106,7 @@ export default function CollectionScreen() {
                 <Pressable
                   key={item.id}
                   style={s.cell}
-                  onPress={() => router.push(`/artwork/${item.id}`)}
+                  onPress={() => router.push(`/collection/${item.id}`)}
                 >
                   <View style={s.cellPad} />
                   <View style={s.cellInner}>
@@ -158,7 +146,7 @@ export default function CollectionScreen() {
               <View style={s.valBar}>
                 <Text style={s.valLabel}>VALEUR ESTIMÉE</Text>
                 <Text style={s.valAmount}>
-                  {Math.round(totalValue).toLocaleString('fr-FR')} €
+                  {new Intl.NumberFormat('fr-FR').format(Math.round(totalValue))} €
                 </Text>
                 <Text style={s.valSub}>
                   {valorizedCount} œuvre{valorizedCount !== 1 ? 's' : ''} valorisée{valorizedCount !== 1 ? 's' : ''} · {items.length} au total
@@ -186,7 +174,7 @@ const s = StyleSheet.create({
   tbr:    { flexDirection: 'row', gap: 8, alignItems: 'center' },
 
   // Add button
-  addBtn:     { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.textPrimary, alignItems: 'center', justifyContent: 'center' },
+  addBtn:     { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.blue, alignItems: 'center', justifyContent: 'center' },
   addBtnText: { color: Colors.bgPrimary, fontSize: 18, lineHeight: 20 },
 
   // Grid
@@ -220,6 +208,6 @@ const s = StyleSheet.create({
   empty:       { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 80, paddingHorizontal: 32 },
   emptyTitle:  { fontSize: Fonts.xl, fontWeight: '600', color: Colors.textPrimary, textAlign: 'center', marginBottom: 8 },
   emptySub:    { fontSize: Fonts.md, color: Colors.textTertiary, textAlign: 'center', lineHeight: 19, marginBottom: 24 },
-  emptyBtn:    { backgroundColor: Colors.textPrimary, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 24 },
+  emptyBtn:    { backgroundColor: Colors.blue, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 24 },
   emptyBtnTxt: { color: '#FFFFFF', fontSize: Fonts.md, fontWeight: '500' },
 });

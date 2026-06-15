@@ -183,6 +183,7 @@ export default function ManualScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     artistName?: string;
+    artistId?: string;
     title?: string;
     year?: string;
     medium?: string;
@@ -190,7 +191,7 @@ export default function ManualScreen() {
 
   // Form state
   const [artistName, setArtistName]     = useState(params.artistName ?? '');
-  const [artistId, setArtistId]         = useState<string | null>(null);
+  const [artistId, setArtistId]         = useState<string | null>(params.artistId ?? null);
   const [title, setTitle]               = useState(params.title ?? '');
   const [year, setYear]                 = useState(params.year ?? '');
   const [selectedMedium, setSelectedMedium] = useState<MediumValue | null>(
@@ -252,43 +253,25 @@ export default function ManualScreen() {
     acDebounce.current = setTimeout(async () => {
       const q = text.trim();
       const enc = encodeURIComponent(q);
-
-      // Appel parallèle :
-      // 1. autocomplete → table Artist enrichie (pg_trgm, a les ids)
-      // 2. search/{q}   → table Lot.artist_name_raw (ILIKE, toujours fiable)
-      const [acResult, searchResult] = await Promise.allSettled([
-        api.get<{ suggestions: Suggestion[] }>(
-          `/api/artist-profiles/autocomplete?q=${enc}&limit=6`
-        ),
-        api.get<{ artists: Array<{ name: string; lot_count: number }> }>(
-          `/api/artist-profiles/search/${enc}`
-        ),
-      ]);
-
-      const merged: Suggestion[] = [];
-      const seen = new Set<string>();
-
-      // Priorité aux résultats autocomplete (ont un id)
-      if (acResult.status === 'fulfilled') {
-        for (const s of acResult.value.suggestions ?? []) {
-          merged.push(s);
-          seen.add(s.name.toLowerCase());
-        }
-      }
-
-      // Complète avec les résultats ILIKE non encore présents
-      if (searchResult.status === 'fulfilled') {
-        for (const a of (searchResult.value.artists ?? []).slice(0, 6)) {
-          if (!seen.has(a.name.toLowerCase())) {
-            merged.push({ name: a.name });
-            seen.add(a.name.toLowerCase());
+      try {
+        const res = await api.get<{ suggestions: Suggestion[] }>(
+          `/api/artist-profiles/autocomplete?q=${enc}&limit=7`
+        );
+        const seen = new Set<string>();
+        const list: Suggestion[] = [];
+        for (const s of res.suggestions ?? []) {
+          const key = s.id ?? s.name.toLowerCase();
+          if (!seen.has(key)) {
+            list.push(s);
+            seen.add(key);
           }
         }
+        setSuggestions(list.slice(0, 7));
+        setShowSuggestions(list.length > 0);
+      } catch {
+        setSuggestions([]);
+        setShowSuggestions(false);
       }
-
-      const list = merged.slice(0, 7);
-      setSuggestions(list);
-      setShowSuggestions(list.length > 0);
     }, 300);
   };
 
@@ -579,7 +562,7 @@ const s = StyleSheet.create({
   // Medium chips
   chipRow:        { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   chip:           { paddingHorizontal: 12, paddingVertical: 7, borderRadius: Radius.full, borderWidth: 0.5, borderColor: Colors.borderSecondary, backgroundColor: Colors.bgPrimary },
-  chipActive:     { backgroundColor: Colors.textPrimary, borderColor: Colors.textPrimary },
+  chipActive:     { backgroundColor: Colors.blue, borderColor: Colors.blue },
   chipTxt:        { fontSize: Fonts.base, color: Colors.textSecondary, fontWeight: Fonts.medium },
   chipTxtActive:  { color: Colors.bgPrimary },
 
@@ -605,7 +588,7 @@ const s = StyleSheet.create({
 
   // Footer
   footer:         { padding: 16, borderTopWidth: 0.5, borderTopColor: Colors.borderTertiary },
-  primaryBtn:     { backgroundColor: Colors.textPrimary, borderRadius: Radius.md, padding: 13, alignItems: 'center' },
+  primaryBtn:     { backgroundColor: Colors.blue, borderRadius: Radius.md, padding: 13, alignItems: 'center' },
   primaryBtnOff:  { opacity: 0.4 },
   primaryBtnTxt:  { color: Colors.bgPrimary, fontSize: Fonts.lg, fontWeight: Fonts.medium },
 });

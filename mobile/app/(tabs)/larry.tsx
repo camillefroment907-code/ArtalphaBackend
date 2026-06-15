@@ -24,7 +24,7 @@ import {
 } from '@/constants/theme';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
-import { PortfolioItem } from '@/lib/types';
+import { PortfolioItem } from '@/services/api';
 
 interface Message {
   role: 'user' | 'assistant';
