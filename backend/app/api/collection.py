@@ -108,9 +108,14 @@ def _serialize_valuation(v: CollectionValuation) -> dict:
         "collection_item_id":   str(v.collection_item_id),
         "user_id":              str(v.user_id),
         "estimated_value_eur":  v.estimated_value_eur,
+        "value_low":            v.value_low,
+        "value_high":           v.value_high,
         "estimation_date":      v.estimation_date.isoformat() if v.estimation_date else None,
         "method":               v.method,
         "confidence":           v.confidence,
+        "comparables_count":    v.comparables_count,
+        "source":               v.source,
+        "warning":              v.warning,
         "comparables_used":     v.comparables_used or [],
         "comparable_lots_ids":  v.comparable_lots_ids or [],
         "market_trend_3m":      v.market_trend_3m,
@@ -437,7 +442,14 @@ async def create_item(
         except Exception as e:
             logger.warning(f"[collection] Auto-valuation failed for item {item.id}: {e}")
 
-    return _serialize_item(item)
+    val_result = await db.execute(
+        select(CollectionValuation)
+        .where(CollectionValuation.collection_item_id == item.id)
+        .order_by(CollectionValuation.estimation_date.desc())
+        .limit(1)
+    )
+    latest_valuation = val_result.scalar_one_or_none()
+    return _serialize_item(item, latest_valuation)
 
 
 @router.get("/items/{item_id}")
@@ -482,12 +494,30 @@ async def update_item(
     if not item:
         raise HTTPException(404, "Item introuvable.")
 
-    for field, value in body.model_dump(exclude_none=True).items():
+    updated_fields = body.model_dump(exclude_none=True)
+    for field, value in updated_fields.items():
         setattr(item, field, value)
     item.updated_at = datetime.utcnow()
 
     await db.commit()
-    return _serialize_item(item)
+    await db.refresh(item)
+
+    VALUATION_FIELDS = {"artist_id", "medium", "dimensions", "year_created"}
+    if updated_fields.keys() & VALUATION_FIELDS and item.artist_id:
+        try:
+            await valuate_item(db, item, update_item=True)
+            await db.refresh(item)
+        except Exception as e:
+            logger.warning(f"[collection] Re-valuation failed after PATCH on item {item.id}: {e}")
+
+    val_result = await db.execute(
+        select(CollectionValuation)
+        .where(CollectionValuation.collection_item_id == item.id)
+        .order_by(CollectionValuation.estimation_date.desc())
+        .limit(1)
+    )
+    latest_valuation = val_result.scalar_one_or_none()
+    return _serialize_item(item, latest_valuation)
 
 
 @router.delete("/items/{item_id}", status_code=204)

@@ -40,6 +40,7 @@ export default function PriceScreen() {
     trendDirection?:  string;
     investmentGrade?: string;
     investmentLabel?: string;
+    editItemId?:      string;
   }>();
 
   const [price, setPrice]     = useState('');
@@ -61,6 +62,7 @@ export default function PriceScreen() {
   const submit = async (skipPrice = false) => {
     setLoading(true);
     try {
+      const editItemId = params.editItemId?.trim() || null;
       const payload: Record<string, unknown> = {
         title:               params.title?.trim() || params.artistName?.trim() || 'Sans titre',
         artist_name:         params.artistName?.trim() ?? '',
@@ -74,8 +76,11 @@ export default function PriceScreen() {
         import_mode:         'manuel',
       };
 
-      const item = await api.post<PortfolioItem>('/api/collection/items', payload);
+      const item = editItemId
+        ? await api.patch<PortfolioItem>(`/api/collection/items/${editItemId}`, payload)
+        : await api.post<PortfolioItem>('/api/collection/items', payload);
 
+      const lv = item.latest_valuation;
       router.replace({
         pathname: '/add-artwork/success',
         params: {
@@ -83,6 +88,11 @@ export default function PriceScreen() {
           artistName:     params.artistName ?? '',
           title:          params.title ?? '',
           estimatedValue: (item.estimated_current_value_eur ?? estMedian ?? 0).toString(),
+          valueLow:       (lv?.value_low  ?? '').toString(),
+          valueHigh:      (lv?.value_high ?? '').toString(),
+          valConf:        lv?.confidence  ?? '',
+          valCount:       (lv?.comparables_count ?? '').toString(),
+          hasArtistId:    (params.artistId?.trim() ? '1' : '0'),
         },
       });
     } catch {

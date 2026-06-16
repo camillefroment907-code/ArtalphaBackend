@@ -14,6 +14,19 @@ export interface AuthUser {
   is_verified?: boolean;
 }
 
+export interface LatestValuation {
+  id: string;
+  estimated_value_eur?: number | null;
+  value_low?: number | null;
+  value_high?: number | null;
+  estimation_date?: string | null;
+  method?: string | null;
+  confidence?: string | null;
+  comparables_count?: number | null;
+  source?: string | null;
+  warning?: string | null;
+}
+
 export interface PortfolioItem {
   id: string;
   title?: string | null;
@@ -33,6 +46,7 @@ export interface PortfolioItem {
   condition?: string | null;
   provenance?: string | null;
   certificate_of_authenticity?: boolean | null;
+  latest_valuation?: LatestValuation | null;
 }
 
 // Payload de création — NE JAMAIS inclure estimated_current_value_eur
@@ -282,6 +296,9 @@ export const collectionService = {
   // NE PAS passer estimated_current_value_eur — le trigger backend calcule automatiquement
   create: (data: CreateItemPayload) =>
     api.post<PortfolioItem>('/api/collection/items', data),
+
+  update: (id: string, data: Partial<CreateItemPayload>) =>
+    api.patch<PortfolioItem>(`/api/collection/items/${id}`, data),
 
   delete: (id: string) =>
     api.delete<void>(`/api/collection/items/${id}`),

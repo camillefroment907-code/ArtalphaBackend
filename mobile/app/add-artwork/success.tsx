@@ -10,15 +10,34 @@ function fmtEur(n: number): string {
   return `${Math.round(n)} €`;
 }
 
+const CONF_LABEL: Record<string, string> = {
+  high:   'Fiabilité élevée',
+  medium: 'Fiabilité modérée',
+  low:    'Estimation indicative',
+};
+
 export default function SuccessScreen() {
   const router = useRouter();
-  const { artistName, title, estimatedValue } = useLocalSearchParams<{
-    artistName?: string;
-    title?: string;
-    estimatedValue?: string;
-  }>();
+  const { artistName, title, estimatedValue, valueLow, valueHigh, valConf, valCount, hasArtistId } =
+    useLocalSearchParams<{
+      artistName?: string;
+      title?: string;
+      estimatedValue?: string;
+      valueLow?: string;
+      valueHigh?: string;
+      valConf?: string;
+      valCount?: string;
+      hasArtistId?: string;
+    }>();
 
-  const hasValue = !!estimatedValue && parseFloat(estimatedValue) > 0;
+  const valLow  = valueLow  ? parseFloat(valueLow)  : null;
+  const valHigh = valueHigh ? parseFloat(valueHigh) : null;
+  const valMed  = estimatedValue ? parseFloat(estimatedValue) : null;
+  const count   = valCount ? parseInt(valCount, 10) : null;
+  const hasRange = valLow != null && valLow > 0 && valHigh != null && valHigh > 0;
+  const hasValue = valMed != null && valMed > 0;
+  const confLabel = valConf ? (CONF_LABEL[valConf] ?? null) : null;
+
   const displayArtist = artistName || 'Votre œuvre';
   const displayTitle = title || null;
 
@@ -38,16 +57,32 @@ export default function SuccessScreen() {
       <View style={s.divider} />
 
       {/* ── Valorisation ── */}
-      {hasValue ? (
+      {hasRange ? (
+        <View style={s.valWrap}>
+          <Text style={s.valLabel}>VALEUR ESTIMÉE</Text>
+          <Text style={s.valRange}>{fmtEur(valLow!)} – {fmtEur(valHigh!)}</Text>
+          {hasValue && <Text style={s.valMedian}>Médiane · {fmtEur(valMed!)}</Text>}
+          <View style={s.valMeta}>
+            {count != null && count > 0 && (
+              <Text style={s.valMetaTxt}>{count} comparable{count > 1 ? 's' : ''}</Text>
+            )}
+            {confLabel && (
+              <Text style={s.valMetaTxt}>{confLabel}</Text>
+            )}
+          </View>
+        </View>
+      ) : hasValue ? (
         <View style={s.valWrap}>
           <Text style={s.valLabel}>ESTIMÉE À ENVIRON</Text>
-          <Text style={s.valAmount}>{fmtEur(parseFloat(estimatedValue!))}</Text>
+          <Text style={s.valAmount}>{fmtEur(valMed!)}</Text>
           <Text style={s.valSource}>Basé sur les comparables récents du marché</Text>
         </View>
       ) : (
         <View style={s.valWrap}>
           <Text style={s.valLabelDim}>
-            Nous rechercherons des comparables{'\n'}pour valoriser cette œuvre.
+            {hasArtistId === '1'
+              ? "Pas assez de données pour valoriser cette œuvre pour l'instant."
+              : "Associez un artiste reconnu pour obtenir une estimation de marché."}
           </Text>
         </View>
       )}
@@ -85,6 +120,10 @@ const s = StyleSheet.create({
 
   valWrap:      { alignItems: 'center', marginBottom: 32 },
   valLabel:     { fontSize: Fonts.xs, color: 'rgba(255,255,255,0.35)', letterSpacing: 0.8, marginBottom: 8, textTransform: 'uppercase' },
+  valRange:     { fontSize: 28, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.8, marginBottom: 4 },
+  valMedian:    { fontSize: Fonts.base, color: 'rgba(255,255,255,0.45)', marginBottom: 8 },
+  valMeta:      { flexDirection: 'row', gap: 12, marginTop: 4 },
+  valMetaTxt:   { fontSize: Fonts.sm, color: 'rgba(255,255,255,0.3)' },
   valAmount:    { fontSize: 34, fontWeight: '700', color: '#FFFFFF', letterSpacing: -1, marginBottom: 6 },
   valSource:    { fontSize: Fonts.sm, color: 'rgba(255,255,255,0.3)', textAlign: 'center' },
   valLabelDim:  { fontSize: Fonts.md, color: 'rgba(255,255,255,0.35)', textAlign: 'center', lineHeight: 20 },

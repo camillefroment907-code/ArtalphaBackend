@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontFamily, FontSize, Spacing, Radius, Shadow } from '@/constants/theme';
 import { collectionService, PortfolioItem } from '@/services/api';
 import { useValuation } from '@/hooks/useValuation';
+import { formatPrice } from '@/utils/format';
 
 type Tab = 'infos' | 'valeur' | 'docs';
 
@@ -88,7 +89,7 @@ export default function CollectionItemDetail() {
     ? new Date(item.purchase_date).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
     : null;
 
-  const larryQ = `Analyser la meilleure stratégie pour ${item.title ?? item.artist_name ?? 'cette œuvre'}`;
+  const assistantQ = `Analyser la meilleure stratégie pour ${item.title ?? item.artist_name ?? 'cette œuvre'}`;
 
   return (
     <View style={s.root}>
@@ -110,7 +111,15 @@ export default function CollectionItemDetail() {
             style={[s.heroOverlayBtn, { top: TOP, right: 14 }]}
             onPress={() => router.push({
               pathname: '/add-artwork/manual',
-              params: { artistName: item.artist_name ?? '', title: item.title ?? '' },
+              params: {
+                artistName: item.artist_name ?? '',
+                artistId:   item.artist_id   ?? '',
+                title:      item.title       ?? '',
+                year:       item.year_created?.toString() ?? '',
+                medium:     item.medium      ?? '',
+                dimensions: item.dimensions  ?? '',
+                editItemId: item.id,
+              },
             })}
           >
             <Ionicons name="pencil-outline" size={16} color="#fff" />
@@ -129,7 +138,7 @@ export default function CollectionItemDetail() {
           <View style={s.valuePill}>
             <Text style={s.valuePillLabel}>VALEUR ESTIMÉE</Text>
             <Text style={s.valuePillAmount}>
-              {Math.round(item.estimated_current_value_eur!).toLocaleString('fr-FR')} €
+              {formatPrice(item.estimated_current_value_eur)}
             </Text>
             {gainPct != null && (
               <Text style={[s.valuePillGain, { color: gainPct >= 0 ? Colors.green : Colors.error }]}>
@@ -163,7 +172,7 @@ export default function CollectionItemDetail() {
               <InfoRow label="Medium"        value={item.medium ?? '—'} />
               <InfoRow label="Dimensions"    value={item.dimensions ?? '—'} />
               <InfoRow label="Provenance"    value={item.provenance ?? '—'} />
-              <InfoRow label="Prix d'achat"  value={item.purchase_price_eur ? `${Math.round(item.purchase_price_eur).toLocaleString('fr-FR')} €` : '—'} />
+              <InfoRow label="Prix d'achat"  value={formatPrice(item.purchase_price_eur ?? null)} />
               <InfoRow label="Date d'achat"  value={purchaseDateStr ?? '—'} />
               <InfoRow label="État"          value={item.condition ?? '—'} last />
             </>
@@ -176,8 +185,14 @@ export default function CollectionItemDetail() {
                   <View style={s.valCard}>
                     <Text style={s.valLabel}>Valeur estimée</Text>
                     <Text style={s.valAmount}>
-                      {Math.round(item.estimated_current_value_eur!).toLocaleString('fr-FR')} €
+                      {formatPrice(item.estimated_current_value_eur)}
                     </Text>
+                    {/* Range from latest_valuation */}
+                    {item.latest_valuation?.value_low != null && item.latest_valuation?.value_high != null && (
+                      <Text style={s.valRange}>
+                        {formatPrice(item.latest_valuation.value_low)} – {formatPrice(item.latest_valuation.value_high)}
+                      </Text>
+                    )}
                     {gainPct != null && (
                       <Text style={[s.valGain, { color: gainPct >= 0 ? Colors.green : Colors.error }]}>
                         {gainPct >= 0 ? '+' : ''}{gainPct}% depuis l'acquisition
@@ -190,12 +205,43 @@ export default function CollectionItemDetail() {
                     )}
                   </View>
 
+                  {/* Valuation metadata */}
+                  {item.latest_valuation && (
+                    <View style={s.valMetaCard}>
+                      {item.latest_valuation.comparables_count != null && (
+                        <View style={s.valMetaRow}>
+                          <Text style={s.valMetaLabel}>Comparables</Text>
+                          <Text style={s.valMetaValue}>{item.latest_valuation.comparables_count} ventes</Text>
+                        </View>
+                      )}
+                      {item.latest_valuation.confidence && (
+                        <View style={s.valMetaRow}>
+                          <Text style={s.valMetaLabel}>Fiabilité</Text>
+                          <Text style={s.valMetaValue}>
+                            {item.latest_valuation.confidence === 'high' ? 'Élevée'
+                              : item.latest_valuation.confidence === 'medium' ? 'Modérée'
+                              : 'Indicative'}
+                          </Text>
+                        </View>
+                      )}
+                      {item.latest_valuation.method && (
+                        <View style={s.valMetaRow}>
+                          <Text style={s.valMetaLabel}>Méthode</Text>
+                          <Text style={s.valMetaValue}>{item.latest_valuation.method}</Text>
+                        </View>
+                      )}
+                      {item.latest_valuation.warning && (
+                        <Text style={s.valWarning}>{item.latest_valuation.warning}</Text>
+                      )}
+                    </View>
+                  )}
+
                   {item.purchase_price_eur != null && (
                     <>
-                      <InfoRow label="Prix d'acquisition" value={`${Math.round(item.purchase_price_eur).toLocaleString('fr-FR')} €`} />
+                      <InfoRow label="Prix d'acquisition" value={formatPrice(item.purchase_price_eur)} />
                       <InfoRow
                         label="Plus-value"
-                        value={`${Math.round(item.estimated_current_value_eur! - item.purchase_price_eur).toLocaleString('fr-FR')} €`}
+                        value={formatPrice(item.estimated_current_value_eur! - item.purchase_price_eur)}
                         last
                       />
                     </>
@@ -214,15 +260,50 @@ export default function CollectionItemDetail() {
 
                   <Pressable
                     style={s.larryLink}
-                    onPress={() => router.push({ pathname: '/(tabs)/larry', params: { q: larryQ } })}
+                    onPress={() => router.push({ pathname: '/(tabs)/larry', params: { q: assistantQ } })}
                   >
-                    <Text style={s.larryLinkTxt}>Analyser avec Larry →</Text>
+                    <Text style={s.larryLinkTxt}>Analyser avec l'Assistant →</Text>
                   </Pressable>
                 </>
               ) : (
                 <View style={s.emptyState}>
-                  <Text style={s.emptyStateTxt}>Valorisation non disponible pour cette œuvre.</Text>
-                  <Text style={s.emptyStateSub}>Assurez-vous que les informations (artiste, médium, année) sont complètes.</Text>
+                  <Text style={s.emptyStateTxt}>
+                    {item.artist_id
+                      ? "Pas assez de données pour valoriser cette œuvre."
+                      : "Aucun artiste associé à cette œuvre."}
+                  </Text>
+                  <Text style={s.emptyStateSub}>
+                    {item.artist_id
+                      ? "Nous n'avons pas trouvé de comparables pour ce médium. Essayez de revaloriser après avoir précisé le médium."
+                      : "Associez un artiste reconnu pour obtenir une estimation basée sur les ventes aux enchères."}
+                  </Text>
+                  {!item.artist_id && (
+                    <Pressable
+                      style={[s.revalueBtn, { marginTop: Spacing.md }]}
+                      onPress={() => router.push({
+                        pathname: '/add-artwork/manual',
+                        params: {
+                          artistName: item.artist_name ?? '',
+                          title:      item.title       ?? '',
+                          editItemId: item.id,
+                        },
+                      })}
+                    >
+                      <Text style={s.revalueBtnTxt}>Compléter les infos →</Text>
+                    </Pressable>
+                  )}
+                  {item.artist_id && (
+                    <Pressable
+                      style={[s.revalueBtn, { marginTop: Spacing.md }]}
+                      onPress={handleRevalue}
+                      disabled={revalueLoading}
+                    >
+                      {revalueLoading
+                        ? <ActivityIndicator size="small" color={Colors.textOnDark} />
+                        : <Text style={s.revalueBtnTxt}>Revaloriser →</Text>
+                      }
+                    </Pressable>
+                  )}
                 </View>
               )}
             </>
@@ -248,15 +329,23 @@ export default function CollectionItemDetail() {
       <View style={s.bottomBar}>
         <Pressable
           style={s.btnGhost}
-          onPress={() => router.push({ pathname: '/(tabs)/larry', params: { q: larryQ } })}
+          onPress={() => router.push({ pathname: '/(tabs)/larry', params: { q: assistantQ } })}
         >
-          <Text style={s.btnGhostTxt}>Demander à Larry</Text>
+          <Text style={s.btnGhostTxt}>Demander à l'Assistant</Text>
         </Pressable>
         <Pressable
           style={s.btnPrimary}
           onPress={() => router.push({
             pathname: '/add-artwork/manual',
-            params: { artistName: item.artist_name ?? '', title: item.title ?? '' },
+            params: {
+              artistName: item.artist_name ?? '',
+              artistId:   item.artist_id   ?? '',
+              title:      item.title       ?? '',
+              year:       item.year_created?.toString() ?? '',
+              medium:     item.medium      ?? '',
+              dimensions: item.dimensions  ?? '',
+              editItemId: item.id,
+            },
           })}
         >
           <Text style={s.btnPrimaryTxt}>Modifier</Text>
@@ -322,13 +411,19 @@ const s = StyleSheet.create({
   rowValue: { fontSize: FontSize.base, fontFamily: FontFamily.sansMedium, color: Colors.textPrimary, maxWidth: '55%', textAlign: 'right' },
 
   // Valeur tab
-  valCard:   { backgroundColor: Colors.bgDark, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.md, ...Shadow.md },
-  valLabel:  { fontSize: FontSize.xs, fontFamily: FontFamily.sansSemibold, color: Colors.textOnDarkSubtle, letterSpacing: 0.7, textTransform: 'uppercase', marginBottom: 6 },
-  valAmount: { fontSize: FontSize['4xl'], fontFamily: FontFamily.serifBold, color: Colors.textOnDark, letterSpacing: -0.8 },
-  valGain:   { fontSize: FontSize.sm, fontFamily: FontFamily.sansSemibold, marginTop: 6 },
-  valDate:   { fontSize: FontSize.xs, fontFamily: FontFamily.sans, color: Colors.textOnDarkSubtle, marginTop: 4 },
+  valCard:    { backgroundColor: Colors.bgDark, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.sm, ...Shadow.md },
+  valLabel:   { fontSize: FontSize.xs, fontFamily: FontFamily.sansSemibold, color: Colors.textOnDarkSubtle, letterSpacing: 0.7, textTransform: 'uppercase', marginBottom: 6 },
+  valAmount:  { fontSize: FontSize['4xl'], fontFamily: FontFamily.serifBold, color: Colors.textOnDark, letterSpacing: -0.8 },
+  valRange:   { fontSize: FontSize.base, fontFamily: FontFamily.sans, color: Colors.textOnDarkMuted, marginTop: 4 },
+  valGain:    { fontSize: FontSize.sm, fontFamily: FontFamily.sansSemibold, marginTop: 6 },
+  valDate:    { fontSize: FontSize.xs, fontFamily: FontFamily.sans, color: Colors.textOnDarkSubtle, marginTop: 4 },
+  valMetaCard:  { backgroundColor: Colors.bgElevated, borderRadius: Radius.md, padding: Spacing.sm, marginBottom: Spacing.md },
+  valMetaRow:   { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 0.5, borderBottomColor: Colors.border },
+  valMetaLabel: { fontSize: FontSize.sm, fontFamily: FontFamily.sans, color: Colors.textTertiary },
+  valMetaValue: { fontSize: FontSize.sm, fontFamily: FontFamily.sansMedium, color: Colors.textSecondary },
+  valWarning:   { fontSize: FontSize.xs, fontFamily: FontFamily.sans, color: Colors.warning, marginTop: 6, lineHeight: 16 },
 
-  revalueBtn:     { marginTop: Spacing.md, paddingVertical: 11, alignItems: 'center', backgroundColor: Colors.navy, borderRadius: Radius.md },
+  revalueBtn:     { marginTop: Spacing.md, paddingVertical: 11, alignItems: 'center', backgroundColor: Colors.gold, borderRadius: Radius.md },
   revalueBtnTxt:  { fontSize: FontSize.sm, fontFamily: FontFamily.sansSemibold, color: Colors.textOnDark },
   larryLink:    { marginTop: Spacing.sm, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md },
   larryLinkTxt: { fontSize: FontSize.sm, fontFamily: FontFamily.sansSemibold, color: Colors.textSecondary },
@@ -341,6 +436,6 @@ const s = StyleSheet.create({
   bottomBar:    { flexDirection: 'row', gap: 8, padding: Spacing.sm, paddingHorizontal: Spacing.md, borderTopWidth: 0.5, borderTopColor: Colors.border, backgroundColor: Colors.bg },
   btnGhost:     { flex: 1, padding: 11, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border, alignItems: 'center' },
   btnGhostTxt:  { fontSize: FontSize.sm, fontFamily: FontFamily.sansMedium, color: Colors.textSecondary },
-  btnPrimary:   { flex: 1, padding: 11, borderRadius: Radius.md, backgroundColor: Colors.navy, alignItems: 'center' },
+  btnPrimary:   { flex: 1, padding: 11, borderRadius: Radius.md, backgroundColor: Colors.gold, alignItems: 'center' },
   btnPrimaryTxt: { fontSize: FontSize.sm, fontFamily: FontFamily.sansSemibold, color: Colors.textOnDark },
 });

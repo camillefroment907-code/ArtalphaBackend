@@ -187,6 +187,8 @@ export default function ManualScreen() {
     title?: string;
     year?: string;
     medium?: string;
+    dimensions?: string;
+    editItemId?: string;
   }>();
 
   // Form state
@@ -197,7 +199,7 @@ export default function ManualScreen() {
   const [selectedMedium, setSelectedMedium] = useState<MediumValue | null>(
     params.medium ? (normalizeMediumRaw(params.medium) as MediumValue) : null
   );
-  const [dimensions, setDimensions]     = useState('');
+  const [dimensions, setDimensions]     = useState(params.dimensions ?? '');
 
   // Autocomplete state
   const [suggestions, setSuggestions]         = useState<Suggestion[]>([]);
@@ -313,6 +315,7 @@ export default function ManualScreen() {
         trendDirection:  estimate?.trend             ?? '',
         investmentGrade: investmentGrade?.grade      ?? '',
         investmentLabel: investmentGrade?.label      ?? '',
+        editItemId:      params.editItemId           ?? '',
       },
     });
   };
