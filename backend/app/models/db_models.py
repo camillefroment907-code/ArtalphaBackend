@@ -458,6 +458,7 @@ class PortfolioItem(Base):
     purchase_price_eur = Column(Float, nullable=True)
     purchase_date = Column(DateTime, nullable=True)
     purchase_source = Column(String(300), nullable=True)
+    acquisition_type = Column(String(100), nullable=True)  # purchase_gallery|purchase_auction|purchase_private|inheritance|succession|gift|donation|exchange|other
 
     # Valuation
     estimated_current_value_eur = Column(Float, nullable=True)

@@ -24,6 +24,22 @@ const TREND_ICON  = { up: '↑', stable: '→', down: '↓' } as const;
 const TREND_LABEL = { up: 'En hausse', stable: 'Stable', down: 'En baisse' } as const;
 const TREND_COLOR = { up: Colors.green, stable: Colors.textTertiary, down: Colors.error } as const;
 
+const ACQ_TYPES = [
+  { value: 'purchase_gallery',  label: 'Galerie' },
+  { value: 'purchase_auction',  label: 'Enchères' },
+  { value: 'purchase_private',  label: 'Particulier' },
+  { value: 'gift',              label: 'Don' },
+  { value: 'inheritance',       label: 'Héritage' },
+  { value: 'succession',        label: 'Succession' },
+  { value: 'donation',          label: 'Donation' },
+  { value: 'exchange',          label: 'Échange' },
+  { value: 'other',             label: 'Autre' },
+] as const;
+
+type AcqType = (typeof ACQ_TYPES)[number]['value'];
+
+const NON_PURCHASE = new Set<AcqType>(['gift', 'inheritance', 'succession', 'donation', 'exchange']);
+
 export default function PriceScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -43,9 +59,10 @@ export default function PriceScreen() {
     editItemId?:      string;
   }>();
 
-  const [price, setPrice]     = useState('');
-  const [house, setHouse]     = useState('');
-  const [date, setDate]       = useState('');
+  const [price,   setPrice]   = useState('');
+  const [house,   setHouse]   = useState('');
+  const [date,    setDate]    = useState('');
+  const [acqType, setAcqType] = useState<AcqType | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Parse market estimate from params
@@ -71,9 +88,9 @@ export default function PriceScreen() {
         medium:              params.medium?.trim() || null,
         dimensions:          params.dimensions?.trim() || null,
         purchase_price_eur:  (!skipPrice && price) ? parseFloat(price) : null,
-        acquisition_source:  house.trim() || null,
-        acquisition_date:    date.trim() || null,
-        import_mode:         'manuel',
+        purchase_source:     house.trim() || null,
+        purchase_date:       date.trim() || null,
+        acquisition_type:    acqType ?? null,
       };
 
       const item = editItemId
@@ -156,11 +173,29 @@ export default function PriceScreen() {
           </View>
         )}
 
+        {/* ── Mode d'acquisition ── */}
+        <View style={s.fieldGroup}>
+          <Text style={s.fieldLabel}>Mode d'acquisition</Text>
+          <View style={s.chipRow}>
+            {ACQ_TYPES.map((t) => (
+              <Pressable
+                key={t.value}
+                style={[s.chip, acqType === t.value && s.chipActive]}
+                onPress={() => setAcqType(prev => prev === t.value ? null : t.value)}
+              >
+                <Text style={[s.chipTxt, acqType === t.value && s.chipTxtActive]}>
+                  {t.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
         {/* ── Prix payé ── */}
         <View style={s.fieldGroup}>
           <Text style={s.fieldLabel}>
-            Prix d'acquisition
-            {hasEstimate && (
+            {acqType && NON_PURCHASE.has(acqType) ? 'Valeur estimée' : 'Prix d\'acquisition'}
+            {(hasEstimate || (acqType && NON_PURCHASE.has(acqType))) && (
               <Text style={s.fieldHint}> · optionnel</Text>
             )}
           </Text>
@@ -266,6 +301,13 @@ const s = StyleSheet.create({
   marketMetaRow:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   marketMetaTxt:  { fontSize: Fonts.sm, color: Colors.textTertiary },
   marketTrend:    { fontSize: Fonts.sm, fontWeight: '600' },
+
+  // Chips
+  chipRow:        { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  chip:           { paddingHorizontal: 12, paddingVertical: 7, borderRadius: Radius.full, borderWidth: 0.5, borderColor: Colors.borderSecondary, backgroundColor: Colors.bgPrimary },
+  chipActive:     { backgroundColor: Colors.blue, borderColor: Colors.blue },
+  chipTxt:        { fontSize: Fonts.base, color: Colors.textSecondary, fontWeight: Fonts.medium },
+  chipTxtActive:  { color: Colors.bgPrimary },
 
   // Fields
   fieldGroup:     { marginBottom: 14 },

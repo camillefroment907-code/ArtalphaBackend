@@ -17,6 +17,18 @@ import { collectionService, PortfolioItem } from '@/services/api';
 import { useValuation } from '@/hooks/useValuation';
 import { formatPrice } from '@/utils/format';
 
+const ACQ_TYPE_LABEL: Record<string, string> = {
+  purchase_gallery: 'Galerie',
+  purchase_auction: 'Enchères',
+  purchase_private: 'Particulier',
+  gift:             'Don',
+  inheritance:      'Héritage',
+  succession:       'Succession',
+  donation:         'Donation',
+  exchange:         'Échange',
+  other:            'Autre',
+};
+
 type Tab = 'infos' | 'valeur' | 'docs';
 
 const TABS: { key: Tab; label: string }[] = [
@@ -172,9 +184,10 @@ export default function CollectionItemDetail() {
               <InfoRow label="Medium"        value={item.medium ?? '—'} />
               <InfoRow label="Dimensions"    value={item.dimensions ?? '—'} />
               <InfoRow label="Provenance"    value={item.provenance ?? '—'} />
-              <InfoRow label="Prix d'achat"  value={formatPrice(item.purchase_price_eur ?? null)} />
-              <InfoRow label="Date d'achat"  value={purchaseDateStr ?? '—'} />
-              <InfoRow label="État"          value={item.condition ?? '—'} last />
+              <InfoRow label="Mode d'acquisition" value={item.acquisition_type ? (ACQ_TYPE_LABEL[item.acquisition_type] ?? item.acquisition_type) : '—'} />
+              <InfoRow label="Prix d'achat"      value={formatPrice(item.purchase_price_eur ?? null)} />
+              <InfoRow label="Date d'achat"      value={purchaseDateStr ?? '—'} />
+              <InfoRow label="État"              value={item.condition ?? '—'} last />
             </>
           )}
 

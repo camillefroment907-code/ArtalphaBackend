@@ -40,6 +40,8 @@ export interface PortfolioItem {
   last_valuation_at?: string | null;            // timestamp dernière valorisation
   purchase_price_eur?: number | null;
   purchase_date?: string | null;
+  purchase_source?: string | null;
+  acquisition_type?: string | null;
   document_urls?: string[];
   image_url?: string | null;
   notes?: string | null;
@@ -59,11 +61,11 @@ export interface CreateItemPayload {
   dimensions: string | null;
   year_created: number | null;
   purchase_price_eur: number | null;
+  purchase_source?: string | null;
+  purchase_date?: string | null;
+  acquisition_type?: string | null;
   image_url?: string | null;
   notes?: string | null;
-  acquisition_source?: string | null;
-  acquisition_date?: string | null;
-  import_mode?: string;
 }
 
 // Résultat réel de l'API /collection/valuate et /collection/items/{id}/revaluate

@@ -41,6 +41,7 @@ def _serialize_item(item: PortfolioItem, latest_valuation=None) -> dict:
         "purchase_price_eur":            item.purchase_price_eur,
         "purchase_date":                 item.purchase_date.isoformat() if item.purchase_date else None,
         "purchase_source":               item.purchase_source,
+        "acquisition_type":              item.acquisition_type,
         # Valuation (legacy fields)
         "estimated_current_value_eur":   item.estimated_current_value_eur,
         "last_valuation_at":             item.last_valuation_at.isoformat() if item.last_valuation_at else None,
@@ -179,6 +180,7 @@ class PortfolioItemCreate(BaseModel):
     year_created: Optional[int] = None
     purchase_date: Optional[datetime] = None
     purchase_source: Optional[str] = None
+    acquisition_type: Optional[str] = None
     purchase_auction_house: Optional[str] = None
     purchase_location: Optional[str] = None
     edition: Optional[str] = None
@@ -228,6 +230,7 @@ class PortfolioItemUpdate(BaseModel):
     image_url: Optional[str] = None
     purchase_date: Optional[datetime] = None
     purchase_source: Optional[str] = None
+    acquisition_type: Optional[str] = None
     purchase_auction_house: Optional[str] = None
     purchase_location: Optional[str] = None
     edition: Optional[str] = None
