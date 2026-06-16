@@ -1,7 +1,7 @@
 """add_acquisition_type
 
-Revision ID: a8b9c0d1e2f3
-Revises: z7a8b9c0d1e2
+Revision ID: b9c0d1e2f3a4
+Revises: a8b9c0d1e2f3
 Create Date: 2026-06-16 00:00:00.000000
 
 Additive migration — adds acquisition_type to portfolio_items.
@@ -10,8 +10,8 @@ Additive migration — adds acquisition_type to portfolio_items.
 from alembic import op
 import sqlalchemy as sa
 
-revision = 'a8b9c0d1e2f3'
-down_revision = 'z7a8b9c0d1e2'
+revision = 'b9c0d1e2f3a4'
+down_revision = 'd5e6f7a8b9c0'
 branch_labels = None
 depends_on = None
 
