@@ -192,6 +192,10 @@ def urgency_block(closes_in: str, auction_house: str, auction_date: str) -> str:
 </div>"""
 
 
+# ── KILL SWITCH — set to True to re-enable alert emails ──────────────────────
+_ALERTS_ENABLED = False
+
+
 def _configured() -> bool:
     if not settings.resend_api_key:
         logger.warning("RESEND_API_KEY not configured — emails disabled")
@@ -201,6 +205,10 @@ def _configured() -> bool:
 
 
 def _send_sync(to_email: str, subject: str, html: str, from_email: str) -> bool:
+    # Block all alert emails when kill switch is active
+    if not _ALERTS_ENABLED and from_email == settings.alert_from_email:
+        logger.info("alerts_kill_switch — skipping alert email to=%s subject=%s", to_email, subject)
+        return False
     if not _configured():
         return False
     try:
