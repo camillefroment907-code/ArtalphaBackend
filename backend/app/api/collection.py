@@ -19,6 +19,7 @@ from app.models.db_models import User, PortfolioItem, CollectionValuation, SaleR
 from app.api.billing import _get_user_plan, PLAN_LIMITS
 from app.engines.valuation_engine import valuate_item
 from app.engines.comparable_engine import find_comparables_and_estimate
+from app.engines.vision_engine import analyze_artwork_image
 
 logger = logging.getLogger(__name__)
 
@@ -611,6 +612,107 @@ async def upload_item_photo(
     await db.refresh(item)
 
     return {"url": public_url, "image_url": item.image_url, "image_urls": item.image_urls}
+
+
+# ── Vision Engine endpoint ────────────────────────────────────────────────────
+
+@router.post("/vision/analyze")
+async def vision_analyze(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Analyse une image d'œuvre via Claude Vision.
+    Retourne des prédictions structurées : artiste, médium, catégorie, année, signature...
+    Ne crée pas d'item — uniquement l'analyse.
+    """
+    from app.config import get_settings
+    settings = get_settings()
+
+    if not settings.anthropic_api_key and not settings.openai_api_key:
+        raise HTTPException(503, "Service de vision non configuré.")
+
+    contents = await file.read(10 * 1024 * 1024 + 1)
+    if len(contents) > 10 * 1024 * 1024:
+        raise HTTPException(413, "Image trop grande (max 10 Mo).")
+
+    content_type = file.content_type or "image/jpeg"
+    if not content_type.startswith("image/"):
+        raise HTTPException(415, "Seules les images sont acceptées.")
+
+    # Upload vers Supabase Storage pour garder une trace (optionnel — ne bloque pas si absent)
+    image_url: Optional[str] = None
+    if settings.supabase_url and settings.supabase_service_key:
+        try:
+            ext = content_type.split("/")[-1].replace("jpeg", "jpg")
+            fname = f"vision/{current_user.id}/{uuid_lib.uuid4().hex}.{ext}"
+            supabase_url = settings.supabase_url.rstrip("/")
+            upload_url = f"{supabase_url}/storage/v1/object/artwork-photos/{fname}"
+            async with httpx.AsyncClient(timeout=20) as client:
+                resp = await client.post(
+                    upload_url,
+                    content=contents,
+                    headers={
+                        "Authorization": f"Bearer {settings.supabase_service_key}",
+                        "Content-Type": content_type,
+                        "x-upsert": "true",
+                    },
+                )
+            if resp.status_code in (200, 201):
+                image_url = f"{supabase_url}/storage/v1/object/public/artwork-photos/{fname}"
+        except Exception as e:
+            logger.warning(f"[vision] Storage upload skipped: {e}")
+
+    # Analyse vision
+    result = await analyze_artwork_image(
+        image_data=contents,
+        content_type=content_type,
+        anthropic_api_key=settings.anthropic_api_key,
+        openai_api_key=settings.openai_api_key,
+    )
+
+    if result.error:
+        raise HTTPException(502, result.error)
+
+    # Tentative de matching artiste dans notre base
+    artist_id: Optional[str] = None
+    if result.artist:
+        from app.models.db_models import Artist
+        from sqlalchemy import func as sqlfunc
+        artist_q = await db.execute(
+            select(Artist).where(
+                sqlfunc.lower(Artist.name).contains(result.artist.lower().split()[0])
+            ).limit(3)
+        )
+        candidates = artist_q.scalars().all()
+        if candidates:
+            # Garder le candidat dont le nom est le plus proche
+            name_lower = result.artist.lower()
+            best = min(candidates, key=lambda a: abs(len(a.name) - len(result.artist)))
+            if name_lower in best.name.lower() or best.name.lower() in name_lower:
+                artist_id = str(best.id)
+
+    logger.info(f"[vision] user={current_user.id} artist={result.artist!r} conf={result.confidence}")
+
+    return {
+        "artist":               result.artist,
+        "artist_id":            artist_id,
+        "artist_confidence":    result.artist_confidence,
+        "title":                result.title,
+        "medium":               result.medium,
+        "artwork_category":     result.artwork_category,
+        "year_estimate":        result.year_estimate,
+        "signature_detected":   result.signature_detected,
+        "signature_position":   result.signature_position,
+        "style":                result.style,
+        "period":               result.period,
+        "condition_apparent":   result.condition_apparent,
+        "confidence":           result.confidence,
+        "confidence_breakdown": result.confidence_breakdown,
+        "analysis":             result.analysis,
+        "image_url":            image_url,
+    }
 
 
 # ── Valuation endpoints ───────────────────────────────────────────────────────
