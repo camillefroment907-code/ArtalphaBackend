@@ -8,14 +8,21 @@ import {
   StyleSheet,
   ActivityIndicator,
   Platform,
+  Image,
+  Alert,
+  Dimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { Colors, FontFamily, FontSize, Spacing, Radius, Shadow } from '@/constants/theme';
 import { collectionService, PortfolioItem } from '@/services/api';
 import { useValuation } from '@/hooks/useValuation';
 import { formatPrice } from '@/utils/format';
+import { api } from '@/lib/api';
+
+const PHOTO_SIZE = Math.floor((Dimensions.get('window').width - Spacing.md * 2 - 8) / 3);
 
 const ACQ_TYPE_LABEL: Record<string, string> = {
   purchase_gallery: 'Galerie',
@@ -51,10 +58,11 @@ const TOP = Platform.OS === 'ios' ? 52 : 36;
 export default function CollectionItemDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [item,      setItem]      = useState<PortfolioItem | null>(null);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>('infos');
+  const [item,           setItem]           = useState<PortfolioItem | null>(null);
+  const [loading,        setLoading]        = useState(true);
+  const [error,          setError]          = useState<string | null>(null);
+  const [activeTab,      setActiveTab]      = useState<Tab>('infos');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const { revalue, loading: revalueLoading } = useValuation();
 
   const fetchItem = useCallback(() => {
@@ -71,6 +79,51 @@ export default function CollectionItemDetail() {
     if (!id) return;
     await revalue(id);
     fetchItem();
+  };
+
+  const pickAndUpload = async (source: 'library' | 'camera') => {
+    const { status } = source === 'camera'
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (status !== 'granted') {
+      Alert.alert('Permission refusée', source === 'camera'
+        ? "Autorisez l'accès à l'appareil photo dans les réglages."
+        : "Autorisez l'accès aux photos dans les réglages.");
+      return;
+    }
+
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8, aspect: [4, 3] })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.8 });
+
+    if (result.canceled || !result.assets[0]) return;
+
+    const asset = result.assets[0];
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', {
+        uri: asset.uri,
+        name: `photo_${Date.now()}.jpg`,
+        type: asset.mimeType ?? 'image/jpeg',
+      } as unknown as Blob);
+
+      await api.upload<{ url: string }>(`/api/collection/items/${id}/upload-photo`, formData);
+      fetchItem();
+    } catch (e: unknown) {
+      Alert.alert('Erreur', e instanceof Error ? e.message : "Impossible d'uploader la photo.");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const showPhotoOptions = () => {
+    Alert.alert('Ajouter une photo', '', [
+      { text: 'Appareil photo', onPress: () => pickAndUpload('camera') },
+      { text: 'Photothèque', onPress: () => pickAndUpload('library') },
+      { text: 'Annuler', style: 'cancel' },
+    ]);
   };
 
   if (loading) return <View style={s.loader}><ActivityIndicator color={Colors.gold} /></View>;
@@ -109,13 +162,26 @@ export default function CollectionItemDetail() {
 
         {/* ── Hero ── */}
         <View style={s.hero}>
-          <View style={s.heroPlaceholder}>
-            <Text style={s.heroInitial}>{initial}</Text>
-          </View>
+          {item.image_url
+            ? <Image source={{ uri: item.image_url }} style={s.heroImage} resizeMode="cover" />
+            : <View style={s.heroPlaceholder}><Text style={s.heroInitial}>{initial}</Text></View>
+          }
 
           {/* Back */}
           <Pressable style={[s.heroOverlayBtn, { top: TOP, left: 14 }]} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={16} color="#fff" />
+          </Pressable>
+
+          {/* Camera */}
+          <Pressable
+            style={[s.heroOverlayBtn, { bottom: 56, right: 14 }]}
+            onPress={showPhotoOptions}
+            disabled={uploadingPhoto}
+          >
+            {uploadingPhoto
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Ionicons name="camera-outline" size={16} color="#fff" />
+            }
           </Pressable>
 
           {/* Edit */}
@@ -324,14 +390,42 @@ export default function CollectionItemDetail() {
 
           {activeTab === 'docs' && (
             <>
+              {/* ── Photos ── */}
+              <View style={s.photoSection}>
+                <View style={s.photoSectionHeader}>
+                  <Text style={s.photoSectionTitle}>PHOTOS</Text>
+                  <Pressable
+                    style={s.photoAddBtn}
+                    onPress={showPhotoOptions}
+                    disabled={uploadingPhoto}
+                  >
+                    {uploadingPhoto
+                      ? <ActivityIndicator size="small" color={Colors.textOnDark} />
+                      : <Ionicons name="add" size={18} color={Colors.textOnDark} />
+                    }
+                  </Pressable>
+                </View>
+
+                {(item.image_urls?.length ?? 0) > 0 ? (
+                  <View style={s.photoGrid}>
+                    {(item.image_urls ?? []).map((url, idx) => (
+                      <Image key={idx} source={{ uri: url }} style={s.photoThumb} resizeMode="cover" />
+                    ))}
+                    <Pressable style={s.photoAddThumb} onPress={showPhotoOptions} disabled={uploadingPhoto}>
+                      <Ionicons name="add" size={24} color={Colors.textTertiary} />
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable style={s.photoEmpty} onPress={showPhotoOptions} disabled={uploadingPhoto}>
+                    <Ionicons name="camera-outline" size={28} color={Colors.textTertiary} />
+                    <Text style={s.photoEmptyTxt}>Ajouter une photo</Text>
+                  </Pressable>
+                )}
+              </View>
+
+              {/* ── Documents ── */}
               <InfoRow label="Certificat d'authenticité" value={item.certificate_of_authenticity ? 'Présent' : 'Non renseigné'} />
               <InfoRow label="Documents" value={docCount > 0 ? `${docCount} fichier${docCount > 1 ? 's' : ''}` : 'Aucun'} last />
-              {docCount === 0 && (
-                <View style={s.emptyState}>
-                  <Text style={s.emptyStateTxt}>Aucun document associé.</Text>
-                  <Text style={s.emptyStateSub}>Ajoutez facture, expertise ou certificat pour renforcer la valeur documentaire.</Text>
-                </View>
-              )}
             </>
           )}
 
@@ -378,6 +472,7 @@ const s = StyleSheet.create({
 
   // Hero
   hero: { height: 260, backgroundColor: Colors.bgDark, position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  heroImage: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   heroPlaceholder: { width: 80, height: 80, borderRadius: Radius.full, borderWidth: 1.5, borderColor: Colors.borderOnDark, alignItems: 'center', justifyContent: 'center' },
   heroInitial: { fontSize: FontSize['3xl'], fontFamily: FontFamily.serifBold, color: Colors.textOnDarkMuted },
   heroOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: Spacing.md, backgroundColor: 'rgba(0,0,0,0.50)' },
@@ -444,6 +539,17 @@ const s = StyleSheet.create({
   emptyState:    { paddingVertical: Spacing.lg, alignItems: 'center' },
   emptyStateTxt: { fontSize: FontSize.base, fontFamily: FontFamily.sansMedium, color: Colors.textSecondary, textAlign: 'center', marginBottom: 6 },
   emptyStateSub: { fontSize: FontSize.sm, fontFamily: FontFamily.sans, color: Colors.textTertiary, textAlign: 'center', lineHeight: 18 },
+
+  // Photos
+  photoSection:       { marginBottom: Spacing.md },
+  photoSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
+  photoSectionTitle:  { fontSize: FontSize.xs, fontFamily: FontFamily.sansSemibold, color: Colors.textTertiary, letterSpacing: 0.7 },
+  photoAddBtn:        { width: 28, height: 28, borderRadius: Radius.full, backgroundColor: Colors.gold, alignItems: 'center', justifyContent: 'center' },
+  photoGrid:          { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  photoThumb:         { width: PHOTO_SIZE, height: PHOTO_SIZE, borderRadius: Radius.sm, backgroundColor: Colors.bgElevated },
+  photoAddThumb:      { width: PHOTO_SIZE, height: PHOTO_SIZE, borderRadius: Radius.sm, backgroundColor: Colors.bgElevated, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed' },
+  photoEmpty:         { height: 100, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: Spacing.md },
+  photoEmptyTxt:      { fontSize: FontSize.sm, fontFamily: FontFamily.sans, color: Colors.textTertiary },
 
   // Bottom bar
   bottomBar:    { flexDirection: 'row', gap: 8, padding: Spacing.sm, paddingHorizontal: Spacing.md, borderTopWidth: 0.5, borderTopColor: Colors.border, backgroundColor: Colors.bg },

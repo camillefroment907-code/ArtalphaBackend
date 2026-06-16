@@ -1,13 +1,15 @@
 """
 Collection management API — authenticated users.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
 from sqlalchemy.orm import selectinload
 from typing import Optional, List
 from datetime import datetime
 from pydantic import BaseModel, model_validator
+import uuid as uuid_lib
+import httpx
 
 import logging
 
@@ -540,6 +542,75 @@ async def delete_item(
 
     await db.delete(item)
     await db.commit()
+
+
+@router.post("/items/{item_id}/upload-photo")
+async def upload_item_photo(
+    item_id: str,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload a photo for a collection item and store the public URL."""
+    from app.config import get_settings
+    settings = get_settings()
+
+    result = await db.execute(
+        select(PortfolioItem).where(
+            and_(PortfolioItem.id == item_id, PortfolioItem.user_id == current_user.id)
+        )
+    )
+    item = result.scalar_one_or_none()
+    if not item:
+        raise HTTPException(404, "Item introuvable.")
+
+    if not settings.supabase_url or not settings.supabase_service_key:
+        raise HTTPException(503, "Service de stockage non configuré.")
+
+    # Read file bytes (max 10 MB)
+    contents = await file.read(10 * 1024 * 1024 + 1)
+    if len(contents) > 10 * 1024 * 1024:
+        raise HTTPException(413, "Image trop grande (max 10 Mo).")
+
+    content_type = file.content_type or "image/jpeg"
+    if not content_type.startswith("image/"):
+        raise HTTPException(415, "Seules les images sont acceptées.")
+
+    ext = content_type.split("/")[-1].replace("jpeg", "jpg")
+    filename = f"{current_user.id}/{item_id}/{uuid_lib.uuid4().hex}.{ext}"
+    bucket = "artwork-photos"
+
+    supabase_url = settings.supabase_url.rstrip("/")
+    upload_url = f"{supabase_url}/storage/v1/object/{bucket}/{filename}"
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            upload_url,
+            content=contents,
+            headers={
+                "Authorization": f"Bearer {settings.supabase_service_key}",
+                "Content-Type": content_type,
+                "x-upsert": "true",
+            },
+        )
+
+    if resp.status_code not in (200, 201):
+        logger.error(f"[upload-photo] Supabase error {resp.status_code}: {resp.text[:200]}")
+        raise HTTPException(502, "Erreur lors de l'upload de la photo.")
+
+    public_url = f"{supabase_url}/storage/v1/object/public/{bucket}/{filename}"
+
+    existing_urls: list = list(item.image_urls or [])
+    existing_urls.append(public_url)
+    item.image_urls = existing_urls
+    if not item.image_url:
+        item.image_url = public_url
+    item.updated_at = datetime.utcnow()
+
+    await db.commit()
+    await db.refresh(item)
+
+    return {"url": public_url, "image_url": item.image_url, "image_urls": item.image_urls}
 
 
 # ── Valuation endpoints ───────────────────────────────────────────────────────

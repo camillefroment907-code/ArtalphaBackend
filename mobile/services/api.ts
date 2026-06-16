@@ -44,6 +44,7 @@ export interface PortfolioItem {
   acquisition_type?: string | null;
   document_urls?: string[];
   image_url?: string | null;
+  image_urls?: string[];
   notes?: string | null;
   condition?: string | null;
   provenance?: string | null;
