@@ -57,7 +57,7 @@ nav.scrolled{
 
 .hero{
   min-height:100vh;
-  padding:100px 40px 0;
+  padding:72px 40px 0;
   text-align:center;
   overflow:hidden;
 }
@@ -79,7 +79,7 @@ nav.scrolled{
   color:var(--ink-light);font-style:normal;
 }
 .hero-line-2 .hero-line-inner{
-  font-size:clamp(44px,5.5vw,82px);
+  font-size:clamp(32px,4vw,62px);
   line-height:1.08;letter-spacing:-.03em;
   color:var(--ink);font-style:italic;
 }
@@ -106,8 +106,15 @@ nav.scrolled{
 
 /* Faithful product mockup */
 .product-stage{
-  position:relative;max-width:1320px;margin:0 auto;padding:0 12px 60px;
+  position:relative;max-width:1320px;margin:0 auto;padding:0 12px 60px;max-height:64vh;overflow:hidden;
   opacity:0;animation:fadeUp 1s ease forwards 1.45s;
+}
+.product-stage::after{
+  content:'';
+  position:absolute;bottom:0;left:0;right:0;
+  height:80px;
+  background:linear-gradient(transparent,var(--canvas));
+  pointer-events:none;
 }
 .product-halo{
   position:absolute;left:50%;top:22%;transform:translate(-50%,-50%);
