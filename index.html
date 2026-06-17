@@ -68,17 +68,28 @@ nav.scrolled{
   margin-bottom:40px;
   opacity:0;animation:fadeUp .8s ease forwards .15s;
 }
-.hero-diff{
-  font-family:"JetBrains Mono",monospace;
-  font-size:11px;
-  letter-spacing:2px;
-  text-transform:uppercase;
+.hero-setup{
+  font-family:"Playfair Display",serif;
+  font-size:clamp(16px,1.8vw,24px);
+  font-weight:400;
+  font-style:italic;
+  color:var(--ink-soft);
+  line-height:1.9;
+  margin-bottom:24px;
+  opacity:0;
+  animation:fadeUp .8s ease forwards .2s;
+}
+.hero-descriptor{
+  font-family:"Inter",sans-serif;
+  font-size:15px;
+  font-weight:300;
   color:var(--ink-light);
-  margin:0 auto 52px;
+  line-height:2.2;
+  margin:28px auto 52px;
+  max-width:360px;
   opacity:0;
   animation:fadeUp .8s ease forwards .9s;
 }
-.hero-diff strong{color:var(--ink);}
 .hero-title{
   font-family:"Playfair Display",serif;
   font-weight:400;
@@ -550,11 +561,12 @@ footer{padding:32px 52px;display:flex;justify-content:space-between;border-top:1
 </nav>
 
 <section class="hero">
+  <p class="hero-setup">Vous vivez avec elles.<br>Vous passez devant chaque jour.<br>Certaines vous suivent depuis des années.</p>
   <h1 class="hero-title">
-    <span class="hero-line hero-line-1"><span class="hero-line-inner">Vous pouvez voir chaque œuvre.</span></span>
-    <span class="hero-line hero-line-2"><span class="hero-line-inner hero-line-accent">Mais avez-vous déjà vu votre collection ?</span></span>
+    <span class="hero-line hero-line-1"><span class="hero-line-inner">Mais connaissez-vous vraiment</span></span>
+    <span class="hero-line hero-line-2"><span class="hero-line-inner hero-line-accent">votre collection ?</span></span>
   </h1>
-  <p class="hero-diff">Le marché parle de <strong>ventes.</strong> Nautilus parle de <strong>collections.</strong></p>
+  <p class="hero-descriptor">Documentez vos œuvres.<br>Suivez leur valeur.<br>Comprenez votre collection.</p>
 
     <div class="product-stage">
     <div class="product-halo"></div>
