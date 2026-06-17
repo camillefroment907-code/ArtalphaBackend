@@ -452,13 +452,6 @@ nav.scrolled{
   text-transform: uppercase;
 }
 
-/* SECTION TENSION sur fond night — continuité visuelle */
-.tension-section {
-  background: var(--night) !important;
-}
-.tension-pre { color: rgba(255,255,255,0.35) !important; }
-.tension-main { color: rgba(255,255,255,0.9) !important; }
-.tension-main em { color: #fff !important; }
 
 @media(max-width:900px) {
   .art-piece:nth-child(4), .art-piece:nth-child(5) { display: none; }
@@ -485,54 +478,7 @@ nav.scrolled{
 /* Page sections */
 .fade-section{opacity:0;transform:translateY(28px);transition:opacity .9s ease,transform .9s ease}
 .fade-section.visible{opacity:1;transform:translateY(0)}
-.tension-section{
-  text-align:center;padding:160px 48px 120px;max-width:700px;margin:0 auto;
-}
-.tension-pre{font-size:16px;font-weight:300;color:var(--ink-light);margin-bottom:32px}
-.tension-main{
-  font-family:"Playfair Display",serif;font-size:clamp(34px,4.5vw,56px);line-height:1.2;font-weight:400;letter-spacing:-.02em;
-}
-.tension-main em{font-style:italic}
 .divider{width:32px;height:1px;background:var(--line);margin:0 auto}
-.dispersion-section{
-  max-width:1060px;margin:0 auto;padding:80px 48px 130px;
-  display:grid;grid-template-columns:1fr 1fr;gap:100px;align-items:center;
-}
-.eyebrow{
-  font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:3.5px;text-transform:uppercase;color:var(--ink-light);
-  margin-bottom:32px;
-}
-.dispersion-lines p{
-  font-family:"Playfair Display",serif;font-size:22px;line-height:1.5;color:var(--ink-light);margin-bottom:6px;
-}
-.dispersion-lines .anchor{color:var(--ink)}
-.dispersion-conclusion{font-size:15px;font-weight:300;color:var(--ink-light);line-height:1.8;max-width:380px;margin-top:34px}
-.fragments{display:flex;flex-direction:column;gap:10px}
-.fragment-card{
-  background:var(--surface);border-radius:6px;padding:16px 20px;
-  display:flex;align-items:center;gap:16px;
-  opacity:0;
-  transition:opacity .6s ease, transform .7s cubic-bezier(0.16,1,0.3,1);
-}
-/* Directions de convergence */
-.fc-left  { transform: translateX(-70px) translateY(10px); }
-.fc-right { transform: translateX(70px) translateY(-10px); }
-.fc-bottom{ transform: translateY(50px); }
-.fc-appear{
-  transform: scale(0.88);
-  transition: opacity .7s ease .55s, transform .8s cubic-bezier(0.16,1,0.3,1) .55s !important;
-  background: var(--ink) !important;
-}
-/* Une fois visible */
-.fragment-card.visible {
-  opacity: 1;
-  transform: translateX(0) translateY(0) scale(1);
-}
-.fragment-icon{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:1.5px;color:var(--ink-light);min-width:58px}
-.fragment-text{font-size:13px;color:var(--ink-soft);font-weight:300}
-.nautilus-card{background:var(--ink)}
-.nautilus-card .fragment-icon{color:rgba(255,255,255,.35)}
-.nautilus-card .fragment-text{color:#fff;font-weight:500}
 .nautilus-card strong{color:#8FAEFF;font-weight:500}
 
 .mockup-blocs{display:flex;flex-direction:column;overflow-y:auto;flex:1}
@@ -575,12 +521,11 @@ footer{padding:32px 52px;display:flex;justify-content:space-between;border-top:1
   .mac-screen{grid-template-columns:1fr;aspect-ratio:auto;min-height:760px}
   .sidebar{display:none}
   .dashboard{padding:22px 16px}
-  .dash-grid,.works-panel,.lower-grid,.editorial-inner,.dispersion-section,.features-grid{grid-template-columns:1fr}
+  .dash-grid,.works-panel,.lower-grid,.editorial-inner,.features-grid{grid-template-columns:1fr}
   .works-row{grid-template-columns:repeat(2,1fr)}
-  .dispersion-section{gap:52px;padding:70px 24px 100px}
   .features-section,.editorial-image{padding:90px 24px}
   .features-grid{gap:56px}
-  .tension-section,.emotion-section,.final-section{padding:90px 24px}
+  .emotion-section,.final-section{padding:90px 24px}
   footer{padding:24px;flex-direction:column;gap:10px;text-align:center}
 }
 </style>
@@ -732,34 +677,7 @@ footer{padding:32px 52px;display:flex;justify-content:space-between;border-top:1
   </div>
 </div>
 
-<section class="tension-section fade-section">
-  <p class="tension-pre">Vous pouvez voir chaque œuvre.</p>
-  <h2 class="tension-main">Mais avez-vous déjà vu<br><em>votre collection ?</em></h2>
-</section>
 
-<div style="background:var(--night);padding-bottom:80px;">
-  <div class="divider" style="background:rgba(255,255,255,0.1);"></div>
-</div>
-
-<section class="dispersion-section fade-section">
-  <div>
-    <div class="eyebrow">Le problème</div>
-    <div class="dispersion-lines">
-      <p>Les œuvres existent.</p>
-      <p>Les factures existent.</p>
-      <p>Les certificats existent.</p>
-      <p class="anchor">La collection, elle, est dispersée.</p>
-    </div>
-    <p class="dispersion-conclusion">Fragmentée entre des photos, des PDF, des dossiers, des souvenirs et des estimations oubliées.</p>
-  </div>
-  <div class="fragments">
-    <div class="fragment-card"><span class="fragment-icon">PHOTOS</span><span class="fragment-text">IMG_4829.jpg · œuvre au mur</span></div>
-    <div class="fragment-card"><span class="fragment-icon">EMAIL</span><span class="fragment-text">Facture galerie · mars 2022</span></div>
-    <div class="fragment-card"><span class="fragment-icon">PDF</span><span class="fragment-text">Certificat_authenticité.pdf</span></div>
-    <div class="fragment-card"><span class="fragment-icon">NOTES</span><span class="fragment-text">“achetée à Bruxelles en 2019”</span></div>
-    <div class="fragment-card nautilus-card"><span class="fragment-icon">NAUTILUS</span><span class="fragment-text">Votre collection · <strong>4 700 €</strong> · 5 œuvres</span></div>
-  </div>
-</section>
 
 
 
