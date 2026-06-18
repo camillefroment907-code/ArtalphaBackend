@@ -71,7 +71,29 @@ nav.scrolled{
   justify-content:center;
   gap:0;
 }
-.hero-right{
+
+.hero-title-new{
+  font-family:"Playfair Display",serif;
+  font-size:clamp(28px,3.5vw,52px);
+  font-weight:400;
+  line-height:1.15;
+  letter-spacing:-0.025em;
+  color:var(--ink);
+  margin-bottom:24px;
+  opacity:0;
+  animation:fadeUp .8s ease forwards .2s;
+}
+.hero-sub{
+  font-family:"Inter",sans-serif;
+  font-size:clamp(15px,1.4vw,18px);
+  font-weight:300;
+  color:var(--ink-soft);
+  line-height:1.75;
+  margin-bottom:40px;
+  max-width:420px;
+  opacity:0;
+  animation:fadeUp .8s ease forwards .5s;
+}.hero-right{
   display:flex;
   align-items:center;
   justify-content:center;
@@ -113,47 +135,7 @@ nav.scrolled{
   margin-bottom:40px;
   opacity:0;animation:fadeUp .8s ease forwards .15s;
 }
-.hero-setup{
-  font-family:"Playfair Display",serif;
-  font-size:clamp(16px,1.8vw,24px);
-  font-weight:400;
-  font-style:italic;
-  color:var(--ink-soft);
-  line-height:1.9;
-  margin-bottom:24px;
-  opacity:0;
-  animation:fadeUp .8s ease forwards .2s;
-}
-.hero-descriptor{
-  font-family:"Inter",sans-serif;
-  font-size:15px;
-  font-weight:300;
-  color:var(--ink-light);
-  line-height:2.2;
-  margin:28px 0 52px;
-  max-width:360px;
-  opacity:0;
-  animation:fadeUp .8s ease forwards .9s;
-}
-.hero-title{
-  font-family:"Playfair Display",serif;
-  font-weight:400;
-  max-width:1080px;margin:0 0 36px;
-}
-.hero-line-1 .hero-line-inner{
-  font-size:clamp(16px,1.8vw,26px);
-  line-height:1.35;letter-spacing:-.02em;
-  color:var(--ink-light);font-style:normal;
-}
-.hero-line-2 .hero-line-inner{
-  font-size:clamp(32px,4vw,62px);
-  line-height:1.08;letter-spacing:-.03em;
-  color:var(--ink);font-style:italic;
-}
-.hero-line{display:block;overflow:hidden}
 .hero-line-inner{display:block;transform:translateY(105%);animation:lineReveal .95s cubic-bezier(.16,1,.3,1) forwards}
-.hero-line:nth-child(1) .hero-line-inner{animation-delay:.28s}
-.hero-line:nth-child(2) .hero-line-inner{animation-delay:.5s}
 
 
 .hero-cta-group{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:76px;opacity:0;animation:fadeUp .8s ease forwards 1.3s}
@@ -513,10 +495,6 @@ nav.scrolled{
 
 
 /* Hero title ligne 2 — légère italique pour l'emphase */
-.hero-line-accent {
-  font-style: italic;
-  color: var(--ink);
-}
 
 /* Art caption amélioré */
 .art-caption {
@@ -560,7 +538,6 @@ footer{padding:32px 52px;display:flex;justify-content:space-between;border-top:1
 .footer-tagline{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--ink-light)}
 
 @media(min-width:1600px){.nlogo{height:56px}}
-@keyframes lineReveal{to{transform:translateY(0)}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
 @keyframes floatShadow{0%,100%{box-shadow:0 44px 100px rgba(0,0,0,.18),0 -8px 60px rgba(27,79,204,.06)}50%{box-shadow:0 56px 120px rgba(0,0,0,.22),0 -8px 60px rgba(27,79,204,.09)}}
@@ -570,8 +547,6 @@ footer{padding:32px 52px;display:flex;justify-content:space-between;border-top:1
   .hero{grid-template-columns:1fr;min-height:auto}
   .hero-left{padding:100px 24px 40px}
   .hero-right{height:auto;padding:0 24px 60px}
-  .hero-line-1 .hero-line-inner{font-size:clamp(15px,4vw,22px)}
-  .hero-line-2 .hero-line-inner{font-size:clamp(28px,8vw,48px)}
   .macbook{padding:10px 10px 0;border-radius:16px 16px 8px 8px}
   .mac-screen{grid-template-columns:1fr;aspect-ratio:auto;min-height:760px}
   .sidebar{display:none}
@@ -582,6 +557,37 @@ footer{padding:32px 52px;display:flex;justify-content:space-between;border-top:1
   .features-grid{gap:56px}
   .emotion-section,.final-section{padding:90px 24px}
   footer{padding:24px;flex-direction:column;gap:10px;text-align:center}
+}
+
+.manifeste-section{
+  padding:140px 48px;
+  text-align:center;
+  background:var(--canvas);
+}
+.manifeste-inner{
+  max-width:680px;
+  margin:0 auto;
+}
+.manifeste-setup{
+  font-family:"Playfair Display",serif;
+  font-size:clamp(16px,1.6vw,22px);
+  font-style:italic;
+  font-weight:400;
+  color:var(--ink-soft);
+  line-height:1.9;
+  margin-bottom:32px;
+}
+.manifeste-title{
+  font-family:"Playfair Display",serif;
+  font-size:clamp(32px,4.5vw,64px);
+  font-weight:400;
+  line-height:1.1;
+  letter-spacing:-0.03em;
+  color:var(--ink);
+}
+.manifeste-title em{
+  font-style:italic;
+  color:var(--accent);
 }
 </style>
 </head>
@@ -595,12 +601,16 @@ footer{padding:32px 52px;display:flex;justify-content:space-between;border-top:1
 
 <section class="hero">
   <div class="hero-left">
-    <p class="hero-setup">Vous vivez avec elles.<br>Vous passez devant chaque jour.<br>Certaines vous suivent depuis des années.</p>
-    <h1 class="hero-title">
-    <span class="hero-line hero-line-1"><span class="hero-line-inner">Mais connaissez-vous vraiment</span></span>
-    <span class="hero-line hero-line-2"><span class="hero-line-inner hero-line-accent">votre collection ?</span></span>
-  </h1>
-    <p class="hero-descriptor">Documentez vos œuvres.<br>Suivez leur valeur.<br>Comprenez votre collection.</p>
+    <h1 class="hero-title-new">
+      L’application pour gérer<br>
+      et comprendre votre<br>
+      collection d’art.
+    </h1>
+    <p class="hero-sub">
+      Nautilus vous permet de documenter vos œuvres,
+      de suivre leur valeur dans le temps
+      et de comprendre ce que votre collection raconte.
+    </p>
     <div class="hero-cta-group">
     <a class="cta-primary" href="#">Voir ma collection →</a>
   </div>
@@ -739,6 +749,20 @@ footer{padding:32px 52px;display:flex;justify-content:space-between;border-top:1
 
 
 
+
+<section class="manifeste-section fade-section">
+  <div class="manifeste-inner">
+    <p class="manifeste-setup">
+      Vous vivez avec elles.<br>
+      Vous passez devant chaque jour.<br>
+      Certaines vous suivent depuis des années.
+    </p>
+    <h2 class="manifeste-title">
+      Mais connaissez-vous vraiment<br>
+      <em>votre collection ?</em>
+    </h2>
+  </div>
+</section>
 
 <section class="emotion-section fade-section">
   <p class="emotion-text">Une collection n'est pas<br>une liste d'œuvres.<br><em>C'est une histoire.</em></p>
