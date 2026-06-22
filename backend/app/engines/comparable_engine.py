@@ -308,6 +308,108 @@ async def _fallback_aggregate_stats(
     return None
 
 
+# ── Fallback catégorie (artiste inconnu) ──────────────────────────────────────
+
+async def find_comparables_by_category(
+    db: AsyncSession,
+    medium_category: Optional[str],
+    year_created: Optional[int] = None,
+    min_price: int = 100,
+    max_price: int = 500_000,
+) -> dict:
+    """
+    Cherche des comparables par catégorie de médium uniquement,
+    sans artist_id. Fallback quand l'artiste est inconnu.
+    Retourne toujours un dict valide. Ne lève jamais d'exception.
+    """
+    try:
+        if not medium_category or medium_category == "other":
+            return _no_data_result(
+                "Médium non identifié — recherche par catégorie impossible."
+            )
+
+        cutoff_date = datetime.utcnow() - timedelta(days=WINDOW_MEDIUM)
+        EXCLUDED_CURRENCIES = ('KRW', 'INR', 'CNY', 'HUF', 'TWD', 'NGN', 'PHP')
+
+        conditions = [
+            HammerPrice.medium_category == medium_category,
+            HammerPrice.hammer_price_eur.isnot(None),
+            HammerPrice.hammer_price_eur >= min_price,
+            HammerPrice.hammer_price_eur <= max_price,
+            HammerPrice.sale_date >= cutoff_date,
+            HammerPrice.currency.notin_(EXCLUDED_CURRENCIES),
+        ]
+
+        if year_created is not None:
+            conditions.append(
+                HammerPrice.year_created >= year_created - 30
+            )
+            conditions.append(
+                HammerPrice.year_created <= year_created + 30
+            )
+
+        stmt = (
+            select(
+                HammerPrice.id,
+                HammerPrice.hammer_price_eur,
+                HammerPrice.medium,
+                HammerPrice.medium_category,
+                HammerPrice.dimensions,
+                HammerPrice.sale_date,
+                HammerPrice.auction_house,
+                HammerPrice.year_created,
+            )
+            .where(and_(*conditions))
+            .order_by(func.random())
+            .limit(50)
+        )
+
+        result = await db.execute(stmt)
+        rows = result.fetchall()
+
+        if len(rows) < MIN_COMPARABLES_LOW:
+            return _no_data_result(
+                "Pas assez de ventes similaires disponibles pour cette catégorie."
+            )
+
+        prices = [float(row.hammer_price_eur) for row in rows]
+        stats = _price_stats(prices)
+        confidence = _confidence_label(len(rows), "comparable_lots")
+        lots = [
+            {
+                "lot_id":           str(row.id),
+                "hammer_price_eur": float(row.hammer_price_eur),
+                "medium":           row.medium,
+                "medium_category":  row.medium_category,
+                "dimensions":       row.dimensions,
+                "sale_date":        row.sale_date.isoformat() if row.sale_date else None,
+                "auction_house":    row.auction_house,
+                "year_created":     row.year_created,
+            }
+            for row in rows
+        ]
+
+        return {
+            **stats,
+            "confidence":        confidence,
+            "confidence_float":  _confidence_to_float(confidence),
+            "comparables_count": len(rows),
+            "method":            "market_comparables_by_category",
+            "comparables":       lots[:10],
+            "warning": (
+                f"Artiste non identifié. Estimation basée sur des ventes "
+                f"de même catégorie ({medium_category}) — précision limitée."
+            ),
+        }
+
+    except Exception as e:
+        logger.error(
+            f"[comparable_engine] find_comparables_by_category error: {e}",
+            exc_info=True,
+        )
+        return _no_data_result("Erreur lors de la recherche par catégorie.")
+
+
 # ── Fonction principale ────────────────────────────────────────────────────────
 
 async def find_comparables_and_estimate(
