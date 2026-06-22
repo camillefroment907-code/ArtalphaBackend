@@ -439,9 +439,9 @@ async def create_item(
     await db.commit()
     await db.refresh(item)
 
-    # Trigger valorisation automatique si aucune valeur saisie manuellement et artiste connu.
+    # Trigger valorisation automatique si aucune valeur saisie manuellement.
     # Ce bloc ne doit JAMAIS bloquer la création de l'item — try/except obligatoire.
-    if not data.get("estimated_current_value_eur") and item.artist_id:
+    if not data.get("estimated_current_value_eur"):
         try:
             await valuate_item(db, item, update_item=True)
             await db.refresh(item)
