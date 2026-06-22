@@ -1,12 +1,13 @@
 """
 Collection management API — authenticated users.
 """
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_, func, or_
 from sqlalchemy.orm import selectinload
 from typing import Optional, List
 from datetime import datetime
+from uuid import UUID
 from pydantic import BaseModel, model_validator
 import uuid as uuid_lib
 import httpx
@@ -329,6 +330,11 @@ class ValuateRequest(BaseModel):
     item_id: Optional[str] = None   # si fourni, persiste la valorisation sur l'item
 
 
+class ArchiveItemBody(BaseModel):
+    exit_reason: str  # sold | given | stolen | destroyed | error
+    notes: Optional[str] = None
+
+
 # ── Valuation endpoints ───────────────────────────────────────────────────────
 
 @router.post("/valuate")
@@ -408,6 +414,12 @@ async def list_items(
     result = await db.execute(
         select(PortfolioItem)
         .where(PortfolioItem.user_id == current_user.id)
+        .where(
+            or_(
+                PortfolioItem.sale_status.is_(None),
+                PortfolioItem.sale_status == "active",
+            )
+        )
         .order_by(PortfolioItem.created_at.desc())
     )
     items = result.scalars().all()
@@ -526,23 +538,51 @@ async def update_item(
     return _serialize_item(item, latest_valuation)
 
 
+@router.patch("/items/{item_id}/archive", status_code=200)
+async def archive_item(
+    item_id: UUID,
+    body: ArchiveItemBody,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Archive une œuvre. Ne supprime JAMAIS physiquement.
+    sale_status : sold | given | stolen | destroyed | error
+    """
+    item = await db.get(PortfolioItem, item_id)
+    if not item or item.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    VALID_REASONS = {"sold", "given", "stolen", "destroyed", "error"}
+    if body.exit_reason not in VALID_REASONS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"exit_reason must be one of: {', '.join(VALID_REASONS)}"
+        )
+
+    item.sale_status = body.exit_reason
+    if body.notes:
+        existing = item.notes or ""
+        separator = "\n\n" if existing else ""
+        item.notes = f"{existing}{separator}[Sortie collection — {body.exit_reason}] {body.notes}"
+
+    await db.commit()
+    await db.refresh(item)
+    return {"id": str(item.id), "sale_status": item.sale_status}
+
+
 @router.delete("/items/{item_id}", status_code=204)
 async def delete_item(
     item_id: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(PortfolioItem).where(
-            and_(PortfolioItem.id == item_id, PortfolioItem.user_id == current_user.id)
-        )
-    )
-    item = result.scalar_one_or_none()
-    if not item:
-        raise HTTPException(404, "Item introuvable.")
-
-    await db.delete(item)
+    item = await db.get(PortfolioItem, item_id)
+    if not item or item.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Item not found")
+    item.sale_status = "error"
     await db.commit()
+    return Response(status_code=204)
 
 
 @router.post("/items/{item_id}/upload-photo")
