@@ -18,7 +18,7 @@ from app.database import get_db
 from app.api.auth_utils import get_current_user
 from app.models.db_models import User, PortfolioItem, CollectionValuation, SaleRequest
 from app.api.billing import _get_user_plan, PLAN_LIMITS
-from app.engines.valuation_engine import valuate_item
+from app.engines.valuation_engine import valuate_item, _claude_review_estimate
 from app.engines.comparable_engine import find_comparables_and_estimate
 from app.engines.vision_engine import analyze_artwork_image
 
@@ -328,6 +328,14 @@ class ValuateRequest(BaseModel):
     dimensions: Optional[str] = None
     year_created: Optional[int] = None
     item_id: Optional[str] = None   # si fourni, persiste la valorisation sur l'item
+    # Contexte qualitatif pour ajustement précis
+    artist_name: Optional[str] = None
+    artwork_category: Optional[str] = None
+    style: Optional[str] = None
+    period: Optional[str] = None
+    signature_detected: Optional[bool] = None
+    condition: Optional[str] = None
+    provenance: Optional[str] = None
 
 
 class ArchiveItemBody(BaseModel):
@@ -370,13 +378,33 @@ async def valuate_artwork(
             return await valuate_item(db, item, update_item=True)
 
     # Estimation à la volée sans persistance
-    return await find_comparables_and_estimate(
+    result = await find_comparables_and_estimate(
         db=db,
         artist_id=body.artist_id,
         medium=body.medium,
         dimensions=body.dimensions,
         year_created=body.year_created,
     )
+
+    # Claude review avec contexte qualitatif complet
+    if result.get("valuation_median"):
+        result = await _claude_review_estimate(
+            result=result,
+            item_context={
+                "artist_name":        body.artist_name,
+                "medium":             body.medium,
+                "dimensions":         body.dimensions,
+                "year_created":       body.year_created,
+                "style":              body.style,
+                "period":             body.period,
+                "artwork_category":   body.artwork_category,
+                "signature_detected": body.signature_detected,
+                "condition":          body.condition,
+                "provenance":         body.provenance,
+            },
+        )
+
+    return result
 
 
 @router.post("/items/{item_id}/revaluate")
@@ -656,46 +684,78 @@ async def upload_item_photo(
 
 # ── Vision Engine endpoint ────────────────────────────────────────────────────
 
+_KNOWN_EVIDENCE_TYPES = {"main", "signature", "back", "certificate"}
+
+def _evidence_type_from_filename(filename: Optional[str]) -> str:
+    """Dérive le type de preuve depuis le nom de fichier (ex: 'signature.jpg' → 'signature').
+    Fallback sur 'main' si le nom est absent ou inconnu."""
+    if not filename:
+        return "main"
+    stem = filename.rsplit(".", 1)[0].lower() if "." in filename else filename.lower()
+    return stem if stem in _KNOWN_EVIDENCE_TYPES else "main"
+
+
 @router.post("/vision/analyze")
 async def vision_analyze(
-    file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    files: List[UploadFile] = File(...),
+    current_user: User      = Depends(get_current_user),
+    db: AsyncSession        = Depends(get_db),
 ):
     """
-    Analyse une image d'œuvre via Claude Vision.
-    Retourne des prédictions structurées : artiste, médium, catégorie, année, signature...
+    Analyse une ou plusieurs images d'œuvre via Claude Vision.
+    Accepte plusieurs preuves dans un seul appel.
+    Le type de chaque preuve est déduit du nom de fichier :
+      main.jpg → main, signature.jpg → signature, back.jpg → back, certificate.jpg → certificate.
     Ne crée pas d'item — uniquement l'analyse.
     """
     from app.config import get_settings
     settings = get_settings()
 
+    if len(files) == 0:
+        raise HTTPException(422, "Au moins un fichier est requis.")
+    if len(files) > 5:
+        raise HTTPException(400, "Maximum 5 fichiers par analyse.")
+
     if not settings.anthropic_api_key and not settings.openai_api_key:
         raise HTTPException(503, "Service de vision non configuré.")
 
-    contents = await file.read(10 * 1024 * 1024 + 1)
-    if len(contents) > 10 * 1024 * 1024:
-        raise HTTPException(413, "Image trop grande (max 10 Mo).")
+    # Lire et valider chaque fichier — dériver le type depuis le filename
+    images: list[tuple[bytes, str, str]] = []
+    main_contents: Optional[bytes] = None
+    main_content_type: str = "image/jpeg"
 
-    content_type = file.content_type or "image/jpeg"
-    if not content_type.startswith("image/"):
-        raise HTTPException(415, "Seules les images sont acceptées.")
+    for upload_file in files:
+        evidence_type = _evidence_type_from_filename(upload_file.filename)
+        contents = await upload_file.read(10 * 1024 * 1024 + 1)
+        if len(contents) > 10 * 1024 * 1024:
+            raise HTTPException(413, f"Image '{evidence_type}' trop grande (max 10 Mo).")
+        content_type = upload_file.content_type or "image/jpeg"
+        if not content_type.startswith("image/"):
+            raise HTTPException(415, f"'{evidence_type}' : seules les images sont acceptées.")
+        images.append((contents, content_type, evidence_type))
+        if evidence_type == "main":
+            main_contents = contents
+            main_content_type = content_type
 
-    # Upload vers Supabase Storage pour garder une trace (optionnel — ne bloque pas si absent)
+    # Si aucun fichier "main", prendre le premier (rétrocompatibilité)
+    if main_contents is None:
+        main_contents, main_content_type, _ = images[0]
+
+    # Upload vers Supabase Storage — uniquement la photo principale
     image_url: Optional[str] = None
     if settings.supabase_url and settings.supabase_service_key:
         try:
-            ext = content_type.split("/")[-1].replace("jpeg", "jpg")
+            ext = main_content_type.split("/")[-1].replace("jpeg", "jpg")
             fname = f"vision/{current_user.id}/{uuid_lib.uuid4().hex}.{ext}"
             supabase_url = settings.supabase_url.rstrip("/")
             upload_url = f"{supabase_url}/storage/v1/object/artwork-photos/{fname}"
             async with httpx.AsyncClient(timeout=20) as client:
                 resp = await client.post(
                     upload_url,
-                    content=contents,
+                    content=main_contents,
                     headers={
                         "Authorization": f"Bearer {settings.supabase_service_key}",
-                        "Content-Type": content_type,
+                        "Content-Type": main_content_type,
                         "x-upsert": "true",
                     },
                 )
@@ -706,8 +766,7 @@ async def vision_analyze(
 
     # Analyse vision
     result = await analyze_artwork_image(
-        image_data=contents,
-        content_type=content_type,
+        images=images,
         anthropic_api_key=settings.anthropic_api_key,
         openai_api_key=settings.openai_api_key,
     )
@@ -715,25 +774,25 @@ async def vision_analyze(
     if result.error:
         raise HTTPException(502, result.error)
 
-    # Tentative de matching artiste dans notre base
+    # Tentative de matching artiste dans notre base — pg_trgm sur name_normalized
     artist_id: Optional[str] = None
     if result.artist:
         from app.models.db_models import Artist
+        from app.engines.artist_resolver import _norm
         from sqlalchemy import func as sqlfunc
+        nq = _norm(result.artist)
+        sim = sqlfunc.similarity(Artist.name_normalized, nq)
         artist_q = await db.execute(
-            select(Artist).where(
-                sqlfunc.lower(Artist.name).contains(result.artist.lower().split()[0])
-            ).limit(3)
+            select(Artist, sim.label("sim"))
+            .where(sim > 0.20)
+            .order_by(sim.desc())
+            .limit(1)
         )
-        candidates = artist_q.scalars().all()
-        if candidates:
-            # Garder le candidat dont le nom est le plus proche
-            name_lower = result.artist.lower()
-            best = min(candidates, key=lambda a: abs(len(a.name) - len(result.artist)))
-            if name_lower in best.name.lower() or best.name.lower() in name_lower:
-                artist_id = str(best.id)
+        row = artist_q.first()
+        if row and float(row[1]) > 0.45:
+            artist_id = str(row[0].id)
 
-    logger.info(f"[vision] user={current_user.id} artist={result.artist!r} conf={result.confidence}")
+    logger.info(f"[vision] user={current_user.id} evidence_count={len(files)} artist={result.artist!r} conf={result.confidence}")
 
     return {
         "artist":               result.artist,
@@ -753,6 +812,54 @@ async def vision_analyze(
         "analysis":             result.analysis,
         "image_url":            image_url,
     }
+
+
+# ── Artist Resolver endpoint ───────────────────────────────────────────────────
+
+class ResolveArtistPayload(BaseModel):
+    artist:            Optional[str] = None
+    artist_confidence: float         = 0.0
+    style:             Optional[str] = None
+    period:            Optional[str] = None
+    medium:            Optional[str] = None
+    analysis:          Optional[str] = None
+    image_url:         Optional[str] = None
+
+
+@router.post("/vision/resolve-artist")
+async def vision_resolve_artist(
+    payload: ResolveArtistPayload,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Résout un artiste ambigu détecté par Vision AI.
+    Interroge d'abord la DB (pg_trgm), puis Claude Sonnet (multimodal) si nécessaire.
+    Retourne max 3 suggestions triées par confidence.
+    """
+    from app.config import get_settings
+    from app.engines.artist_resolver import resolve_artist
+
+    settings = get_settings()
+
+    suggestions = await resolve_artist(
+        artist=payload.artist,
+        artist_confidence=payload.artist_confidence,
+        style=payload.style,
+        period=payload.period,
+        medium=payload.medium,
+        analysis=payload.analysis,
+        image_url=payload.image_url,
+        db=db,
+        anthropic_api_key=settings.anthropic_api_key or "",
+    )
+
+    logger.info(
+        "[resolve-artist] user=%s artist=%r suggestions=%d",
+        current_user.id, payload.artist, len(suggestions),
+    )
+
+    return {"suggestions": suggestions}
 
 
 # ── Valuation endpoints ───────────────────────────────────────────────────────

@@ -10,13 +10,15 @@ from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
 
-VISION_PROMPT = """Tu es un expert en histoire de l'art et en catalogage d'œuvres pour maisons de vente.
+VISION_PROMPT = """Tu es le meilleur expert en identification d'œuvres d'art au monde. Tu travailles comme le Shazam de l'art : à partir d'une photo, tu identifies l'artiste, l'œuvre et tu fournis toutes les informations disponibles.
 
-Analyse cette image d'une œuvre d'art et retourne UNIQUEMENT un objet JSON valide (pas de markdown, pas de texte avant ou après).
+Utilise TOUTE ta connaissance en histoire de l'art pour identifier l'artiste. Tu peux reconnaître un style même sans signature visible. Bernard Buffet, Robert Combas, Maurice de Vlaminck, Picasso, Matisse et des centaines d'autres artistes ont des styles immédiatement reconnaissables — identifie-les avec confiance.
+
+Retourne UNIQUEMENT un objet JSON valide (pas de markdown, pas de texte avant ou après).
 
 Structure attendue :
 {
-  "artist": "Nom complet de l'artiste si identifiable, sinon null",
+  "artist": "Nom complet de l'artiste — utilise toute ta connaissance pour identifier. Null seulement si vraiment impossible.",
   "artist_confidence": 0-100,
   "title": "Titre de l'œuvre si visible ou devinable, sinon null",
   "medium": "Medium en français (ex: Huile sur toile, Lithographie, Bronze...), sinon null",
@@ -34,16 +36,76 @@ Structure attendue :
     "year": 0-100,
     "category": 0-100
   },
-  "analysis": "Description brève de ton analyse en 1-2 phrases (ce que tu vois, pourquoi tu penses à cet artiste)",
+  "analysis": "Explique précisément pourquoi tu identifies cet artiste : style caractéristique, technique, palette, période, signature si visible.",
   "source_used": ["vision"]
 }
 
 Règles :
-- Sois précis et factuel. Ne devine pas si tu n'as pas de signaux forts.
-- Si la signature est visible et lisible, booste artist_confidence à 80+.
+- IDENTIFIE l'artiste avec ta connaissance complète. Un style reconnaissable = confidence élevée (70+), même sans signature.
+- Bernard Buffet : traits noirs appuyés, personnages allongés, palette sombre et expressionniste → confidence 85+.
+- Robert Combas : figuration libre, couleurs saturées, personnages cartoon, textes intégrés → confidence 85+.
+- Maurice de Vlaminck : fauvisme, touches larges, couleurs vives, paysages → confidence 80+.
+- Si la signature est visible et lisible → artist_confidence 90+.
 - Pour artwork_category : Painting = peinture sur toile/panneau, Drawing = dessin, Work On Paper = aquarelle/gouache/pastel sur papier, Print = gravure/lithographie/sérigraphie.
-- Retourne null pour les champs que tu ne peux pas déterminer avec un minimum de certitude.
 - confidence global = moyenne pondérée des confidence_breakdown.
+- Ne retourne jamais null pour artist si tu reconnais un style caractéristique.
+"""
+
+
+EVIDENCE_LABELS: dict[str, str] = {
+    "main":        "Photo principale de l'œuvre",
+    "signature":   "Photo rapprochée de la signature de l'artiste",
+    "back":        "Photo du verso (peut contenir : titre manuscrit, date, tampon de galerie, étiquette de vente, dédicace, numéro d'inventaire, provenance)",
+    "certificate": "Certificat d'authenticité (fait autorité pour : artiste, titre, dimensions, médium, année, provenance)",
+}
+
+VISION_PROMPT_MULTI = """Tu es le meilleur expert en identification d'œuvres d'art au monde. Tu travailles comme le Shazam de l'art.
+
+Tu disposes de plusieurs preuves documentaires présentées ci-dessus, chacune étiquetée selon son rôle.
+
+Rôle de chaque type de preuve :
+
+\u2022 Photo principale : source primaire d'identification stylistique. Analyse le style, la technique, la palette, la composition et les caractéristiques distinctives de l'artiste. Base ta confiance sur la clarté et la cohérence des indices visuels.
+
+\u2022 Signature : observe-la attentivement. Une signature lisible et reconnaissable est la preuve la plus directe de l'attribution — elle doit fortement augmenter ta confiance dans l'identification de l'artiste. Transcris-la exactement dans le champ "artist".
+
+\u2022 Verso : recherche un titre manuscrit, une date, un tampon de galerie, une étiquette de vente aux enchères, une dédicace, un numéro d'inventaire ou une mention de provenance. Ces éléments enrichissent title, year_estimate, medium et analysis.
+
+\u2022 Certificat d'authenticité : fait autorité. Ses informations (artiste, titre, dimensions, médium, année, provenance) ont priorité sur toute autre source. Un certificat cohérent avec les autres preuves doit produire une confiance élevée.
+
+Croise systématiquement toutes les preuves disponibles. Des preuves convergentes augmentent la confiance. Des preuves contradictoires doivent être mentionnées dans analysis et réduire la confiance en conséquence.
+
+Retourne UNIQUEMENT un objet JSON valide (pas de markdown, pas de texte avant ou après).
+
+Structure attendue :
+{
+  "artist": "Nom complet de l'artiste — utilise toute ta connaissance pour identifier. Null seulement si vraiment impossible.",
+  "artist_confidence": 0-100,
+  "title": "Titre de l'oeuvre si visible ou devinable, sinon null",
+  "medium": "Medium en français (ex: Huile sur toile, Lithographie, Bronze...), sinon null",
+  "artwork_category": "Painting|Sculpture|Drawing|Work On Paper|Photography|Print|Ceramic|Design|Other",
+  "year_estimate": "Année ou période estimée (ex: 1962, Années 1950, XXe siècle), sinon null",
+  "signature_detected": true ou false,
+  "signature_position": "bas_droite|bas_gauche|haut_droite|haut_gauche|centre|null",
+  "style": "Style ou école artistique en français, sinon null",
+  "period": "Période artistique (ex: Moderne, Contemporain, Impressionniste...), sinon null",
+  "condition_apparent": "bon|moyen|mauvais|inconnu",
+  "confidence": 0-100,
+  "confidence_breakdown": {
+    "artist": 0-100,
+    "medium": 0-100,
+    "year": 0-100,
+    "category": 0-100
+  },
+  "analysis": "Explique précisément pourquoi tu identifies cet artiste en croisant toutes les preuves disponibles : style, technique, signature, informations du verso ou du certificat.",
+  "source_used": ["vision"]
+}
+
+Règles :
+- IDENTIFIE l'artiste avec ta connaissance complète. Un style reconnaissable suffit à une identification confiante.
+- Pour artwork_category : Painting = peinture sur toile/panneau, Drawing = dessin, Work On Paper = aquarelle/gouache/pastel sur papier, Print = gravure/lithographie/sérigraphie.
+- confidence global = moyenne pondérée des confidence_breakdown.
+- Ne retourne jamais null pour artist si tu reconnais un style caractéristique ou si une preuve l'identifie clairement.
 """
 
 
@@ -68,26 +130,29 @@ class VisionAnalysisResult:
 
 
 async def analyze_artwork_image(
-    image_data: bytes,
-    content_type: str = "image/jpeg",
+    images: list[tuple[bytes, str, str]],
     anthropic_api_key: Optional[str] = None,
     openai_api_key: Optional[str] = None,
 ) -> VisionAnalysisResult:
     """
-    Analyse une image via Claude Vision (fallback GPT-4o).
+    Analyse une ou plusieurs images via Claude Vision (fallback GPT-4o).
+    images : liste de (data: bytes, content_type: str, evidence_type: str)
     Retourne un VisionAnalysisResult structuré.
     """
-    # Valider le content_type
     allowed = {"image/jpeg", "image/png", "image/gif", "image/webp"}
-    if content_type not in allowed:
-        content_type = "image/jpeg"
-
-    b64 = base64.standard_b64encode(image_data).decode()
+    b64_images = [
+        (
+            base64.standard_b64encode(data).decode(),
+            ct if ct in allowed else "image/jpeg",
+            et,
+        )
+        for (data, ct, et) in images
+    ]
 
     # ── Essai Anthropic ──────────────────────────────────────────────────────
     if anthropic_api_key:
         try:
-            result = await _analyze_with_anthropic(b64, content_type, anthropic_api_key)
+            result = await _analyze_with_anthropic(b64_images, anthropic_api_key)
             if result and not result.error:
                 return result
         except Exception as e:
@@ -96,7 +161,7 @@ async def analyze_artwork_image(
     # ── Fallback OpenAI ──────────────────────────────────────────────────────
     if openai_api_key:
         try:
-            result = await _analyze_with_openai(b64, content_type, openai_api_key)
+            result = await _analyze_with_openai(b64_images, openai_api_key)
             if result and not result.error:
                 return result
         except Exception as e:
@@ -105,59 +170,59 @@ async def analyze_artwork_image(
     return VisionAnalysisResult(error="Aucun service de vision disponible ou configuré.")
 
 
-async def _analyze_with_anthropic(b64: str, content_type: str, api_key: str) -> VisionAnalysisResult:
-    import asyncio
-    import anthropic as ant
+async def _analyze_with_anthropic(
+    images: list[tuple[str, str, str]],  # (b64, content_type, evidence_type)
+    api_key: str,
+) -> VisionAnalysisResult:
+    from anthropic import AsyncAnthropic
 
-    def _sync_call():
-        client = ant.Anthropic(api_key=api_key)
-        return client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=1024,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": content_type,
-                                "data": b64,
-                            },
-                        },
-                        {"type": "text", "text": VISION_PROMPT},
-                    ],
-                }
-            ],
-        )
+    content: list[dict] = []
+    for (b64, content_type, evidence_type) in images:
+        label = EVIDENCE_LABELS.get(evidence_type, f"Preuve documentaire ({evidence_type})")
+        content.append({"type": "text", "text": f"[{label}]"})
+        content.append({
+            "type": "image",
+            "source": {"type": "base64", "media_type": content_type, "data": b64},
+        })
 
-    response = await asyncio.to_thread(_sync_call)
+    prompt = VISION_PROMPT_MULTI if len(images) > 1 else VISION_PROMPT
+    content.append({"type": "text", "text": prompt})
+
+    client = AsyncAnthropic(api_key=api_key)
+    response = await client.messages.create(
+        model="claude-sonnet-4-5",
+        max_tokens=1500,
+        messages=[{"role": "user", "content": content}],
+    )
     raw_text = response.content[0].text.strip()
     return _parse_vision_response(raw_text)
 
 
-async def _analyze_with_openai(b64: str, content_type: str, api_key: str) -> VisionAnalysisResult:
+async def _analyze_with_openai(
+    images: list[tuple[str, str, str]],  # (b64, content_type, evidence_type)
+    api_key: str,
+) -> VisionAnalysisResult:
     import asyncio
     from openai import OpenAI
+
+    content: list[dict] = []
+    for (b64, content_type, evidence_type) in images:
+        label = EVIDENCE_LABELS.get(evidence_type, f"Preuve documentaire ({evidence_type})")
+        content.append({"type": "text", "text": f"[{label}]"})
+        content.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:{content_type};base64,{b64}"},
+        })
+
+    prompt = VISION_PROMPT_MULTI if len(images) > 1 else VISION_PROMPT
+    content.append({"type": "text", "text": prompt})
 
     def _sync_call():
         client = OpenAI(api_key=api_key)
         return client.chat.completions.create(
             model="gpt-4o",
-            max_tokens=1024,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:{content_type};base64,{b64}"},
-                        },
-                        {"type": "text", "text": VISION_PROMPT},
-                    ],
-                }
-            ],
+            max_tokens=1500,
+            messages=[{"role": "user", "content": content}],
         )
 
     response = await asyncio.to_thread(_sync_call)
