@@ -727,6 +727,8 @@ async def vision_analyze(
     for upload_file in files:
         evidence_type = _evidence_type_from_filename(upload_file.filename)
         contents = await upload_file.read(10 * 1024 * 1024 + 1)
+        size_kb = len(contents) / 1024
+        logger.info(f"[vision] file={upload_file.filename!r} evidence={evidence_type} size={size_kb:.0f}KB")
         if len(contents) > 10 * 1024 * 1024:
             raise HTTPException(413, f"Image '{evidence_type}' trop grande (max 10 Mo).")
         content_type = upload_file.content_type or "image/jpeg"

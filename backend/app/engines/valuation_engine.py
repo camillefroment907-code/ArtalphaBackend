@@ -44,14 +44,18 @@ async def _claude_review_estimate(
     item_context: dict,
 ) -> dict:
     """
-    Claude Sonnet reviewer — appelé UNIQUEMENT sur des comparables réels.
-    Contextualise et explique l'estimation pour le collectionneur.
-    Ne modifie JAMAIS valuation_low/median/high.
+    Claude Sonnet reviewer — appelé sur des comparables réels ou par catégorie.
+    Contextualise, explique, et ajuste les prix si des facteurs qualitatifs le justifient.
     Ne lève jamais d'exception.
+
+    Facteurs d'ajustement pris en compte :
+    - signature_detected (×1.3–2.0 selon artiste)
+    - certificate_detected / certificate_of_authenticity (+10–30%)
+    - condition "mauvais" (×0.4–0.7)
+    - provenance notable (+20–50%)
 
     Skip automatique si :
     - confidence == 'high' ET comparables_count >= 20
-      (estimation déjà très fiable, Claude n'apporte pas de valeur)
     - pas de valuation_median
     - method contient 'llm_inference' (déjà un appel Claude)
     """
@@ -74,8 +78,9 @@ async def _claude_review_estimate(
             return result
 
         from anthropic import AsyncAnthropic
-        from app.config import settings
+        from app.config import get_settings
         import json
+        settings = get_settings()
 
         if not settings.anthropic_api_key:
             return result
@@ -96,14 +101,21 @@ async def _claude_review_estimate(
             context_parts.append(f"Style : {item_context['style']}")
         if item_context.get("period"):
             context_parts.append(f"Période : {item_context['period']}")
-        if item_context.get("signature_detected"):
-            context_parts.append("Signature : détectée sur la photo")
-        if item_context.get("certificate_detected"):
-            context_parts.append("Certificat : détecté sur la photo")
+        if item_context.get("artwork_category"):
+            context_parts.append(f"Catégorie : {item_context['artwork_category']}")
+        if item_context.get("condition"):
+            context_parts.append(f"État : {item_context['condition']}")
+        if item_context.get("provenance"):
+            context_parts.append(f"Provenance : {item_context['provenance']}")
 
         context = "\n".join(context_parts) if context_parts else "Informations limitées"
 
-        prompt = f"""Tu es un expert du marché de l'art aux enchères.
+        sig      = item_context.get("signature_detected")
+        cert     = item_context.get("certificate_detected") or item_context.get("certificate_of_authenticity")
+        cond     = item_context.get("condition", "inconnu")
+        prov     = item_context.get("provenance")
+
+        prompt = f"""Tu es un expert du marché de l'art aux enchères européennes.
 
 Œuvre à évaluer :
 {context}
@@ -114,23 +126,42 @@ Estimation calculée par notre moteur de comparables :
 - Basée sur {count} vente(s) comparable(s)
 - Méthode : {method}
 
+Facteurs qualitatifs détectés :
+- Signature visible sur l'œuvre : {'OUI' if sig else 'non détectée'}
+- Certificat d'authenticité : {'OUI' if cert else 'non'}
+- État apparent : {cond or 'non renseigné'}
+- Provenance : {prov or 'non renseignée'}
+
+Règles d'ajustement marché de l'art (applique seulement si le facteur est clairement présent) :
+- Signature visible + artiste identifié → ×1.3 à ×2.0 (les lots comparables incluent souvent des œuvres non signées)
+- Certificat d'authenticité → ×1.1 à ×1.3
+- État "mauvais" → ×0.4 à ×0.7
+- Provenance notable (collection privée connue, institutionnel, galerie historique) → ×1.2 à ×1.5
+- Si état "bon" et aucun autre facteur notable → adjustment_factor = 1.0
+
 Ta mission :
-1. Vérifier si la fourchette est cohérente avec le contexte
-2. Générer une explication courte et claire pour le collectionneur
+1. Déterminer si un ajustement est justifié (seulement si un facteur est clairement présent)
+2. Calculer les valeurs ajustées si nécessaire (arrondir à l'entier)
+3. Rédiger une explication courte pour le collectionneur
 
 Réponds UNIQUEMENT avec ce JSON, sans texte avant ou après :
 {{
   "coherent": true,
+  "adjustment_factor": <float, 1.0 si pas d'ajustement>,
+  "adjusted_low": <int arrondi, ou null si factor=1.0>,
+  "adjusted_median": <int arrondi, ou null si factor=1.0>,
+  "adjusted_high": <int arrondi, ou null si factor=1.0>,
+  "adjustment_reason": "<raison de l'ajustement en français, null si factor=1.0>",
   "collector_explanation": "<2 phrases en français expliquant la fourchette>",
   "confidence_note": "<note courte sur la fiabilité>",
   "possible_outlier": false,
-  "outlier_reason": "<si possible_outlier true : une phrase expliquant l'anomalie, sinon null>"
+  "outlier_reason": "<si possible_outlier true : une phrase, sinon null>"
 }}"""
 
         client = AsyncAnthropic(api_key=settings.anthropic_api_key)
         message = await client.messages.create(
             model="claude-sonnet-4-5",
-            max_tokens=384,
+            max_tokens=512,
             temperature=0.2,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -143,6 +174,16 @@ Réponds UNIQUEMENT avec ce JSON, sans texte avant ou après :
             raw = raw.strip()
 
         review = json.loads(raw)
+
+        # Appliquer l'ajustement si Claude le recommande
+        factor = float(review.get("adjustment_factor", 1.0))
+        if factor != 1.0 and review.get("adjusted_median"):
+            result["valuation_low"]     = review["adjusted_low"]
+            result["valuation_median"]  = review["adjusted_median"]
+            result["valuation_high"]    = review["adjusted_high"]
+            result["adjustment_factor"] = factor
+            result["adjustment_reason"] = review.get("adjustment_reason")
+
         result["claude_explanation"] = review.get("collector_explanation")
         result["confidence_note"]    = review.get("confidence_note")
         result["possible_outlier"]   = review.get("possible_outlier", False)
@@ -161,6 +202,13 @@ async def _claude_fallback_estimate(
     year_created: Optional[int],
     artist_name: Optional[str],
     dimensions: Optional[str],
+    artwork_category: Optional[str] = None,
+    style: Optional[str] = None,
+    period: Optional[str] = None,
+    signature_detected: Optional[bool] = None,
+    condition: Optional[str] = None,
+    provenance: Optional[str] = None,
+    certificate: Optional[bool] = None,
 ) -> dict:
     """
     Claude Sonnet estimateur indicatif — appelé UNIQUEMENT quand
@@ -170,9 +218,10 @@ async def _claude_fallback_estimate(
     """
     try:
         from anthropic import AsyncAnthropic
-        from app.config import settings
+        from app.config import get_settings
         import json
         import math
+        settings = get_settings()
 
         if not settings.anthropic_api_key:
             return _no_estimate_result("llm_inference_no_key")
@@ -186,6 +235,20 @@ async def _claude_fallback_estimate(
             context_parts.append(f"Dimensions : {dimensions}")
         if year_created:
             context_parts.append(f"Année approximative : {year_created}")
+        if artwork_category:
+            context_parts.append(f"Catégorie : {artwork_category}")
+        if style:
+            context_parts.append(f"Style : {style}")
+        if period:
+            context_parts.append(f"Période : {period}")
+        if signature_detected:
+            context_parts.append("Signature : visible sur l'œuvre")
+        if condition:
+            context_parts.append(f"État apparent : {condition}")
+        if provenance:
+            context_parts.append(f"Provenance : {provenance}")
+        if certificate:
+            context_parts.append("Certificat d'authenticité : présent")
 
         if not context_parts:
             return _no_estimate_result("llm_inference_no_context")
@@ -194,14 +257,15 @@ async def _claude_fallback_estimate(
 
         prompt = f"""Tu es un expert du marché de l'art aux enchères européennes.
 
-Œuvre non attribuée avec les informations suivantes :
+Œuvre avec les informations suivantes :
 {context}
 
 Aucune vente comparable n'est disponible dans notre base de données.
-Donne une fourchette de valeur indicative et très prudente.
+Donne une fourchette de valeur indicative en tenant compte de tous les éléments fournis.
 
 Règles :
-- Sois très conservateur
+- Intègre tous les facteurs : signature, état, provenance, certificat
+- Sois conservateur mais réaliste
 - Fourchette large si informations insuffisantes
 - Ne refuse jamais de répondre
 - Valeurs en euros entiers
@@ -312,14 +376,17 @@ async def valuate_item(
             result = await _claude_review_estimate(
                 result=result,
                 item_context={
-                    "artist_name":          item.artist_name,
-                    "medium":               item.medium,
-                    "dimensions":           item.dimensions,
-                    "year_created":         item.year_created,
-                    "style":                getattr(item, "style", None),
-                    "period":               getattr(item, "period", None),
-                    "signature_detected":   getattr(item, "signature_detected", None),
-                    "certificate_detected": getattr(item, "certificate_detected", None),
+                    "artist_name":             item.artist_name,
+                    "medium":                  item.medium,
+                    "dimensions":              item.dimensions,
+                    "year_created":            item.year_created,
+                    "style":                   getattr(item, "style", None),
+                    "period":                  getattr(item, "period", None),
+                    "artwork_category":        getattr(item, "artwork_category", None),
+                    "condition":               getattr(item, "condition", None),
+                    "provenance":              getattr(item, "provenance", None),
+                    "signature_detected":      getattr(item, "signature_detected", None),
+                    "certificate_detected":    item.certificate_of_authenticity,
                 },
             )
 
@@ -330,6 +397,13 @@ async def valuate_item(
                 year_created=item.year_created,
                 artist_name=item.artist_name,
                 dimensions=item.dimensions,
+                artwork_category=getattr(item, "artwork_category", None),
+                style=getattr(item, "style", None),
+                period=getattr(item, "period", None),
+                signature_detected=getattr(item, "signature_detected", None),
+                condition=getattr(item, "condition", None),
+                provenance=getattr(item, "provenance", None),
+                certificate=item.certificate_of_authenticity,
             )
             # Pas de review après fallback — retour direct
 
@@ -381,14 +455,17 @@ async def valuate_item(
         result = await _claude_review_estimate(
             result=result,
             item_context={
-                "artist_name":          item.artist_name,
-                "medium":               item.medium,
-                "dimensions":           item.dimensions,
-                "year_created":         item.year_created,
-                "style":                getattr(item, "style", None),
-                "period":               getattr(item, "period", None),
-                "signature_detected":   getattr(item, "signature_detected", None),
-                "certificate_detected": getattr(item, "certificate_detected", None),
+                "artist_name":             item.artist_name,
+                "medium":                  item.medium,
+                "dimensions":              item.dimensions,
+                "year_created":            item.year_created,
+                "style":                   getattr(item, "style", None),
+                "period":                  getattr(item, "period", None),
+                "artwork_category":        getattr(item, "artwork_category", None),
+                "condition":               getattr(item, "condition", None),
+                "provenance":              getattr(item, "provenance", None),
+                "signature_detected":      getattr(item, "signature_detected", None),
+                "certificate_detected":    item.certificate_of_authenticity,
             },
         )
 
