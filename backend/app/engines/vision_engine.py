@@ -5,6 +5,7 @@ Analyse une image d'œuvre d'art via Claude Vision et retourne des prédictions 
 import base64
 import json
 import logging
+import os
 from typing import Optional
 from dataclasses import dataclass, field
 
@@ -133,6 +134,7 @@ async def analyze_artwork_image(
     images: list[tuple[bytes, str, str]],
     anthropic_api_key: Optional[str] = None,
     openai_api_key: Optional[str] = None,
+    previous_artist: Optional[str] = None,
 ) -> VisionAnalysisResult:
     """
     Analyse une ou plusieurs images via Claude Vision (fallback GPT-4o).
@@ -152,7 +154,7 @@ async def analyze_artwork_image(
     # ── Essai Anthropic ──────────────────────────────────────────────────────
     if anthropic_api_key:
         try:
-            result = await _analyze_with_anthropic(b64_images, anthropic_api_key)
+            result = await _analyze_with_anthropic(b64_images, anthropic_api_key, previous_artist)
             if result and not result.error:
                 return result
         except Exception as e:
@@ -173,6 +175,7 @@ async def analyze_artwork_image(
 async def _analyze_with_anthropic(
     images: list[tuple[str, str, str]],  # (b64, content_type, evidence_type)
     api_key: str,
+    previous_artist: Optional[str] = None,
 ) -> VisionAnalysisResult:
     from anthropic import AsyncAnthropic
 
@@ -190,12 +193,23 @@ async def _analyze_with_anthropic(
 
     client = AsyncAnthropic(api_key=api_key)
     response = await client.messages.create(
-        model="claude-sonnet-4-5",
+        model="claude-sonnet-4-6",
         max_tokens=1500,
         messages=[{"role": "user", "content": content}],
     )
     raw_text = response.content[0].text.strip()
-    return _parse_vision_response(raw_text)
+    result = _parse_vision_response(raw_text)
+    if (
+        os.getenv("DEBUG_VISION", "").lower() == "true"
+        or not result.artist
+        or result.artist_confidence < 75
+        or (previous_artist is not None and result.artist != previous_artist)
+    ):
+        logger.info(
+            "[vision][raw] model=claude-sonnet-4-6 evidence=%d artist=%r conf=%d raw=%s",
+            len(images), result.artist, result.artist_confidence, raw_text[:2000],
+        )
+    return result
 
 
 async def _analyze_with_openai(
