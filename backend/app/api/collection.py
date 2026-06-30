@@ -779,20 +779,23 @@ async def vision_analyze(
     # Tentative de matching artiste dans notre base — pg_trgm sur name_normalized
     artist_id: Optional[str] = None
     if result.artist:
-        from app.models.db_models import Artist
-        from app.engines.artist_resolver import _norm
-        from sqlalchemy import func as sqlfunc
-        nq = _norm(result.artist)
-        sim = sqlfunc.similarity(Artist.name_normalized, nq)
-        artist_q = await db.execute(
-            select(Artist, sim.label("sim"))
-            .where(sim > 0.20)
-            .order_by(sim.desc())
-            .limit(1)
-        )
-        row = artist_q.first()
-        if row and float(row[1]) > 0.45:
-            artist_id = str(row[0].id)
+        try:
+            from app.models.db_models import Artist
+            from app.engines.artist_resolver import _norm
+            from sqlalchemy import func as sqlfunc
+            nq = _norm(result.artist)
+            sim = sqlfunc.similarity(Artist.name_normalized, nq)
+            artist_q = await db.execute(
+                select(Artist, sim.label("sim"))
+                .where(sim > 0.20)
+                .order_by(sim.desc())
+                .limit(1)
+            )
+            row = artist_q.first()
+            if row and float(row[1]) > 0.45:
+                artist_id = str(row[0].id)
+        except Exception as e:
+            logger.warning(f"[vision] artist matching failed: {e}")
 
     logger.info(f"[vision] user={current_user.id} evidence_count={len(files)} artist={result.artist!r} conf={result.confidence}")
 
