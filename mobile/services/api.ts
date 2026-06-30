@@ -66,6 +66,7 @@ export interface CreateItemPayload {
   purchase_date?: string | null;
   acquisition_type?: string | null;
   image_url?: string | null;
+  image_urls?: string[] | null;
   notes?: string | null;
 }
 
@@ -80,6 +81,17 @@ export interface ValuationResult {
   method: string;
   comparables: ComparableLot[];
   warning: string | null;
+  // Métadonnées qualité (comparable_engine v2)
+  comparables_quality?: 'excellent' | 'bon' | 'moyen' | null;
+  avg_score?: number | null;
+  score_std_dev?: number | null;
+  lowest_score?: number | null;
+  highest_score?: number | null;
+  comparable_mediums?: string[] | null;
+  year_range?: [number, number] | null;
+  sale_date_range?: [string, string] | null;
+  dimension_range_cm2?: [number, number] | null;
+  explanation?: string | null;
 }
 
 export interface ComparableLot {
@@ -91,6 +103,7 @@ export interface ComparableLot {
   sale_date?: string | null;
   auction_house?: string | null;
   year_created?: number | null;
+  score?: number | null;
 }
 
 export interface ArtistSearchResult {
@@ -286,6 +299,12 @@ export interface ChatResponse {
   sources?: string[];
 }
 
+export interface ResolveArtistSuggestion {
+  artist_name: string;
+  artist_id:   string | null;
+  confidence:  'high' | 'medium' | 'low';
+}
+
 // ─── Collection (Collection Value Engine) ────────────────────────────────────
 // Endpoints corrects : /api/collection/... (pas /api/portfolio/...)
 
@@ -313,12 +332,52 @@ export const collectionService = {
     dimensions?: string | null;
     year_created?: number | null;
     item_id?: string;
+    artist_name?: string | null;
+    artwork_category?: string | null;
+    style?: string | null;
+    period?: string | null;
+    signature_detected?: boolean | null;
+    condition?: string | null;
+    provenance?: string | null;
   }) =>
     api.post<ValuationResult>('/api/collection/valuate', params),
 
   // Revalorisation d'un item existant (persiste en collection_valuations)
   revaluate: (itemId: string) =>
     api.post<ValuationResult>(`/api/collection/items/${itemId}/revaluate`, {}),
+
+  resolveArtist: (params: {
+    artist?:            string | null;
+    artist_confidence:  number;
+    style?:             string | null;
+    period?:            string | null;
+    medium?:            string | null;
+    analysis?:          string | null;
+    image_url?:         string | null;
+  }) =>
+    api.post<{ suggestions: ResolveArtistSuggestion[] }>(
+      '/api/collection/vision/resolve-artist',
+      params,
+    ),
+
+  archive: (id: string, exitReason: string, notes?: string) =>
+    api.patch<{ id: string; sale_status: string }>(
+      `/api/collection/items/${id}/archive`,
+      { exit_reason: exitReason, ...(notes ? { notes } : {}) },
+    ),
+
+  uploadPhoto: (itemId: string, photoUri: string) => {
+    const form = new FormData();
+    form.append('file', {
+      uri:  photoUri,
+      type: 'image/jpeg',
+      name: 'artwork.jpg',
+    } as unknown as Blob);
+    return api.upload<{ url: string; image_url: string }>(
+      `/api/collection/items/${itemId}/upload-photo`,
+      form,
+    );
+  },
 };
 
 // ─── Larry (AI advisor) ───────────────────────────────────────────────────────

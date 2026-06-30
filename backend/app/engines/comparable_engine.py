@@ -1,25 +1,27 @@
 """
 Moteur de recherche de comparables pour la valorisation de collection Nautilus.
-
-Requête hammer_prices pour trouver des lots vendus comparables à une œuvre
-donnée, en appliquant des filtres successifs avec dégradation gracieuse.
+v2 — Philosophie : estimations crédibles uniquement, jamais de fourchette trompeuse.
 
 Architecture :
-  HammerPrice n'a pas de colonne artist_id. Le lien artiste se fait via
-  artist_name_normalized (String). Le moteur commence donc par résoudre
-  artist_id → Artist.name_normalized avant de requêter hammer_prices.
+  Une seule requête large (artiste + médium + 60 mois), suivie d'un pipeline
+  de scoring et de sélection. Aucune dégradation progressive de filtres.
 
-  HammerPrice.medium_category est déjà normalisé en DB (paint/print/…),
-  ce qui permet un filtre SQL direct sans normalisation Python par ligne.
+Pipeline :
+  1. Requête : artiste + medium_category (obligatoire si connu) + 60 mois
+  2. Score de similarité (0–100) par lot :
+       Medium specificity  30 pts
+       Dimensions          25 pts
+       Période création    25 pts
+       Récence             20 pts
+  3. Filtre : score ≥ SCORE_FLOOR
+  4. Contrôle qualité : avg_score ≥ MIN_AVG_SCORE,
+       ET si avg_score < STD_DEV_THRESHOLD → score_std_dev ≤ MAX_STD_DEV_BORDERLINE
+  5. Minimum MIN_COMPARABLES lots retenus
+  6. Statistiques P25/P50/P75 sur les TOP_N_FOR_STATS meilleurs lots
+  7. Retour riche : estimation + métadonnées + explication lisible
 
-Hiérarchie de filtres (du plus strict au plus large) :
-  Level 1 : artiste + médium (medium_category) + taille ±40% + 24 derniers mois
-  Level 2 : artiste + médium + 48 derniers mois (relâche taille)
-  Level 3 : artiste seul + 60 derniers mois (tous médiums, toutes tailles)
-  Fallback : hammer_artist_medium_stats ou hammer_artist_stats (pré-agrégés)
-
-RÈGLE : Jamais retourner de données inventées.
-Si 0 résultat à tous les niveaux → confidence='none', valuation_median=None.
+RÈGLE : Si les conditions 3–5 ne sont pas toutes satisfaites → confidence='none',
+        valuation_median=None. Jamais une fourchette peu crédible.
 """
 
 import logging
@@ -33,43 +35,44 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.db_models import (
     Artist,
     HammerPrice,
-    HammerArtistStats,
     HammerArtistMediumStats,
 )
 from app.utils.normalize import (
     normalize_medium_category,
     parse_dimensions_cm,
-    is_size_comparable,
-    mediums_are_compatible,
 )
 
 logger = logging.getLogger(__name__)
 
-# Nombre minimum de comparables pour chaque niveau de confiance
-MIN_COMPARABLES_HIGH = 5
-MIN_COMPARABLES_MEDIUM = 3
-MIN_COMPARABLES_LOW = 1
+# ── Paramètres calibrables ────────────────────────────────────────────────────
 
-# Fenêtres temporelles (jours)
-WINDOW_TIGHT = 730    # 24 mois
-WINDOW_MEDIUM = 1460  # 48 mois
-WINDOW_WIDE = 1825    # 60 mois
+# Score individuel minimum pour qu'un lot soit admis comme comparable
+SCORE_FLOOR = 35
 
-# Tolérance de taille relative (±40%)
-SIZE_TOLERANCE = 0.40
+# Score moyen minimum sur l'ensemble des lots admis
+MIN_AVG_SCORE = 40
 
-# Filtre anti-sentinel values : exclure les artistes avec des stats manifestement
-# fausses (valeurs injectées lors d'ingestions batch, ex. sale_count=22000)
+# Si avg_score < STD_DEV_THRESHOLD, l'écart-type doit rester ≤ MAX_STD_DEV_BORDERLINE
+STD_DEV_THRESHOLD = 55
+MAX_STD_DEV_BORDERLINE = 20
+
+# Nombre minimum de lots admis pour produire une estimation
+MIN_COMPARABLES = 3
+
+# Nombre de lots (triés par score desc) utilisés pour calculer P25/P50/P75
+TOP_N_FOR_STATS = 15
+
+# Fenêtre temporelle unique (60 mois)
+WINDOW_MAX = 1825
+
+# Filtre anti-sentinel values
 MAX_PLAUSIBLE_SALE_COUNT = 5000
 
 
 # ── Helpers statistiques ──────────────────────────────────────────────────────
 
 def _percentile(sorted_data: list[float], p: float) -> float:
-    """
-    Interpolation linéaire pour le percentile p (0-100) sur liste triée.
-    Correcte même sur petites listes (1, 2, 3 éléments).
-    """
+    """Interpolation linéaire pour le percentile p (0-100) sur liste triée."""
     n = len(sorted_data)
     if n == 1:
         return sorted_data[0]
@@ -94,73 +97,282 @@ def _price_stats(prices: list[float]) -> dict:
     }
 
 
-def _confidence_label(n: int, method: str) -> str:
-    """Niveau de confiance basé sur le nombre de comparables et la méthode."""
-    if method in ("aggregate_medium_stats", "aggregate_artist_stats"):
-        return "low"
-    if n >= MIN_COMPARABLES_HIGH:
+def _confidence_to_float(label: str) -> Optional[float]:
+    return {"high": 0.9, "medium": 0.6, "low": 0.3, "none": 0.0, "error": None}.get(label)
+
+
+def _confidence_label(n: int, avg_score: float) -> str:
+    """Niveau de confiance basé sur le nombre de comparables et leur score moyen."""
+    if n >= 5 and avg_score >= 65:
         return "high"
-    if n >= MIN_COMPARABLES_MEDIUM:
+    if n >= 3 and avg_score >= 50:
         return "medium"
-    if n >= MIN_COMPARABLES_LOW:
+    if n >= 3 and avg_score >= 40:
         return "low"
     return "none"
 
 
-def _confidence_to_float(label: str) -> Optional[float]:
-    """Convertit le label de confiance en float pour la colonne DB (Float)."""
-    return {"high": 0.9, "medium": 0.6, "low": 0.3, "none": 0.0, "error": None}.get(label)
+def _quality_label(avg_score: float) -> str:
+    """Label lisible du niveau de qualité des comparables."""
+    if avg_score >= 70:
+        return "excellent"
+    if avg_score >= 55:
+        return "bon"
+    if avg_score >= 40:
+        return "moyen"
+    return "faible"
+
+
+# ── Comparaison de médium ─────────────────────────────────────────────────────
+
+_MEDIUM_STOP_WORDS = frozenset({
+    "sur", "on", "à", "a", "en", "de", "du", "la", "le", "les",
+    "un", "une", "des", "and", "et", "with", "avec", "the",
+})
+
+# Table de traduction vers un token canonique (FR/EN → canonical)
+_MEDIUM_TRANSLATIONS: dict[str, str] = {
+    # Peintures / techniques
+    "huile": "oil",          "acrylique": "acrylic",    "aquarelle": "watercolor",
+    "watercolour": "watercolor",
+    "gouache": "gouache",    "tempera": "tempera",       "pastel": "pastel",
+    "crayon": "pencil",      "charbon": "charcoal",      "charcoal": "charcoal",
+    "encre": "ink",          "technique": "mixed",       "mixte": "mixed",
+    "media": "mixed",
+    # Estampes
+    "gravure": "print",      "estampe": "print",         "lithographie": "lithograph",
+    "lithograph": "lithograph",
+    "sérigraphie": "silkscreen", "screenprint": "silkscreen",
+    "xylographie": "woodcut",    "woodcut": "woodcut",
+    # Supports
+    "toile": "canvas",       "panneau": "panel",         "papier": "paper",
+    "bois": "wood",          "carton": "cardboard",      "soie": "silk",
+    "cuivre": "copper",      "zinc": "zinc",
+    # Sculpture / volumes
+    "bronze": "bronze",      "marbre": "marble",         "plâtre": "plaster",
+    "plaster": "plaster",    "fonte": "cast",            "résine": "resin",
+    "resin": "resin",        "ceramic": "ceramic",       "céramique": "ceramic",
+    "terre": "terracotta",   "terracotta": "terracotta",
+}
+
+
+def _medium_tokens(medium: str) -> frozenset:
+    """Extrait les tokens canoniques d'un médium (multilingue FR/EN)."""
+    tokens = set()
+    for word in medium.lower().split():
+        word = word.strip(".,;:()")
+        if len(word) <= 2 or word in _MEDIUM_STOP_WORDS:
+            continue
+        tokens.add(_MEDIUM_TRANSLATIONS.get(word, word))
+    return frozenset(tokens)
+
+
+def _medium_score_pts(ref_medium: str, lot_medium: Optional[str]) -> float:
+    """
+    Score de comparaison entre le médium de référence et le médium du lot (0–30 pts).
+
+      ≥ 0.5 Jaccard (même médium, ex: "huile sur toile" ↔ "oil on canvas") → 30
+      ≥ 0.2 Jaccard (médium proche, ex: "huile" ↔ "acrylique sur toile")   → 20
+      < 0.2 Jaccard (médium différent dans la même catégorie)               → 10
+      lot_medium absent (lot non décrit)                                     →  8
+    """
+    if not lot_medium:
+        return 8
+
+    ref_tokens = _medium_tokens(ref_medium)
+    lot_tokens = _medium_tokens(lot_medium)
+
+    if not ref_tokens or not lot_tokens:
+        return 10
+
+    union = ref_tokens | lot_tokens
+    jaccard = len(ref_tokens & lot_tokens) / len(union)
+
+    if jaccard >= 0.5:
+        return 30
+    elif jaccard >= 0.2:
+        return 20
+    else:
+        return 10
+
+
+# ── Scoring ───────────────────────────────────────────────────────────────────
+
+def _score_comparable(
+    lot: dict,
+    ref_medium: Optional[str],
+    ref_cm2: Optional[float],
+    ref_year: Optional[int],
+) -> float:
+    """
+    Score de similarité normalisé (0–100).
+
+    Normalisation : le score est calculé sur les critères réellement évaluables
+    (les deux côtés ont la donnée). Les critères sans données disponibles ne
+    contribuent ni positivement ni négativement — ils sont exclus du dénominateur.
+
+    Exception medium : si la référence a un médium mais que le lot n'en a pas,
+    le critère reste actif avec un score réduit (lot non décrit en catalogue).
+    """
+    raw_score = 0.0
+    available_weight = 0.0
+
+    # ── Medium (30 pts) ──────────────────────────────────────────────────
+    # Toujours compté si la référence a un médium (même si le lot n'en a pas).
+    if ref_medium:
+        available_weight += 30
+        raw_score += _medium_score_pts(ref_medium, lot.get("medium"))
+
+    # ── Dimensions (25 pts) — uniquement si les deux côtés ont la donnée ─
+    if ref_cm2 is not None and ref_cm2 > 0:
+        lot_dims = lot.get("dimensions")
+        if lot_dims:
+            dim = parse_dimensions_cm(lot_dims)
+            lot_cm2 = dim.get("area_cm2")
+            if lot_cm2 and lot_cm2 > 0:
+                available_weight += 25
+                ratio = abs(lot_cm2 - ref_cm2) / ref_cm2
+                if ratio <= 0.15:
+                    raw_score += 25
+                elif ratio <= 0.25:
+                    raw_score += 20
+                elif ratio <= 0.40:
+                    raw_score += 12
+                elif ratio <= 0.60:
+                    raw_score += 5
+                # > 60% : 0 pts, mais le poids est compté (pénalité réelle)
+
+    # ── Période de création (25 pts) — uniquement si les deux côtés ont la donnée
+    if ref_year is not None:
+        lot_year = lot.get("year_created")
+        if lot_year is not None:
+            available_weight += 25
+            delta = abs(int(lot_year) - ref_year)
+            if delta <= 5:
+                raw_score += 25
+            elif delta <= 10:
+                raw_score += 20
+            elif delta <= 20:
+                raw_score += 12
+            elif delta <= 30:
+                raw_score += 5
+            # > 30 ans : 0 pts, mais le poids est compté (pénalité réelle)
+
+    # ── Récence (20 pts) — toujours disponible ───────────────────────────
+    available_weight += 20
+    sale_date = lot.get("sale_date")
+    if sale_date:
+        months_ago = (datetime.utcnow() - sale_date).days / 30.44
+        if months_ago < 12:
+            raw_score += 20
+        elif months_ago < 24:
+            raw_score += 15
+        elif months_ago < 36:
+            raw_score += 9
+        elif months_ago < 48:
+            raw_score += 4
+        else:
+            raw_score += 1
+
+    if available_weight == 0:
+        return 0.0
+
+    return (raw_score / available_weight) * 100
+
+
+# ── Génération de l'explication lisible ──────────────────────────────────────
+
+def _build_explanation(
+    n: int,
+    ref_medium: Optional[str],
+    medium_category: Optional[str],
+    year_range: Optional[list],
+    sale_date_range: Optional[list],
+    has_dims: bool,
+) -> str:
+    """
+    Génère une phrase explicative pour le frontend.
+
+    Ex: "Basé sur 7 huiles sur toile comparables, créés entre 1985 et 1993,
+         vendus entre juin 2022 et jan. 2025, de formats similaires."
+    """
+    _MONTHS_FR = ["", "jan.", "fév.", "mars", "avr.", "mai", "juin",
+                  "juil.", "août", "sep.", "oct.", "nov.", "déc."]
+
+    def _fmt_ym(ym: str) -> str:
+        try:
+            y, m = ym.split("-")
+            return f"{_MONTHS_FR[int(m)]} {y}"
+        except Exception:
+            return ym
+
+    pl = "s" if n > 1 else ""
+    medium_label = ref_medium or medium_category or "œuvre"
+    parts = [f"Basé sur {n} {medium_label} comparable{pl}"]
+
+    if year_range:
+        if year_range[0] == year_range[1]:
+            parts.append(f"créé{pl} en {year_range[0]}")
+        else:
+            parts.append(f"créé{pl} entre {year_range[0]} et {year_range[1]}")
+
+    if sale_date_range:
+        d0 = _fmt_ym(sale_date_range[0])
+        d1 = _fmt_ym(sale_date_range[1])
+        if sale_date_range[0] == sale_date_range[1]:
+            parts.append(f"vendu{pl} en {d0}")
+        else:
+            parts.append(f"vendu{pl} entre {d0} et {d1}")
+
+    if has_dims:
+        parts.append("de formats similaires")
+
+    return ", ".join(parts) + "."
+
+
+# ── Formatage de la sortie comparables ───────────────────────────────────────
+
+def _lot_to_output(lot: dict) -> dict:
+    """Convertit un lot interne (sale_date = datetime) en dict API."""
+    sale_date = lot.get("sale_date")
+    return {
+        "id":               lot.get("lot_id"),
+        "hammer_price_eur": lot["hammer_price_eur"],
+        "medium":           lot.get("medium"),
+        "medium_category":  lot.get("medium_category"),
+        "dimensions":       lot.get("dimensions"),
+        "sale_date":        sale_date.isoformat() if sale_date else None,
+        "auction_house":    lot.get("auction_house"),
+        "year_created":     lot.get("year_created"),
+        "score":            lot.get("score"),
+    }
 
 
 # ── Résolution artiste ────────────────────────────────────────────────────────
 
 async def _get_artist_name_normalized(db: AsyncSession, artist_id) -> Optional[str]:
-    """
-    Résout artist_id (UUID) → Artist.name_normalized.
-
-    HammerPrice n'a pas de colonne artist_id. La jointure artiste se fait
-    exclusivement via artist_name_normalized.
-    """
+    """Résout artist_id (UUID) → Artist.name_normalized."""
     result = await db.execute(
         select(Artist.name_normalized).where(Artist.id == artist_id)
     )
     return result.scalar_one_or_none()
 
 
-# ── Requête principale hammer_prices ─────────────────────────────────────────
+# ── Requête hammer_prices ─────────────────────────────────────────────────────
 
 async def _query_hammer_prices(
     db: AsyncSession,
     artist_name_normalized: str,
-    medium_category: Optional[str],   # catégorie normalisée, ex: "painting"
-    ref_cm2: Optional[float],
+    medium_category: Optional[str],
     days_back: int,
-    apply_size_filter: bool,
-    apply_medium_filter: bool,
-    year_created: Optional[int] = None,
-    year_tolerance: int = 20,
 ) -> list[dict]:
     """
-    Requête interne hammer_prices avec filtres configurables.
+    Requête unique : artiste + médium (si connu) + fenêtre temporelle.
 
-    Utilise HammerPrice.medium_category (déjà normalisé en DB) pour le filtre
-    médium — évite la normalisation Python ligne par ligne.
-
-    Args:
-        artist_name_normalized: clé de jointure vers hammer_prices
-        medium_category: catégorie canonique (normalize_medium_category output)
-        ref_cm2: surface de référence en cm²
-        days_back: fenêtre temporelle (ventes des N derniers jours)
-        apply_size_filter: activer le filtre ±40% de surface
-        apply_medium_filter: activer le filtre par catégorie de médium
-        year_created: année de création de l'œuvre de référence.
-                      Si fourni, restreint les comparables à ±year_tolerance ans
-                      autour de l'année de création (pas de vente) pour éviter
-                      de comparer des œuvres de périodes stylistiques différentes.
-        year_tolerance: fenêtre ±N ans autour de year_created (défaut ±20)
+    medium_category est un filtre permanent : jamais relâché si fourni.
+    sale_date est retourné comme objet datetime (pour le scoring de récence).
     """
     cutoff_date = datetime.utcnow() - timedelta(days=days_back)
-
     EXCLUDED_CURRENCIES = ('KRW', 'INR', 'CNY', 'HUF', 'TWD', 'NGN', 'PHP')
     SEK_SENTINEL_VALUE = 276.0
 
@@ -177,14 +389,8 @@ async def _query_hammer_prices(
         ),
     ]
 
-    # Filtre médium via medium_category (déjà normalisé en DB)
-    if apply_medium_filter and medium_category and medium_category != "other":
+    if medium_category and medium_category != "other":
         conditions.append(HammerPrice.medium_category == medium_category)
-
-    # Filtre période de création (±year_tolerance autour de year_created)
-    if year_created is not None:
-        conditions.append(HammerPrice.year_created >= year_created - year_tolerance)
-        conditions.append(HammerPrice.year_created <= year_created + year_tolerance)
 
     stmt = (
         select(
@@ -192,40 +398,32 @@ async def _query_hammer_prices(
             HammerPrice.hammer_price_eur,
             HammerPrice.medium,
             HammerPrice.medium_category,
-            HammerPrice.dimensions,      # colonne réelle : 'dimensions' (pas dimensions_cm)
+            HammerPrice.dimensions,
             HammerPrice.sale_date,
             HammerPrice.auction_house,
             HammerPrice.year_created,
         )
         .where(and_(*conditions))
         .order_by(HammerPrice.sale_date.desc())
-        .limit(200)  # cap pour éviter les requêtes trop larges
+        .limit(200)
     )
 
     result = await db.execute(stmt)
     rows = result.fetchall()
 
-    candidates = []
-    for row in rows:
-        # Filtre taille : calculé en Python car dimensions stockées en String brut
-        if apply_size_filter and ref_cm2 is not None:
-            dim = parse_dimensions_cm(row.dimensions)
-            lot_cm2 = dim.get("area_cm2")
-            if lot_cm2 is not None and not is_size_comparable(ref_cm2, lot_cm2, SIZE_TOLERANCE):
-                continue
-
-        candidates.append({
-            "lot_id": str(row.id),
+    return [
+        {
+            "lot_id":           str(row.id),
             "hammer_price_eur": float(row.hammer_price_eur),
-            "medium": row.medium,
-            "medium_category": row.medium_category,
-            "dimensions": row.dimensions,
-            "sale_date": row.sale_date.isoformat() if row.sale_date else None,
-            "auction_house": row.auction_house,
-            "year_created": row.year_created,
-        })
-
-    return candidates
+            "medium":           row.medium,
+            "medium_category":  row.medium_category,
+            "dimensions":       row.dimensions,
+            "sale_date":        row.sale_date,   # datetime pour scoring
+            "auction_house":    row.auction_house,
+            "year_created":     row.year_created,
+        }
+        for row in rows
+    ]
 
 
 # ── Fallback stats pré-agrégées ───────────────────────────────────────────────
@@ -236,76 +434,57 @@ async def _fallback_aggregate_stats(
     medium_category: Optional[str],
 ) -> Optional[dict]:
     """
-    Fallback sur les stats pré-agrégées si aucun comparable individuel trouvé.
+    Fallback sur hammer_artist_medium_stats uniquement (filtré par médium).
 
-    Essaie hammer_artist_medium_stats (plus précis) puis hammer_artist_stats.
-
-    RÈGLE ANTI-SENTINEL : filtre sale_count < MAX_PLAUSIBLE_SALE_COUNT.
-    Les valeurs like sale_count=22000 sont des artefacts d'ingestion batch.
+    Le fallback hammer_artist_stats (tous médiums confondus) est supprimé :
+    mélanger des médiums hétérogènes produit des médianes non-interprétables.
     """
-    # Tentative 1 : stats par médium (hammer_artist_medium_stats)
-    if medium_category and medium_category != "other":
-        stmt = select(HammerArtistMediumStats).where(
-            and_(
-                HammerArtistMediumStats.artist_name_normalized == artist_name_normalized,
-                HammerArtistMediumStats.medium_category == medium_category,
-                HammerArtistMediumStats.sale_count > 0,
-                # Anti-sentinel : exclut les valeurs manifestement fausses injectées par batch
-                HammerArtistMediumStats.sale_count < MAX_PLAUSIBLE_SALE_COUNT,
-                HammerArtistMediumStats.median_eur.isnot(None),
-            )
-        )
-        result = await db.execute(stmt)
-        stats = result.scalar_one_or_none()
+    if not medium_category or medium_category == "other":
+        return None
 
-        if stats and stats.median_eur and stats.median_eur > 0:
-            median = float(stats.median_eur)
-            return {
-                "valuation_low":      round(median * 0.70),
-                "valuation_median":   round(median),
-                "valuation_high":     round(median * 1.35),
-                "confidence":         "low",
-                "confidence_float":   0.3,
-                "comparables_count":  int(stats.sale_count),
-                "method":             "aggregate_medium_stats",
-                "comparables":        [],
-                "warning": (
-                    "Estimation basée sur des statistiques agrégées par médium, "
-                    "non sur des comparables individuels."
-                ),
-            }
-
-    # Tentative 2 : stats artiste global (hammer_artist_stats)
-    stmt = select(HammerArtistStats).where(
+    stmt = select(HammerArtistMediumStats).where(
         and_(
-            HammerArtistStats.artist_name_normalized == artist_name_normalized,
-            HammerArtistStats.sale_count > 0,
-            # Anti-sentinel : exclut les valeurs manifestement fausses injectées par batch
-            HammerArtistStats.sale_count < MAX_PLAUSIBLE_SALE_COUNT,
-            HammerArtistStats.median_eur.isnot(None),
+            HammerArtistMediumStats.artist_name_normalized == artist_name_normalized,
+            HammerArtistMediumStats.medium_category == medium_category,
+            HammerArtistMediumStats.sale_count > 0,
+            HammerArtistMediumStats.sale_count < MAX_PLAUSIBLE_SALE_COUNT,
+            HammerArtistMediumStats.median_eur.isnot(None),
         )
     )
     result = await db.execute(stmt)
     stats = result.scalar_one_or_none()
 
-    if stats and stats.median_eur and stats.median_eur > 0:
-        median = float(stats.median_eur)
-        return {
-            "valuation_low":      round(median * 0.65),
-            "valuation_median":   round(median),
-            "valuation_high":     round(median * 1.40),
-            "confidence":         "low",
-            "confidence_float":   0.3,
-            "comparables_count":  int(stats.sale_count),
-            "method":             "aggregate_artist_stats",
-            "comparables":        [],
-            "warning": (
-                "Estimation basée sur la médiane globale de l'artiste (tous médiums). "
-                "Précision limitée."
-            ),
-        }
+    if not stats or not stats.median_eur or stats.median_eur <= 0:
+        return None
 
-    return None
+    median = float(stats.median_eur)
+    return {
+        "valuation_low":         round(median * 0.70),
+        "valuation_median":      round(median),
+        "valuation_high":        round(median * 1.35),
+        "confidence":            "low",
+        "confidence_float":      0.3,
+        "comparables_count":     int(stats.sale_count),
+        "method":                "aggregate_medium_stats",
+        "comparables":           [],
+        "comparables_quality":   "moyen",
+        "avg_score":             None,
+        "score_std_dev":         None,
+        "lowest_score":          None,
+        "highest_score":         None,
+        "comparable_mediums":    [medium_category],
+        "year_range":            None,
+        "sale_date_range":       None,
+        "dimension_range_cm2":   None,
+        "explanation": (
+            f"Estimation basée sur la médiane historique de {int(stats.sale_count)} "
+            f"ventes en {medium_category} — aucun comparable récent disponible."
+        ),
+        "warning": (
+            "Estimation basée sur des statistiques agrégées par médium, "
+            "non sur des comparables individuels récents."
+        ),
+    }
 
 
 # ── Fallback catégorie (artiste inconnu) ──────────────────────────────────────
@@ -328,7 +507,7 @@ async def find_comparables_by_category(
                 "Médium non identifié — recherche par catégorie impossible."
             )
 
-        cutoff_date = datetime.utcnow() - timedelta(days=WINDOW_MEDIUM)
+        cutoff_date = datetime.utcnow() - timedelta(days=1460)  # 48 mois
         EXCLUDED_CURRENCIES = ('KRW', 'INR', 'CNY', 'HUF', 'TWD', 'NGN', 'PHP')
 
         conditions = [
@@ -341,12 +520,8 @@ async def find_comparables_by_category(
         ]
 
         if year_created is not None:
-            conditions.append(
-                HammerPrice.year_created >= year_created - 30
-            )
-            conditions.append(
-                HammerPrice.year_created <= year_created + 30
-            )
+            conditions.append(HammerPrice.year_created >= year_created - 30)
+            conditions.append(HammerPrice.year_created <= year_created + 30)
 
         stmt = (
             select(
@@ -367,17 +542,17 @@ async def find_comparables_by_category(
         result = await db.execute(stmt)
         rows = result.fetchall()
 
-        if len(rows) < MIN_COMPARABLES_LOW:
+        if len(rows) < MIN_COMPARABLES:
             return _no_data_result(
                 "Pas assez de ventes similaires disponibles pour cette catégorie."
             )
 
         prices = [float(row.hammer_price_eur) for row in rows]
         stats = _price_stats(prices)
-        confidence = _confidence_label(len(rows), "comparable_lots")
+        confidence = _confidence_label(len(rows), 50.0)
         lots = [
             {
-                "lot_id":           str(row.id),
+                "id":               str(row.id),
                 "hammer_price_eur": float(row.hammer_price_eur),
                 "medium":           row.medium,
                 "medium_category":  row.medium_category,
@@ -385,17 +560,31 @@ async def find_comparables_by_category(
                 "sale_date":        row.sale_date.isoformat() if row.sale_date else None,
                 "auction_house":    row.auction_house,
                 "year_created":     row.year_created,
+                "score":            None,
             }
             for row in rows
         ]
 
         return {
             **stats,
-            "confidence":        confidence,
-            "confidence_float":  _confidence_to_float(confidence),
-            "comparables_count": len(rows),
-            "method":            "market_comparables_by_category",
-            "comparables":       lots[:10],
+            "confidence":          confidence,
+            "confidence_float":    _confidence_to_float(confidence),
+            "comparables_count":   len(rows),
+            "method":              "market_comparables_by_category",
+            "comparables":         lots[:10],
+            "comparables_quality": "moyen",
+            "avg_score":           None,
+            "score_std_dev":       None,
+            "lowest_score":        None,
+            "highest_score":       None,
+            "comparable_mediums":  [medium_category],
+            "year_range":          None,
+            "sale_date_range":     None,
+            "dimension_range_cm2": None,
+            "explanation": (
+                f"Artiste non identifié. Estimation basée sur {len(rows)} ventes "
+                f"de même catégorie ({medium_category}) — précision limitée."
+            ),
             "warning": (
                 f"Artiste non identifié. Estimation basée sur des ventes "
                 f"de même catégorie ({medium_category}) — précision limitée."
@@ -420,137 +609,187 @@ async def find_comparables_and_estimate(
     year_created: Optional[int] = None,
 ) -> dict:
     """
-    Fonction principale du moteur de comparable.
+    Fonction principale du moteur de comparable v2.
 
-    Cherche des comparables par niveaux de filtres successifs et retourne
-    une estimation avec fourchette de prix et niveau de confiance.
-
-    Args:
-        db: session async SQLAlchemy
-        artist_id: UUID de l'artiste en DB (FK valide vers artists.id)
-        medium: chaîne de médium libre (ex: "huile sur toile")
-        dimensions: chaîne de dimensions libre (ex: "80 x 60 cm")
-        year_created: année de création de l'œuvre (restreint comparables
-                      à la même période stylistique ±20 ans)
+    Pipeline :
+      1. Requête : artiste + medium_category (obligatoire si connu) + 60 mois
+      2. Score de similarité par lot (0–100)
+      3. Filtre : score ≥ SCORE_FLOOR
+      4. Contrôle qualité : avg_score + score_std_dev
+      5. Minimum MIN_COMPARABLES lots admis
+      6. P25/P50/P75 sur TOP_N_FOR_STATS meilleurs lots
+      7. Retour riche avec métadonnées et explication
 
     Returns:
-        dict avec valuation_low, valuation_median, valuation_high,
-        confidence (str), confidence_float (float), comparables_count,
-        method, comparables (list), warning (str|None).
+        dict toujours valide. Si données insuffisantes → confidence='none'.
 
-    GARANTIE : Ne lève jamais d'exception. Retourne toujours un dict valide.
-    Si aucune donnée → valuation_median=None, confidence='none'.
+    GARANTIE : Ne lève jamais d'exception.
     """
     try:
-        # Résoudre artist_id → artist_name_normalized (clé hammer_prices)
+        # 1. Résoudre artist_id → artist_name_normalized
         artist_name_normalized = await _get_artist_name_normalized(db, artist_id)
         if not artist_name_normalized:
-            logger.warning(f"[comparable_engine] artist_id={artist_id} not found in artists table")
+            logger.warning(f"[comparable_engine] artist_id={artist_id} not found")
             return _no_data_result("Artiste non trouvé en base de données.")
 
-        # Normaliser le médium et calculer la surface
+        # 2. Normaliser les entrées
         medium_category = normalize_medium_category(medium) if medium else None
         dim = parse_dimensions_cm(dimensions) if dimensions else {}
         ref_cm2 = dim.get("area_cm2") if dim else None
 
         logger.info(
-            f"[comparable_engine] artist_name_normalized='{artist_name_normalized}', "
+            f"[comparable_engine] artist='{artist_name_normalized}', "
             f"medium='{medium}' → '{medium_category}', "
-            f"dimensions='{dimensions}' → {ref_cm2}cm²"
+            f"dimensions='{dimensions}' → {ref_cm2}cm², "
+            f"year_created={year_created}"
         )
 
-        # ── Level 1 : médium + taille + 24 mois (filtre le plus strict) ─────────
-        if medium_category and medium_category != "other" and ref_cm2:
-            lots = await _query_hammer_prices(
-                db, artist_name_normalized, medium_category, ref_cm2,
-                days_back=WINDOW_TIGHT,
-                apply_size_filter=True,
-                apply_medium_filter=True,
-                year_created=year_created,
-            )
-            if len(lots) >= MIN_COMPARABLES_LOW:
-                prices = [l["hammer_price_eur"] for l in lots]
-                stats = _price_stats(prices)
-                confidence = _confidence_label(len(lots), "comparable_lots")
-                logger.info(f"[comparable_engine] Level 1 match: {len(lots)} comparables")
-                return {
-                    **stats,
-                    "confidence":        confidence,
-                    "confidence_float":  _confidence_to_float(confidence),
-                    "comparables_count": len(lots),
-                    "method":            "comparable_lots_strict",
-                    "comparables":       lots[:10],
-                    "warning":           None,
-                }
-
-        # ── Level 2 : médium + 48 mois (relâche filtre taille) ──────────────────
-        if medium_category and medium_category != "other":
-            lots = await _query_hammer_prices(
-                db, artist_name_normalized, medium_category, ref_cm2,
-                days_back=WINDOW_MEDIUM,
-                apply_size_filter=False,
-                apply_medium_filter=True,
-                year_created=year_created,
-            )
-            if len(lots) >= MIN_COMPARABLES_LOW:
-                prices = [l["hammer_price_eur"] for l in lots]
-                stats = _price_stats(prices)
-                confidence = _confidence_label(len(lots), "comparable_lots")
-                logger.info(f"[comparable_engine] Level 2 match: {len(lots)} comparables")
-                return {
-                    **stats,
-                    "confidence":        confidence,
-                    "confidence_float":  _confidence_to_float(confidence),
-                    "comparables_count": len(lots),
-                    "method":            "comparable_lots_medium_only",
-                    "comparables":       lots[:10],
-                    "warning": (
-                        "Taille non prise en compte — peu de ventes de format "
-                        "similaire disponibles sur 48 mois."
-                    ),
-                }
-
-        # ── Level 3 : artiste seul + 60 mois ────────────────────────────────────
+        # 3. Requête unique : artiste + médium (obligatoire si connu) + 60 mois
         lots = await _query_hammer_prices(
-            db, artist_name_normalized, None, None,
-            days_back=WINDOW_WIDE,
-            apply_size_filter=False,
-            apply_medium_filter=False,
+            db, artist_name_normalized, medium_category, WINDOW_MAX
         )
-        if len(lots) >= MIN_COMPARABLES_LOW:
-            prices = [l["hammer_price_eur"] for l in lots]
-            stats = _price_stats(prices)
-            confidence = _confidence_label(len(lots), "comparable_lots")
-            logger.info(f"[comparable_engine] Level 3 match: {len(lots)} comparables")
-            return {
-                **stats,
-                "confidence":        confidence,
-                "confidence_float":  _confidence_to_float(confidence),
-                "comparables_count": len(lots),
-                "method":            "comparable_lots_artist_only",
-                "comparables":       lots[:10],
-                "warning": (
-                    "Médium et taille non pris en compte — estimation basée sur "
-                    "toutes les ventes disponibles de l'artiste."
-                ),
-            }
 
-        # ── Fallback : stats pré-agrégées ────────────────────────────────────────
-        fallback = await _fallback_aggregate_stats(
-            db, artist_name_normalized, medium_category
-        )
-        if fallback:
-            logger.info(f"[comparable_engine] Fallback: {fallback['method']}")
-            return fallback
+        if not lots:
+            fallback = await _fallback_aggregate_stats(
+                db, artist_name_normalized, medium_category
+            )
+            if fallback:
+                logger.info("[comparable_engine] Fallback: aggregate_medium_stats")
+                return fallback
+            return _no_data_result(
+                "Aucune vente disponible pour cet artiste"
+                + (f" en catégorie '{medium_category}'" if medium_category else "")
+                + " sur les 60 derniers mois."
+            )
 
-        # ── Aucune donnée disponible ──────────────────────────────────────────────
-        logger.warning(
-            f"[comparable_engine] No data for artist '{artist_name_normalized}' "
-            f"(artist_id={artist_id})"
+        # 4. Score de similarité par lot
+        scored_lots = []
+        for lot in lots:
+            s = _score_comparable(lot, medium, ref_cm2, year_created)
+            scored_lots.append({**lot, "score": round(s, 1)})
+
+        # 5. Filtrer par score plancher
+        admitted = [l for l in scored_lots if l["score"] >= SCORE_FLOOR]
+        logger.info(
+            f"[comparable_engine] {len(lots)} lots fetched, "
+            f"{len(admitted)} admitted (score ≥ {SCORE_FLOOR})"
         )
-        return _no_data_result(
-            "Aucune donnée de vente disponible pour cet artiste. Estimation impossible."
+
+        if len(admitted) < MIN_COMPARABLES:
+            return _no_data_result(
+                f"Comparables insuffisants après filtrage qualité "
+                f"({len(admitted)} retenus sur {len(lots)} disponibles) — "
+                f"estimation indisponible."
+            )
+
+        # 6. Contrôle qualité : score moyen + homogénéité
+        scores = [l["score"] for l in admitted]
+        avg_score = sum(scores) / len(scores)
+        variance = sum((s - avg_score) ** 2 for s in scores) / len(scores)
+        std_dev = math.sqrt(variance)
+
+        logger.info(
+            f"[comparable_engine] Quality: avg_score={avg_score:.1f}, "
+            f"std_dev={std_dev:.1f}, n={len(admitted)}"
         )
+
+        if avg_score < MIN_AVG_SCORE:
+            return _no_data_result(
+                f"Qualité insuffisante des comparables (score moyen {avg_score:.0f}/100) — "
+                f"estimation indisponible."
+            )
+
+        if avg_score < STD_DEV_THRESHOLD and std_dev > MAX_STD_DEV_BORDERLINE:
+            return _no_data_result(
+                f"Comparables trop hétérogènes (score moyen {avg_score:.0f}/100, "
+                f"écart-type {std_dev:.0f}) — estimation indisponible."
+            )
+
+        # 7. Sélectionner les TOP_N_FOR_STATS meilleurs pour les statistiques
+        admitted.sort(key=lambda l: l["score"], reverse=True)
+        top_lots = admitted[:TOP_N_FOR_STATS]
+
+        # 8. Calculer P25/P50/P75
+        prices = [l["hammer_price_eur"] for l in top_lots]
+        stats = _price_stats(prices)
+
+        # 9. Confiance, label qualité et plage de scores
+        confidence = _confidence_label(len(top_lots), avg_score)
+        quality_label = _quality_label(avg_score)
+        top_scores = [l["score"] for l in top_lots]
+        lowest_score = round(min(top_scores), 1)
+        highest_score = round(max(top_scores), 1)
+
+        # 10. Métadonnées contextuelles
+        seen_mediums: set = set()
+        comparable_mediums = []
+        for l in top_lots:
+            m = l.get("medium")
+            if m:
+                m_key = m.lower().strip()
+                if m_key not in seen_mediums:
+                    seen_mediums.add(m_key)
+                    comparable_mediums.append(m)
+
+        years = [l["year_created"] for l in top_lots if l.get("year_created") is not None]
+        year_range = [min(years), max(years)] if years else None
+
+        sale_dates = [l["sale_date"] for l in top_lots if l.get("sale_date")]
+        if sale_dates:
+            sd_sorted = sorted(sale_dates)
+            sale_date_range = [
+                sd_sorted[0].strftime("%Y-%m"),
+                sd_sorted[-1].strftime("%Y-%m"),
+            ]
+        else:
+            sale_date_range = None
+
+        dim_areas = []
+        for l in top_lots:
+            if l.get("dimensions"):
+                d = parse_dimensions_cm(l["dimensions"])
+                a = d.get("area_cm2")
+                if a and a > 0:
+                    dim_areas.append(a)
+        dimension_range_cm2 = (
+            [round(min(dim_areas)), round(max(dim_areas))] if dim_areas else None
+        )
+
+        # 11. Explication lisible
+        explanation = _build_explanation(
+            n=len(top_lots),
+            ref_medium=medium,
+            medium_category=medium_category,
+            year_range=year_range,
+            sale_date_range=sale_date_range,
+            has_dims=dimension_range_cm2 is not None,
+        )
+
+        logger.info(
+            f"[comparable_engine] → confidence={confidence}, n={len(top_lots)}, "
+            f"avg_score={avg_score:.1f}, std_dev={std_dev:.1f}, "
+            f"median={stats['valuation_median']}€"
+        )
+
+        return {
+            **stats,
+            "confidence":            confidence,
+            "confidence_float":      _confidence_to_float(confidence),
+            "comparables_count":     len(top_lots),
+            "method":                "comparable_lots_scored",
+            "comparables":           [_lot_to_output(l) for l in top_lots[:10]],
+            "comparables_quality":   quality_label,
+            "avg_score":             round(avg_score, 1),
+            "score_std_dev":         round(std_dev, 1),
+            "lowest_score":          lowest_score,
+            "highest_score":         highest_score,
+            "comparable_mediums":    comparable_mediums or None,
+            "year_range":            year_range,
+            "sale_date_range":       sale_date_range,
+            "dimension_range_cm2":   dimension_range_cm2,
+            "explanation":           explanation,
+            "warning":               None,
+        }
 
     except Exception as e:
         logger.error(
@@ -558,27 +797,47 @@ async def find_comparables_and_estimate(
             exc_info=True,
         )
         return {
-            "valuation_low":     None,
-            "valuation_median":  None,
-            "valuation_high":    None,
-            "confidence":        "none",
-            "confidence_float":  None,
-            "comparables_count": 0,
-            "method":            "error",
-            "comparables":       [],
-            "warning":           "Erreur interne lors de l'estimation.",
+            "valuation_low":         None,
+            "valuation_median":      None,
+            "valuation_high":        None,
+            "confidence":            "error",
+            "confidence_float":      None,
+            "comparables_count":     0,
+            "method":                "error",
+            "comparables":           [],
+            "comparables_quality":   None,
+            "avg_score":             None,
+            "score_std_dev":         None,
+            "lowest_score":          None,
+            "highest_score":         None,
+            "comparable_mediums":    None,
+            "year_range":            None,
+            "sale_date_range":       None,
+            "dimension_range_cm2":   None,
+            "explanation":           None,
+            "warning":               "Erreur interne lors de l'estimation.",
         }
 
 
 def _no_data_result(warning: str) -> dict:
     return {
-        "valuation_low":     None,
-        "valuation_median":  None,
-        "valuation_high":    None,
-        "confidence":        "none",
-        "confidence_float":  None,
-        "comparables_count": 0,
-        "method":            "no_data",
-        "comparables":       [],
-        "warning":           warning,
+        "valuation_low":         None,
+        "valuation_median":      None,
+        "valuation_high":        None,
+        "confidence":            "none",
+        "confidence_float":      None,
+        "comparables_count":     0,
+        "method":                "no_data",
+        "comparables":           [],
+        "comparables_quality":   None,
+        "avg_score":             None,
+        "score_std_dev":         None,
+        "lowest_score":          None,
+        "highest_score":         None,
+        "comparable_mediums":    None,
+        "year_range":            None,
+        "sale_date_range":       None,
+        "dimension_range_cm2":   None,
+        "explanation":           None,
+        "warning":               warning,
     }
