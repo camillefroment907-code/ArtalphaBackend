@@ -49,6 +49,13 @@ class Settings(BaseSettings):
     apify_api_token: Optional[str] = None       # APIFY_API_TOKEN — cloud scraping proxy
     apify_actor_id: str = "jupri/liveauctioneers-scraper"  # APIFY_ACTOR_ID
 
+    # Cloudflare R2 Storage
+    r2_endpoint: Optional[str] = None          # https://<account_id>.r2.cloudflarestorage.com
+    r2_access_key_id: Optional[str] = None
+    r2_secret_access_key: Optional[str] = None
+    r2_bucket: Optional[str] = None
+    r2_public_url: Optional[str] = None        # public base URL (ex: https://pub-xxx.r2.dev/bucket)
+
     # AI
     openai_api_key: Optional[str] = None
     openai_model: str = "gpt-4o"

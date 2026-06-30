@@ -633,7 +633,8 @@ async def upload_item_photo(
     if not item:
         raise HTTPException(404, "Item introuvable.")
 
-    if not settings.supabase_url or not settings.supabase_service_key:
+    if not (settings.r2_endpoint and settings.r2_access_key_id and settings.r2_secret_access_key
+            and settings.r2_bucket and settings.r2_public_url):
         raise HTTPException(503, "Service de stockage non configuré.")
 
     # Read file bytes (max 10 MB)
@@ -645,35 +646,26 @@ async def upload_item_photo(
     if not content_type.startswith("image/"):
         raise HTTPException(415, "Seules les images sont acceptées.")
 
-    ext = content_type.split("/")[-1].replace("jpeg", "jpg")
-    filename = f"{current_user.id}/{item_id}/{uuid_lib.uuid4().hex}.{ext}"
-    bucket = "artwork-photos"
-
-    supabase_url = settings.supabase_url.rstrip("/")
-    if not supabase_url.startswith(("http://", "https://")):
-        supabase_url = f"https://{supabase_url}"
-    upload_url = f"{supabase_url}/storage/v1/object/{bucket}/{filename}"
-
+    import asyncio
+    from app.utils.r2_storage import upload_to_r2
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(
-                upload_url,
-                content=contents,
-                headers={
-                    "Authorization": f"Bearer {settings.supabase_service_key}",
-                    "Content-Type": content_type,
-                    "x-upsert": "true",
-                },
-            )
+        loop = asyncio.get_event_loop()
+        public_url = await loop.run_in_executor(
+            None,
+            lambda: upload_to_r2(
+                data=contents,
+                content_type=content_type,
+                folder=f"{current_user.id}/{item_id}",
+                endpoint=settings.r2_endpoint,
+                access_key_id=settings.r2_access_key_id,
+                secret_access_key=settings.r2_secret_access_key,
+                bucket=settings.r2_bucket,
+                public_url=settings.r2_public_url,
+            ),
+        )
     except Exception as e:
-        logger.error(f"[upload-photo] httpx error: {e}")
+        logger.error(f"[upload-photo] R2 upload error: {e}")
         raise HTTPException(502, "Impossible de contacter le service de stockage.")
-
-    if resp.status_code not in (200, 201):
-        logger.error(f"[upload-photo] Supabase error {resp.status_code}: {resp.text[:200]}")
-        raise HTTPException(502, f"Erreur stockage ({resp.status_code}).")
-
-    public_url = f"{supabase_url}/storage/v1/object/public/{bucket}/{filename}"
 
     existing_urls: list = list(item.image_urls or [])
     existing_urls.append(public_url)
@@ -749,28 +741,29 @@ async def vision_analyze(
     if main_contents is None:
         main_contents, main_content_type, _ = images[0]
 
-    # Upload vers Supabase Storage — uniquement la photo principale
+    # Upload vers R2 — uniquement la photo principale
     image_url: Optional[str] = None
-    if settings.supabase_url and settings.supabase_service_key:
+    if settings.r2_endpoint and settings.r2_access_key_id and settings.r2_secret_access_key \
+            and settings.r2_bucket and settings.r2_public_url:
         try:
-            ext = main_content_type.split("/")[-1].replace("jpeg", "jpg")
-            fname = f"vision/{current_user.id}/{uuid_lib.uuid4().hex}.{ext}"
-            supabase_url = settings.supabase_url.rstrip("/")
-            upload_url = f"{supabase_url}/storage/v1/object/artwork-photos/{fname}"
-            async with httpx.AsyncClient(timeout=20) as client:
-                resp = await client.post(
-                    upload_url,
-                    content=main_contents,
-                    headers={
-                        "Authorization": f"Bearer {settings.supabase_service_key}",
-                        "Content-Type": main_content_type,
-                        "x-upsert": "true",
-                    },
-                )
-            if resp.status_code in (200, 201):
-                image_url = f"{supabase_url}/storage/v1/object/public/artwork-photos/{fname}"
+            import asyncio
+            from app.utils.r2_storage import upload_to_r2
+            loop = asyncio.get_event_loop()
+            image_url = await loop.run_in_executor(
+                None,
+                lambda: upload_to_r2(
+                    data=main_contents,
+                    content_type=main_content_type,
+                    folder=f"vision/{current_user.id}",
+                    endpoint=settings.r2_endpoint,
+                    access_key_id=settings.r2_access_key_id,
+                    secret_access_key=settings.r2_secret_access_key,
+                    bucket=settings.r2_bucket,
+                    public_url=settings.r2_public_url,
+                ),
+            )
         except Exception as e:
-            logger.warning(f"[vision] Storage upload skipped: {e}")
+            logger.warning(f"[vision] R2 upload skipped: {e}")
 
     # Analyse vision
     result = await analyze_artwork_image(
