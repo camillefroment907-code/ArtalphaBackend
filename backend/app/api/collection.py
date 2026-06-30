@@ -650,22 +650,28 @@ async def upload_item_photo(
     bucket = "artwork-photos"
 
     supabase_url = settings.supabase_url.rstrip("/")
+    if not supabase_url.startswith(("http://", "https://")):
+        supabase_url = f"https://{supabase_url}"
     upload_url = f"{supabase_url}/storage/v1/object/{bucket}/{filename}"
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(
-            upload_url,
-            content=contents,
-            headers={
-                "Authorization": f"Bearer {settings.supabase_service_key}",
-                "Content-Type": content_type,
-                "x-upsert": "true",
-            },
-        )
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                upload_url,
+                content=contents,
+                headers={
+                    "Authorization": f"Bearer {settings.supabase_service_key}",
+                    "Content-Type": content_type,
+                    "x-upsert": "true",
+                },
+            )
+    except Exception as e:
+        logger.error(f"[upload-photo] httpx error: {e}")
+        raise HTTPException(502, "Impossible de contacter le service de stockage.")
 
     if resp.status_code not in (200, 201):
         logger.error(f"[upload-photo] Supabase error {resp.status_code}: {resp.text[:200]}")
-        raise HTTPException(502, "Erreur lors de l'upload de la photo.")
+        raise HTTPException(502, f"Erreur stockage ({resp.status_code}).")
 
     public_url = f"{supabase_url}/storage/v1/object/public/{bucket}/{filename}"
 
