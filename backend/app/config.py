@@ -31,6 +31,13 @@ class Settings(BaseSettings):
             raise ValueError('JWT_SECRET must be at least 32 characters — set a strong secret in environment variables')
         return v
 
+    @field_validator('supabase_url', mode='before')
+    @classmethod
+    def normalize_supabase_url(cls, v: Optional[str]) -> Optional[str]:
+        if v and not v.startswith(('http://', 'https://')):
+            return f'https://{v}'
+        return v
+
     # Supabase (optional)
     supabase_url: Optional[str] = None
     supabase_anon_key: Optional[str] = None
