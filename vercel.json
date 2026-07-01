@@ -1,7 +1,8 @@
 {
-  "buildCommand": "mkdir -p dist && cp index.html dist/index.html",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": null,
+  "rewrites": [{ "source": "/((?!assets|favicon|robots|sitemap).*)", "destination": "/index.html" }],
   "headers": [
     {
       "source": "/(.*)",
