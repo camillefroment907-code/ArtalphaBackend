@@ -1,4 +1,6 @@
-// app/auth/register.tsx — Nautilus Register Screen
+// app/auth/register.tsx — Nautilus Register
+// Fond blanc · Titre "Créer ma collection" · Bouton "Commencer" · ink #1A1A1A
+
 import {
   View,
   Text,
@@ -16,24 +18,28 @@ import { authService } from '@/services/api';
 import { setStoredAuth } from '@/lib/auth';
 import { useAuthStore } from '@/store/auth';
 import {
-  Colors,
   FontFamily,
   FontSize,
   Spacing,
   Radius,
-  Shadow,
 } from '@/constants/theme';
 
-export default function RegisterScreen() {
-  const router   = useRouter();
-  const setUser  = useAuthStore((s) => s.setUser);
+const INK    = '#1A1A1A';
+const MUTED  = '#6E6E73';
+const BLUE   = '#1B4FCC';
+const BORDER = '#E8E4DC';
+const ERROR  = '#C0392B';
 
-  const [name,        setName]        = useState('');
-  const [email,       setEmail]       = useState('');
-  const [password,    setPassword]    = useState('');
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState<string | null>(null);
-  const [emailTaken,  setEmailTaken]  = useState(false);
+export default function RegisterScreen() {
+  const router  = useRouter();
+  const setUser = useAuthStore((s) => s.setUser);
+
+  const [name,       setName]       = useState('');
+  const [email,      setEmail]      = useState('');
+  const [password,   setPassword]   = useState('');
+  const [loading,    setLoading]    = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
+  const [emailTaken, setEmailTaken] = useState(false);
 
   const canSubmit = name.trim().length > 0 && email.trim().length > 0 && password.length >= 8;
 
@@ -73,15 +79,13 @@ export default function RegisterScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Header ── */}
+        {/* Header */}
         <View style={s.header}>
-          <Text style={s.title}>Créer un compte</Text>
-          <Text style={s.subtitle}>
-            Commencez à connaître la valeur{'\n'}de ce que vous possédez.
-          </Text>
+          <Text style={s.title}>Créer ma collection</Text>
+          <Text style={s.subtitle}>Votre collection vous attend.</Text>
         </View>
 
-        {/* ── Form ── */}
+        {/* Form */}
         <View style={s.form}>
           <View style={s.fieldGroup}>
             <Text style={s.label}>Prénom</Text>
@@ -90,7 +94,7 @@ export default function RegisterScreen() {
               value={name}
               onChangeText={setName}
               placeholder="Votre prénom"
-              placeholderTextColor={Colors.textTertiary}
+              placeholderTextColor={MUTED}
               autoCapitalize="words"
               autoComplete="name"
               returnKeyType="next"
@@ -104,7 +108,7 @@ export default function RegisterScreen() {
               value={email}
               onChangeText={setEmail}
               placeholder="votre@email.com"
-              placeholderTextColor={Colors.textTertiary}
+              placeholderTextColor={MUTED}
               autoCapitalize="none"
               keyboardType="email-address"
               autoComplete="email"
@@ -119,7 +123,7 @@ export default function RegisterScreen() {
               value={password}
               onChangeText={setPassword}
               placeholder="8 caractères minimum"
-              placeholderTextColor={Colors.textTertiary}
+              placeholderTextColor={MUTED}
               secureTextEntry
               autoComplete="new-password"
               returnKeyType="done"
@@ -144,7 +148,7 @@ export default function RegisterScreen() {
             disabled={!canSubmit || loading}
           >
             <Text style={s.btnText}>
-              {loading ? 'Création…' : 'Créer mon compte'}
+              {loading ? 'Création…' : 'Commencer'}
             </Text>
           </Pressable>
 
@@ -153,9 +157,10 @@ export default function RegisterScreen() {
           </Text>
         </View>
 
-        {/* ── Back to login ── */}
+        {/* Retour login */}
         <Pressable style={s.backLink} onPress={() => router.replace('/auth/login')}>
-          <Text style={s.backTxt}>Déjà un compte ? Se connecter</Text>
+          <Text style={s.backTxt}>Déjà un compte ? </Text>
+          <Text style={[s.backTxt, s.backCta]}>Se connecter</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -163,56 +168,81 @@ export default function RegisterScreen() {
 }
 
 const s = StyleSheet.create({
-  root:  { flex: 1, backgroundColor: Colors.bgDark },
+  root:  { flex: 1, backgroundColor: '#FFFFFF' },
   inner: { flexGrow: 1, padding: Spacing.lg, paddingTop: 80 },
 
   // Header
   header:   { marginBottom: 40 },
-  title:    { fontSize: FontSize['4xl'], fontFamily: FontFamily.serifBold, color: Colors.textOnDark, letterSpacing: -0.4, marginBottom: 10 },
-  subtitle: { fontSize: FontSize.md, fontFamily: FontFamily.sans, color: Colors.textOnDarkMuted, lineHeight: FontSize.md * 1.5 },
+  title:    {
+    fontSize: FontSize['4xl'],
+    fontFamily: FontFamily.serifBold,
+    color: INK,
+    letterSpacing: -0.4,
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: FontSize.md,
+    fontFamily: FontFamily.sans,
+    color: MUTED,
+    lineHeight: FontSize.md * 1.5,
+  },
 
   // Form
   form:       { gap: 16 },
   fieldGroup: { gap: 6 },
-  label:      { fontSize: FontSize.sm, fontFamily: FontFamily.sansSemibold, color: Colors.textOnDarkMuted, letterSpacing: 0.3, textTransform: 'uppercase' },
+  label: {
+    fontSize: FontSize.sm,
+    fontFamily: FontFamily.sansSemibold,
+    color: MUTED,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
   input: {
     borderWidth: 1,
-    borderColor: Colors.borderOnDark,
+    borderColor: BORDER,
     borderRadius: Radius.md,
     padding: 14,
     fontSize: FontSize.base,
     fontFamily: FontFamily.sans,
-    color: Colors.textOnDark,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    color: INK,
+    backgroundColor: '#FAFAF8',
   },
   errorText: {
     fontSize: FontSize.sm,
     fontFamily: FontFamily.sans,
-    color: '#FF6B6B',
+    color: ERROR,
     textAlign: 'center',
   },
 
   btn: {
-    backgroundColor: Colors.gold,
+    backgroundColor: INK,
     borderRadius: Radius.md,
     paddingVertical: 15,
     alignItems: 'center',
     marginTop: 8,
-    ...Shadow.gold,
   },
-  btnDisabled: { opacity: 0.4 },
+  btnDisabled: { opacity: 0.35 },
   btnText: {
     fontSize: FontSize.md,
     fontFamily: FontFamily.sansSemibold,
-    color: Colors.textOnDark,
+    color: '#FFFFFF',
     letterSpacing: 0.2,
   },
 
-  cgu:       { fontSize: FontSize.xs, fontFamily: FontFamily.sans, color: Colors.textOnDarkSubtle, textAlign: 'center', lineHeight: 16, marginTop: 10 },
+  cgu: {
+    fontSize: FontSize.xs,
+    fontFamily: FontFamily.sans,
+    color: MUTED,
+    textAlign: 'center',
+    lineHeight: 16,
+    marginTop: 10,
+    opacity: 0.7,
+  },
   loginHint:    { alignItems: 'center', marginTop: 6 },
-  loginHintTxt: { fontSize: FontSize.sm, fontFamily: FontFamily.sansMedium, color: Colors.gold, textDecorationLine: 'underline' },
+  loginHintTxt: { fontSize: FontSize.sm, fontFamily: FontFamily.sansMedium, color: BLUE, textDecorationLine: 'underline' },
 
   // Back link
-  backLink: { marginTop: 32, alignItems: 'center' },
-  backTxt:  { fontSize: FontSize.sm, fontFamily: FontFamily.sans, color: Colors.textOnDarkSubtle, textDecorationLine: 'underline' },
+  backLink: { flexDirection: 'row', justifyContent: 'center', marginTop: 36 },
+  backTxt:  { fontSize: FontSize.sm, fontFamily: FontFamily.sans, color: MUTED },
+  backCta:  { color: BLUE, fontFamily: FontFamily.sansMedium },
 });

@@ -20,19 +20,11 @@ const Artists       = lazy(() => import('./pages/Artists'));
 const ArtistDetail  = lazy(() => import('./pages/ArtistDetail'));
 const ArtistIntelligence = lazy(() => import('./pages/ArtistIntelligence'));
 const MarketContainer  = lazy(() => import('./components/MarketContainer'));
-const ArtistsFollowing = lazy(() => import('./pages/ArtistsFollowing'));
 const Alerts        = lazy(() => import('./pages/Alerts'));
 const Portfolio        = lazy(() => import('./pages/Portfolio'));
-const CollectionMatch  = lazy(() => import('./pages/CollectionMatch'));
 const Agent         = lazy(() => import('./pages/Agent'));
 const FAQ           = lazy(() => import('./pages/FAQ'));
 const BillingSuccess = lazy(() => import('./pages/BillingSuccess'));
-const Primary       = lazy(() => import('./pages/Primary'));
-const Convictions      = lazy(() => import('./pages/Convictions'));
-const MarketIndex      = lazy(() => import('./pages/MarketIndex'));
-const RoomVisualizer   = lazy(() => import('./pages/RoomVisualizer'));
-const AuctionCalendar  = lazy(() => import('./pages/AuctionCalendar'));
-const Emerging         = lazy(() => import('./pages/Emerging'));
 const VerifyPending    = lazy(() => import('./pages/VerifyPending'));
 const Legal                 = lazy(() => import('./pages/Legal'));
 const AdminHealth           = lazy(() => import('./pages/AdminHealth'));
@@ -43,16 +35,12 @@ const Blog                  = lazy(() => import('./pages/Blog'));
 const BlogPost              = lazy(() => import('./pages/BlogPost'));
 const BlogArticleOpportunites2026  = lazy(() => import('./pages/BlogArticleOpportunites2026'));
 const BlogArticleArtAuction2026    = lazy(() => import('./pages/BlogArticleArtAuction2026'));
-const FeedbackPage          = lazy(() => import('./pages/FeedbackPage'));
 const ForgotPassword           = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword            = lazy(() => import('./pages/ResetPassword'));
 const VerifyEmailRequired      = lazy(() => import('./pages/VerifyEmailRequired'));
 const VerifyEmail              = lazy(() => import('./pages/VerifyEmail'));
-const Partners                 = lazy(() => import('./pages/Partners'));
 const Preferences              = lazy(() => import('./pages/Preferences'));
 const GoogleCallback           = lazy(() => import('./pages/GoogleCallback'));
-const TodayPage                = lazy(() => import('./pages/TodayPage'));
-const ClosingSoon              = lazy(() => import('./pages/ClosingSoon'));
 
 export const router = createBrowserRouter([
   {
@@ -77,7 +65,6 @@ export const router = createBrowserRouter([
   { path: '/blog/art-auction-opportunities-2026', Component: BlogArticleArtAuction2026 },
   { path: '/blog/:slug', Component: BlogPost },
   // Feedback
-  { path: '/feedback', Component: FeedbackPage },
   // Password reset flow (outside /app/ — no auth chrome needed)
   { path: '/forgot-password', Component: ForgotPassword },
   { path: '/reset-password',  Component: ResetPassword  },
@@ -104,20 +91,12 @@ export const router = createBrowserRouter([
     Component: About,
   },
   {
-    path: '/partners',
-    Component: Partners,
-  },
-  {
     path: '/contact',
     Component: Contact,
   },
   {
     path: '/faq',
     Component: FAQ,
-  },
-  {
-    path: '/market-index',
-    Component: MarketIndex,
   },
   {
     path: '/billing/success',
@@ -135,7 +114,7 @@ export const router = createBrowserRouter([
     path: '/app',
     Component: Root,
     children: [
-      { index: true, loader: () => redirect('/app/today') },
+      { index: true, loader: () => redirect('/app/dashboard') },
       { path: 'waitlist', loader: () => redirect('/app/signup') },
       { path: 'dashboard', Component: Dashboard },
       { path: 'explore', loader: () => redirect('/app/market/opportunities') },
@@ -144,8 +123,8 @@ export const router = createBrowserRouter([
       { path: 'contact', Component: ContactSales },
       { path: 'pricing', Component: Pricing },
       { path: 'opportunities', loader: () => redirect('/app/market/opportunities') },
-      { path: 'primary', Component: Primary },
-      { path: 'convictions', Component: Convictions },
+      { path: 'primary', loader: () => redirect('/app/dashboard') },
+      { path: 'convictions', loader: () => redirect('/app/dashboard') },
       { path: 'opportunities/:id', Component: OpportunityDetail },
       { path: 'artists', loader: () => redirect('/app/market/artists') },
       { path: 'artists/:artistName', Component: ArtistIntelligence },
@@ -158,20 +137,20 @@ export const router = createBrowserRouter([
           { index: true, loader: () => redirect('/app/market/opportunities') },
           { path: 'opportunities', Component: Explore },
           { path: 'artists', Component: ArtistIntelligence },
-          { path: 'artists-following', Component: ArtistsFollowing },
+          { path: 'artists-following', loader: () => redirect('/app/market/artists') },
         ],
       },
       { path: 'alerts', Component: Alerts },
       { path: 'portfolio', Component: Portfolio },
-      { path: 'collection-match', Component: CollectionMatch },
+      { path: 'collection-match', loader: () => redirect('/app/portfolio') },
       { path: 'agent', Component: Agent },
       { path: 'onboarding', Component: Onboarding },
       { path: 'profile/preferences', Component: Preferences },
-      { path: 'visualizer', Component: RoomVisualizer },
-      { path: 'calendar', Component: AuctionCalendar },
-      { path: 'emerging', Component: Emerging },
-      { path: 'today',                  Component: TodayPage            },
-      { path: 'urgent',                 Component: ClosingSoon          },
+      { path: 'visualizer', loader: () => redirect('/app/dashboard') },
+      { path: 'calendar', loader: () => redirect('/app/dashboard') },
+      { path: 'emerging', loader: () => redirect('/app/dashboard') },
+      { path: 'today', loader: () => redirect('/app/dashboard') },
+      { path: 'urgent', loader: () => redirect('/app/dashboard') },
       { path: 'verify-pending',        Component: VerifyPending        },
       { path: 'verify-email-required', Component: VerifyEmailRequired  },
       { path: 'verify-email',          Component: VerifyEmail          },

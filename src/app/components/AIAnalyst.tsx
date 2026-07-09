@@ -110,105 +110,6 @@ function PricingBadge({ pricing }: { pricing: string }) {
   );
 }
 
-function ProjectionChart({ projections, visibleYears, basePrice }: {
-  projections: AnalysisResult['projections'];
-  visibleYears: number[];
-  basePrice: number;
-}) {
-  const fmt = (v: number) =>
-    v >= 1_000_000 ? `€${(v / 1_000_000).toFixed(1)}M`
-    : v >= 1_000   ? `€${(v / 1_000).toFixed(0)}K`
-    : `€${v}`;
-
-  const scenarios = [
-    { key: 'conservative', label: 'Conservative', color: '#9A9A9A', data: projections.conservative },
-    { key: 'base',         label: 'Base case',    color: 'var(--navy)', data: projections.base },
-    { key: 'optimistic',   label: 'Optimistic',   color: '#0a5c2e', data: projections.optimistic },
-  ];
-
-  const allYears = [0, 5, 10, 20, 50].filter(y => y === 0 || visibleYears.includes(y));
-  const getValue = (d: any, y: number) => y === 0 ? basePrice : (d[`${y}yr`] || 0);
-  const maxVal = Math.max(...scenarios.flatMap(s => allYears.map(y => getValue(s.data, y))), 1);
-
-  return (
-    <div>
-      <div className="label-caps" style={{ marginBottom: '14px' }}>Price Projection (EUR)</div>
-
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '14px', flexWrap: 'wrap' }}>
-        {scenarios.map(s => (
-          <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '18px', height: '3px', background: s.color, borderRadius: '2px' }} />
-            <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>{s.label} (+{(s.data.cagr * 100).toFixed(0)}%/yr)</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Bar chart */}
-      <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end', height: '140px', marginBottom: '6px' }}>
-        {allYears.map(year => (
-          <div key={year} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '100%', display: 'flex', gap: '2px', alignItems: 'flex-end', height: '120px' }}>
-              {scenarios.map(s => {
-                const val = getValue(s.data, year);
-                const pct = (val / maxVal) * 100;
-                return (
-                  <div key={s.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-                    <div
-                      title={fmt(val)}
-                      style={{ height: `${pct}%`, minHeight: '3px', background: s.color, borderRadius: '2px 2px 0 0', opacity: year === 0 ? 0.4 : 0.85 }}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-            <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-              {year === 0 ? 'Now' : `${year}yr`}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* Values table */}
-      <div style={{ border: '1px solid var(--border)', overflow: 'hidden', marginTop: '10px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: `110px ${allYears.map(() => '1fr').join(' ')}`, borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)' }}>
-          <div style={{ padding: '7px 10px', fontSize: '10px', color: 'var(--text-3)' }}>Scenario</div>
-          {allYears.map(y => (
-            <div key={y} style={{ padding: '7px 4px', fontSize: '10px', color: 'var(--text-3)', textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
-              {y === 0 ? 'Now' : `${y}yr`}
-            </div>
-          ))}
-        </div>
-        {scenarios.map((s, si) => (
-          <div key={s.key} style={{ display: 'grid', gridTemplateColumns: `110px ${allYears.map(() => '1fr').join(' ')}`, borderBottom: si < 2 ? '1px solid var(--border)' : 'none', background: si === 1 ? 'white' : 'transparent' }}>
-            <div style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: s.color, flexShrink: 0 }} />
-              <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>{s.label}</span>
-            </div>
-            {allYears.map(y => {
-              const val = getValue(s.data, y);
-              const mult = basePrice > 0 ? val / basePrice : 1;
-              return (
-                <div key={y} style={{ padding: '8px 4px', textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: y === 0 ? 'var(--text-3)' : si === 0 ? '#777' : si === 2 ? '#0a5c2e' : 'var(--navy)' }}>
-                    {fmt(val)}
-                  </div>
-                  {y > 0 && (
-                    <div style={{ fontSize: '9px', color: 'var(--text-3)' }}>×{mult.toFixed(1)}</div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-
-      <p style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '8px', fontStyle: 'italic', lineHeight: 1.5 }}>
-        ⚠ Projections are estimates. Art investment carries significant risk. Past performance does not guarantee future results. For informational purposes only.
-      </p>
-    </div>
-  );
-}
-
 function LockedSection({ title, planRequired }: { title: string; planRequired: string }) {
   const navigate = useNavigate();
   return (
@@ -285,10 +186,10 @@ export function AIAnalyst({ rawLot }: Props) {
       <div style={{ padding: '32px 24px', background: 'white', border: '1px solid var(--border)', textAlign: 'center' }}>
         <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'var(--navy)', marginBottom: '10px' }}>◆ Investment Intelligence</div>
         <p style={{ fontSize: '14px', color: 'var(--text-2)', maxWidth: '440px', margin: '0 auto 20px', lineHeight: 1.7 }}>
-          Unlock artist cotation, price projections, provenance analysis, comparable sales, and AI investment verdicts.
+          Unlock artist cotation, provenance analysis, comparable sales, and AI investment verdicts.
         </p>
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '20px' }}>
-          {['Artist cotation', '5–50yr projections', 'AI verdict', 'Risk assessment', 'Comparables'].map(f => (
+          {['Artist cotation', 'AI verdict', 'Risk assessment', 'Comparables'].map(f => (
             <span key={f} style={{ padding: '3px 10px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', fontSize: '12px', color: 'var(--text-2)' }}>{f}</span>
           ))}
         </div>
@@ -368,7 +269,7 @@ export function AIAnalyst({ rawLot }: Props) {
         {/* Idle — has credits */}
         {status === 'idle' && canAnalyze && (
           <p style={{ padding: '0', fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.6, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            Full analysis — 5/10/20yr projections · artist valuation · AI verdict
+            Full analysis — artist valuation · AI verdict · comparables
           </p>
         )}
 
@@ -384,7 +285,7 @@ export function AIAnalyst({ rawLot }: Props) {
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', color: 'var(--text)', marginBottom: '4px' }}>
               Researching {rawLot.artist_name_raw || rawLot.artist_name || 'artist'}…
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>Analyzing market data, comparable sales, and building projections</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>Analyzing market data and comparable sales</div>
           </div>
         )}
 
@@ -503,24 +404,6 @@ export function AIAnalyst({ rawLot }: Props) {
               )}
             </div>
 
-            {/* 4. Projections */}
-            {limits.hasProjections && limits.projectionYears.length > 0 ? (
-              <div style={{ padding: '18px 20px', background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
-                <ProjectionChart
-                  projections={analysis.projections}
-                  visibleYears={limits.projectionYears}
-                  basePrice={analysis.basePrice}
-                />
-                {!limits.hasFullArtistProfile && (
-                  <div style={{ marginTop: '10px', padding: '8px 12px', background: 'rgba(26,42,68,0.04)', border: '1px solid rgba(26,42,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>🔒 20yr and 50yr projections on Family Office plan</span>
-                    <button onClick={() => navigate('/app/pricing')} style={{ padding: '4px 10px', background: 'var(--navy)', color: 'white', border: 'none', fontSize: '10px', fontWeight: 600, cursor: 'pointer' }}>Upgrade</button>
-                  </div>
-                )}
-              </div>
-            ) : limits.hasArtistCotation ? (
-              <LockedSection title="Price Projections (5–50yr)" planRequired="Collector" />
-            ) : null}
 
             {/* 5. Provenance */}
             {limits.hasProvenance ? (

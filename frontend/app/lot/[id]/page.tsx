@@ -47,9 +47,6 @@ const AnalysisTab = dynamic(
   () => import("@/components/lot/AnalysisTab").then(m => ({ default: m.AnalysisTab })),
   { ssr: false, loading: TabFallback }
 );
-const InvestmentTimeline = dynamic(
-  () => import("@/components/lot/InvestmentTimeline").then(m => ({ default: m.InvestmentTimeline })),
-  { ssr: false, loading: TabFallback }
 );
 const ProvenanceTab = dynamic(
   () => import("@/components/lot/ProvenanceTab").then(m => ({ default: m.ProvenanceTab })),
@@ -1120,7 +1117,6 @@ export default function LotPage({ params }: { params: { id: string } }) {
                 )}
                 {activeTab === "analysis" && (
                   <>
-                    <InvestmentTimeline lot={lot} />
                     <AnalysisTab lot={lot} />
                   </>
                 )}

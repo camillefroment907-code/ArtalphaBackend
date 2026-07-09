@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const COMPLETE_KEY = 'nautilus_onboarding_complete';
 const DATA_KEY     = 'nautilus_onboarding_data';
+const INTRO_KEY    = 'nautilus_intro_complete';
 
 export interface OnboardingData {
   profileType: 'collector' | 'advisor' | 'gallery' | 'investor' | '';
@@ -37,4 +38,13 @@ export async function getOnboardingData(): Promise<Partial<OnboardingData>> {
 
 export async function resetOnboarding(): Promise<void> {
   await AsyncStorage.multiRemove([COMPLETE_KEY, DATA_KEY]);
+}
+
+export async function isIntroComplete(): Promise<boolean> {
+  const v = await AsyncStorage.getItem(INTRO_KEY);
+  return v === 'true';
+}
+
+export async function markIntroComplete(): Promise<void> {
+  await AsyncStorage.setItem(INTRO_KEY, 'true');
 }

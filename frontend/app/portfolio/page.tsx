@@ -86,15 +86,15 @@ function StatBanner({ stats }: { stats: PortfolioStats }) {
           color: "text-stone-900",
         },
         {
-          label: "Plus-value latente",
+          label: "Variation estimée",
           value: formatPriceInCurrency(stats.total_gain_eur, currency, locale),
-          sub: `${positive ? "+" : ""}${stats.total_gain_pct.toFixed(1)}% depuis l'achat`,
+          sub: "Écart entre valeur estimée et prix d'achat saisi",
           color: positive ? "text-emerald-600" : "text-red-600",
         },
         {
-          label: "Performance",
+          label: "Variation de valeur",
           value: `${positive ? "+" : ""}${stats.total_gain_pct.toFixed(1)}%`,
-          sub: "Rendement portefeuille global",
+          sub: "Hors frais acheteur et frais de vente",
           color: positive ? "text-emerald-600" : "text-red-600",
           icon: positive ? TrendingUp : TrendingDown,
         },
@@ -173,7 +173,7 @@ function ProjectionModal({
                     <th className="text-right py-2 text-xs text-stone-400 font-medium">Conservateur</th>
                     <th className="text-right py-2 text-xs text-emerald-600 font-medium">Base</th>
                     <th className="text-right py-2 text-xs text-stone-400 font-medium">Optimiste</th>
-                    <th className="text-right py-2 text-xs text-stone-400 font-medium">ROI</th>
+                    <th className="text-right py-2 text-xs text-stone-400 font-medium">Variation</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -417,10 +417,11 @@ function ArtworkRow({
 
       {/* Current value */}
       <div className="text-right flex-shrink-0">
-        <div className="text-xs text-stone-400 mb-0.5">Valeur est.</div>
+        <div className="text-xs text-stone-400 mb-0.5">Valeur est. <span className="text-stone-300" title="Estimation indicative basée sur comparables — hors frais">ⓘ</span></div>
         <div className="font-mono text-sm font-semibold text-stone-900">
           {formatPriceInCurrency(item.estimated_current_value_eur, currency, locale)}
         </div>
+        <div className="text-2xs text-stone-300">indicatif</div>
       </div>
 
       {/* Gain */}

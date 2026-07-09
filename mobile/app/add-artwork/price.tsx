@@ -56,6 +56,7 @@ export default function PriceScreen() {
     trendDirection?:  string;
     investmentGrade?: string;
     investmentLabel?: string;
+    imageUrl?:        string;   // URL Supabase depuis le flow Vision
     editItemId?:      string;
   }>();
 
@@ -80,17 +81,19 @@ export default function PriceScreen() {
     setLoading(true);
     try {
       const editItemId = params.editItemId?.trim() || null;
+      const parsedYear = params.year ? parseInt(params.year, 10) : null;
       const payload: Record<string, unknown> = {
         title:               params.title?.trim() || params.artistName?.trim() || 'Sans titre',
         artist_name:         params.artistName?.trim() ?? '',
         artist_id:           params.artistId?.trim() || null,
-        year_created:        params.year ? parseInt(params.year, 10) : null,
+        year_created:        parsedYear && !isNaN(parsedYear) ? parsedYear : null,
         medium:              params.medium?.trim() || null,
         dimensions:          params.dimensions?.trim() || null,
         purchase_price_eur:  (!skipPrice && price) ? parseFloat(price) : null,
         purchase_source:     house.trim() || null,
         purchase_date:       date.trim() || null,
         acquisition_type:    acqType ?? null,
+        image_url:           params.imageUrl?.trim() || null,  // URL Supabase du flow Vision
       };
 
       const item = editItemId

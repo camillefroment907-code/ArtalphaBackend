@@ -292,6 +292,6 @@ const s = StyleSheet.create({
 
   // Bottom bar
   bottomBar: { padding: Spacing.sm, paddingHorizontal: Spacing.md, borderTopWidth: 0.5, borderTopColor: Colors.border, backgroundColor: Colors.bg },
-  bottomBtn: { backgroundColor: Colors.navy, borderRadius: Radius.md, paddingVertical: 14, alignItems: 'center', ...Shadow.md },
+  bottomBtn: { backgroundColor: Colors.gold, borderRadius: Radius.md, paddingVertical: 14, alignItems: 'center', ...Shadow.md },
   bottomBtnTxt: { fontSize: FontSize.base, fontFamily: FontFamily.sansSemibold, color: Colors.textOnDark },
 });

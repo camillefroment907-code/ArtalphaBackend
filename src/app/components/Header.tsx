@@ -17,13 +17,10 @@ function useIsMobile(breakpoint = 900) {
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 const NAV_ITEMS = [
-  { label: 'Accueil',          to: '/app/today'     },
-  { label: 'En direct',       to: '/app/urgent'    },
-  { label: 'Le marché',       to: '/app/market'    },
-  { label: 'Ma sélection',    to: '/app/dashboard' },
+  { label: 'Opportunités',    to: '/app/dashboard' },
+  { label: 'Mes analyses',    to: '/app/market'    },
   { label: 'Portfolio',       to: '/app/portfolio' },
   { label: 'Alertes',         to: '/app/alerts'    },
-  { label: 'Calendrier',      to: '/app/calendar'  },
 ] as const;
 
 const PLAN_LABELS: Record<string, string> = {
@@ -93,6 +90,14 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
   }, []);
 
   const isActive = (to: string) => {
+    if (to === '/app/dashboard') {
+      return (
+        location.pathname.startsWith('/app/dashboard') ||
+        location.pathname.startsWith('/app/today') ||
+        location.pathname.startsWith('/app/urgent') ||
+        location.pathname.startsWith('/app/opportunities')
+      );
+    }
     if (to === '/app/market') {
       return (
         location.pathname.startsWith('/app/market') ||
@@ -170,7 +175,6 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
             {NAV_ITEMS.map((item) => {
               const active = isActive(item.to);
               const isAlerts = item.to === '/app/alerts';
-              const isToday  = item.to === '/app/today';
               return (
                 <Link
                   key={item.to}
@@ -207,12 +211,7 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
                       background: 'var(--gold)', display: 'inline-block', flexShrink: 0,
                     }} />
                   )}
-                  {isToday && briefUnseen && !active && (
-                    <span style={{
-                      width: '6px', height: '6px', borderRadius: '50%',
-                      background: 'var(--electric)', display: 'inline-block', flexShrink: 0,
-                    }} />
-                  )}
+    
                 </Link>
               );
             })}
@@ -423,8 +422,7 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
           {/* Nav items — grouped */}
           {NAV_ITEMS.map((item, idx) => (
             <Fragment key={item.to}>
-              {idx === 3 && <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />}
-              {idx === 5 && <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />}
+              {idx === 2 && <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />}
               <Link
                 key={item.to}
                 to={item.to}

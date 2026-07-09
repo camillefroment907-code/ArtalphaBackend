@@ -1,4 +1,4 @@
-// app/(tabs)/profile.tsx — Profile Screen (Nautilus design)
+// app/(tabs)/profile.tsx — Profile / Collection Admin
 
 import {
   View,
@@ -22,7 +22,8 @@ import {
 } from '@/constants/theme';
 import { useAuthStore, isPaidPlan } from '@/store/auth';
 import { api } from '@/lib/api';
-import { PortfolioItem } from '@/services/api';
+import { collectionService, PortfolioItem } from '@/services/api';
+import { formatPrice } from '@/utils/format';
 
 interface Me {
   full_name?: string;
@@ -46,10 +47,46 @@ function getInitials(name?: string): string {
   return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
 }
 
+type RowItem = {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value?: string;
+  onPress?: () => void;
+  danger?: boolean;
+  soon?: boolean;
+};
+
+function SectionRow({ item, last }: { item: RowItem; last?: boolean }) {
+  return (
+    <Pressable
+      style={[row.r, last && row.last]}
+      onPress={item.onPress}
+      disabled={item.soon}
+    >
+      <View style={row.icon}>
+        <Ionicons name={item.icon} size={17} color={item.danger ? Colors.error : Colors.textSecondary} />
+      </View>
+      <Text style={[row.label, item.danger && { color: Colors.error }]}>{item.label}</Text>
+      {item.soon && <Text style={row.soon}>Bientôt</Text>}
+      {item.value && !item.soon && <Text style={row.value}>{item.value}</Text>}
+      {!item.danger && !item.soon && <Ionicons name="chevron-forward" size={15} color={Colors.textTertiary} />}
+    </Pressable>
+  );
+}
+
+const row = StyleSheet.create({
+  r:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: Spacing.md },
+  last:  { borderBottomWidth: 0 },
+  icon:  { width: 30, height: 30, borderRadius: Radius.sm, backgroundColor: Colors.bgElevated, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  label: { flex: 1, fontSize: FontSize.base, fontFamily: FontFamily.sansMedium, color: Colors.textPrimary },
+  value: { fontSize: FontSize.sm, fontFamily: FontFamily.sans, color: Colors.textTertiary },
+  soon:  { fontSize: FontSize.xs, fontFamily: FontFamily.sansMedium, color: Colors.textTertiary, backgroundColor: Colors.bgElevated, paddingHorizontal: 8, paddingVertical: 2, borderRadius: Radius.full },
+});
+
 export default function ProfileScreen() {
-  const router  = useRouter();
+  const router    = useRouter();
   const storeUser = useAuthStore((s) => s.user);
-  const logout  = useAuthStore((s) => s.logout);
+  const logout    = useAuthStore((s) => s.logout);
 
   const [me,      setMe]      = useState<Me | null>(null);
   const [items,   setItems]   = useState<PortfolioItem[]>([]);
@@ -66,7 +103,7 @@ export default function ProfileScreen() {
               email: storeUser?.email,
               plan: storeUser?.plan,
             } as Me)),
-            api.get<PortfolioItem[]>('/api/portfolio/items').catch(() => [] as PortfolioItem[]),
+            collectionService.list().catch(() => [] as PortfolioItem[]),
           ]);
           if (active) {
             setMe(meData);
@@ -94,10 +131,10 @@ export default function ProfileScreen() {
     return <View style={s.loader}><ActivityIndicator color={Colors.gold} /></View>;
   }
 
-  const name        = me?.full_name ?? storeUser?.name ?? '';
-  const email       = me?.email ?? storeUser?.email ?? '';
-  const plan        = me?.plan ?? storeUser?.plan ?? 'free';
-  const initials    = getInitials(name || email);
+  const name       = me?.full_name ?? storeUser?.name ?? '';
+  const email      = me?.email ?? storeUser?.email ?? '';
+  const plan       = me?.plan ?? storeUser?.plan ?? 'free';
+  const initials   = getInitials(name || email);
   const artistCount = new Set(items.map((i) => i.artist_name).filter(Boolean)).size;
   const totalValue  = items.reduce((s, i) => s + (i.estimated_current_value_eur ?? 0), 0);
   const planLabel   = PLAN_LABELS[plan] ?? 'Gratuit';
@@ -107,11 +144,36 @@ export default function ProfileScreen() {
     ? Math.max(0, Math.ceil((new Date(me.trial_end).getTime() - Date.now()) / 86_400_000))
     : 0;
 
-  const SETTINGS: { icon: keyof typeof Ionicons.glyphMap; label: string; value?: string; onPress?: () => void; danger?: boolean }[] = [
-    { icon: 'notifications-outline', label: 'Notifications', value: 'Activées' },
-    { icon: 'shield-checkmark-outline', label: 'Confidentialité' },
-    { icon: 'download-outline', label: 'Exporter ma collection' },
-    { icon: 'log-out-outline', label: 'Se déconnecter', onPress: handleLogout, danger: true },
+  const ACCOUNT_ROWS: RowItem[] = [
+    { icon: 'person-outline',             label: 'Informations personnelles', soon: true },
+    { icon: 'card-outline',               label: 'Abonnement', value: planLabel },
+    { icon: 'shield-checkmark-outline',   label: 'Sécurité', soon: true },
+  ];
+
+  const COLLECTION_ROWS: RowItem[] = [
+    { icon: 'download-outline',           label: 'Exporter ma collection', soon: true },
+    { icon: 'document-text-outline',      label: 'Générer un rapport PDF', soon: true },
+    { icon: 'share-outline',              label: 'Partager avec mon conseiller', soon: true },
+    { icon: 'folder-outline',             label: 'Mes documents', soon: true },
+    { icon: 'ribbon-outline',             label: 'Mes certificats', soon: true },
+    { icon: 'receipt-outline',            label: 'Mes factures', soon: true },
+  ];
+
+  const TRANSMISSION_ROWS: RowItem[] = [
+    {
+      icon: 'leaf-outline',
+      label: 'Préparer ma succession',
+      onPress: () => router.push('/profile/succession' as any),
+    },
+    { icon: 'people-outline',             label: 'Bénéficiaires', soon: true },
+    { icon: 'document-attach-outline',    label: 'Dossier de transmission', soon: true },
+    { icon: 'link-outline',               label: 'Lien sécurisé de partage', soon: true },
+  ];
+
+  const SETTINGS_ROWS: RowItem[] = [
+    { icon: 'notifications-outline',      label: 'Notifications', value: 'Activées' },
+    { icon: 'lock-closed-outline',        label: 'Confidentialité', soon: true },
+    { icon: 'log-out-outline',            label: 'Se déconnecter', onPress: handleLogout, danger: true },
   ];
 
   return (
@@ -121,7 +183,7 @@ export default function ProfileScreen() {
       contentContainerStyle={s.scroll}
     >
 
-      {/* ── Profile header (dark) ── */}
+      {/* ── Header ── */}
       <View style={s.header}>
         <View style={s.avatar}>
           <Text style={s.avatarTxt}>{initials}</Text>
@@ -129,7 +191,6 @@ export default function ProfileScreen() {
         <Text style={s.name}>{name || email}</Text>
         {name && email ? <Text style={s.email}>{email}</Text> : null}
 
-        {/* Stats row */}
         <View style={s.statsRow}>
           <View style={s.stat}>
             <Text style={s.statV}>{items.length}</Text>
@@ -154,24 +215,15 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* ── Abonnement ── */}
+      {/* ── Mon compte ── */}
       <View style={s.section}>
-        <Text style={s.sectionTitle}>Mon abonnement</Text>
-
-        <View style={s.planCard}>
-          <View>
-            <Text style={s.planName}>{planLabel}</Text>
-            <Text style={s.planSub}>
-              {me?.trial_active && trialDays > 0
-                ? `Essai · ${trialDays} jour${trialDays > 1 ? 's' : ''} restant${trialDays > 1 ? 's' : ''}`
-                : isPaid ? 'Abonnement actif' : 'Plan gratuit'}
-            </Text>
-          </View>
-          <View style={[s.planBadge, isPaid && { backgroundColor: Colors.gold }]}>
-            <Text style={[s.planBadgeTxt, isPaid && { color: Colors.bgDark }]}>
-              {isPaid ? 'Actif' : 'Gratuit'}
-            </Text>
-          </View>
+        <Text style={s.sectionTitle}>Mon compte</Text>
+        <View style={s.card}>
+          {ACCOUNT_ROWS.map((item, i) => (
+            <View key={item.label} style={i < ACCOUNT_ROWS.length - 1 && s.borderBottom}>
+              <SectionRow item={item} last={i === ACCOUNT_ROWS.length - 1} />
+            </View>
+          ))}
         </View>
 
         {!isPaid && (
@@ -181,37 +233,44 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      {/* ── Réglages ── */}
+      {/* ── Ma collection ── */}
       <View style={s.section}>
-        <Text style={s.sectionTitle}>Réglages</Text>
-        <View style={s.settingsList}>
-          {SETTINGS.map((item, i) => (
-            <Pressable
-              key={item.label}
-              style={[s.settingRow, i < SETTINGS.length - 1 && s.settingBorder]}
-              onPress={item.onPress}
-            >
-              <View style={s.settingIcon}>
-                <Ionicons
-                  name={item.icon}
-                  size={18}
-                  color={item.danger ? Colors.error : Colors.textSecondary}
-                />
-              </View>
-              <Text style={[s.settingLabel, item.danger && { color: Colors.error }]}>
-                {item.label}
-              </Text>
-              {item.value && <Text style={s.settingValue}>{item.value}</Text>}
-              {!item.danger && <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />}
-            </Pressable>
+        <Text style={s.sectionTitle}>Ma collection</Text>
+        <View style={s.card}>
+          {COLLECTION_ROWS.map((item, i) => (
+            <View key={item.label} style={i < COLLECTION_ROWS.length - 1 && s.borderBottom}>
+              <SectionRow item={item} last={i === COLLECTION_ROWS.length - 1} />
+            </View>
           ))}
         </View>
       </View>
 
-      {/* ── Footer ── */}
+      {/* ── Transmission ── */}
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>Transmission</Text>
+        <View style={s.card}>
+          {TRANSMISSION_ROWS.map((item, i) => (
+            <View key={item.label} style={i < TRANSMISSION_ROWS.length - 1 && s.borderBottom}>
+              <SectionRow item={item} last={i === TRANSMISSION_ROWS.length - 1} />
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* ── Paramètres ── */}
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>Paramètres</Text>
+        <View style={s.card}>
+          {SETTINGS_ROWS.map((item, i) => (
+            <View key={item.label} style={i < SETTINGS_ROWS.length - 1 && s.borderBottom}>
+              <SectionRow item={item} last={i === SETTINGS_ROWS.length - 1} />
+            </View>
+          ))}
+        </View>
+      </View>
+
       <View style={s.footer}>
         <Text style={s.footerTxt}>Nautilus · v1.0</Text>
-        <Text style={s.footerTxt}>get-nautilus.com</Text>
       </View>
 
     </ScrollView>
@@ -220,10 +279,10 @@ export default function ProfileScreen() {
 
 const s = StyleSheet.create({
   root:   { flex: 1, backgroundColor: Colors.bg },
-  scroll: { paddingBottom: 40 },
+  scroll: { paddingBottom: 48 },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.bg },
 
-  // Header
+  // Header dark
   header: {
     backgroundColor: Colors.bgDark,
     paddingTop: 64,
@@ -232,14 +291,9 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   avatar: {
-    width: 68,
-    height: 68,
-    borderRadius: Radius.full,
-    borderWidth: 1.5,
-    borderColor: Colors.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
+    width: 68, height: 68, borderRadius: Radius.full,
+    borderWidth: 1.5, borderColor: Colors.gold,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
   },
   avatarTxt: { fontSize: FontSize['2xl'], fontFamily: FontFamily.serifBold, color: Colors.gold },
   name:      { fontSize: FontSize.xl, fontFamily: FontFamily.serifBold, color: Colors.textOnDark, letterSpacing: -0.2, marginBottom: 4 },
@@ -252,35 +306,10 @@ const s = StyleSheet.create({
   statDivider: { width: 1, height: 28, backgroundColor: Colors.borderOnDark },
 
   // Sections
-  section:      { paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, borderBottomWidth: 0.5, borderBottomColor: Colors.border },
-  sectionTitle: { fontSize: FontSize.xs, fontFamily: FontFamily.sansSemibold, color: Colors.textTertiary, letterSpacing: 0.7, textTransform: 'uppercase', marginBottom: 12 },
+  section:      { paddingHorizontal: Spacing.md, paddingTop: Spacing.md, paddingBottom: 4 },
+  sectionTitle: { fontSize: FontSize.xs, fontFamily: FontFamily.sansSemibold, color: Colors.textTertiary, letterSpacing: 0.7, textTransform: 'uppercase', marginBottom: 8 },
 
-  // Plan
-  planCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: Colors.bgElevated,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    marginBottom: 10,
-  },
-  planName:     { fontSize: FontSize.base, fontFamily: FontFamily.sansSemibold, color: Colors.textPrimary },
-  planSub:      { fontSize: FontSize.sm, fontFamily: FontFamily.sans, color: Colors.textTertiary, marginTop: 2 },
-  planBadge:    { paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full, backgroundColor: Colors.bgElevated, borderWidth: 1, borderColor: Colors.border },
-  planBadgeTxt: { fontSize: FontSize.xs, fontFamily: FontFamily.sansSemibold, color: Colors.textSecondary },
-
-  upgradeBtn: {
-    backgroundColor: Colors.bgDark,
-    borderRadius: Radius.md,
-    paddingVertical: 13,
-    alignItems: 'center',
-    ...Shadow.md,
-  },
-  upgradeBtnTxt: { fontSize: FontSize.base, fontFamily: FontFamily.sansSemibold, color: Colors.gold, letterSpacing: 0.1 },
-
-  // Settings
-  settingsList: {
+  card: {
     backgroundColor: Colors.bgSurface,
     borderRadius: Radius.lg,
     borderWidth: 1,
@@ -288,13 +317,18 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     ...Shadow.sm,
   },
-  settingRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: Spacing.md },
-  settingBorder: { borderBottomWidth: 0.5, borderBottomColor: Colors.border },
-  settingIcon:   { width: 32, height: 32, borderRadius: Radius.md, backgroundColor: Colors.bgElevated, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  settingLabel:  { flex: 1, fontSize: FontSize.base, fontFamily: FontFamily.sansMedium, color: Colors.textPrimary },
-  settingValue:  { fontSize: FontSize.sm, fontFamily: FontFamily.sans, color: Colors.textTertiary },
+  borderBottom: { borderBottomWidth: 0.5, borderBottomColor: Colors.border },
 
-  // Footer
-  footer:    { paddingVertical: 20, alignItems: 'center', gap: 4 },
+  upgradeBtn: {
+    marginTop: 10,
+    backgroundColor: Colors.gold,
+    borderRadius: Radius.md,
+    paddingVertical: 13,
+    alignItems: 'center',
+    ...Shadow.md,
+  },
+  upgradeBtnTxt: { fontSize: FontSize.base, fontFamily: FontFamily.sansSemibold, color: Colors.textOnDark },
+
+  footer:    { paddingVertical: 20, alignItems: 'center' },
   footerTxt: { fontSize: FontSize.xs, fontFamily: FontFamily.sans, color: Colors.textTertiary },
 });

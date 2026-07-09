@@ -36,7 +36,21 @@ async function request<T>(
 
   if (!res.ok) {
     let detail = `Erreur ${res.status}`;
-    try { detail = (JSON.parse(text) as { detail?: string }).detail ?? detail; } catch {}
+    try {
+      const parsed = JSON.parse(text) as { detail?: unknown };
+      if (typeof parsed.detail === 'string') {
+        detail = parsed.detail;
+      } else if (Array.isArray(parsed.detail) && parsed.detail.length > 0) {
+        const first = parsed.detail[0] as { msg?: string; loc?: string[] };
+        const field = first.loc ? first.loc[first.loc.length - 1] : '';
+        detail = `Erreur ${res.status}${field ? ` (${field})` : ''}: ${first.msg ?? 'requête invalide'}`;
+      } else if (parsed.detail && typeof parsed.detail === 'object') {
+        const d = parsed.detail as Record<string, unknown>;
+        if (d.code === 'COLLECTION_LIMIT') {
+          detail = `Limite de collection atteinte (max ${d.limit} œuvres sur votre plan actuel).`;
+        }
+      }
+    } catch {}
     throw new Error(detail);
   }
 
@@ -70,7 +84,16 @@ async function uploadFile<T>(path: string, formData: FormData): Promise<T> {
 
   if (!res.ok) {
     let detail = `Erreur ${res.status}`;
-    try { detail = (JSON.parse(text) as { detail?: string }).detail ?? detail; } catch {}
+    try {
+      const parsed = JSON.parse(text) as { detail?: unknown };
+      if (typeof parsed.detail === 'string') {
+        detail = parsed.detail;
+      } else if (Array.isArray(parsed.detail) && parsed.detail.length > 0) {
+        const first = parsed.detail[0] as { msg?: string; loc?: string[] };
+        const field = first.loc ? first.loc[first.loc.length - 1] : '';
+        detail = `Erreur ${res.status}${field ? ` (${field})` : ''}: ${first.msg ?? 'requête invalide'}`;
+      }
+    } catch {}
     throw new Error(detail);
   }
 

@@ -403,8 +403,6 @@ def compute_deal_score(inp: ScoringInput) -> ScoringResult:
         )
 
     is_upcoming = status_mult == 0.3
-    if is_upcoming and deal_score >= 65:
-        deal_score = min(deal_score, 72.0)
 
     is_deal = deal_score >= settings.deal_score_threshold
 

@@ -744,7 +744,7 @@ query FetchHistoricalSales($cursor: String) {
 }
 """
 
-_USD_TO_EUR = 1.08  # fixed conversion rate
+from app.lib.fx import to_eur as _fx_to_eur
 
 
 async def fetch_historical_sales(max_pages: int = 50) -> List[dict]:
@@ -857,11 +857,11 @@ async def fetch_historical_sales(max_pages: int = 50) -> List[dict]:
                         if hammer_currency == "EUR":
                             hammer_price_eur = hammer_price
                         elif hammer_currency in ("USD", "US$", "$"):
-                            hammer_price_eur = round(hammer_price / _USD_TO_EUR, 2)
+                            hammer_price_eur = _fx_to_eur(hammer_price, "USD") or round(hammer_price * 0.92, 2)
                         elif hammer_currency == "GBP":
-                            hammer_price_eur = round(hammer_price * 1.17, 2)
+                            hammer_price_eur = _fx_to_eur(hammer_price, "GBP") or round(hammer_price * 1.17, 2)
                         else:
-                            hammer_price_eur = round(hammer_price / _USD_TO_EUR, 2)
+                            hammer_price_eur = _fx_to_eur(hammer_price, "USD") or round(hammer_price * 0.92, 2)
 
                         premium_ratio = None
                         if est_low and est_low > 0:

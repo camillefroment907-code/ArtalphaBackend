@@ -141,14 +141,12 @@ export default function Signup() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [nameError, setNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [tosAccepted, setTosAccepted] = useState(false);
-  const [newsletterConsent, setNewsletterConsent] = useState(false);
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -170,13 +168,9 @@ export default function Signup() {
     }
     if (!valid) return;
 
-    if (password !== confirmPassword) {
-      setError(isFr ? 'Les mots de passe ne correspondent pas' : "Passwords don't match");
-      return;
-    }
     setLoading(true);
     try {
-      const res = await registerApi(email.trim(), password, name.trim(), newsletterConsent);
+      const res = await registerApi(email.trim(), password, name.trim(), true);
       setUser({
         id: res.user_id,
         email: res.email,
@@ -194,8 +188,6 @@ export default function Signup() {
       setLoading(false);
     }
   }
-
-  const passwordMismatch = confirmPassword.length > 0 && password !== confirmPassword;
 
   return (
     <div className="signup-container" style={{ display: 'flex', height: '100vh', maxHeight: '100vh', overflow: 'hidden', background: '#FAFAFA' }}>
@@ -267,26 +259,7 @@ export default function Signup() {
             </div>
 
             {/* Confirm password */}
-            <div style={{ marginBottom: '10px' }}>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '4px', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
-                {isFr ? 'CONFIRMER LE MOT DE PASSE' : 'CONFIRM PASSWORD'}
-              </label>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                className="input"
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="new-password"
-                onKeyDown={e => { if (e.key === 'Enter' && tosAccepted) handleRegister(); }}
-                style={passwordMismatch ? { borderColor: 'var(--red)' } : {}}
-              />
-              {passwordMismatch && (
-                <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--red)' }}>
-                  {isFr ? 'Les mots de passe ne correspondent pas' : "Passwords don't match"}
-                </div>
-              )}
-            </div>
+
 
             {/* Legal — 2 checkboxes only */}
             <div style={{ marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -315,23 +288,13 @@ export default function Signup() {
                   )}
                 </span>
               </label>
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={newsletterConsent}
-                  onChange={e => setNewsletterConsent(e.target.checked)}
-                  style={{ marginTop: '3px', flexShrink: 0, accentColor: '#2563EB', width: '14px', height: '14px' }}
-                />
-                <span style={{ fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.5 }}>
-                  {isFr ? "Je souhaite recevoir les newsletters d'intelligence marché de Nautilus" : "I'd like to receive market intelligence newsletters from Nautilus"}
-                </span>
-              </label>
+
             </div>
 
             {/* Submit */}
             <button
               onClick={handleRegister}
-              disabled={loading || passwordMismatch || !tosAccepted}
+              disabled={loading || !tosAccepted}
               className="btn-electric"
               style={{ width: '100%', justifyContent: 'center', padding: '10px', fontSize: '13px', opacity: (loading || !tosAccepted) ? 0.7 : 1, textTransform: 'none' as const, letterSpacing: '0.02em' }}
             >

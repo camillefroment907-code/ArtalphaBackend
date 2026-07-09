@@ -63,6 +63,7 @@ export default function CollectionItemDetail() {
   const [error,          setError]          = useState<string | null>(null);
   const [activeTab,      setActiveTab]      = useState<Tab>('infos');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [archiving,      setArchiving]      = useState(false);
   const { revalue, loading: revalueLoading } = useValuation();
 
   const fetchItem = useCallback(() => {
@@ -124,6 +125,38 @@ export default function CollectionItemDetail() {
       { text: 'Photothèque', onPress: () => pickAndUpload('library') },
       { text: 'Annuler', style: 'cancel' },
     ]);
+  };
+
+  const ARCHIVE_REASONS: { label: string; value: string }[] = [
+    { label: 'Vendue',           value: 'sold'      },
+    { label: 'Donnée ou offerte', value: 'given'    },
+    { label: 'Volée',            value: 'stolen'    },
+    { label: 'Détruite',         value: 'destroyed' },
+    { label: 'Ajout par erreur', value: 'error'     },
+  ];
+
+  const handleArchive = () => {
+    Alert.alert(
+      'Retirer de la collection',
+      'Pourquoi retirez-vous cette œuvre ?',
+      [
+        ...ARCHIVE_REASONS.map(({ label, value }) => ({
+          text: label,
+          onPress: async () => {
+            setArchiving(true);
+            try {
+              await collectionService.archive(id!, value);
+              router.replace('/(tabs)/collection');
+            } catch (e) {
+              Alert.alert('Erreur', e instanceof Error ? e.message : 'Impossible de retirer cette œuvre.');
+            } finally {
+              setArchiving(false);
+            }
+          },
+        })),
+        { text: 'Annuler', style: 'cancel' },
+      ],
+    );
   };
 
   if (loading) return <View style={s.loader}><ActivityIndicator color={Colors.gold} /></View>;
@@ -435,10 +468,20 @@ export default function CollectionItemDetail() {
       {/* ── Bottom bar ── */}
       <View style={s.bottomBar}>
         <Pressable
+          style={s.btnArchive}
+          onPress={handleArchive}
+          disabled={archiving}
+        >
+          {archiving
+            ? <ActivityIndicator size="small" color={Colors.error} />
+            : <Ionicons name="trash-outline" size={16} color={Colors.error} />
+          }
+        </Pressable>
+        <Pressable
           style={s.btnGhost}
           onPress={() => router.push({ pathname: '/(tabs)/larry', params: { q: assistantQ } })}
         >
-          <Text style={s.btnGhostTxt}>Demander à l'Assistant</Text>
+          <Text style={s.btnGhostTxt}>Assistant</Text>
         </Pressable>
         <Pressable
           style={s.btnPrimary}
@@ -553,6 +596,7 @@ const s = StyleSheet.create({
 
   // Bottom bar
   bottomBar:    { flexDirection: 'row', gap: 8, padding: Spacing.sm, paddingHorizontal: Spacing.md, borderTopWidth: 0.5, borderTopColor: Colors.border, backgroundColor: Colors.bg },
+  btnArchive:   { width: 42, height: 42, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center' },
   btnGhost:     { flex: 1, padding: 11, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border, alignItems: 'center' },
   btnGhostTxt:  { fontSize: FontSize.sm, fontFamily: FontFamily.sansMedium, color: Colors.textSecondary },
   btnPrimary:   { flex: 1, padding: 11, borderRadius: Radius.md, backgroundColor: Colors.gold, alignItems: 'center' },

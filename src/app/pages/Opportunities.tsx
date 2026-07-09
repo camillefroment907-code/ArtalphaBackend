@@ -126,11 +126,18 @@ function mapLot(lot: any) {
   const fmt = (v: number) =>
     new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(Math.round(v * _fxRate));
 
+  const realCostBasis = lot.real_cost?.cost_basis || null;
+  const fmtEur = (v: number) =>
+    new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(Math.round(v));
+  const priceDisplay = realCostBasis
+    ? `${fmt(price)} · ~${fmtEur(realCostBasis)} frais inclus`
+    : price ? fmt(price) : "Prix sur demande";
+
   return {
     id: String(lot.id),
     artistName: lot.artist_name_raw?.trim() || "Unknown Artist",
     title: lot.title || "Untitled",
-    price: price ? fmt(price) : "Prix sur demande",
+    price: priceDisplay,
     estimatedValue: estimate ? fmt(estimate) : "",
     estimateLow,
     estimateHigh,

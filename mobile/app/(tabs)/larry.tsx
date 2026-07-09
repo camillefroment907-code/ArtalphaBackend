@@ -24,7 +24,8 @@ import {
 } from '@/constants/theme';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
-import { PortfolioItem } from '@/services/api';
+import { collectionService, PortfolioItem } from '@/services/api';
+import { formatPrice } from '@/utils/format';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -32,17 +33,21 @@ interface Message {
 }
 
 const CHIPS = [
-  { label: 'Valeur de ma collection',  prompt: 'Que vaut ma collection en ce moment ?' },
-  { label: 'Œuvre la plus liquide',    prompt: 'Quelle œuvre de ma collection est la plus liquide ?' },
-  { label: 'Améliorer ma collection',  prompt: 'Comment améliorer ma Collection Health ?' },
-  { label: 'Tendances du marché',      prompt: 'Quelles sont les tendances actuelles du marché de l\'art ?' },
+  { label: 'Quelle œuvre vendre ?',          prompt: 'Quelle œuvre de ma collection devrais-je vendre en priorité ?' },
+  { label: 'Quelle œuvre assurer ?',          prompt: 'Quelle œuvre de ma collection est la plus importante à assurer ?' },
+  { label: 'Œuvre la plus importante',        prompt: 'Quelle est mon œuvre la plus importante et pourquoi ?' },
+  { label: 'Collection équilibrée ?',         prompt: 'Ma collection est-elle bien diversifiée et équilibrée ?' },
+  { label: 'Résumé pour mon conseiller',      prompt: 'Prépare un résumé de ma collection pour mon conseiller patrimonial.' },
 ];
 
 function computeContext(items: PortfolioItem[]): string {
   if (items.length === 0) return '';
   const total = items.reduce((s, i) => s + (i.estimated_current_value_eur ?? 0), 0);
   const artists = new Set(items.map((i) => i.artist_name).filter(Boolean));
-  return `Portfolio: ${items.length} œuvres, ${artists.size} artistes, valeur estimée ${Math.round(total).toLocaleString('fr-FR')} €.`;
+  const topItem = items.reduce((best, i) =>
+    (i.estimated_current_value_eur ?? 0) > (best.estimated_current_value_eur ?? 0) ? i : best
+  );
+  return `Collection: ${items.length} œuvres, ${artists.size} artistes, valeur estimée ${formatPrice(total)}. Œuvre la plus valorisée : ${topItem.artist_name ?? topItem.title ?? 'inconnue'} (${formatPrice(topItem.estimated_current_value_eur)}).`;
 }
 
 export default function LarryScreen() {
@@ -59,9 +64,9 @@ export default function LarryScreen() {
   // Pre-fill from deep link
   useEffect(() => { if (q) setInput(q); }, [q]);
 
-  // Build portfolio context once
+  // Build collection context once
   useEffect(() => {
-    api.get<PortfolioItem[]>('/api/portfolio/items')
+    collectionService.list()
       .then((items) => setContext(computeContext(Array.isArray(items) ? items : [])))
       .catch(() => {});
   }, []);
@@ -106,7 +111,7 @@ export default function LarryScreen() {
             <Ionicons name="sparkles-outline" size={14} color={Colors.gold} />
           </View>
           <View>
-            <Text style={s.title}>Larry</Text>
+            <Text style={s.title}>Assistant</Text>
             <Text style={s.sub}>Nautilus Intelligence</Text>
           </View>
         </View>
@@ -135,8 +140,8 @@ export default function LarryScreen() {
                 Bonjour{firstName ? `, ${firstName}` : ''}.
               </Text>
               <Text style={s.welcomeSub}>
-                Je suis Larry, votre conseiller Nautilus.{'\n'}
-                Posez-moi vos questions sur votre collection, un artiste ou le marché de l'art.
+                Que voulez-vous savoir sur votre collection ?{'\n'}
+                Posez une question sur une œuvre, un artiste ou le marché de l'art.
               </Text>
             </View>
 
@@ -158,7 +163,7 @@ export default function LarryScreen() {
                 {msg.role === 'assistant' && (
                   <View style={s.bubbleLarryTag}>
                     <Ionicons name="sparkles-outline" size={10} color={Colors.gold} />
-                    <Text style={s.bubbleLarryTxt}>Larry</Text>
+                    <Text style={s.bubbleLarryTxt}>Assistant</Text>
                   </View>
                 )}
                 <Text style={msg.role === 'user' ? s.bubbleTxtUser : s.bubbleTxtAsst}>
@@ -246,7 +251,7 @@ const s = StyleSheet.create({
 
   // Bubbles
   bubble:         { maxWidth: '82%', borderRadius: Radius.lg, padding: 12, marginBottom: 8 },
-  bubbleUser:     { alignSelf: 'flex-end', backgroundColor: Colors.navy },
+  bubbleUser:     { alignSelf: 'flex-end', backgroundColor: Colors.gold },
   bubbleAsst:     { alignSelf: 'flex-start', backgroundColor: Colors.bgSurface, borderWidth: 1, borderColor: Colors.border },
   bubbleLoading:  { minWidth: 48, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
   bubbleLarryTag: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 5 },

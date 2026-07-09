@@ -1,12 +1,13 @@
 // app/add-artwork/photo.tsx — Photo step avec caméra réelle (étape 30%)
 
 import {
-  View, Text, Pressable, StyleSheet, Alert,
+  View, Text, Pressable, StyleSheet, Alert, Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useRef } from 'react';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, Fonts, Radius } from '@/lib/tokens';
 
 export default function PhotoScreen() {
@@ -14,19 +15,30 @@ export default function PhotoScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
 
-  // Photo capturée → formulaire manuel directement
-  const afterCapture = () => {
+  // Photo capturée → conversion JPEG si nécessaire → analyse Vision AI
+  const afterCapture = async (uri: string) => {
+    let finalUri = uri;
+    try {
+      const ImageManipulator = await import('expo-image-manipulator');
+      const converted = await ImageManipulator.manipulateAsync(
+        uri, [], { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
+      );
+      finalUri = converted.uri;
+    } catch {}
     router.push({
-      pathname: '/add-artwork/manual',
-      params: { import_mode: 'photo' },
+      pathname: '/add-artwork/analyse',
+      params: { photoUri: finalUri },
     });
   };
 
   const takePicture = async () => {
     if (!cameraRef.current) return;
     try {
-      await cameraRef.current.takePictureAsync({ quality: 0.7 });
-      afterCapture();
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
+      if (photo?.uri) {
+        try { console.log('[NAUTILUS_EVENT]', { event: 'photo_submitted', timestamp: Date.now(), properties: { source: 'camera' } }); } catch {}
+        await afterCapture(photo.uri);
+      }
     } catch {
       Alert.alert('Erreur', 'Impossible de prendre la photo. Réessayez.');
     }
@@ -42,35 +54,46 @@ export default function PhotoScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.7,
     });
-    if (!result.canceled) {
-      afterCapture();
+    if (!result.canceled && result.assets[0]) {
+      try { console.log('[NAUTILUS_EVENT]', { event: 'photo_submitted', timestamp: Date.now(), properties: { source: 'gallery' } }); } catch {}
+      await afterCapture(result.assets[0].uri);
     }
   };
 
-  // ── Permission refusée ────────────────────────────────────────────────────
+  // ── Permission non accordée ───────────────────────────────────────────────
   if (!permission?.granted) {
+    const isDenied = permission?.status === 'denied';
+
     return (
       <View style={s.container}>
         <View style={s.topbar}>
           <Pressable onPress={() => router.back()} style={s.backBtn}>
             <Text style={s.backTxt}>←</Text>
           </Pressable>
-          <Text style={s.tbTitle}>Photographier</Text>
-          <Text style={s.tbStep}>1/4</Text>
+          <Text style={s.tbTitle}>Photographier une œuvre</Text>
+          <View style={{ width: 40 }} />
         </View>
         <View style={s.progBg}><View style={[s.progFill, { width: '30%' }]} /></View>
 
         <View style={s.permContent}>
-          <Text style={s.permIcon}>📷</Text>
-          <Text style={s.permTitle}>Accès à l'appareil photo</Text>
+          <View style={s.iconCircle}>
+            <Ionicons name="camera-outline" size={28} color={Colors.textSecondary} />
+          </View>
+          <Text style={s.permTitle}>Photographier une œuvre</Text>
           <Text style={s.permSub}>
-            Nautilus utilise l'appareil photo pour identifier vos œuvres d'art.
+            Pour identifier automatiquement une œuvre et estimer sa valeur, Nautilus a besoin d'accéder à votre appareil photo.
           </Text>
-          <Pressable style={s.primaryBtn} onPress={requestPermission}>
-            <Text style={s.primaryBtnTxt}>Autoriser l'accès</Text>
-          </Pressable>
+          {isDenied ? (
+            <Pressable style={s.primaryBtn} onPress={() => Linking.openSettings()}>
+              <Text style={s.primaryBtnTxt}>Ouvrir les réglages</Text>
+            </Pressable>
+          ) : (
+            <Pressable style={s.primaryBtn} onPress={requestPermission}>
+              <Text style={s.primaryBtnTxt}>Continuer</Text>
+            </Pressable>
+          )}
           <Pressable style={s.secondaryBtn} onPress={pickFromLibrary}>
-            <Text style={s.secondaryBtnTxt}>🖼  Choisir depuis la galerie</Text>
+            <Text style={s.secondaryBtnTxt}>Importer une photo existante</Text>
           </Pressable>
         </View>
       </View>
@@ -86,8 +109,8 @@ export default function PhotoScreen() {
           <Pressable onPress={() => router.back()} style={s.camBackBtn}>
             <Text style={s.camBackTxt}>←</Text>
           </Pressable>
-          <Text style={s.camTitle}>Photographier</Text>
-          <Text style={s.camStep}>1/4</Text>
+          <Text style={s.camTitle}>Photographier une œuvre</Text>
+          <View style={{ width: 32 }} />
         </View>
 
         {/* Viseur centré */}
@@ -127,13 +150,12 @@ const s = StyleSheet.create({
   backBtn:      { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   backTxt:      { fontSize: 20, color: Colors.textSecondary },
   tbTitle:      { flex: 1, fontSize: Fonts.lg, fontWeight: Fonts.medium, color: Colors.textPrimary },
-  tbStep:       { fontSize: Fonts.base, color: Colors.textTertiary },
   progBg:       { height: 2, backgroundColor: Colors.bgSecondary },
   progFill:     { height: 2, backgroundColor: Colors.green },
   permContent:  { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
-  permIcon:     { fontSize: 44, marginBottom: 16 },
-  permTitle:    { fontSize: Fonts.xl, fontWeight: Fonts.medium, color: Colors.textPrimary, marginBottom: 10, textAlign: 'center' },
-  permSub:      { fontSize: Fonts.base, color: Colors.textSecondary, textAlign: 'center', lineHeight: 19, marginBottom: 24 },
+  iconCircle:   { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.bgSecondary, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  permTitle:    { fontSize: Fonts.xl, fontWeight: '600', color: Colors.textPrimary, marginBottom: 10, textAlign: 'center' },
+  permSub:      { fontSize: Fonts.base, color: Colors.textSecondary, textAlign: 'center', lineHeight: 21, marginBottom: 32 },
   primaryBtn:   { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 13, borderRadius: Radius.md, backgroundColor: Colors.textPrimary, marginBottom: 10 },
   primaryBtnTxt:{ color: Colors.bgPrimary, fontSize: Fonts.lg, fontWeight: Fonts.medium },
   secondaryBtn: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 11, borderRadius: Radius.md, borderWidth: 0.5, borderColor: Colors.borderSecondary },
@@ -147,7 +169,6 @@ const s = StyleSheet.create({
   camBackBtn:  { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' },
   camBackTxt:  { fontSize: 18, color: '#fff' },
   camTitle:    { flex: 1, fontSize: Fonts.lg, fontWeight: Fonts.medium, color: '#fff' },
-  camStep:     { fontSize: Fonts.base, color: 'rgba(255,255,255,0.6)' },
 
   // Viewfinder corners
   viewfinder:  { flex: 1, alignItems: 'center', justifyContent: 'center' },

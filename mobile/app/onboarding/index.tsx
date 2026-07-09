@@ -1,6 +1,6 @@
-// app/onboarding/index.tsx — 3-screen onboarding (valeur avant inscription)
-// Règle : montrer la valeur du produit AVANT de demander email/password
-// Post-onboarding : /auth/register (nouveau) ou /auth/login (existant)
+// app/onboarding/index.tsx — Carrousel intro Nautilus (3 slides pré-inscription)
+// Fond linen #F7F4EE · Texte ink #1A1A1A · Accent bleu #1B4FCC
+// Slide 1 : organisation · Slide 2 : fiche œuvre · Slide 3 : conversion
 
 import {
   View,
@@ -13,95 +13,141 @@ import {
 import { useRouter } from 'expo-router';
 import { useState, useRef } from 'react';
 import {
-  Colors,
   FontFamily,
   FontSize,
   Spacing,
   Radius,
-  Shadow,
 } from '@/constants/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { markOnboardingComplete } from '@/lib/onboarding';
+
+const ONBOARDING_VERSION_KEY = 'nautilus_onboarding_version';
+const ONBOARDING_VERSION     = '2';
+
+async function markOnboardingCompleteWithVersion() {
+  await markOnboardingComplete();
+  await AsyncStorage.setItem(ONBOARDING_VERSION_KEY, ONBOARDING_VERSION);
+}
 
 const { width: SW } = Dimensions.get('window');
 
-// ── Slide 3 — Estimation mockée (style price.tsx) ────────────────────────────
+const INK    = '#1A1A1A';
+const LINEN  = '#F7F4EE';
+const MUTED  = '#6E6E73';
+const BLUE   = '#1B4FCC';
+const BORDER = '#E8E4DC';
 
-function MockEstimationCard() {
+// ── Slide 2 — Fiche œuvre élégante ───────────────────────────────────────────
+
+function MockArtworkCard() {
+  const docs = ['Certificat', 'Facture', 'Provenance'];
   return (
-    <View style={mock.card}>
-      <View style={mock.topRow}>
-        <Text style={mock.cardTitle}>Valeur de marché estimée</Text>
-        <View style={mock.grade}>
-          <Text style={mock.gradeTxt}>Grade A</Text>
+    <View style={card.wrap}>
+      <View style={card.image} />
+      <View style={card.body}>
+        <Text style={card.artist}>Marc Chagall</Text>
+        <Text style={card.title}>Les amoureux</Text>
+        <Text style={card.date}>Huile sur toile · 1928</Text>
+        <View style={card.docs}>
+          {docs.map((d) => (
+            <View key={d} style={card.chip}>
+              <Text style={card.chipDot}>·</Text>
+              <Text style={card.chipTxt}>{d}</Text>
+            </View>
+          ))}
         </View>
-      </View>
-      <Text style={mock.range}>1 140 000 — 3 806 000 €</Text>
-      <Text style={mock.median}>Médiane estimée · 2 340 000 €</Text>
-      <View style={mock.metaRow}>
-        <Text style={mock.meta}>200 ventes analysées</Text>
-        <Text style={mock.trend}>↑ En hausse</Text>
-      </View>
-      <View style={mock.recap}>
-        <Text style={mock.recapArtist}>Pablo Picasso</Text>
-        <Text style={mock.recapTitle}>Huile sur toile, 1962</Text>
       </View>
     </View>
   );
 }
 
-const mock = StyleSheet.create({
-  card:      { borderWidth: 1.5, borderColor: Colors.gold, borderRadius: Radius.lg, padding: 16, backgroundColor: 'rgba(27,79,204,0.08)', width: SW - Spacing.xl * 2 - 16 },
-  topRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  cardTitle: { fontSize: FontSize.sm, color: Colors.gold, fontFamily: FontFamily.sansSemibold },
-  grade:     { borderWidth: 1, borderColor: Colors.gold, borderRadius: Radius.sm, paddingHorizontal: 7, paddingVertical: 2 },
-  gradeTxt:  { fontSize: FontSize.xs, color: Colors.gold, fontFamily: FontFamily.sansBold, letterSpacing: 0.3 },
-  range:     { fontSize: FontSize['2xl'], fontFamily: FontFamily.serifBold, color: Colors.textOnDark, letterSpacing: -0.5, marginBottom: 3 },
-  median:    { fontSize: FontSize.sm, color: Colors.textOnDarkMuted, fontFamily: FontFamily.sans, marginBottom: 10 },
-  metaRow:   { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.1)' },
-  meta:      { fontSize: FontSize.xs, color: Colors.textOnDarkSubtle, fontFamily: FontFamily.sans },
-  trend:     { fontSize: FontSize.xs, color: Colors.gold, fontFamily: FontFamily.sansSemibold },
-  recap:     { gap: 2 },
-  recapArtist: { fontSize: FontSize.xs, color: Colors.textOnDarkMuted, fontFamily: FontFamily.sans },
-  recapTitle:  { fontSize: FontSize.sm, color: Colors.textOnDark, fontFamily: FontFamily.sansMedium },
+const card = StyleSheet.create({
+  wrap: {
+    width: SW - Spacing.xl * 2 - 16,
+    borderRadius: Radius.lg,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: BORDER,
+    overflow: 'hidden',
+  },
+  image: {
+    height: 160,
+    backgroundColor: '#D9D3C7',
+  },
+  body: {
+    padding: 20,
+    gap: 4,
+  },
+  artist: {
+    fontSize: FontSize.sm,
+    fontFamily: FontFamily.sans,
+    color: MUTED,
+    letterSpacing: 0.2,
+  },
+  title: {
+    fontSize: FontSize['2xl'],
+    fontFamily: FontFamily.serifBold,
+    color: INK,
+    letterSpacing: -0.3,
+    marginBottom: 2,
+  },
+  date: {
+    fontSize: FontSize.sm,
+    fontFamily: FontFamily.sans,
+    color: MUTED,
+    marginBottom: 12,
+  },
+  docs: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: LINEN,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  chipDot: { fontSize: 10, color: BLUE },
+  chipTxt: {
+    fontSize: FontSize.xs,
+    fontFamily: FontFamily.sansMedium,
+    color: INK,
+  },
 });
 
-// ── Slides data ───────────────────────────────────────────────────────────────
+// ── Slides ────────────────────────────────────────────────────────────────────
 
-interface Slide {
-  id:        number;
-  symbol:    string;
-  title:     string;
-  sub:       string;
-  showMock?: boolean;
-  ctaLabel:  string;
-}
-
-const SLIDES: Slide[] = [
+const SLIDES = [
   {
     id:       1,
-    symbol:   '?',
-    title:    'Vous possédez\ndes œuvres d\'art.',
-    sub:      'Mais savez-vous\nce qu\'elles valent aujourd\'hui ?',
+    title:    'Toute votre\ncollection.\nEnfin organisée.',
+    sub:      'Toutes les informations importantes de votre collection réunies dans un seul espace.',
     ctaLabel: 'Découvrir →',
+    showCard: false,
   },
   {
     id:       2,
-    symbol:   '◈',
-    title:    '1,5 million de données\nde marché analysées.',
-    sub:      'Nautilus estime chaque œuvre que vous possédez grâce aux données du marché réel.',
+    title:    'Tout ce qui compte\nsur chaque œuvre.',
+    sub:      'Certificat. Facture. Provenance. Historique.\nToujours à portée de main.',
     ctaLabel: 'Voir comment →',
+    showCard: true,
   },
   {
     id:       3,
-    symbol:   'N',
-    title:    'C\'est ça,\nNautilus.',
-    sub:      'Commencez gratuitement.\nAjoutez une œuvre, recevez son estimation.',
-    showMock: true,
-    ctaLabel: 'Créer mon compte gratuit →',
+    title:    'Votre collection\nmérite mieux\nqu\'un tableur.',
+    sub:      'Organisez vos œuvres, retrouvez vos documents et accédez à des estimations actualisées quand vous le souhaitez.',
+    ctaLabel: null,
+    showCard: false,
   },
 ];
 
-// ── Screen ─────────────────────────────────────────────────────────────────
+// ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function OnboardingScreen() {
   const router    = useRouter();
@@ -112,13 +158,13 @@ export default function OnboardingScreen() {
   const isLast = step === SLIDES.length - 1;
 
   const goToLogin = async () => {
-    await markOnboardingComplete();
+    await markOnboardingCompleteWithVersion();
     router.replace('/auth/login');
   };
 
   const next = async () => {
     if (isLast) {
-      await markOnboardingComplete();
+      await markOnboardingCompleteWithVersion();
       router.replace('/auth/register');
     } else {
       const nextStep = step + 1;
@@ -130,12 +176,14 @@ export default function OnboardingScreen() {
   return (
     <View style={s.root}>
 
-      {/* ── "J'ai déjà un compte" — visible sur chaque slide ── */}
-      <Pressable style={s.loginLink} onPress={goToLogin}>
-        <Text style={s.loginLinkTxt}>J'ai déjà un compte</Text>
-      </Pressable>
+      {/* Skip — visible slides 1 et 2 seulement */}
+      {!isLast && (
+        <Pressable style={s.skip} onPress={goToLogin}>
+          <Text style={s.skipTxt}>J'ai déjà un compte</Text>
+        </Pressable>
+      )}
 
-      {/* ── Slides ── */}
+      {/* Slides */}
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -146,28 +194,16 @@ export default function OnboardingScreen() {
       >
         {SLIDES.map((sl, i) => (
           <View key={i} style={s.slide}>
-            {sl.showMock ? (
-              <>
-                <MockEstimationCard />
-                <View style={s.mockTextWrap}>
-                  <Text style={s.title}>{sl.title}</Text>
-                  <Text style={s.sub}>{sl.sub}</Text>
-                </View>
-              </>
-            ) : (
-              <>
-                <View style={s.symbolWrap}>
-                  <Text style={s.symbol}>{sl.symbol}</Text>
-                </View>
-                <Text style={s.title}>{sl.title}</Text>
-                <Text style={s.sub}>{sl.sub}</Text>
-              </>
-            )}
+            {sl.showCard && <MockArtworkCard />}
+            <View style={[s.textBlock, sl.showCard && s.textBlockCompact]}>
+              <Text style={[s.title, sl.showCard && s.titleSmall]}>{sl.title}</Text>
+              <Text style={s.sub}>{sl.sub}</Text>
+            </View>
           </View>
         ))}
       </ScrollView>
 
-      {/* ── Bottom controls ── */}
+      {/* Contrôles bas */}
       <View style={s.controls}>
         <View style={s.dots}>
           {SLIDES.map((_, i) => (
@@ -175,9 +211,20 @@ export default function OnboardingScreen() {
           ))}
         </View>
 
-        <Pressable style={s.btn} onPress={next}>
-          <Text style={s.btnText}>{slide.ctaLabel}</Text>
-        </Pressable>
+        {isLast ? (
+          <View style={s.conversionBtns}>
+            <Pressable style={s.btnPrimary} onPress={next}>
+              <Text style={s.btnPrimaryTxt}>Créer ma collection →</Text>
+            </Pressable>
+            <Pressable onPress={goToLogin} style={s.loginHint}>
+              <Text style={s.loginHintTxt}>J'ai déjà un compte</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable style={s.btn} onPress={next}>
+            <Text style={s.btnTxt}>{slide.ctaLabel}</Text>
+          </Pressable>
+        )}
       </View>
 
     </View>
@@ -185,11 +232,10 @@ export default function OnboardingScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.bgDark },
+  root: { flex: 1, backgroundColor: LINEN },
 
-  // "J'ai déjà un compte" — top right
-  loginLink:    { position: 'absolute', top: 56, right: Spacing.lg, zIndex: 10, paddingVertical: 6, paddingHorizontal: 2 },
-  loginLinkTxt: { fontSize: FontSize.sm, fontFamily: FontFamily.sans, color: Colors.textOnDarkSubtle, textDecorationLine: 'underline' },
+  skip:    { position: 'absolute', top: 56, right: Spacing.lg, zIndex: 10, paddingVertical: 6 },
+  skipTxt: { fontSize: FontSize.sm, fontFamily: FontFamily.sans, color: MUTED },
 
   scrollView: { flex: 1 },
   slide: {
@@ -198,38 +244,33 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: Spacing.xl,
-    paddingTop: 100,
-    gap: 20,
+    paddingTop: 80,
+    gap: 28,
   },
 
-  symbolWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: Radius.full,
-    borderWidth: 1.5,
-    borderColor: Colors.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  symbol: { fontSize: FontSize['3xl'], fontFamily: FontFamily.serifBold, color: Colors.gold },
+  textBlock:        { alignItems: 'center', gap: 14 },
+  textBlockCompact: { gap: 10 },
 
   title: {
     fontSize: FontSize['4xl'],
     fontFamily: FontFamily.serifBold,
-    color: Colors.textOnDark,
+    color: INK,
     textAlign: 'center',
-    lineHeight: FontSize['4xl'] * 1.18,
+    lineHeight: FontSize['4xl'] * 1.2,
     letterSpacing: -0.5,
+  },
+  titleSmall: {
+    fontSize: FontSize['3xl'],
+    lineHeight: FontSize['3xl'] * 1.2,
   },
   sub: {
     fontSize: FontSize.md,
     fontFamily: FontFamily.sans,
-    color: Colors.textOnDarkMuted,
+    color: MUTED,
     textAlign: 'center',
-    lineHeight: FontSize.md * 1.6,
+    lineHeight: FontSize.md * 1.65,
+    maxWidth: 320,
   },
-
-  mockTextWrap: { alignItems: 'center', gap: 8, marginTop: 4 },
 
   // Controls
   controls: {
@@ -239,21 +280,38 @@ const s = StyleSheet.create({
     gap: 16,
   },
   dots:      { flexDirection: 'row', gap: 6 },
-  dot:       { width: 6, height: 6, borderRadius: Radius.full, backgroundColor: Colors.borderOnDark },
-  dotActive: { backgroundColor: Colors.gold, width: 18 },
+  dot:       { width: 6, height: 6, borderRadius: Radius.full, backgroundColor: BORDER },
+  dotActive: { backgroundColor: INK, width: 20 },
 
+  // CTA slides 1 & 2
   btn: {
-    backgroundColor: Colors.gold,
+    backgroundColor: INK,
     borderRadius: Radius.md,
     paddingVertical: 15,
     alignSelf: 'stretch',
     alignItems: 'center',
-    ...Shadow.gold,
   },
-  btnText: {
+  btnTxt: {
     fontSize: FontSize.md,
     fontFamily: FontFamily.sansSemibold,
-    color: Colors.textOnDark,
+    color: '#FFFFFF',
     letterSpacing: 0.2,
   },
+
+  // Slide 3 — conversion
+  conversionBtns:  { alignSelf: 'stretch', gap: 14 },
+  btnPrimary: {
+    backgroundColor: INK,
+    borderRadius: Radius.md,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  btnPrimaryTxt: {
+    fontSize: FontSize.md,
+    fontFamily: FontFamily.sansSemibold,
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+  loginHint:    { alignItems: 'center', paddingVertical: 4 },
+  loginHintTxt: { fontSize: FontSize.sm, fontFamily: FontFamily.sans, color: BLUE },
 });

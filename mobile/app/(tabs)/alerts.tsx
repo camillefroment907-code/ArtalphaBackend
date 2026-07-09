@@ -217,9 +217,9 @@ const s = StyleSheet.create({
   tabsWrap: { flexGrow: 0, borderBottomWidth: 0.5, borderBottomColor: Colors.border },
   tabsRow:  { paddingHorizontal: Spacing.md, flexDirection: 'row', gap: 4 },
   tab:           { paddingVertical: 10, paddingHorizontal: 14, borderBottomWidth: 2, borderBottomColor: 'transparent', marginBottom: -0.5 },
-  tabActive:     { borderBottomColor: Colors.navy },
+  tabActive:     { borderBottomColor: Colors.gold },
   tabTxt:        { fontSize: FontSize.sm, fontFamily: FontFamily.sansMedium, color: Colors.textTertiary },
-  tabTxtActive:  { color: Colors.navy },
+  tabTxtActive:  { color: Colors.gold },
 
   list:  { padding: Spacing.md, paddingBottom: 40, gap: 10 },
 
@@ -245,7 +245,7 @@ const s = StyleSheet.create({
   cardBody2: { fontSize: FontSize.sm, fontFamily: FontFamily.sans, color: Colors.textSecondary, lineHeight: 17, marginBottom: 8 },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardType:  { fontSize: FontSize.xs, fontFamily: FontFamily.sans, color: Colors.textTertiary },
-  cardCta:   { fontSize: FontSize.sm, fontFamily: FontFamily.sansSemibold, color: Colors.navy },
+  cardCta:   { fontSize: FontSize.sm, fontFamily: FontFamily.sansSemibold, color: Colors.gold },
 
   empty:      { paddingVertical: 56, alignItems: 'center', paddingHorizontal: 24 },
   emptyTitle: { fontSize: FontSize.xl, fontFamily: FontFamily.serifBold, color: Colors.textPrimary, textAlign: 'center', marginBottom: 8 },

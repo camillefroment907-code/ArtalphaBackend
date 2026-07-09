@@ -1,8 +1,10 @@
 // app/add-artwork/success.tsx — Wow moment (dark, premium)
 
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
+import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors, Fonts, Radius } from '@/lib/tokens';
+import type { ComparableLot } from '@/services/api';
 
 function fmtEur(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} M€`;
@@ -18,17 +20,22 @@ const CONF_LABEL: Record<string, string> = {
 
 export default function SuccessScreen() {
   const router = useRouter();
-  const { artistName, title, estimatedValue, valueLow, valueHigh, valConf, valCount, hasArtistId } =
+  const { artistName, title, estimatedValue, valueLow, valueHigh, valConf, valCount, hasArtistId, comparables: comparablesJson } =
     useLocalSearchParams<{
-      artistName?: string;
-      title?: string;
+      artistName?:    string;
+      title?:         string;
       estimatedValue?: string;
-      valueLow?: string;
-      valueHigh?: string;
-      valConf?: string;
-      valCount?: string;
-      hasArtistId?: string;
+      valueLow?:      string;
+      valueHigh?:     string;
+      valConf?:       string;
+      valCount?:      string;
+      hasArtistId?:   string;
+      comparables?:   string;
     }>();
+
+  useEffect(() => {
+    try { console.log('[NAUTILUS_EVENT]', { event: 'success_screen_viewed', timestamp: Date.now(), properties: { estimated_value: estimatedValue ?? null, confidence: valConf ?? null } }); } catch {}
+  }, []);
 
   const valLow  = valueLow  ? parseFloat(valueLow)  : null;
   const valHigh = valueHigh ? parseFloat(valueHigh) : null;
@@ -38,11 +45,35 @@ export default function SuccessScreen() {
   const hasValue = valMed != null && valMed > 0;
   const confLabel = valConf ? (CONF_LABEL[valConf] ?? null) : null;
 
+  const parsedComparables: ComparableLot[] = (() => {
+    try { return comparablesJson ? JSON.parse(comparablesJson) : []; } catch { return []; }
+  })();
+
+  const sortedComparables = [...parsedComparables].sort((a, b) => {
+    if (!a.sale_date) return 1;
+    if (!b.sale_date) return -1;
+    return new Date(b.sale_date).getTime() - new Date(a.sale_date).getTime();
+  });
+
+  const fmtDate = (d: string | null | undefined): string => {
+    if (!d) return '—';
+    const s = new Date(d).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+
+  const showLimitedWarning =
+    sortedComparables.length > 0 &&
+    (valConf === 'low' || (count != null && count < 3));
+
   const displayArtist = artistName || 'Votre œuvre';
   const displayTitle = title || null;
 
   return (
-    <View style={s.container}>
+    <ScrollView
+      style={s.scroll}
+      contentContainerStyle={s.container}
+      showsVerticalScrollIndicator={false}
+    >
 
       {/* ── N ring ── */}
       <View style={s.logoRing}>
@@ -87,6 +118,30 @@ export default function SuccessScreen() {
         </View>
       )}
 
+      {/* ── Comparables ── */}
+      {sortedComparables.length > 0 && (
+        <View style={s.compWrap}>
+          <Text style={s.compHeader}>VENTES COMPARABLES</Text>
+          {sortedComparables.map((c, i) => (
+            <View key={c.id ?? i} style={[s.compRow, i < sortedComparables.length - 1 && s.compDivider]}>
+              <Text style={s.compHouse}>{c.auction_house ?? '—'}</Text>
+              <Text style={s.compDate}>{fmtDate(c.sale_date)}</Text>
+              {(c.medium || c.dimensions) && (
+                <Text style={s.compMeta}>
+                  {[c.medium, c.dimensions].filter(Boolean).join('\n')}
+                </Text>
+              )}
+              <Text style={s.compPrice}>{fmtEur(c.hammer_price_eur)}</Text>
+            </View>
+          ))}
+          {showLimitedWarning && (
+            <Text style={s.compWarning}>
+              Estimation fondée sur un nombre limité de ventes comparables.
+            </Text>
+          )}
+        </View>
+      )}
+
       {/* ── CTAs ── */}
       <View style={s.ctaWrap}>
         <Pressable style={s.primaryBtn} onPress={() => router.replace('/(tabs)/collection')}>
@@ -94,7 +149,10 @@ export default function SuccessScreen() {
         </Pressable>
         <Pressable
           style={s.secBtn}
-          onPress={() => router.replace('/add-artwork')}
+          onPress={() => {
+            try { console.log('[NAUTILUS_EVENT]', { event: 'add_second_artwork_clicked', timestamp: Date.now(), properties: { from: 'success_screen' } }); } catch {}
+            router.replace('/add-artwork');
+          }}
         >
           <Text style={s.secBtnTxt}>Ajouter une autre œuvre</Text>
         </Pressable>
@@ -102,12 +160,13 @@ export default function SuccessScreen() {
 
       <Text style={s.legal}>Nautilus Collection OS · 2026</Text>
 
-    </View>
+    </ScrollView>
   );
 }
 
 const s = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: Colors.night, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
+  scroll:       { flex: 1, backgroundColor: Colors.night },
+  container:    { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 60 },
 
   logoRing:     { width: 64, height: 64, borderRadius: 32, borderWidth: 1.5, borderColor: Colors.blue, alignItems: 'center', justifyContent: 'center', marginBottom: 28 },
   logoMark:     { fontSize: 24, fontWeight: '700', color: Colors.blue, letterSpacing: -0.5 },
@@ -134,5 +193,19 @@ const s = StyleSheet.create({
   secBtn:       { padding: 12, alignItems: 'center' },
   secBtnTxt:    { fontSize: Fonts.base, color: 'rgba(255,255,255,0.4)' },
 
-  legal:        { position: 'absolute', bottom: 32, fontSize: Fonts.xs, color: 'rgba(255,255,255,0.15)', letterSpacing: 0.3 },
+  legal:        { fontSize: Fonts.xs, color: 'rgba(255,255,255,0.15)', letterSpacing: 0.3, marginTop: 32 },
+
+  compWrap:     { width: '100%', marginBottom: 28 },
+  compHeader:   { fontSize: Fonts.xs, color: 'rgba(255,255,255,0.22)', letterSpacing: 0.9,
+                  textAlign: 'center', marginBottom: 14 },
+  compRow:      { paddingVertical: 11 },
+  compDivider:  { borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.07)' },
+  compHouse:    { fontSize: Fonts.sm, color: 'rgba(255,255,255,0.60)', fontWeight: '500',
+                  marginBottom: 2 },
+  compDate:     { fontSize: Fonts.xs, color: 'rgba(255,255,255,0.30)', marginBottom: 8 },
+  compMeta:     { fontSize: Fonts.xs, color: 'rgba(255,255,255,0.28)', lineHeight: 17,
+                  marginBottom: 6 },
+  compPrice:    { fontSize: Fonts.base, color: 'rgba(255,255,255,0.70)', fontWeight: '600' },
+  compWarning:  { fontSize: Fonts.xs, color: 'rgba(255,255,255,0.22)', textAlign: 'center',
+                  marginTop: 12, lineHeight: 16 },
 });

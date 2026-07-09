@@ -111,13 +111,15 @@ async def get_context(client):
 
 # ── Auto-scoring ───────────────────────────────────────────────────────────────
 
-# Artefacts signatures: very cheap lots with extreme discounts
+# Artefacts signatures: the specific lots that dominated before the fix
+# (do NOT flag all cheap prices — €100 Shrigley is legit)
 ARTEFACT_PATTERNS = [
-    r"hirst",
+    r"\bhirst\b",
     r"spin painting",
     r"richter.*poster",
-    r"€\s*(?:50|80|90|100|120|150)\b",   # suspiciously cheap price mentions
-    r"(?:50|80|90|100|120|150)\s*€",
+    r"butterfly.*spin",
+    r"circle.*spin",
+    r"heart.*spin",
 ]
 
 RISK_WORDS = [

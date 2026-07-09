@@ -53,8 +53,8 @@ const CHALLENGES = [
   { value: 'advisory',       icon: '🤝', label: 'Lack of trusted advice',       labelFr: 'Manque de conseils de confiance',  sub: 'Hard to find unbiased expertise',            subFr: 'Difficile de trouver une expertise impartiale' },
 ];
 
-// 6 profile steps + 2 post-profile screens (preview + Larry) + confirmation
-const TOTAL_STEPS = 6;
+// MVP : 2 steps essentiels (budget + catégories)
+const TOTAL_STEPS = 2;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -106,8 +106,18 @@ export default function Onboarding() {
       .catch(() => {});
   }, [step]);
 
-  const goNext = () => setStep(s => s + 1);
-  const goBack = () => setStep(s => Math.max(s - 1, 1));
+  const goNext = () => setStep(s => {
+    // MVP : step 0 (welcome) → 2 (budget) → 4 (catégories) → complete
+    if (s === 0) return 2;
+    if (s === 2) return 4;
+    if (s === 4) { handleComplete(); return s; }
+    return s + 1;
+  });
+  const goBack = () => setStep(s => {
+    if (s === 4) return 2;
+    if (s === 2) return 0;
+    return Math.max(s - 1, 0);
+  });
 
   const toggleCategory = (cat: string) =>
     setCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
@@ -131,13 +141,13 @@ export default function Onboarding() {
     } catch { /* silent */ }
     localStorage.setItem('nautilus_show_tour', '1');
     localStorage.removeItem('nautilus_tour_seen');
-    navigate('/app/today');
+    navigate('/app/dashboard');
   };
 
   const handleSkip = () => {
     localStorage.setItem('nautilus_show_tour', '1');
     localStorage.removeItem('nautilus_tour_seen');
-    navigate('/app/today');
+    navigate('/app/dashboard');
   };
 
   // ── Tile styles ─────────────────────────────────────────────────────────────

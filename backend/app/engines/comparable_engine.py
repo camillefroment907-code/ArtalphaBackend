@@ -134,7 +134,7 @@ _MEDIUM_STOP_WORDS = frozenset({
 _MEDIUM_TRANSLATIONS: dict[str, str] = {
     # Peintures / techniques
     "huile": "oil",          "acrylique": "acrylic",    "aquarelle": "watercolor",
-    "watercolour": "watercolor",
+    "watercolour": "watercolor", "peinture": "paint",
     "gouache": "gouache",    "tempera": "tempera",       "pastel": "pastel",
     "crayon": "pencil",      "charbon": "charcoal",      "charcoal": "charcoal",
     "encre": "ink",          "technique": "mixed",       "mixte": "mixed",

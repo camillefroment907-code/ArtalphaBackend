@@ -1,0 +1,38 @@
+› Skipping dev server
+› Planning build
+› Executing react-native Pods/hermes-engine » [CP-User] [Hermes] Replace Hermes for the right configuration, if needed
+› Executing react-native Pods/ReactNativeDependencies » [CP-User] [RNDeps] Replace React Native Dependencies for the right configuration, if needed
+› Preparing Pods/ExpoMediaLibrary-ExpoMediaLibrary_privacy » ResourceBundle-ExpoMediaLibrary_privacy-ExpoMediaLibrary-Info.plist
+› Preparing Pods/RNSVG-RNSVGFilters » ResourceBundle-RNSVGFilters-RNSVG-Info.plist
+› Preparing Pods/EXConstants-ExpoConstants_privacy » ResourceBundle-ExpoConstants_privacy-EXConstants-Info.plist
+› Preparing Pods/ExpoFileSystem-ExpoFileSystem_privacy » ResourceBundle-ExpoFileSystem_privacy-ExpoFileSystem-Info.plist
+› Preparing Pods/RNCAsyncStorage-RNCAsyncStorage_resources » ResourceBundle-RNCAsyncStorage_resources-RNCAsyncStorage-Info.plist
+› Preparing Pods/expo-dev-menu-EXDevMenu » ResourceBundle-EXDevMenu-expo-dev-menu-Info.plist
+› Preparing Pods/React-cxxreact-React-cxxreact_privacy » ResourceBundle-React-cxxreact_privacy-React-cxxreact-Info.plist
+› Preparing Pods/React-Core-React-Core_privacy » ResourceBundle-React-Core_privacy-React-Core-Info.plist
+› Preparing expo-constants Pods/EXConstants-EXConstants » ResourceBundle-EXConstants-EXConstants-Info.plist
+› Executing react-native Pods/React-Core-prebuilt » [CP-User] [RNDeps] Replace React Native Core for the right configuration, if needed
+› Executing react-native Pods/React-RCTFBReactNativeSpec » [CP-User] [RN]Check FBReactNativeSpec
+› Executing expo-constants Pods/EXConstants » [CP-User] Generate app.config for prebuilt Constants.manifest
+
+❌  Script '[CP-User] Generate app.config for prebuilt Constants.manifest' failed
+   └─Pods/EXConstants
+No such file or directory: /Users/camillefroment/Documents/Claude
+
+
+❌  Command SwiftCompile failed with a nonzero exit code
+SwiftCompile normal x86_64 /Users/camillefroment/Documents/Claude\ code/artalpha-figma/mobile/node_modules/expo-dev-menu/ios/Interceptors/DevMenuMotionInterceptor.swift (in target 'expo-dev-menu' from project 'Pods')
+SwiftCompile normal x86_64 /Users/camillefroment/Documents/Claude\ code/artalpha-figma/mobile/node_modules/expo-dev-menu/ios/SwiftUI/DevMenuOnboardingView.swift (in target 'expo-dev-menu' from project 'Pods')
+SwiftCompile normal x86_64 /Users/camillefroment/Documents/Claude\ code/artalpha-figma/mobile/node_modules/expo-dev-menu/ios/DevMenuPackagerConnectionHandler.swift (in target 'expo-dev-menu' from project 'Pods')
+SwiftCompile normal x86_64 /Users/camillefroment/Documents/Claude\ code/artalpha-figma/mobile/node_modules/expo-dev-menu/ios/Modules/DevMenuPreferences.swift (in target 'expo-dev-menu' from project 'Pods')
+SwiftEmitModule normal x86_64 Emitting\ module\ for\ EXDevMenu (in target 'expo-dev-menu' from project 'Pods')
+SwiftCompile normal x86_64 Compiling\ HostUrl.swift,\ MockedSafeAreaViewProvider.swift,\ Models.swift /Users/camillefroment/Documents/Claude\ code/artalpha-figma/mobile/node_modules/expo-dev-menu/ios/SwiftUI/HostUrl.swift /Users/camillefroment/Documents/Claude\ code/artalpha-figma/mobile/node_modules/expo-dev-menu/ios/Modules/MockedSafeAreaViewProvider.swift /Users/camillefroment/Documents/Claude\ code/artalpha-figma/mobile/node_modules/expo-dev-menu/ios/SwiftUI/Models.swift (in target 'expo-dev-menu' from project 'Pods')
+SwiftCompile normal x86_64 /Users/camillefroment/Documents/Claude\ code/artalpha-figma/mobile/node_modules/expo-dev-menu/ios/SwiftUI/HostUrl.swift (in target 'expo-dev-menu' from project 'Pods')
+SwiftCompile normal x86_64 /Users/camillefroment/Documents/Claude\ code/artalpha-figma/mobile/node_modules/expo-dev-menu/ios/Modules/MockedSafeAreaViewProvider.swift (in target 'expo-dev-menu' from project 'Pods')
+SwiftCompile normal x86_64 /Users/camillefroment/Documents/Claude\ code/artalpha-figma/mobile/node_modules/expo-dev-menu/ios/SwiftUI/Models.swift (in target 'expo-dev-menu' from project 'Pods')
+SwiftCompile normal x86_64 Compiling\ EXDevMenuDevSettings.swift,\ ExpoDevMenuReactDelegateHandler.swift,\ HeaderView.swift,\ HermesWarning.swift /Users/camillefroment/Documents/Claude\ code/artalpha-figma/mobile/node_modules/expo-dev-menu/ios/EXDevMenuDevSettings.swift /Users/camillefroment/Documents/Claude\ code/artalpha-figma/mobile/node_modules/expo-dev-menu/ios/ReactDelegateHandler/ExpoDevMenuReactDelegateHandler.swift /Users/camillefroment/Documents/Claude\ code/artalpha-figma/mobile/node_modules/expo-dev-menu/ios/SwiftUI/HeaderView.swift /Users/camillefroment/Documents/Claude\ code/artalpha-figma/mobile/node_modules/expo-dev-menu/ios/SwiftUI/HermesWarning.swift (in target 'expo-dev-menu' from project 'Pods')
+
+
+› 2 error(s), and 0 warning(s)
+
+CommandError: Failed to build iOS project. "xcodebuild" exited with error code 65.

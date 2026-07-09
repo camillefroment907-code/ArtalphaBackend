@@ -21,13 +21,12 @@ from app.models.db_models import User
 
 limiter = Limiter(key_func=get_remote_address)
 
-# Approximate EUR conversion rates — used for currency-aware price filters
-_FX_TO_EUR: dict[str, float] = {
-    'EUR': 1.0, 'USD': 0.92, 'GBP': 1.17,
-    'SEK': 0.087, 'CHF': 1.05, 'DKK': 0.134,
-    'NOK': 0.087, 'JPY': 0.006, 'HKD': 0.118,
-    'AUD': 0.59, 'CAD': 0.68,
-}
+from app.lib.fx import get_rates_sync as _get_fx_rates
+
+def _get_fx_to_eur() -> dict:
+    return _get_fx_rates()
+
+_FX_TO_EUR = _get_fx_to_eur()
 
 from app.utils.real_cost import compute_real_cost, compute_max_bid
 from app.utils.estimation_bias import get_estimation_bias
@@ -433,13 +432,14 @@ async def list_lots(
         filters.append(Lot.created_at <= datetime.utcnow() - timedelta(minutes=5))
     # Minimum €50 EUR — exclut les lots trivialement cheap (ex: 26 SEK)
     # Lots sans aucun prix (NULL/NULL) sont conservés
+    _fx = _get_fx_to_eur()
     _eur_val = case(
-        (Lot.currency == 'SEK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.087),
-        (Lot.currency == 'USD', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.92),
-        (Lot.currency == 'GBP', func.coalesce(Lot.current_price, Lot.estimate_low) * 1.17),
-        (Lot.currency == 'DKK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.134),
-        (Lot.currency == 'NOK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.087),
-        (Lot.currency == 'CHF', func.coalesce(Lot.current_price, Lot.estimate_low) * 1.05),
+        (Lot.currency == 'SEK', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('SEK', 0.087)),
+        (Lot.currency == 'USD', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('USD', 0.92)),
+        (Lot.currency == 'GBP', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('GBP', 1.17)),
+        (Lot.currency == 'DKK', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('DKK', 0.134)),
+        (Lot.currency == 'NOK', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('NOK', 0.087)),
+        (Lot.currency == 'CHF', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('CHF', 1.05)),
         else_=func.coalesce(Lot.current_price, Lot.estimate_low),
     )
     filters.append(
@@ -1186,12 +1186,12 @@ async def get_primary_lots(
         or_(
             and_(Lot.current_price.is_(None), Lot.estimate_low.is_(None)),
             case(
-                (Lot.currency == 'SEK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.087),
-                (Lot.currency == 'USD', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.92),
-                (Lot.currency == 'GBP', func.coalesce(Lot.current_price, Lot.estimate_low) * 1.17),
-                (Lot.currency == 'DKK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.134),
-                (Lot.currency == 'NOK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.087),
-                (Lot.currency == 'CHF', func.coalesce(Lot.current_price, Lot.estimate_low) * 1.05),
+                (Lot.currency == 'SEK', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('SEK', 0.087)),
+                (Lot.currency == 'USD', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('USD', 0.92)),
+                (Lot.currency == 'GBP', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('GBP', 1.17)),
+                (Lot.currency == 'DKK', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('DKK', 0.134)),
+                (Lot.currency == 'NOK', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('NOK', 0.087)),
+                (Lot.currency == 'CHF', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('CHF', 1.05)),
                 else_=func.coalesce(Lot.current_price, Lot.estimate_low),
             ) >= 50,
         ),
@@ -1279,12 +1279,12 @@ async def get_lots_for_investor(
         or_(
             and_(Lot.current_price.is_(None), Lot.estimate_low.is_(None)),
             case(
-                (Lot.currency == 'SEK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.087),
-                (Lot.currency == 'USD', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.92),
-                (Lot.currency == 'GBP', func.coalesce(Lot.current_price, Lot.estimate_low) * 1.17),
-                (Lot.currency == 'DKK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.134),
-                (Lot.currency == 'NOK', func.coalesce(Lot.current_price, Lot.estimate_low) * 0.087),
-                (Lot.currency == 'CHF', func.coalesce(Lot.current_price, Lot.estimate_low) * 1.05),
+                (Lot.currency == 'SEK', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('SEK', 0.087)),
+                (Lot.currency == 'USD', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('USD', 0.92)),
+                (Lot.currency == 'GBP', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('GBP', 1.17)),
+                (Lot.currency == 'DKK', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('DKK', 0.134)),
+                (Lot.currency == 'NOK', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('NOK', 0.087)),
+                (Lot.currency == 'CHF', func.coalesce(Lot.current_price, Lot.estimate_low) * _fx.get('CHF', 1.05)),
                 else_=func.coalesce(Lot.current_price, Lot.estimate_low),
             ) >= 50,
         ),

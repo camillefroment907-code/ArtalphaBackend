@@ -57,8 +57,8 @@ export default function MarketScreen() {
     <View style={s.root}>
       {/* Header */}
       <View style={s.header}>
-        <Text style={s.title}>Marché</Text>
-        <Text style={s.sub}>Intelligence des ventes aux enchères</Text>
+        <Text style={s.title}>Découvrir</Text>
+        <Text style={s.sub}>Opportunités et ventes récentes</Text>
       </View>
 
       {/* Tabs */}
@@ -80,7 +80,10 @@ export default function MarketScreen() {
         {tab === 'opps' && (
           opps.length === 0 ? (
             <View style={s.empty}>
-              <Text style={s.emptyTxt}>Aucune opportunité détectée pour le moment.</Text>
+              <Text style={s.emptyTitle}>Le marché est calme aujourd'hui.</Text>
+              <Text style={s.emptyTxt}>
+                Nous vous préviendrons lorsqu'une opportunité liée à votre collection apparaît.
+              </Text>
             </View>
           ) : (
             opps.map((o, i) => (
@@ -106,7 +109,8 @@ export default function MarketScreen() {
         {tab === 'recent' && (
           recent.length === 0 ? (
             <View style={s.empty}>
-              <Text style={s.emptyTxt}>Aucune vente récente disponible.</Text>
+              <Text style={s.emptyTitle}>Aucune vente récente.</Text>
+              <Text style={s.emptyTxt}>Les données de marché sont mises à jour régulièrement.</Text>
             </View>
           ) : (
             recent.map((lot) => (
@@ -156,7 +160,7 @@ const s = StyleSheet.create({
     borderColor: Colors.border,
     backgroundColor: Colors.bgSurface,
   },
-  tabBtnActive: { backgroundColor: Colors.navy, borderColor: Colors.navy },
+  tabBtnActive: { backgroundColor: Colors.gold, borderColor: Colors.gold },
   tabLabel:       { fontSize: FontSize.sm, fontFamily: 'Inter_500Medium', color: Colors.textSecondary },
   tabLabelActive: { color: Colors.textOnDark },
 
@@ -188,8 +192,9 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  scoreTxt: { fontSize: FontSize.xs, fontFamily: 'Inter_700Bold', color: Colors.bgDark },
+  scoreTxt: { fontSize: FontSize.xs, fontFamily: 'Inter_700Bold', color: Colors.textOnDark },
 
-  empty:    { paddingVertical: 48, alignItems: 'center' },
-  emptyTxt: { fontSize: FontSize.base, fontFamily: 'Inter_400Regular', color: Colors.textTertiary, textAlign: 'center' },
+  empty:      { paddingVertical: 48, alignItems: 'center', paddingHorizontal: 24 },
+  emptyTitle: { fontSize: FontSize.md, fontFamily: FontFamily.sansSemibold, color: Colors.textPrimary, textAlign: 'center', marginBottom: 8 },
+  emptyTxt:   { fontSize: FontSize.base, fontFamily: FontFamily.sans, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
 });

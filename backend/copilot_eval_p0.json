@@ -1,0 +1,202 @@
+{
+  "session_id": "eval-p0-20260604-131439",
+  "avg_avant": 4.5,
+  "avg_apres": 9.83,
+  "results": [
+    {
+      "id": "Q1",
+      "label": "Budget 5k",
+      "avant": {
+        "ancrage": 1,
+        "perso": 0,
+        "tempo": 0,
+        "decision": 1,
+        "signal": 0
+      },
+      "avant_total": 2,
+      "apres": {
+        "ancrage": 3,
+        "perso": 3,
+        "tempo": 2,
+        "decision": 3,
+        "signal": 1
+      },
+      "apres_total": 12,
+      "delta": 10,
+      "response": "Avec un budget de 5 000 €, vous avez plusieurs options intéressantes dans le domaine de la peinture et des estampes, notamment des œuvres sous-évaluées. Voici trois recommandations :\n\n1. **David Shrigley — This Huge Cat**\n   - **Prix :** €100\n   - **Décote :** -33%\n   - **Maison :** Vanguarts Auctions: Contemporary Discoveries: The Collection Continues\n   - **Urgence :** Vente aujourd'hui ⚡\n   - **Argument :** Shrigley est un artiste contemporain reconnu, et cette œuvre est à un prix attractif pour son potentiel de revente.\n   - **Risque :** La liquidité peut être limitée pour les œuvres contemporaines, surtout celles d'artistes moins établis.\n   - → [Voir l'œuvre](https://www.get-nautilus.com/app/opportunities/4e62ea31-bf72-4e10-b9c6-e0cb1ff2a937)\n\n2. **MARC CHAGALL. EFTER. Vence — \"Cité des arts Et des fleurs\"**\n   - **Prix :** €300\n   - **Décote :** -82%\n   - **Maison :** Bidstrup Auktioner\n   - **Urgence :** Vente aujourd'hui ⚡\n   - **Argument :** Chagall est un artiste emblématique, et cette œuvre est fortement décotée, offrant un bon potentiel de valorisation.\n   - **Risque :** La demande pour les œuvres de Chagall peut fluctuer, et il est essentiel de vérifier l'authenticité et l'état de l'œuvre.\n   - → [Voir l'œuvre](https://www.get-nautilus.com/app/opportunities/5d3fe892-ea12-47c1-9abf-25d8180ab9e9)\n\n3. **JOAN JOSEP THARRATS — Libra**\n   - **Prix :** €30\n   - **Décote :** -70%\n   - **Maison :** Balclis\n   - **Urgence :** Vente demain ⚡\n   - **Argument :** À ce prix, c'est une opportunité d'acquérir une œuvre d'un artiste moins connu mais avec un potentiel d'appréciation.\n   - **Risque :** La notoriété de Tharrats est moindre, ce qui peut affecter la demande à court terme.\n   - → [Voir l'œuvre](https://www.get-nautilus.com/app/opportunities/0583d5c0-1796-472a-ab2f-ce870896f081)\n\nCes œuvres respectent votre budget et présentent des opportunités intéressantes d'investissement. N'hésitez pas à me faire savoir si vous souhaitez explorer davantage ou si vous avez des questions !",
+      "flags": [
+        "✓ URL lot présente",
+        "✓ Réponse substantielle",
+        "✓ Budget 5k respecté",
+        "✓ Budget 5k référencé",
+        "✓ Signal urgence",
+        "✓ Risque mentionné",
+        "✓ Recommandation actionnable",
+        "✗ Artefact détecté : €\\s*(?:50|80|90|100|120|150)\\b",
+        "✓ Diversité artistes"
+      ],
+      "elapsed": 17.03
+    },
+    {
+      "id": "Q2",
+      "label": "Budget 20k",
+      "avant": {
+        "ancrage": 1,
+        "perso": 0,
+        "tempo": 0,
+        "decision": 1,
+        "signal": 0
+      },
+      "avant_total": 2,
+      "apres": {
+        "ancrage": 3,
+        "perso": 3,
+        "tempo": 2,
+        "decision": 3,
+        "signal": 1
+      },
+      "apres_total": 12,
+      "delta": 10,
+      "response": "Avec un budget de 20 000 €, vous avez plusieurs options intéressantes sur le marché. Voici trois recommandations spécifiques qui respectent votre budget :\n\n1. **David Shrigley — This Huge Cat**\n   - **Prix :** €100\n   - **Décote :** -33%\n   - **Maison :** Vanguarts Auctions: Contemporary Discoveries: The Collection Continues\n   - **Urgence :** Vente aujourd'hui ⚡\n   - **Argument :** Shrigley est un artiste contemporain en forte demande, et cette œuvre a un bon potentiel de valorisation.\n   - **Risque :** La liquidité peut être un défi pour les œuvres contemporaines, surtout si l'artiste n'est pas encore établi dans le marché secondaire.\n   - → [Voir l'œuvre](https://www.get-nautilus.com/app/opportunities/4e62ea31-bf72-4e10-b9c6-e0cb1ff2a937)\n\n2. **MARC CHAGALL. EFTER. Vence — \"Cité des arts Et des fleurs\"**\n   - **Prix :** €300\n   - **Décote :** -82%\n   - **Maison :** Bidstrup Auktioner\n   - **Urgence :** Vente aujourd'hui ⚡\n   - **Argument :** Chagall est un maître reconnu, et cette œuvre à un prix très attractif pourrait offrir un excellent retour sur investissement à long terme.\n   - **Risque :** Les œuvres de Chagall peuvent parfois être surévaluées, et la demande peut varier selon les tendances du marché.\n   - → [Voir l'œuvre](https://www.get-nautilus.com/app/opportunities/5d3fe892-ea12-47c1-9abf-25d8180ab9e9)\n\n3. **JOAN JOSEP THARRATS — Libra**\n   - **Prix :** €30\n   - **Décote :** -70%\n   - **Maison :** Balclis\n   - **Urgence :** Vente demain ⚡\n   - **Argument :** Tharrats est un artiste moins connu mais avec un potentiel de hausse, surtout pour les œuvres à bas prix.\n   - **Risque :** L'artiste n'a pas encore une reconnaissance internationale, ce qui peut limiter la demande.\n   - → [Voir l'œuvre](https://www.get-nautilus.com/app/opportunities/0583d5c0-1796-472a-ab2f-ce870896f081)\n\nCes recommandations vous permettent de diversifier votre portefeuille tout en restant dans votre budget. Si vous souhaitez explorer plus d'options ou des catégories spécifiques, n'hésitez pas à me le faire savoir.",
+      "flags": [
+        "✓ URL lot présente",
+        "✓ Réponse substantielle",
+        "✓ Budget 20k respecté",
+        "✓ Budget 20k référencé",
+        "✓ Signal urgence",
+        "✓ Risque mentionné",
+        "✓ Recommandation actionnable",
+        "✗ Artefact détecté : €\\s*(?:50|80|90|100|120|150)\\b",
+        "✓ Diversité artistes"
+      ],
+      "elapsed": 23.85
+    },
+    {
+      "id": "Q3",
+      "label": "Revente 3 ans",
+      "avant": {
+        "ancrage": 2,
+        "perso": 1,
+        "tempo": 1,
+        "decision": 2,
+        "signal": 1
+      },
+      "avant_total": 7,
+      "apres": {
+        "ancrage": 3,
+        "perso": 2,
+        "tempo": 2,
+        "decision": 3,
+        "signal": 1
+      },
+      "apres_total": 11,
+      "delta": 4,
+      "response": "Pour un investissement à moyen terme (3 ans), il est essentiel de se concentrer sur les œuvres qui présentent un potentiel de valorisation. Voici quelques critères à considérer :\n\n1. **Artistes en croissance** : Recherchez des artistes dont la cote est en hausse, souvent soutenue par des ventes aux enchères récentes et une demande croissante dans les galeries.\n   \n2. **Décotes importantes** : Les œuvres affichant une décote significative peuvent offrir une marge de revalorisation. Cela signifie que vous achetez en dessous de leur valeur de marché perçue.\n\n3. **Tendances de marché** : Analysez les tendances actuelles dans le marché de l'art, notamment les catégories populaires (comme la peinture contemporaine) et les mouvements artistiques en vogue.\n\nActuellement, voici deux lots intéressants qui respectent ces critères :\n\n1. **David Shrigley — This Huge Cat**\n   - **Prix** : €100\n   - **Décote** : -33%\n   - **Maison** : Vanguarts Auctions: Contemporary Discoveries: The Collection Continues\n   - **Urgence** : Vente aujourd'hui ⚡\n   - **Argument** : Shrigley est un artiste contemporain en pleine ascension, avec une forte demande dans le marché.\n   - **Risque** : La liquidité peut être un problème si le marché devient saturé de ses œuvres.\n   - → [Voir le lot](https://www.get-nautilus.com/app/opportunities/4e62ea31-bf72-4e10-b9c6-e0cb1ff2a937)\n\n2. **MARC CHAGALL. EFTER. Vence — \"Cité des arts Et des fleurs\"**\n   - **Prix** : €300\n   - **Décote** : -82%\n   - **Maison** : Bidstrup Auktioner\n   - **Urgence** : Vente aujourd'hui ⚡\n   - **Argument** : Chagall reste un artiste emblématique avec une forte demande dans le marché des estampes.\n   - **Risque** : La concurrence des œuvres originales peut influencer la valeur des éditions.\n   - → [Voir le lot](https://www.get-nautilus.com/app/opportunities/5d3fe892-ea12-47c1-9abf-25d8180ab9e9)\n\nCes deux œuvres présentent des opportunités intéressantes pour un investissement à court terme. Évaluez bien les risques associés avant de prendre une décision.",
+      "flags": [
+        "✓ URL lot présente",
+        "✓ Réponse substantielle",
+        "✓ Réponse personnalisée",
+        "✓ Signal urgence",
+        "✓ Risque mentionné",
+        "✓ Recommandation actionnable",
+        "✗ Artefact détecté : €\\s*(?:50|80|90|100|120|150)\\b",
+        "✓ Diversité artistes"
+      ],
+      "elapsed": 13.12
+    },
+    {
+      "id": "Q4",
+      "label": "Urgence",
+      "avant": {
+        "ancrage": 1,
+        "perso": 1,
+        "tempo": 0,
+        "decision": 1,
+        "signal": 0
+      },
+      "avant_total": 3,
+      "apres": {
+        "ancrage": 3,
+        "perso": 1,
+        "tempo": 3,
+        "decision": 3,
+        "signal": 1
+      },
+      "apres_total": 11,
+      "delta": 8,
+      "response": "Oui, il y a plusieurs enchères urgentes à considérer aujourd'hui. Voici deux œuvres intéressantes :\n\n1. **David Shrigley — This Huge Cat**\n   - Prix : €100\n   - Décote : -33%\n   - Vente : aujourd'hui ⚡\n   - Cette œuvre d'un artiste contemporain reconnu pourrait attirer l'attention des collectionneurs, surtout avec une décote significative.\n   → [Voir l'œuvre](https://www.get-nautilus.com/app/opportunities/4e62ea31-bf72-4e10-b9c6-e0cb1ff2a937)\n\n2. **David Shrigley — When Life Gives You A Lemon**\n   - Prix : €100\n   - Décote : -33%\n   - Vente : aujourd'hui ⚡\n   - Une autre œuvre de Shrigley, qui est en phase avec les tendances contemporaines et pourrait être facilement revendue.\n   → [Voir l'œuvre](https://www.get-nautilus.com/app/opportunities/4aec2a67-7590-4b8c-9f71-05ea5453b632)\n\nCes deux lots sont à surveiller de près, car ils ferment aujourd'hui. Assurez-vous de prendre une décision rapidement !",
+      "flags": [
+        "✓ URL lot présente",
+        "✓ Réponse substantielle",
+        "~ Personnalisation partielle",
+        "✓ Signal urgence",
+        "✓ Date enchère présente",
+        "✓ Risque mentionné",
+        "✓ Recommandation actionnable",
+        "✗ Artefact détecté : €\\s*(?:50|80|90|100|120|150)\\b",
+        "✓ Diversité artistes"
+      ],
+      "elapsed": 9.19
+    },
+    {
+      "id": "Q5",
+      "label": "Portfolio",
+      "avant": {
+        "ancrage": 1,
+        "perso": 2,
+        "tempo": 0,
+        "decision": 2,
+        "signal": 1
+      },
+      "avant_total": 6,
+      "apres": {
+        "ancrage": 3,
+        "perso": 3,
+        "tempo": 3,
+        "decision": 3,
+        "signal": 1
+      },
+      "apres_total": 13,
+      "delta": 7,
+      "response": "Votre portefeuille actuel est vide, ce qui signifie qu'il est essentiel de commencer à construire une base solide. Voici quelques points à considérer :\n\n1. **Diversification** : Étant donné que vous n'avez pas encore d'œuvres, il est judicieux de commencer avec des pièces variées dans vos catégories préférées : peinture, estampes et dessins. Cela vous permettra de minimiser les risques.\n\n2. **Opportunités actuelles** : Plusieurs œuvres intéressantes sont disponibles, notamment à des prix attractifs. Certaines d'entre elles présentent des décotes significatives, ce qui pourrait offrir un bon potentiel de revente à moyen terme.\n\n3. **Action recommandée** : Je vous suggère de considérer les œuvres suivantes, qui sont à la fois abordables et intéressantes pour débuter votre collection :\n\n   - **David Shrigley — This Huge Cat** | Prix : €100 | Décote : -33% | Vente : aujourd'hui ⚡  \n     → [Voir l'œuvre](https://www.get-nautilus.com/app/opportunities/4e62ea31-bf72-4e10-b9c6-e0cb1ff2a937)\n   \n   - **MARC CHAGALL. EFTER. Vence** | Prix : €300 | Décote : -82% | Vente : aujourd'hui ⚡  \n     → [Voir l'œuvre](https://www.get-nautilus.com/app/opportunities/5d3fe892-ea12-47c1-9abf-25d8180ab9e9)\n\nCes œuvres sont à des prix raisonnables, mais veillez à agir rapidement en raison de l'urgence des enchères. Pensez également à surveiller régulièrement de nouvelles opportunités pour étoffer votre portefeuille.",
+      "flags": [
+        "✓ URL lot présente",
+        "✓ Réponse substantielle",
+        "✓ Réponse personnalisée",
+        "✓ Signal urgence",
+        "✓ Date enchère présente",
+        "✓ Risque mentionné",
+        "✓ Recommandation actionnable",
+        "✗ Artefact détecté : €\\s*(?:50|80|90|100|120|150)\\b",
+        "✓ Diversité artistes"
+      ],
+      "elapsed": 11.27
+    },
+    {
+      "id": "Q6",
+      "label": "Marché photo",
+      "avant": {
+        "ancrage": 2,
+        "perso": 1,
+        "tempo": 1,
+        "decision": 2,
+        "signal": 1
+      },
+      "avant_total": 7,
+      "apres": {
+        "ancrage": 0,
+        "perso": 0,
+        "tempo": 0,
+        "decision": 0,
+        "signal": 0
+      },
+      "apres_total": 0,
+      "delta": -7,
+      "response": "[EXCEPTION] All connection attempts failed",
+      "flags": [
+        "[ERREUR API]"
+      ],
+      "elapsed": 0.0
+    }
+  ]
+}

@@ -26,7 +26,7 @@ HEADERS = {
 }
 
 # USD → EUR approximate conversion factor
-_USD_TO_EUR = 0.93
+from app.lib.fx import to_eur as _fx_to_eur
 
 
 def _parse_artflat(val: dict) -> Optional[LotNormalized]:
@@ -43,7 +43,7 @@ def _parse_artflat(val: dict) -> Optional[LotNormalized]:
         if price_usd <= 0:
             return None
 
-        current_price = round(price_usd * _USD_TO_EUR, 2)
+        current_price = _fx_to_eur(price_usd, "USD") or round(price_usd * 0.92, 2)
         estimate_high = round(current_price * 1.1, 2)
 
         return LotNormalized(
