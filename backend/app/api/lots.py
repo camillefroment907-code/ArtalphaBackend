@@ -2380,7 +2380,7 @@ def _comp_proximity_score(
     return score
 
 
-async def _compute_weighted_max_bid(lot, db) -> dict:
+async def _compute_weighted_max_bid(lot, db, estimate_low_eur=None, estimate_high_eur=None) -> dict:
     """
     Proximity-weighted market value for max-bid computation.
     Returns dict {market_value, comp_count, comp_level, max_bid_source}
@@ -2407,7 +2407,7 @@ async def _compute_weighted_max_bid(lot, db) -> dict:
     # (e.g. cheap offset lithos vs expensive signed editions in the same
     # "print" bucket).  price_band_sql is a hardcoded SQL fragment — no user
     # input touches it; bound parameters carry the actual values.
-    est_floor, est_ceil = _price_band(lot.estimate_low, lot.estimate_high)
+    est_floor, est_ceil = _price_band(estimate_low_eur or lot.estimate_low, estimate_high_eur or lot.estimate_high)
     params: dict = {"norm": artist_normalized}
     price_band_sql = ""
     if est_floor is not None and est_ceil is not None:
@@ -2787,7 +2787,18 @@ async def get_comparables(
     fair_value: int | None = None
     fair_value_source: str | None = None
 
-    weighted = await _compute_weighted_max_bid(lot, db)
+    # CRITICAL: convert estimates to EUR before passing to weighted max bid
+    # estimate_low/high are stored in lot.currency (may be SEK, GBP, USD...)
+    from app.lib.fx import get_rate as _fx_rate_wb
+    _wb_currency = (lot.currency or "EUR").upper()
+    _wb_fx = _fx_rate_wb(_wb_currency) or 1.0
+    _wb_estimate_low_eur = round(float(lot.estimate_low) * _wb_fx, 2) if lot.estimate_low else None
+    _wb_estimate_high_eur = round(float(lot.estimate_high) * _wb_fx, 2) if lot.estimate_high else None
+
+    weighted = await _compute_weighted_max_bid(lot, db,
+        estimate_low_eur=_wb_estimate_low_eur,
+        estimate_high_eur=_wb_estimate_high_eur,
+    )
     comp_confidence = weighted.get("confidence") if weighted else None
     use_comp_value = weighted and comp_confidence not in (None, "insuffisante")
 
@@ -2805,19 +2816,22 @@ async def get_comparables(
         fair_value_source = weighted["max_bid_source"]
     elif lot.estimate_high:
         # Sparse or missing comps: fall back to estimate_high directly.
-        # Production data shows p50 realized = 0.966× estimate_high, so estimate_high
-        # is a sound anchor. The × 0.85 multiplier was an unjustified double-discount
-        # on top of the real-cost discounts already applied by compute_max_bid.
+        # CRITICAL: estimate_high is stored in the lot's native currency — must convert to EUR first.
+        from app.lib.fx import get_rate as _fx_rate
+        _lot_currency = (lot.currency or "EUR").upper()
+        _fx = _fx_rate(_lot_currency) or 1.0
+        _estimate_high_eur = round(float(lot.estimate_high) * _fx, 2)
+        _estimate_low_eur = round(float(lot.estimate_low) * _fx, 2) if lot.estimate_low else None
         max_bid = compute_max_bid(
-            float(lot.estimate_high), lot.auction_house_name,
-            estimate_high=float(lot.estimate_high) if lot.estimate_high else None,
-            estimate_low=float(lot.estimate_low) if lot.estimate_low else None,
+            _estimate_high_eur, lot.auction_house_name,
+            estimate_high=_estimate_high_eur,
+            estimate_low=_estimate_low_eur,
         )
         max_bid_source = "estimate"
         max_bid_confidence = "insuffisante"
         max_bid_comp_count = weighted["comp_count"] if weighted else None
         max_bid_comp_level = weighted["comp_level"] if weighted else None
-        fair_value = round(float(lot.estimate_high))
+        fair_value = _estimate_high_eur
         fair_value_source = "estimate"
 
     # ── Market context alert ──────────────────────────────────────────────────

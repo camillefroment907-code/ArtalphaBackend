@@ -224,7 +224,18 @@ class LotOut(BaseModel):
                 self.fomo_level = 'medium'
             else:
                 self.fomo_level = 'low'
-        if self.estimate_low and self.currency:
+        if self.currency and self.currency.upper() != 'EUR':
+            from app.lib.fx import get_rate as _fx_rate
+            rate = _fx_rate(self.currency)
+            if rate:
+                if self.estimate_low:
+                    self.estimate_low_eur = round(self.estimate_low * rate, 0)
+                    self.estimate_low = round(self.estimate_low * rate, 0)
+                if self.estimate_high:
+                    self.estimate_high = round(self.estimate_high * rate, 0)
+                if self.current_price:
+                    self.current_price = round(self.current_price * rate, 0)
+        elif self.estimate_low and self.currency:
             from app.lib.fx import get_rate as _fx_rate
             rate = _fx_rate(self.currency)
             if rate:
