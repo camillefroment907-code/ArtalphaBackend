@@ -694,9 +694,9 @@ export default function Explore() {
         {/* LEFT: Tab pills — desktop */}
         <div className="explore-tabs-desktop" style={{ display: 'flex', gap: '4px', flex: 1 }}>
           {([
-            { key: 'auctions' as ExploreTab, label: 'Toutes les Enchères' },
-            { key: 'ended'    as ExploreTab, label: 'Résultats · 7j' },
-            { key: 'primary'  as ExploreTab, label: 'Sélection Galerie' },
+            { key: 'auctions' as ExploreTab, label: 'Enchères' },
+            { key: 'ended'    as ExploreTab, label: 'Résultats' },
+            { key: 'primary'  as ExploreTab, label: 'Galeries' },
           ]).map(({ key, label }) => (
             <button
               key={key}
@@ -722,9 +722,9 @@ export default function Explore() {
           onChange={e => setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('tab', e.target.value); return p; })}
           style={{ display: 'none' }}
         >
-          <option value="auctions">Toutes les Enchères</option>
-          <option value="ended">Résultats · 7j</option>
-          <option value="primary">Sélection Galerie</option>
+          <option value="auctions">Enchères</option>
+          <option value="ended">Résultats</option>
+          <option value="primary">Galeries</option>
         </select>
 
         {/* RIGHT: Filters + View mode + LIVE */}
