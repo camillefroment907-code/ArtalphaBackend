@@ -212,6 +212,20 @@ async def send_exceptional_opportunity_alerts(lot_ids: list) -> int:
                         threshold = _PLAN_THRESHOLD.get(user_plan, 80)
                         if score < threshold:
                             continue
+
+                        # Filter by user budget preferences
+                        from app.models.db_models import UserPreference
+                        from sqlalchemy import select as _sel
+                        _pref_r = await db.execute(_sel(UserPreference).where(UserPreference.user_id == user.id))
+                        _pref = _pref_r.scalar_one_or_none()
+                        if _pref:
+                            _lot_price = lot.estimate_low or lot.current_price or 0
+                            if _pref.min_lot_budget_eur and _lot_price < _pref.min_lot_budget_eur:
+                                continue
+                            if _pref.max_lot_budget_eur and _lot_price > _pref.max_lot_budget_eur:
+                                continue
+                        if score < threshold:
+                            continue
                         if await _already_sent(db, user.id, lot.id, "EXCEPTIONAL"):
                             continue
                         if not await _daily_limit_ok(db, user.id):
