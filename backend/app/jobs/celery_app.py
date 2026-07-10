@@ -33,6 +33,12 @@ celery_app.conf.update(
             "schedule": crontab(minute="0", hour="6,18"),
             "options": {"queue": "default"},
         },
+        # Weekly report — Friday 18h UTC (20h Paris)
+        "weekly-report-friday": {
+            "task": "app.jobs.tasks.trigger_weekly_report",
+            "schedule": crontab(minute="0", hour="18", day_of_week="5"),
+            "options": {"queue": "default"},
+        },
         # Refresh upcoming lot prices every 6h (live bids change frequently)
         "refresh-upcoming-prices-6h": {
             "task": "app.jobs.tasks.refresh_upcoming_prices",

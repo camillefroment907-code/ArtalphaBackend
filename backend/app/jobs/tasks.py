@@ -1718,3 +1718,21 @@ async def _refresh_upcoming_prices_async():
             skipped=skipped,
             total=len(lots),
         )
+
+
+# ── Weekly report trigger ─────────────────────────────────────────────────────
+
+@celery_app.task(bind=True, max_retries=2, name="app.jobs.tasks.trigger_weekly_report")
+def trigger_weekly_report(self):
+    """Trigger the weekly report email every Friday at 18h UTC."""
+    try:
+        asyncio.run(_trigger_weekly_report_async())
+    except Exception as exc:
+        logger.error("trigger_weekly_report failed", error=str(exc))
+        raise self.retry(exc=exc, countdown=300)
+
+
+async def _trigger_weekly_report_async():
+    from app.jobs.weekly_report import send_weekly_report
+    result = await send_weekly_report()
+    logger.info("weekly_report_done", result=result)
