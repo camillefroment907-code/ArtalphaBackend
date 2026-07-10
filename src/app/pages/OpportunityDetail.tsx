@@ -958,9 +958,6 @@ export default function OpportunityDetail() {
                 const c = cfgMap[bState] || cfgMap.upcoming;
                 const showCnt = (bState === 'imminent' || bState === 'soon') && cntStr;
 
-                // Post-auction result block
-                const postAuction = (lot as any).post_auction;
-                const showPostAuction = bState === 'sold' && postAuction?.actual_hammer && postAuction?.predicted_price;
                 const showCta = (bState === 'live' || bState === 'imminent' || bState === 'soon') && externalUrl;
                 const anim = bState === 'live'
                   ? 'lot-status-pulse-green 2s ease-in-out infinite'
@@ -997,7 +994,11 @@ export default function OpportunityDetail() {
               })()}
 
               {/* Post-auction result */}
-              {showPostAuction && (
+              {(() => {
+                const postAuction = (lot as any).post_auction;
+                const showPostAuction = (lot.status === 'sold' || (lot as any).status === 'SOLD') && postAuction?.actual_hammer && postAuction?.predicted_price;
+                if (!showPostAuction) return null;
+                return (
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 16, marginBottom: 16 }}>
                   <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: 8 }}>
                     {isFr ? 'RÉSULTAT POST-VENTE' : 'POST-SALE RESULT'}
@@ -1024,7 +1025,8 @@ export default function OpportunityDetail() {
                     </div>
                   </div>
                 </div>
-              )}
+                );
+              })()}
 
               {/* Q1 — Verdict */}
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 16, marginBottom: 16 }}>
