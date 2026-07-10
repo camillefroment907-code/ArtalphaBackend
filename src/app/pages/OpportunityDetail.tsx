@@ -957,6 +957,10 @@ export default function OpportunityDetail() {
                 };
                 const c = cfgMap[bState] || cfgMap.upcoming;
                 const showCnt = (bState === 'imminent' || bState === 'soon') && cntStr;
+
+                // Post-auction result block
+                const postAuction = (lot as any).post_auction;
+                const showPostAuction = bState === 'sold' && postAuction?.actual_hammer && postAuction?.predicted_price;
                 const showCta = (bState === 'live' || bState === 'imminent' || bState === 'soon') && externalUrl;
                 const anim = bState === 'live'
                   ? 'lot-status-pulse-green 2s ease-in-out infinite'
@@ -991,6 +995,36 @@ export default function OpportunityDetail() {
                   </div>
                 );
               })()}
+
+              {/* Post-auction result */}
+              {showPostAuction && (
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 16, marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', marginBottom: 8 }}>
+                    {isFr ? 'RÉSULTAT POST-VENTE' : 'POST-SALE RESULT'}
+                  </div>
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>{isFr ? 'Nautilus estimait' : 'Nautilus estimated'}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
+                        {fmtExact(postAuction.predicted_price)}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>{isFr ? 'Adjugé' : 'Hammer'}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 700, color: '#4ade80' }}>
+                        {fmtExact(postAuction.actual_hammer)}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>{isFr ? 'Écart' : 'Gap'}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 700,
+                        color: Math.abs(postAuction.gap_pct) <= 15 ? '#4ade80' : '#FBBF24' }}>
+                        {postAuction.gap_pct > 0 ? '+' : ''}{postAuction.gap_pct}%
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Q1 — Verdict */}
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 16, marginBottom: 16 }}>

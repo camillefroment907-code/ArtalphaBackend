@@ -1780,6 +1780,28 @@ async def get_lot(
     lot_dict["consignment_alert"] = await get_consignment_alert(lot.artist_name_raw, str(lot.id), db)
     lot_dict["provenance_risk"] = await get_provenance_risk(lot, db)
 
+    # ── Post-auction result (score vs réalité) ──────────────────────────────
+    lot_dict["post_auction"] = None
+    try:
+        from app.models.db_models import ScorePerformance
+        sp_result = await db.execute(
+            select(ScorePerformance).where(ScorePerformance.lot_id == lot.id)
+        )
+        sp = sp_result.scalar_one_or_none()
+        if sp and sp.actual_hammer_price:
+            predicted = sp.predicted_price or 0
+            actual = float(sp.actual_hammer_price)
+            gap_pct = round((actual - predicted) / predicted * 100, 1) if predicted else None
+            lot_dict["post_auction"] = {
+                "predicted_price":    round(predicted) if predicted else None,
+                "actual_hammer":      round(actual),
+                "gap_pct":            gap_pct,
+                "prediction_correct": sp.prediction_correct,
+                "deal_score_at_time": sp.deal_score_at_prediction,
+            }
+    except Exception:
+        pass
+
     # ── Oracle signal (ArtistSignal) ──────────────────────────────────────────
     lot_dict["oracle"] = None
     if lot.artist_id:

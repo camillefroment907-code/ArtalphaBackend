@@ -1736,3 +1736,24 @@ async def _trigger_weekly_report_async():
     from app.jobs.weekly_report import send_weekly_report
     result = await send_weekly_report()
     logger.info("weekly_report_done", result=result)
+
+
+# ── Post-auction fill ─────────────────────────────────────────────────────────
+
+@celery_app.task(bind=True, max_retries=2, name="app.jobs.tasks.run_post_auction_fill")
+def run_post_auction_fill(self):
+    """Match past lots against hammer_prices and populate actual results."""
+    try:
+        asyncio.run(_run_post_auction_fill_async())
+    except Exception as exc:
+        logger.error("run_post_auction_fill failed", error=str(exc))
+        raise self.retry(exc=exc, countdown=300)
+
+
+async def _run_post_auction_fill_async():
+    from app.jobs.post_auction_fill import fill_post_auction_results
+    from app.database import BgSessionLocal as AsyncSessionLocal
+    async with AsyncSessionLocal() as db:
+        result = await fill_post_auction_results(db, limit=200)
+        await db.commit()
+        logger.info("post_auction_fill_done", result=result)

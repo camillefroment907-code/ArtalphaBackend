@@ -33,6 +33,12 @@ celery_app.conf.update(
             "schedule": crontab(minute="0", hour="6,18"),
             "options": {"queue": "default"},
         },
+        # Post-auction fill — toutes les 6h (match hammer prices après vente)
+        "post-auction-fill-6h": {
+            "task": "app.jobs.tasks.run_post_auction_fill",
+            "schedule": crontab(minute="45", hour="*/6"),
+            "options": {"queue": "scoring"},
+        },
         # Weekly report — Friday 18h UTC (20h Paris)
         "weekly-report-friday": {
             "task": "app.jobs.tasks.trigger_weekly_report",
