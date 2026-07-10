@@ -274,6 +274,7 @@ def run_daily_email_checks():
     - Annual subscription expiring (7 days)
     - Winback (7 days post-cancellation)
     """
+    _check_j1()
     _check_nps()
     _check_reengagement()
     _check_anniversaries()
@@ -284,6 +285,29 @@ def run_daily_email_checks():
     _check_winback()
     _check_payment_retry()
     _check_payment_dunning()
+
+
+def _check_j1():
+    """J+1 after signup: first analysis reminder."""
+    db = _get_sync_db()
+    now = datetime.utcnow()
+    cutoff_min = now - timedelta(hours=25)
+    cutoff_max = now - timedelta(hours=23)
+    try:
+        from sqlalchemy import text as _text
+        users = db.execute(
+            _text("SELECT id, email, full_name FROM users WHERE is_active = true AND created_at BETWEEN :cmin AND :cmax"),
+            {"cmin": cutoff_min, "cmax": cutoff_max}
+        ).fetchall()
+        for u in users:
+            try:
+                from app.services.email_retention import send_j1_email
+                _run(send_j1_email(u.email, u.full_name or u.email.split("@")[0]))
+                logger.info("j1_email_sent user=%s", u.email)
+            except Exception as e:
+                logger.error("j1_email_failed user=%s error=%s", u.email, e)
+    finally:
+        db.close()
 
 
 def _check_nps():

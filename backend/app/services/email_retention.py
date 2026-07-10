@@ -163,3 +163,52 @@ async def send_anniversary_email(
         html_email(content, "One year on Nautilus"),
         TRANSAC_FROM,
     )
+
+
+async def send_j1_email(to_email: str, name: str) -> bool:
+    """J+1 after signup — first analysis reminder."""
+    import resend
+    from app.config import get_settings
+    settings = get_settings()
+    if not settings.resend_api_key:
+        return False
+    resend.api_key = settings.resend_api_key
+    first = _first_name(name, to_email)
+    html = f"""
+    <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 40px 24px; color: #1a1a1a;">
+      <div style="font-size: 11px; letter-spacing: 0.15em; color: #9a8a6a; margin-bottom: 32px;">NAUTILUS · INTELLIGENCE MARCHÉ</div>
+      <h2 style="font-size: 22px; font-weight: 400; margin: 0 0 16px;">Bonjour {first},</h2>
+      <p style="font-size: 15px; line-height: 1.7; color: #444;">
+        Nautilus analyse en ce moment <strong>1 324 lots</strong> aux enchères en Europe.
+        Certains sont sous-estimés par rapport au marché — et ferment dans les prochains jours.
+      </p>
+      <p style="font-size: 15px; line-height: 1.7; color: #444;">
+        Copiez le lien d'un lot qui vous intéresse et demandez à Nautilus si le prix est juste.
+      </p>
+      <div style="margin: 32px 0;">
+        <a href="https://www.get-nautilus.com/app/market/opportunities"
+           style="background: #1a2744; color: white; padding: 14px 28px; text-decoration: none;
+                  font-size: 13px; font-weight: 600; letter-spacing: 0.05em;">
+          Voir les opportunités du moment →
+        </a>
+      </div>
+      <p style="font-size: 13px; color: #888; line-height: 1.6;">
+        Les lots scorés à 75+ ferment souvent au-dessus de leur estimation.<br>
+        Nautilus vous dit jusqu'où enchérir avant de surpayer.
+      </p>
+      <div style="margin-top: 48px; padding-top: 24px; border-top: 1px solid #e8e4dc;
+                  font-size: 11px; color: #aaa; letter-spacing: 0.08em;">
+        NAUTILUS · <a href="https://www.get-nautilus.com/app/alerts" style="color: #aaa;">Gérer mes alertes</a>
+      </div>
+    </div>
+    """
+    try:
+        resend.Emails.send({
+            "from": "Nautilus <intelligence@get-nautilus.com>",
+            "to": [to_email],
+            "subject": f"{first}, voici ce que Nautilus a trouvé pour vous",
+            "html": html,
+        })
+        return True
+    except Exception:
+        return False
