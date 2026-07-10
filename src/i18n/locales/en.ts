@@ -218,7 +218,7 @@ const en = {
     resume: 'Resume',
   },
   portfolio: {
-    title: 'Portfolio',
+    title: 'Collection',
     subtitle: 'Track your collection and manage your account',
     myCollection: 'My Collection',
     alerts: 'Alerts',

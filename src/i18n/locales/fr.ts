@@ -220,7 +220,7 @@ const fr: TranslationKeys = {
     resume: 'Reprendre',
   },
   portfolio: {
-    title: 'Portfolio',
+    title: 'Collection',
     subtitle: 'Suivez votre collection et gérez votre compte',
     myCollection: 'Ma Collection',
     alerts: 'Alertes',

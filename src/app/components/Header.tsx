@@ -17,10 +17,10 @@ function useIsMobile(breakpoint = 900) {
 const BACKEND = import.meta.env.VITE_API_URL || 'https://artalpha-backend-production.up.railway.app';
 
 const NAV_ITEMS = [
-  { label: 'Opportunités',    to: '/app/dashboard' },
-  { label: 'Mes analyses',    to: '/app/market'    },
-  { label: 'Portfolio',       to: '/app/portfolio' },
-  { label: 'Alertes',         to: '/app/alerts'    },
+  { label: 'Accueil',     to: '/app/dashboard'      },
+  { label: 'Marché',      to: '/app/market'         },
+  { label: 'Artistes',    to: '/app/market/artists' },
+  { label: 'Collection',  to: '/app/portfolio'      },
 ] as const;
 
 const PLAN_LABELS: Record<string, string> = {
@@ -98,12 +98,17 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
         location.pathname.startsWith('/app/opportunities')
       );
     }
+    if (to === '/app/market/artists') {
+      return (
+        location.pathname.startsWith('/app/market/artists') ||
+        location.pathname.startsWith('/app/artists')
+      );
+    }
     if (to === '/app/market') {
       return (
         location.pathname.startsWith('/app/market') ||
-        location.pathname.startsWith('/app/explore') ||
-        location.pathname.startsWith('/app/artists')
-      );
+        location.pathname.startsWith('/app/explore')
+      ) && !location.pathname.startsWith('/app/market/artists');
     }
     return location.pathname.startsWith(to);
   };
@@ -422,7 +427,7 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
           {/* Nav items — grouped */}
           {NAV_ITEMS.map((item, idx) => (
             <Fragment key={item.to}>
-              {idx === 2 && <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />}
+              {idx === 3 && <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />}
               <Link
                 key={item.to}
                 to={item.to}
