@@ -232,11 +232,24 @@ async def send_weekly_report() -> dict:
 
     async with BgSessionLocal() as db:
         # Top 5 live lots by deal score
+        from datetime import timedelta
+        from sqlalchemy import or_, and_
+
+        next_week = now + timedelta(days=7)
+
         lots_result = await db.execute(
             select(Lot)
             .where(
-                Lot.status == LotStatus.LIVE,
+                or_(
+                    Lot.status == LotStatus.LIVE,
+                    and_(
+                        Lot.status == LotStatus.UPCOMING,
+                        Lot.auction_date >= now,
+                        Lot.auction_date <= next_week,
+                    )
+                ),
                 Lot.deal_score.isnot(None),
+                Lot.deal_score >= 65,
             )
             .order_by(desc(Lot.deal_score))
             .limit(5)
@@ -244,13 +257,22 @@ async def send_weekly_report() -> dict:
         top_lots: List[Lot] = lots_result.scalars().all()
 
         if not top_lots:
-            logger.warning("[weekly_report] no live lots found — aborting")
+            logger.warning("[weekly_report] no lots found — aborting")
             return {"skipped": True, "reason": "no_lots"}
 
         # Stats
         stats_result = await db.execute(
             select(func.count(Lot.id), func.avg(Lot.deal_score))
-            .where(Lot.status == LotStatus.LIVE)
+            .where(
+                or_(
+                    Lot.status == LotStatus.LIVE,
+                    and_(
+                        Lot.status == LotStatus.UPCOMING,
+                        Lot.auction_date >= now,
+                        Lot.auction_date <= next_week,
+                    )
+                )
+            )
         )
         total_live, avg_score = stats_result.one()
         avg_score = float(avg_score or 0)
