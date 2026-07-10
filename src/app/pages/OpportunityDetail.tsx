@@ -674,15 +674,19 @@ export default function OpportunityDetail() {
   // Priority 3: same-artist comps median (only if ≥ estLow — avoids cheap-prints contamination)
   // Priority 4: estimate mid/high (auction house data — always available)
   const avoidAbove = (() => {
+    // Sanity ceiling: max_bid cannot exceed 30× current price (catches FX conversion bugs)
+    const _sanityMax = price > 0 ? price * 30 : null;
+    const _cap = (v: number | null) => (v && _sanityMax && v > _sanityMax) ? null : v;
+
     if (fairValueFromComps) {
       // Sanity floor: if comps-derived value < estLow, the medium mix is off — fall back to estimate
-      if (estLow && fairValueFromComps < estLow) return estimateMid ?? estHigh ?? null;
-      return fairValueFromComps;
+      if (estLow && fairValueFromComps < estLow) return _cap(estimateMid ?? estHigh ?? null);
+      return _cap(fairValueFromComps);
     }
-    if (marketAnalysis?.market_median_price) return Math.round(marketAnalysis.market_median_price);
-    if (marketAnalysis?.market_avg_price)    return Math.round(marketAnalysis.market_avg_price);
-    if (compsMedian && (!estLow || compsMedian >= estLow)) return compsMedian;
-    return estimateMid ?? estHigh ?? null;
+    if (marketAnalysis?.market_median_price) return _cap(Math.round(marketAnalysis.market_median_price));
+    if (marketAnalysis?.market_avg_price)    return _cap(Math.round(marketAnalysis.market_avg_price));
+    if (compsMedian && (!estLow || compsMedian >= estLow)) return _cap(compsMedian);
+    return _cap(estimateMid ?? estHigh ?? null);
   })();
   const avoidAboveIsEstimate = !fairValueFromComps && !marketAnalysis?.market_median_price && !marketAnalysis?.market_avg_price && !compsMedian;
   const maxBidIsReliable = !!fairValueFromComps || (!!maxBidFromApi && RELIABLE_SOURCES.includes(maxBidSource ?? ''));
