@@ -73,7 +73,21 @@ async def fill_post_auction_results(db: AsyncSession, limit: int = 100) -> dict:
     matched = 0
     unmatched = 0
 
+    # Keywords signalant une reproduction (pas un original)
+    _REPRODUCTION_KEYWORDS = [
+        'efter', 'nach', "d'après", 'after', 'attributed to',
+        'attribué', 'follower of', 'circle of', 'school of',
+        'manner of', 'studio of', 'workshop of', 'tillskriven',
+    ]
+
     for lot, sp in rows:
+        # Skip reproductions — their prices are not comparable to originals
+        title_lower = (lot.title or '').lower()
+        artist_lower = (lot.artist_name_raw or '').lower()
+        if any(kw in title_lower or kw in artist_lower for kw in _REPRODUCTION_KEYWORDS):
+            unmatched += 1
+            continue
+
         hammer_eur = await _find_hammer_price(lot, db)
 
         if hammer_eur is None:
@@ -141,30 +155,47 @@ async def _find_hammer_price(lot: Lot, db: AsyncSession) -> float | None:
     if hp:
         return hp.hammer_price_eur
 
-    # ── Pass 2: artist name + date window ───────────────────────────────────
+    # ── Pass 2: artist name + date window (strict matching) ─────────────────
     if not lot.artist_name_raw or not lot.auction_date:
         return None
 
-    # Use the first word of the artist name — most distinctive token
-    keyword = lot.artist_name_raw.strip().split()[0]
-    if len(keyword) < 3:
-        # Too short to be useful (e.g. "De", "Le") — use full name
-        keyword = lot.artist_name_raw.strip()
+    # Use full normalized artist name for strict matching
+    # Avoid first-word-only matching which causes cross-lot contamination
+    from app.jobs.quality_filter import normalize_artist_name as _norm
+    artist_normalized = _norm(lot.artist_name_raw)
+    if not artist_normalized or len(artist_normalized) < 4:
+        return None
 
-    window_start = lot.auction_date - timedelta(days=7)
-    window_end   = lot.auction_date + timedelta(days=7)
+    window_start = lot.auction_date - timedelta(days=3)
+    window_end   = lot.auction_date + timedelta(days=3)
 
-    hp2 = (await db.execute(
+    # Match on normalized artist name + auction house + date window
+    candidates = (await db.execute(
         select(HammerPrice).where(
             and_(
-                HammerPrice.artist_name.ilike(f"%{keyword}%"),
+                HammerPrice.artist_name.ilike(f"%{artist_normalized}%"),
                 HammerPrice.sale_date >= window_start,
                 HammerPrice.sale_date <= window_end,
                 HammerPrice.hammer_price_eur.isnot(None),
+                HammerPrice.hammer_price_eur > 0,
             )
         )
         .order_by(HammerPrice.sale_date)
-        .limit(1)
-    )).scalar_one_or_none()
+        .limit(5)
+    )).scalars().all()
 
-    return hp2.hammer_price_eur if hp2 else None
+    if not candidates:
+        return None
+
+    # If multiple candidates, pick the one closest to lot.current_price or estimate_low
+    ref_price = lot.current_price or lot.estimate_low
+    if not ref_price or len(candidates) == 1:
+        return candidates[0].hammer_price_eur
+
+    # Pick closest to reference price (avoids tier mismatch)
+    best = min(candidates, key=lambda h: abs(h.hammer_price_eur - ref_price))
+    # Sanity check: reject if >20x the reference price (likely wrong match)
+    if best.hammer_price_eur > ref_price * 20:
+        return None
+
+    return best.hammer_price_eur
