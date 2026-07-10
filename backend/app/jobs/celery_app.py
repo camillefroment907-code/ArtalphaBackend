@@ -33,6 +33,12 @@ celery_app.conf.update(
             "schedule": crontab(minute="0", hour="6,18"),
             "options": {"queue": "default"},
         },
+        # Refresh upcoming lot prices every 6h (live bids change frequently)
+        "refresh-upcoming-prices-6h": {
+            "task": "app.jobs.tasks.refresh_upcoming_prices",
+            "schedule": crontab(minute="30", hour="*/6"),
+            "options": {"queue": "default"},
+        },
         # Re-score existing lots every hour (prices change) — offset 5min from poll
         "rescore-live-lots-every-hour": {
             "task": "app.jobs.tasks.rescore_live_lots",

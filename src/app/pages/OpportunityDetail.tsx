@@ -1049,9 +1049,21 @@ export default function OpportunityDetail() {
                         ? Math.round((Date.now() - new Date(lot.updated_at).getTime()) / 3_600_000)
                         : null;
                       if (priceAgeHours === null || priceAgeHours <= 3) return null;
+                      const isStale = priceAgeHours > 24;
+                      const isVeryStale = priceAgeHours > 72;
+                      const ageLabel = priceAgeHours >= 48
+                        ? `${Math.round(priceAgeHours / 24)}j`
+                        : `${priceAgeHours}h`;
                       return (
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#9CA3AF', marginTop: '4px' }}>
-                          Mis à jour il y a {priceAgeHours}h · peut différer du prix live
+                        <div style={{
+                          fontFamily: 'var(--font-mono)', fontSize: '10px', marginTop: '4px',
+                          color: isVeryStale ? '#F59E0B' : isStale ? '#D97706' : '#9CA3AF',
+                          display: 'flex', alignItems: 'center', gap: 4,
+                        }}>
+                          {isStale && <span style={{ fontSize: 9 }}>⚠</span>}
+                          {isFr
+                            ? `Mis à jour il y a ${ageLabel} · prix live peut différer`
+                            : `Updated ${ageLabel} ago · live price may differ`}
                         </div>
                       );
                     })()}

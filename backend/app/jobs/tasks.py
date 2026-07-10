@@ -1631,3 +1631,90 @@ async def _generate_weekly_blog_async():
     async for db in get_db():
         await generate_blog_post_logic(db)
         break
+
+
+# ── Refresh upcoming lot prices ───────────────────────────────────────────────
+
+@celery_app.task(bind=True, max_retries=2, name="app.jobs.tasks.refresh_upcoming_prices")
+def refresh_upcoming_prices(self):
+    """
+    Refresh current_price for upcoming lots closing in the next 7 days.
+    Runs every 6h. Only updates lots with a known external_id from supported sources.
+    """
+    try:
+        asyncio.run(_refresh_upcoming_prices_async())
+    except Exception as exc:
+        logger.error("refresh_upcoming_prices failed", error=str(exc))
+        raise self.retry(exc=exc, countdown=300)
+
+
+async def _refresh_upcoming_prices_async():
+    from app.models.db_models import Lot
+    from app.database import BgSessionLocal as AsyncSessionLocal
+    from sqlalchemy import select, and_
+    from datetime import timedelta
+    import httpx
+
+    cutoff = datetime.utcnow() + timedelta(days=7)
+    now = datetime.utcnow()
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Lot)
+            .where(
+                and_(
+                    Lot.status.cast(String).in_(['upcoming', 'live']),
+                    Lot.auction_date >= now,
+                    Lot.auction_date <= cutoff,
+                    Lot.external_id.isnot(None),
+                )
+            )
+            .limit(500)
+        )
+        lots = result.scalars().all()
+        logger.info("refresh_upcoming_prices started", count=len(lots))
+
+        updated = 0
+        skipped = 0
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            for lot in lots:
+                try:
+                    ext_id = lot.external_id or ""
+
+                    # Auctionet: external_id = "auctionet-{numeric_id}"
+                    if ext_id.startswith("auctionet-"):
+                        item_id = ext_id.replace("auctionet-", "")
+                        resp = await client.get(
+                            f"https://auctionet.com/api/v2/items/{item_id}",
+                            headers={"Accept": "application/json"},
+                        )
+                        if resp.status_code != 200:
+                            skipped += 1
+                            continue
+                        data = resp.json()
+                        # current_price = highest_bid or starting_bid
+                        new_price = (
+                            data.get("current_bid_amount")
+                            or data.get("highest_bid_amount")
+                            or data.get("starting_bid_amount")
+                        )
+                        if new_price and float(new_price) != (lot.current_price or 0):
+                            lot.current_price = float(new_price)
+                            lot.updated_at = datetime.utcnow()
+                            updated += 1
+
+                    else:
+                        skipped += 1
+
+                except Exception as e:
+                    logger.warning("refresh_price_failed", lot_id=str(lot.id), error=str(e))
+                    skipped += 1
+
+        await session.commit()
+        logger.info(
+            "refresh_upcoming_prices done",
+            updated=updated,
+            skipped=skipped,
+            total=len(lots),
+        )
