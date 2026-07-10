@@ -75,8 +75,13 @@ def lot_to_list_dict(lot) -> dict:
     hammer, price_basis = _resolve_ref_price(lot)
     real_cost = None
     if hammer:
-        real_cost = compute_real_cost(hammer, lot.auction_house_name)
-        real_cost["ref_price"] = round(hammer)
+        # Convert hammer to EUR if lot is in a foreign currency
+        from app.lib.fx import get_rate as _fx_real_cost
+        _rc_currency = (lot.currency or "EUR").upper()
+        _rc_fx = _fx_real_cost(_rc_currency) or 1.0
+        hammer_eur = round(hammer * _rc_fx, 2)
+        real_cost = compute_real_cost(hammer_eur, lot.auction_house_name)
+        real_cost["ref_price"] = round(hammer_eur)
         real_cost["price_basis"] = price_basis
     return {
         "id": str(lot.id),
@@ -1760,8 +1765,12 @@ async def get_lot(
     lot_dict["dimensions_parsed"] = dims
     hammer, price_basis = _resolve_ref_price(lot)
     if hammer:
-        rc = compute_real_cost(hammer, lot.auction_house_name)
-        rc["ref_price"] = round(hammer)
+        from app.lib.fx import get_rate as _fx_serialize
+        _s_currency = (lot.currency or "EUR").upper()
+        _s_fx = _fx_serialize(_s_currency) or 1.0
+        hammer_eur_s = round(hammer * _s_fx, 2)
+        rc = compute_real_cost(hammer_eur_s, lot.auction_house_name)
+        rc["ref_price"] = round(hammer_eur_s)
         rc["price_basis"] = price_basis
         lot_dict["real_cost"] = rc
     else:
