@@ -121,6 +121,8 @@ def _build_display_estimate(
 
     low_d = Decimal(str(estimate_low))
     high_d = Decimal(str(estimate_high)) if estimate_high and estimate_high > 0 else None
+    if high_d is not None and high_d == low_d:
+        high_d = None  # identical bounds — display single value
 
     if native == "EUR":
         parts = f"{_fmt_eur(low_d)}–{_fmt_native_amount(high_d)}" if high_d is not None else _fmt_eur(low_d)
