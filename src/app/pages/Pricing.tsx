@@ -524,9 +524,6 @@ export default function Pricing() {
                   </div>
                 ) : plan.key === 'investor' ? (
                   <div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.28)', textDecoration: 'line-through', fontFamily: 'var(--font-mono)', marginBottom: '1px', letterSpacing: '0.04em' }}>
-                      €29/mo
-                    </div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '3px' }}>
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '36px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>
                         {isAnnual ? formatMoney(plan.annualPrice!, lang) : formatMoney(plan.price, lang)}
