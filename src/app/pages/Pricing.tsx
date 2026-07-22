@@ -13,7 +13,6 @@ interface Plan {
   annualPriceKey?: string;
   price: number;
   annualPrice?: number;
-  annualMonthly?: number;
   badge?: string;
   priceSubtext?: string;
   description: string;
@@ -46,9 +45,8 @@ const PLANS: Plan[] = [
     name: 'Investor',
     monthlyPriceKey: 'investor_monthly',
     annualPriceKey: 'investor_annual',
-    price: 10,
-    annualPrice: 96,
-    annualMonthly: 8,
+    price: 7.9,
+    annualPrice: 79,
     badge: 'FOUNDING MEMBER',
     priceSubtext: 'Limited to 100 spots · Price locked for life · Rises to €29 after launch',
     description: '',
@@ -73,8 +71,7 @@ const PLANS: Plan[] = [
     monthlyPriceKey: 'pro_monthly',
     annualPriceKey: 'pro_annual',
     price: 99,
-    annualPrice: 912,
-    annualMonthly: 76,
+    annualPrice: 990,
     description: 'For serious art investors.',
     highlight: false,
     cta: 'Go Pro →',
@@ -88,6 +85,31 @@ const PLANS: Plan[] = [
     ],
   },
 ];
+
+function formatMoney(price: number, lang: 'fr' | 'en'): string {
+  const num = price % 1 === 0
+    ? String(price)
+    : price.toFixed(2).replace('.', lang === 'fr' ? ',' : '.');
+  return lang === 'fr' ? `${num} €` : `€${num}`;
+}
+
+function getSavingsDisplay(plan: Plan, lang: 'fr' | 'en') {
+  const annualSavings = Number(
+    (plan.price * 12 - (plan.annualPrice ?? 0)).toFixed(2)
+  );
+  const annualSavingsMonthsExact = plan.price > 0 ? annualSavings / plan.price : 0;
+  const annualSavingsMonthsRounded = Math.round(annualSavingsMonthsExact);
+  const hasExactFreeMonths = annualSavingsMonthsRounded > 0
+    && Math.abs(annualSavingsMonthsExact - annualSavingsMonthsRounded) < 0.001;
+  const label = hasExactFreeMonths
+    ? (lang === 'fr'
+        ? `⭐ ${annualSavingsMonthsRounded} mois offert${annualSavingsMonthsRounded > 1 ? 's' : ''}`
+        : `⭐ ${annualSavingsMonthsRounded} month${annualSavingsMonthsRounded > 1 ? 's' : ''} free`)
+    : (lang === 'fr'
+        ? `Économisez ${annualSavings}€ par an`
+        : `Save €${annualSavings} per year`);
+  return { label, hasExactFreeMonths, annualSavingsMonthsRounded, annualSavings };
+}
 
 const COMPARE_ROWS = [
   { feature: 'Lots per day',            free: '5',             investor: 'Unlimited',      pro: 'Unlimited',   institutional: 'Custom'    },
@@ -109,7 +131,7 @@ const PT = {
   en: {
     pageTitle: 'Choose your level of access',
     pageSubtitle: 'From market discovery to full investment intelligence.',
-    monthly: 'Monthly', annual: 'Annual', save23: 'SAVE 23%',
+    monthly: 'Monthly', annual: 'Annual',
     currentPlan: 'CURRENT PLAN',
     foundingPrice: 'Founding price · locked for life',
     limitedSpots: 'Limited to 100 spots · Rises to €29 after launch',
@@ -135,7 +157,7 @@ const PT = {
   fr: {
     pageTitle: "Choisissez votre niveau d'accès",
     pageSubtitle: "De la découverte du marché à l'intelligence d'investissement complète.",
-    monthly: 'Mensuel', annual: 'Annuel', save23: 'ÉCONOMISEZ 23%',
+    monthly: 'Mensuel', annual: 'Annuel',
     currentPlan: 'PLAN ACTUEL',
     foundingPrice: 'Prix fondateur · garanti à vie',
     limitedSpots: 'Limité à 100 places · Passera à €29 au lancement',
@@ -177,12 +199,18 @@ export default function Pricing() {
   const { i18n } = useTranslation();
   const lang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
   const p = PT[lang];
+  const perMonth = lang === 'fr' ? '/ mois' : '/ month';
+  const perYear  = lang === 'fr' ? '/ an'   : '/ year';
+  const investorSavings = getSavingsDisplay(
+    PLANS.find(pl => pl.key === 'investor')!,
+    lang,
+  );
 
   useSEO({
     title: lang === 'fr' ? 'Tarifs · Nautilus' : 'Pricing · Nautilus',
     description: lang === 'fr'
-      ? "Accès gratuit, puis à partir de 10 €/mois. Essai 7 jours inclus. Intelligence de marché pour collectionneurs sérieux."
-      : 'Free access, then from €10/month. 7-day trial included. Art market intelligence for serious collectors.',
+      ? "Accès gratuit, puis à partir de 7,90 €/mois. Essai 7 jours inclus. Intelligence de marché pour collectionneurs sérieux."
+      : 'Free access, then from €7.90/month. 7-day trial included. Art market intelligence for serious collectors.',
     schema: {
       '@context': 'https://schema.org',
       '@type': 'Product',
@@ -191,7 +219,7 @@ export default function Pricing() {
       url: 'https://get-nautilus.com/pricing',
       offers: [
         { '@type': 'Offer', name: 'Explorer', price: '0', priceCurrency: 'EUR', availability: 'https://schema.org/InStock' },
-        { '@type': 'Offer', name: 'Investor', price: '19', priceCurrency: 'EUR', availability: 'https://schema.org/InStock' },
+        { '@type': 'Offer', name: 'Investor', price: '7.9', priceCurrency: 'EUR', availability: 'https://schema.org/InStock' },
         { '@type': 'Offer', name: 'Pro', price: '99', priceCurrency: 'EUR', availability: 'https://schema.org/InStock' },
       ],
     },
@@ -203,8 +231,8 @@ export default function Pricing() {
     fetch(`${BACKEND}/api/billing/subscription`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then(r => r.json())
-      .then(d => setCurrentPlan(d.plan || 'free'))
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then((d: any) => setCurrentPlan(d.plan || 'free'))
       .catch(() => {});
   }, []);
 
@@ -266,7 +294,9 @@ export default function Pricing() {
     }
   };
 
-  const effectivePlan = currentPlan === 'starter' ? 'investor' : currentPlan;
+  const effectivePlan = currentPlan === 'starter' ? 'investor'
+    : currentPlan === 'institutional' ? 'pro'
+    : currentPlan;
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -324,7 +354,7 @@ export default function Pricing() {
           >
             {p.annual}
             <span style={{ fontSize: '9px', fontWeight: 700, background: '#16A34A', color: 'white', padding: '2px 6px', borderRadius: '8px', letterSpacing: '0.05em', whiteSpace: 'nowrap' as const }}>
-              {p.save23}
+              {investorSavings.label}
             </span>
           </button>
         </div>
@@ -334,10 +364,11 @@ export default function Pricing() {
           {PLANS.map(plan => {
             const isOpen = openPlan === plan.key;
             const isHighlight = plan.highlight;
-            const annualSavings = plan.annualPrice ? (plan.price * 12 - plan.annualPrice) : 0;
-            const priceLabel = plan.key === 'free' ? '€0'
-              : plan.key === 'investor' ? (isAnnual ? '€8/mo' : '€10/mo')
-              : `€${isAnnual && plan.annualMonthly ? plan.annualMonthly : plan.price}/mo`;
+            const { label: savingsLabel } = getSavingsDisplay(plan, lang);
+            const priceLabel = plan.key === 'free' ? formatMoney(0, lang)
+              : isAnnual && plan.annualPrice
+                ? `${formatMoney(plan.annualPrice, lang)} ${perYear}`
+                : `${formatMoney(plan.price, lang)} ${perMonth}`;
             const features: string[] = (p.planFeatures as any)[plan.key] || plan.features;
             return (
               <div key={plan.key} style={{ border: isHighlight ? '2px solid var(--navy)' : '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', marginBottom: '8px', background: isHighlight ? 'var(--navy)' : 'white' }}>
@@ -367,17 +398,12 @@ export default function Pricing() {
                   <div style={{ padding: '0 16px 20px', borderTop: `1px solid ${isHighlight ? 'rgba(255,255,255,0.12)' : 'var(--border)'}` }}>
                     {/* Price detail */}
                     <div style={{ paddingTop: '14px', marginBottom: '14px' }}>
-                      {plan.key === 'investor' && isAnnual && (
-                        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', marginBottom: '4px' }}>
-                          €96/year · save €{annualSavings}/year
-                        </div>
-                      )}
                       {plan.key === 'investor' && (
                         <div style={{ fontSize: '11px', fontStyle: 'italic', color: 'rgba(198,168,90,0.75)' }}>{p.foundingPrice}</div>
                       )}
-                      {plan.key === 'pro' && isAnnual && plan.annualPrice && (
-                        <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-                          €{plan.annualPrice}/year · save €{annualSavings}/year
+                      {isAnnual && plan.annualPrice && (
+                        <div style={{ fontSize: '11px', color: isHighlight ? 'rgba(255,255,255,0.4)' : 'var(--text-3)', fontFamily: 'var(--font-mono)', marginBottom: '4px' }}>
+                          {savingsLabel}
                         </div>
                       )}
                     </div>
@@ -386,7 +412,9 @@ export default function Pricing() {
                     <div style={{ marginBottom: '16px' }}>
                       {plan.key === 'free' ? (
                         <button disabled style={{ width: '100%', height: '44px', borderRadius: '6px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', color: 'var(--text-3)', fontSize: '12px', fontWeight: 700, cursor: 'not-allowed', letterSpacing: '0.06em' }}>
-                          {(p.planCtas as any)[plan.key]}
+                          {effectivePlan === 'free'
+                            ? (p.planCtas as any)[plan.key]
+                            : (lang === 'fr' ? 'Accès gratuit' : 'Free access')}
                         </button>
                       ) : effectivePlan === plan.key ? (
                         <div style={{ width: '100%', height: '44px', borderRadius: '6px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', color: 'var(--electric)', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -427,7 +455,7 @@ export default function Pricing() {
           {PLANS.map(plan => {
             const isCurrentPlan = effectivePlan === plan.key;
             const isHighlight = plan.highlight;
-            const annualSavings = plan.annualPrice ? (plan.price * 12 - plan.annualPrice) : 0;
+            const { label: savingsLabel } = getSavingsDisplay(plan, lang);
 
             return (
               <div
@@ -491,7 +519,7 @@ export default function Pricing() {
                 ) : plan.key === 'free' ? (
                   <div style={{ marginBottom: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '36px', fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>€0</span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '36px', fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>{formatMoney(0, lang)}</span>
                     </div>
                   </div>
                 ) : plan.key === 'investor' ? (
@@ -501,13 +529,13 @@ export default function Pricing() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '3px' }}>
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '36px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>
-                        {isAnnual ? '€8' : '€10'}
+                        {isAnnual ? formatMoney(plan.annualPrice!, lang) : formatMoney(plan.price, lang)}
                       </span>
-                      <span style={{ fontSize: '13px', color: 'rgba(198,168,90,0.55)' }}>/mo</span>
+                      <span style={{ fontSize: '13px', color: 'rgba(198,168,90,0.55)' }}>{isAnnual ? perYear : perMonth}</span>
                     </div>
                     {isAnnual && (
                       <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', marginBottom: '2px' }}>
-                        €96/year · save €{annualSavings}/year
+                        {savingsLabel}
                       </div>
                     )}
                     <div style={{ fontSize: '11px', fontStyle: 'italic', color: 'rgba(198,168,90,0.75)', lineHeight: 1.3 }}>
@@ -518,13 +546,13 @@ export default function Pricing() {
                   <div style={{ marginBottom: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '36px', fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>
-                        €{isAnnual && plan.annualMonthly ? plan.annualMonthly : plan.price}
+                        {isAnnual && plan.annualPrice ? formatMoney(plan.annualPrice, lang) : formatMoney(plan.price, lang)}
                       </span>
-                      <span style={{ fontSize: '13px', color: 'var(--text-3)' }}>/mo</span>
+                      <span style={{ fontSize: '13px', color: 'var(--text-3)' }}>{isAnnual && plan.annualPrice ? perYear : perMonth}</span>
                     </div>
                     {isAnnual && plan.annualPrice && (
                       <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
-                        €{plan.annualPrice}/year · save €{annualSavings}/year
+                        {savingsLabel}
                       </div>
                     )}
                   </div>
@@ -555,7 +583,9 @@ export default function Pricing() {
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
-                      {(p.planCtas as any)[plan.key] || plan.cta}
+                      {effectivePlan === 'free'
+                        ? ((p.planCtas as any)[plan.key] || plan.cta)
+                        : (lang === 'fr' ? 'Accès gratuit' : 'Free access')}
                     </button>
                   ) : isCurrentPlan ? (
                     <div style={{ width: '100%', height: '48px', borderRadius: '6px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', color: 'var(--electric)', fontSize: '12px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' as const, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
