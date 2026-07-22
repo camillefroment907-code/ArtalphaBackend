@@ -844,40 +844,42 @@ async def _rescore_live_async():
                 logger.warning("Re-score failed for lot", lot_id=str(lot.id), error=str(e))
 
         # ── Status transitions (hourly) ───────────────────────────────────────
-        from sqlalchemy import and_ as _and_
+        from sqlalchemy import and_ as _and_, update as _update
         now = datetime.utcnow()
         window_start = now - timedelta(hours=4)
 
         # upcoming + auction_date in the last 4h → LIVE (sale just started)
         live_result = await session.execute(
-            select(Lot).where(
+            _update(Lot)
+            .where(
                 _and_(
                     Lot.auction_date < now,
                     Lot.auction_date >= window_start,
                     Lot.status.cast(String) == 'upcoming',
                 )
             )
+            .values(status=cast(literal(LotStatus.LIVE.value), PGEnum(name='lotstatus', create_constraint=False)))
+            .returning(Lot.id)
         )
-        live_lots = live_result.scalars().all()
-        for lot in live_lots:
-            lot.status = LotStatus.LIVE
-        if live_lots:
-            logger.info("Marked lots as LIVE", count=len(live_lots))
+        live_count = len(live_result.fetchall())
+        if live_count:
+            logger.info("Marked lots as LIVE", count=live_count)
 
         # upcoming or live + auction_date older than 4h → SOLD (sale ended)
         expired_result = await session.execute(
-            select(Lot).where(
+            _update(Lot)
+            .where(
                 _and_(
                     Lot.auction_date < window_start,
                     Lot.status.cast(String).in_(['upcoming', 'live']),
                 )
             )
+            .values(status=cast(literal(LotStatus.SOLD.value), PGEnum(name='lotstatus', create_constraint=False)))
+            .returning(Lot.id)
         )
-        expired_lots = expired_result.scalars().all()
-        for lot in expired_lots:
-            lot.status = LotStatus.SOLD
-        if expired_lots:
-            logger.info("Marked expired lots as SOLD", count=len(expired_lots))
+        expired_count = len(expired_result.fetchall())
+        if expired_count:
+            logger.info("Marked expired lots as SOLD", count=expired_count)
 
         await session.commit()
         logger.info("Re-score complete")
