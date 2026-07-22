@@ -206,7 +206,8 @@ export default function Landing() {
             score:  Math.round(l.deal_score || 0),
             house:  l.auction_house_name || 'Auction',
             est:    l.estimate_low
-              ? `€${l.estimate_low >= 1000 ? Math.round(l.estimate_low / 1000) + 'K' : l.estimate_low}–${l.estimate_high >= 1000 ? Math.round(l.estimate_high / 1000) + 'K' : l.estimate_high}`
+              ? `€${l.estimate_low >= 1000 ? Math.round(l.estimate_low / 1000) + 'K' : l.estimate_low}` +
+                (l.estimate_high ? `–${l.estimate_high >= 1000 ? Math.round(l.estimate_high / 1000) + 'K' : l.estimate_high}` : '+')
               : '',
           }));
           setTickerItems(real.slice(0, 10));
