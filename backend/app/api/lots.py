@@ -70,6 +70,77 @@ def _resolve_projection_price(lot) -> tuple[float | None, str]:
     return None, "none"
 
 
+def _build_display_estimate(
+    estimate_low: "Optional[float]",
+    estimate_high: "Optional[float]",
+    currency: "Optional[str]",
+    hammer_price: "Optional[float]",
+) -> "tuple[str, str, bool]":
+    """
+    Build a display-ready estimate string for the public landing page.
+
+    Returns (display_estimate, display_currency, conversion_applied).
+      display_estimate  : e.g. "Est. €1.2K–1.8K" or "Est. 4K–6K SEK", or "".
+      display_currency  : "EUR" when converted; native code when not convertible.
+      conversion_applied: True only when a foreign→EUR conversion occurred.
+
+    Rules
+    -----
+    - Garde-fou: hammer_price IS NOT NULL → return ("", native, False).
+      Applies even if the caller's WHERE clause already filters sold lots.
+    - Only currencies listed in EUR_EXCHANGE_RATES are converted.
+      Unknown currencies fall back to native display (no invented rates).
+    - All arithmetic uses Decimal; no float intermediate values.
+    - < 1000 → integer "€450"; ≥ 1000 → compact "€1.2K" (trailing zero stripped).
+    """
+    from decimal import Decimal, ROUND_HALF_UP
+    from app.utils.exchange_rates import EUR_EXCHANGE_RATES
+
+    # Garde-fou: sold lots must never be displayed here
+    if hammer_price is not None:
+        return "", (currency or "EUR").upper(), False
+
+    if not estimate_low or estimate_low <= 0:
+        return "", (currency or "EUR").upper(), False
+
+    native = (currency or "EUR").upper()
+    rate = EUR_EXCHANGE_RATES.get(native)
+
+    def _fmt_eur(amount: Decimal) -> str:
+        if amount < Decimal("1000"):
+            return f"€{int(amount.to_integral_value(ROUND_HALF_UP))}"
+        k = (amount / Decimal("1000")).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+        return f"€{str(k).rstrip('0').rstrip('.')}K"
+
+    def _fmt_native_amount(amount: Decimal) -> str:
+        """Amount only, no symbol — used when building native-currency ranges."""
+        if amount < Decimal("1000"):
+            return str(int(amount.to_integral_value(ROUND_HALF_UP)))
+        k = (amount / Decimal("1000")).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+        return f"{str(k).rstrip('0').rstrip('.')}K"
+
+    low_d = Decimal(str(estimate_low))
+    high_d = Decimal(str(estimate_high)) if estimate_high and estimate_high > 0 else None
+
+    if native == "EUR":
+        parts = f"{_fmt_eur(low_d)}–{_fmt_eur(high_d)}" if high_d is not None else _fmt_eur(low_d)
+        return f"Est. {parts}", "EUR", False
+
+    if rate is not None:
+        low_eur = low_d * rate
+        high_eur = high_d * rate if high_d is not None else None
+        parts = f"{_fmt_eur(low_eur)}–{_fmt_eur(high_eur)}" if high_eur is not None else _fmt_eur(low_eur)
+        return f"Est. {parts}", "EUR", True
+
+    # Unknown currency — native display, no conversion
+    parts = (
+        f"{_fmt_native_amount(low_d)}–{_fmt_native_amount(high_d)} {native}"
+        if high_d is not None
+        else f"{_fmt_native_amount(low_d)} {native}"
+    )
+    return f"Est. {parts}", native, False
+
+
 def lot_to_list_dict(lot) -> dict:
     """Minimal lot payload for list views — skip heavy fields."""
     hammer, price_basis = _resolve_ref_price(lot)
@@ -1646,6 +1717,18 @@ async def get_auction_calendar(
 
 # ── Public endpoint (no auth) — MUST be before /{lot_id} to avoid route shadowing ──────────────
 
+def _public_lot(lot) -> dict:
+    """Extend lot_to_list_dict with display_estimate fields for the landing page."""
+    d = lot_to_list_dict(lot)
+    display_estimate, display_currency, conversion_applied = _build_display_estimate(
+        lot.estimate_low, lot.estimate_high, lot.currency, lot.hammer_price
+    )
+    d["display_estimate"]   = display_estimate
+    d["display_currency"]   = display_currency
+    d["conversion_applied"] = conversion_applied
+    return d
+
+
 @router.get("/public")
 async def get_public_lots(
     limit: int = Query(default=8, le=12),
@@ -1665,13 +1748,14 @@ async def get_public_lots(
                 Lot.image_url.isnot(None),
                 Lot.hammer_price.is_(None),
                 Lot.auction_date >= datetime.utcnow(),
+                Lot.status.cast(String).in_(["upcoming", "live"]),
             )
         )
         .order_by(desc(order_col))
         .limit(limit)
     )
     lots = result.scalars().all()
-    return {"lots": [lot_to_list_dict(lot) for lot in lots]}
+    return {"lots": [_public_lot(lot) for lot in lots]}
 
 
 @router.get("/closing-today")

@@ -205,10 +205,7 @@ export default function Landing() {
             title:  l.title || 'Untitled',
             score:  Math.round(l.deal_score || 0),
             house:  l.auction_house_name || 'Auction',
-            est:    l.estimate_low
-              ? `€${l.estimate_low >= 1000 ? Math.round(l.estimate_low / 1000) + 'K' : l.estimate_low}` +
-                (l.estimate_high ? `–${l.estimate_high >= 1000 ? Math.round(l.estimate_high / 1000) + 'K' : l.estimate_high}` : '+')
-              : '',
+            est:    l.display_estimate || '',
           }));
           setTickerItems(real.slice(0, 10));
         }
@@ -337,6 +334,7 @@ export default function Landing() {
 
       {/* ── LIVE TICKER ── */}
       {tickerItems.length > 0 && (
+        <>
         <div style={{ background: 'var(--bg-deep, #0C1622)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0', overflow: 'hidden', height: '36px', display: 'flex', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, padding: '0 14px', height: '100%', background: 'rgba(198,168,90,0.15)', borderRight: '1px solid rgba(198,168,90,0.2)' }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34D399', marginRight: '6px', animation: 'pulseDot 2s infinite' }} />
@@ -359,7 +357,7 @@ export default function Landing() {
                   {item.est && (
                     <>
                       <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
-                      <span style={{ color: 'rgba(255,255,255,0.5)' }}>Est. {item.est}</span>
+                      <span style={{ color: 'rgba(255,255,255,0.5)' }}>{item.est}</span>
                     </>
                   )}
                 </span>
@@ -367,6 +365,12 @@ export default function Landing() {
             </div>
           </div>
         </div>
+        <div style={{ background: 'var(--bg-deep, #0C1622)', textAlign: 'center', padding: '4px 0 5px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-mono)' }}>
+            {isFr ? 'Estimations converties en euros à titre indicatif.' : 'Estimates converted to EUR for reference.'}
+          </span>
+        </div>
+        </>
       )}
 
       {/* ── HERO ── */}
