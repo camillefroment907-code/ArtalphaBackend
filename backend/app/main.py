@@ -224,8 +224,9 @@ app = FastAPI(
     title="Nautilus — AI Auction Deal Finder",
     description="Detect underpriced auction lots across major platforms",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None if settings.environment == "production" else "/docs",
+    redoc_url=None if settings.environment == "production" else "/redoc",
+    openapi_url=None if settings.environment == "production" else "/openapi.json",
     lifespan=lifespan,
 )
 
