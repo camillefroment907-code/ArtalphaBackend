@@ -51,6 +51,7 @@ from app.api.copilot import router as copilot_router
 from app.api.collection_os import router as collection_os_router
 from app.routers.cycle import router as cycle_router
 from app.routers.upside import router as upside_router
+from app.api.market_signals import router as market_signals_router
 
 settings = get_settings()
 
@@ -284,34 +285,12 @@ app.include_router(collection_router,       prefix="/api")
 app.include_router(collection_os_router,    prefix="/api")
 app.include_router(cycle_router,            prefix="/api")
 app.include_router(upside_router,           prefix="/api")
+app.include_router(market_signals_router,   prefix="/api")
 
 
 @app.get("/")
 async def root():
     return {"name": "Nautilus API", "version": "5.0.0", "docs": "/docs", "status": "operational"}
-
-
-@app.get("/api/proxy/image")
-async def proxy_image(url: str):
-    import httpx
-    from fastapi.responses import Response
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-        "Referer": "https://www.artsy.net/",
-        "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
-    }
-    try:
-        async with httpx.AsyncClient() as client:
-            r = await client.get(
-                url, headers=headers,
-                follow_redirects=True, timeout=15
-            )
-        content_type = r.headers.get("content-type", "")
-        if r.status_code != 200 or not content_type.startswith("image/"):
-            return Response(status_code=404)
-        return Response(content=r.content, media_type=content_type)
-    except Exception:
-        return Response(status_code=404)
 
 
 @app.get("/health")
