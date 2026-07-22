@@ -2,6 +2,15 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { setUser } from '../../lib/auth';
 
+function parseJwt(token: string): Record<string, any> {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(base64));
+  } catch {
+    return {};
+  }
+}
+
 export default function GoogleCallback() {
   const navigate = useNavigate();
 
@@ -18,14 +27,16 @@ export default function GoogleCallback() {
       return;
     }
 
+    const payload = parseJwt(token);
+
     setUser({
       id: user_id ?? '',
       email,
       name: email,
       plan: plan as any,
       token,
-      trial_end: null,
-      trial_active: false,
+      trial_end: payload.trial_end ?? null,
+      trial_active: payload.trial_active ?? false,
     });
 
     if (is_new_user) {

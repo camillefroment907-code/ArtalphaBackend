@@ -1,4 +1,5 @@
 import { X, Check, Lock } from 'lucide-react';
+import { getUser, isTrialActive } from '../../lib/auth';
 
 interface PaywallModalProps {
   onClose: () => void;
@@ -9,6 +10,9 @@ interface PaywallModalProps {
 }
 
 export function PaywallModal({ onClose, onSubscribe, onUpgrade, viewedCount, maxFree }: PaywallModalProps) {
+  const user = getUser();
+  const trialExpired = user?.trial_end != null && !isTrialActive();
+
   const benefits = [
     'All undervalued artworks',
     'Full investment analysis',
@@ -94,7 +98,9 @@ export function PaywallModal({ onClose, onSubscribe, onUpgrade, viewedCount, max
           {/* Footer */}
           <div className="mt-8 text-center">
             <p className="text-[13px]" style={{ color: '#999999' }}>
-              Start your 7-day free trial
+              {trialExpired
+                ? 'Your free trial has ended — subscribe to continue'
+                : 'Start your 7-day free trial'}
             </p>
           </div>
         </div>
