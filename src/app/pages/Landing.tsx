@@ -365,11 +365,6 @@ export default function Landing() {
             </div>
           </div>
         </div>
-        <div style={{ background: 'var(--bg-deep, #0C1622)', textAlign: 'center', padding: '4px 0 5px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-mono)' }}>
-            {isFr ? 'Estimations converties en euros à titre indicatif.' : 'Estimates converted to EUR for reference.'}
-          </span>
-        </div>
         </>
       )}
 
