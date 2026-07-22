@@ -133,7 +133,7 @@ const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
 
       {/* Logo */}
       <Link to={getToken() ? '/app/dashboard' : '/'} style={{ textDecoration: 'none', flexShrink: 0 }}>
-        <Logo variant="horizontal" color="dark" size={28} />
+        <Logo variant="horizontal" color="dark" size={34} />
       </Link>
 
       {/* ── Mobile hamburger ── */}
