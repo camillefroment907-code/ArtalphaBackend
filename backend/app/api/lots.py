@@ -141,6 +141,19 @@ def _build_display_estimate(
     return f"Est. {parts}", native, False
 
 
+def _estimate_low_eur(estimate_low: float, currency: "Optional[str]") -> "Optional[float]":
+    """Return estimate_low converted to EUR using static rates, or None if currency unknown."""
+    from decimal import Decimal
+    from app.utils.exchange_rates import EUR_EXCHANGE_RATES
+    native = (currency or "EUR").upper()
+    if native == "EUR":
+        return float(estimate_low)
+    rate = EUR_EXCHANGE_RATES.get(native)
+    if rate is None:
+        return None
+    return float(Decimal(str(estimate_low)) * rate)
+
+
 def lot_to_list_dict(lot) -> dict:
     """Minimal lot payload for list views — skip heavy fields."""
     hammer, price_basis = _resolve_ref_price(lot)
@@ -1733,29 +1746,72 @@ def _public_lot(lot) -> dict:
 async def get_public_lots(
     limit: int = Query(default=8, le=12),
     sort: str = "deal_score",
+    min_eur: float = Query(default=0.0, ge=0),
+    max_eur: float = Query(default=0.0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
-    """Returns top lots for landing page preview — public, max 12."""
+    """Returns top lots for landing page preview — public, max 12.
+
+    Optional EUR price filter applied on estimate_low after currency conversion:
+      ?min_eur=100&max_eur=1000 — only lots whose estimate_low converts to [100, 1000]€.
+    When filter_eur is active:
+      - Score threshold loosened to >= 65, excluding known fallback scores (74, 69, 64).
+      - Lots without auction_date are included (upcoming lots with unknown sale date).
+      - Lots in unknown currencies are excluded.
+    """
     from sqlalchemy import desc
 
     order_col = Lot.deal_score if sort == "deal_score" else Lot.created_at
+    filter_eur = min_eur > 0 or max_eur > 0
+    fetch_limit = min(limit * 15, 100) if filter_eur else limit
+
+    if filter_eur:
+        score_filter = and_(
+            Lot.deal_score >= 65,
+            Lot.deal_score.notin_([74, 69, 64]),
+        )
+        date_filter = or_(
+            Lot.auction_date >= datetime.utcnow(),
+            Lot.auction_date.is_(None),
+        )
+    else:
+        score_filter = Lot.deal_score >= 75
+        date_filter = Lot.auction_date >= datetime.utcnow()
 
     result = await db.execute(
         select(Lot)
         .where(
             and_(
-                Lot.deal_score >= 75,
+                score_filter,
                 Lot.image_url.isnot(None),
                 Lot.hammer_price.is_(None),
-                Lot.auction_date >= datetime.utcnow(),
+                date_filter,
                 Lot.status.cast(String).in_(["upcoming", "live"]),
                 Lot.title.notilike("%efter%"),
             )
         )
         .order_by(desc(order_col))
-        .limit(limit)
+        .limit(fetch_limit)
     )
     lots = result.scalars().all()
+
+    if filter_eur:
+        filtered = []
+        for lot in lots:
+            if not lot.estimate_low or lot.estimate_low <= 0:
+                continue
+            eur_val = _estimate_low_eur(float(lot.estimate_low), lot.currency)
+            if eur_val is None:
+                continue  # unknown currency — exclude when price filter active
+            if min_eur > 0 and eur_val < min_eur:
+                continue
+            if max_eur > 0 and eur_val > max_eur:
+                continue
+            filtered.append(lot)
+            if len(filtered) >= limit:
+                break
+        lots = filtered
+
     return {"lots": [_public_lot(lot) for lot in lots]}
 
 

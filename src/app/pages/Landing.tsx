@@ -29,6 +29,7 @@ const MOCK_LOTS = [
     score: 77,
     auction_house_name: 'Stockholms Auktionsverk Helsinki',
     image_url: 'https://images.auctionet.com/thumbs/w640_item_4985512_956299f06a.jpg',
+    display_estimate: 'Est. €400–600',
   },
 ];
 
@@ -43,6 +44,7 @@ function NautilusMockup({ lots = [], isFr = false }: { lots: any[]; isFr?: boole
   const getArtist = (l: any) => (l.artist_name_raw ?? l.artist ?? '').toUpperCase();
   const getTitle  = (l: any) => l.title ?? '';
   const getPrice  = (l: any) => {
+    if (l.display_estimate) return l.display_estimate;
     if (l.estimate_low != null) {
       const v = l.estimate_low;
       return v >= 1000 ? `€${Math.round(v / 1000)}K` : `€${Math.round(v)}`;
@@ -199,7 +201,7 @@ export default function Landing() {
 
   useEffect(() => {
     // Public top lots for landing page preview (no auth required)
-    fetch(`${BACKEND}/api/lots/public?limit=3&sort=deal_score`)
+    fetch(`${BACKEND}/api/lots/public?limit=3&sort=deal_score&min_eur=100&max_eur=1000`)
       .then(r => r.json())
       .then(data => {
         const items = data.lots || [];
