@@ -21,12 +21,18 @@ const SEED_TICKER = [
 ];
 
 const MOCK_LOTS = [
-  { artist: 'MARC CHAGALL', title: 'Moses and the Burning Bush', price: '€750', score: 86 },
-  { artist: 'JOAN MIRÓ', title: 'Personnage I Estels V', price: '€1,500', score: 82 },
-  { artist: 'DAVID DRISKELL', title: 'Echoes', price: '€500', score: 79 },
+  {
+    artist: 'ALFRED WILLIAM FINCH',
+    title: 'Kvinna i röd dräkt',
+    estimate_low: 400,
+    estimate_high: 600,
+    score: 77,
+    auction_house_name: 'Stockholms Auktionsverk Helsinki',
+    image_url: 'https://images.auctionet.com/thumbs/w640_item_4985512_956299f06a.jpg',
+  },
 ];
 
-function NautilusMockup({ lots = [] }: { lots: any[] }) {
+function NautilusMockup({ lots = [], isFr = false }: { lots: any[]; isFr?: boolean }) {
   const [activeCard, setActiveCard] = useState(0);
   const [showScore, setShowScore]   = useState(false);
   const [showBrief, setShowBrief]   = useState(false);
@@ -104,8 +110,8 @@ function NautilusMockup({ lots = [] }: { lots: any[] }) {
             <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(10,22,40,0.85)', padding: '3px 7px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: 'white', opacity: showScore ? 1 : 0, transition: 'opacity 0.3s ease' }}>
               {score}/100
             </div>
-            <div style={{ position: 'absolute', top: '8px', left: '8px', background: '#C6A85A', padding: '2px 6px', borderRadius: '3px', fontSize: '8px', fontWeight: 700, color: 'white', fontFamily: 'var(--font-mono)', opacity: showScore ? 1 : 0, transition: 'opacity 0.3s ease 0.1s' }}>
-              EXCEPTIONAL
+            <div style={{ position: 'absolute', top: '8px', left: '8px', background: lots.length === 0 ? '#1B4FCC' : '#C6A85A', padding: '2px 6px', borderRadius: '3px', fontSize: '8px', fontWeight: 700, color: 'white', fontFamily: 'var(--font-mono)', opacity: showScore ? 1 : 0, transition: 'opacity 0.3s ease 0.1s' }}>
+              {lots.length === 0 ? (isFr ? 'Exemple réel' : 'Real example') : 'EXCEPTIONAL'}
             </div>
           </div>
           <div style={{ padding: '10px 12px', opacity: fade ? 1 : 0, transition: 'opacity 0.3s ease' }}>
@@ -408,7 +414,7 @@ export default function Landing() {
 
         {/* Right — animated product mockup */}
         <div className="landing-hero-right" style={{ position: 'relative', animation: 'fadeIn 0.6s ease 0.3s both' }}>
-          <NautilusMockup lots={topLots} />
+          <NautilusMockup lots={topLots} isFr={isFr} />
 
           {/* Floating badge — top right */}
           <div style={{ position: 'absolute', top: '-16px', right: '-20px', background: 'white', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 14px', boxShadow: '0 8px 32px rgba(10,22,40,0.12)', textAlign: 'center', minWidth: '110px' }}>
