@@ -201,14 +201,14 @@ export default function Landing() {
 
   useEffect(() => {
     // Public top lots for landing page preview (no auth required)
-    fetch(`${BACKEND}/api/lots/public?limit=3&sort=deal_score&min_eur=100&max_eur=1000`)
+    fetch(`${BACKEND}/api/lots/public?limit=10&sort=deal_score&min_eur=100&max_eur=1000`)
       .then(r => r.json())
       .then(data => {
         const items = data.lots || [];
         setTopLots(items.slice(0, 3));
         // Replace ticker with real data
-        if (items.length >= 3) {
-          const real = items.slice(0, 8).map((l: any) => ({
+        if (items.length >= 1) {
+          const real = items.map((l: any) => ({
             artist: l.artist_name_raw || 'Unknown Artist',
             title:  l.title || 'Untitled',
             score:  Math.round(l.deal_score || 0),
