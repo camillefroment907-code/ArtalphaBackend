@@ -205,7 +205,7 @@ export default function Landing() {
       .then(r => r.json())
       .then(data => {
         const items = data.lots || [];
-        setTopLots(items.slice(0, 3));
+        setTopLots(items.slice(0, 10));
         // Replace ticker with real data
         if (items.length >= 1) {
           const real = items.map((l: any) => ({
