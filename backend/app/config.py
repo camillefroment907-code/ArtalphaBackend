@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from functools import lru_cache
 from typing import Optional
 
@@ -30,6 +30,21 @@ class Settings(BaseSettings):
         if len(v) < 32:
             raise ValueError('JWT_SECRET must be at least 32 characters — set a strong secret in environment variables')
         return v
+
+    @model_validator(mode="after")
+    def check_production_secrets(self) -> "Settings":
+        if self.environment == "production":
+            if self.jwt_secret == "change-me-in-production-set-a-secure-key":
+                raise ValueError(
+                    "JWT_SECRET must be overridden in production — "
+                    "the default value is not secure. Set JWT_SECRET in Railway env vars."
+                )
+            if self.admin_emails in ("demo@artalpha.io", ""):
+                raise ValueError(
+                    "ADMIN_EMAILS must be overridden in production — "
+                    'default "demo@artalpha.io" is not valid. Set ADMIN_EMAILS in Railway env vars.'
+                )
+        return self
 
     @field_validator('supabase_url', mode='before')
     @classmethod

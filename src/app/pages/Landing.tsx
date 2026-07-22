@@ -21,9 +21,9 @@ const SEED_TICKER = [
 ];
 
 const MOCK_LOTS = [
-  { artist: 'MARC CHAGALL', title: 'Moses and the Burning Bush', price: '€750', score: 86, upside: '+62%' },
-  { artist: 'JOAN MIRÓ', title: 'Personnage I Estels V', price: '€1,500', score: 82, upside: '+44%' },
-  { artist: 'DAVID DRISKELL', title: 'Echoes', price: '€500', score: 79, upside: '+50%' },
+  { artist: 'MARC CHAGALL', title: 'Moses and the Burning Bush', price: '€750', score: 86 },
+  { artist: 'JOAN MIRÓ', title: 'Personnage I Estels V', price: '€1,500', score: 82 },
+  { artist: 'DAVID DRISKELL', title: 'Echoes', price: '€500', score: 79 },
 ];
 
 function NautilusMockup({ lots = [] }: { lots: any[] }) {
@@ -113,9 +113,11 @@ function NautilusMockup({ lots = [] }: { lots: any[] }) {
             <div style={{ fontFamily: 'Georgia, serif', fontSize: '12px', color: 'var(--text)', marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{price}</span>
-              <span style={{ fontSize: '9px', fontWeight: 700, color: '#2563EB', background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', padding: '2px 6px', borderRadius: '3px', fontFamily: 'var(--font-mono)', opacity: showScore ? 1 : 0, transition: 'opacity 0.3s ease 0.2s' }}>
-                {upside}
-              </span>
+              {upside && (
+                <span style={{ fontSize: '9px', fontWeight: 700, color: '#2563EB', background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', padding: '2px 6px', borderRadius: '3px', fontFamily: 'var(--font-mono)', opacity: showScore ? 1 : 0, transition: 'opacity 0.3s ease 0.2s' }}>
+                  {upside}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -135,7 +137,7 @@ function NautilusMockup({ lots = [] }: { lots: any[] }) {
               <div style={{ fontSize: '8px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getArtist(l).split(' ').slice(-1)[0]}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700, color: 'var(--text)' }}>{getScore(l)}/100</span>
-                <span style={{ fontSize: '8px', color: '#2563EB', fontWeight: 700 }}>{getUpside(l)}</span>
+                {getUpside(l) && <span style={{ fontSize: '8px', color: '#2563EB', fontWeight: 700 }}>{getUpside(l)}</span>}
               </div>
             </div>
           ))}
@@ -146,10 +148,18 @@ function NautilusMockup({ lots = [] }: { lots: any[] }) {
       <div style={{ margin: '0 16px 16px', background: 'var(--navy)', borderRadius: '8px', padding: '12px 14px', opacity: showBrief ? 1 : 0, transform: showBrief ? 'translateY(0)' : 'translateY(8px)', transition: 'all 0.4s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
           <span style={{ fontSize: '10px', fontWeight: 700, color: 'white' }}>◆ AI Analysis</span>
-          <span style={{ fontSize: '8px', color: '#34D399', fontFamily: 'var(--font-mono)', background: 'rgba(52,211,153,0.15)', padding: '1px 5px', borderRadius: '2px' }}>LIVE</span>
+          {lots.length > 0 ? (
+            <span style={{ fontSize: '8px', color: '#34D399', fontFamily: 'var(--font-mono)', background: 'rgba(52,211,153,0.15)', padding: '1px 5px', borderRadius: '2px' }}>LIVE</span>
+          ) : (
+            <span style={{ fontSize: '8px', color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)', background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: '2px' }}>APERÇU</span>
+          )}
         </div>
         <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, opacity: fade ? 1 : 0, transition: 'opacity 0.3s ease' }}>
-          {artist ? `${artist.split(' ').slice(-1)[0]} scored ${score}/100 — priced ${upside} below estimate. Strong conviction signal.` : 'Analysing current market conditions...'}
+          {artist
+            ? lots.length > 0
+              ? `${artist.split(' ').slice(-1)[0]} scored ${score}/100${upside ? ` — priced ${upside} below estimate` : ''}. Strong conviction signal.`
+              : `${artist.split(' ').slice(-1)[0]} · Score ${score}/100`
+            : 'Analysing current market conditions...'}
         </div>
       </div>
 
@@ -174,7 +184,7 @@ export default function Landing() {
   const navigate = useNavigate();
   const [topLots, setTopLots]               = useState<any[]>([]);
   const [weeklyStats, setWeeklyStats]       = useState<any>(null);
-  const [tickerItems, setTickerItems]       = useState(SEED_TICKER);
+  const [tickerItems, setTickerItems]       = useState<typeof SEED_TICKER>([]);
   const [lotCount, setLotCount]             = useState<number | null>(null);
   const [showStickyCTA, setShowStickyCTA]   = useState(false);
   const [menuOpen, setMenuOpen]             = useState(false);
@@ -199,7 +209,7 @@ export default function Landing() {
               ? `€${l.estimate_low >= 1000 ? Math.round(l.estimate_low / 1000) + 'K' : l.estimate_low}–${l.estimate_high >= 1000 ? Math.round(l.estimate_high / 1000) + 'K' : l.estimate_high}`
               : '',
           }));
-          setTickerItems([...real, ...SEED_TICKER].slice(0, 10));
+          setTickerItems(real.slice(0, 10));
         }
       })
       .catch(() => {});
@@ -325,36 +335,38 @@ export default function Landing() {
       </header>
 
       {/* ── LIVE TICKER ── */}
-      <div style={{ background: 'var(--bg-deep, #0C1622)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0', overflow: 'hidden', height: '36px', display: 'flex', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, padding: '0 14px', height: '100%', background: 'rgba(198,168,90,0.15)', borderRight: '1px solid rgba(198,168,90,0.2)' }}>
-          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34D399', marginRight: '6px', animation: 'pulseDot 2s infinite' }} />
-          <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', whiteSpace: 'nowrap' }}>LIVE</span>
-        </div>
-        <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-          <div className="ticker-inner" style={{ display: 'flex', gap: '0', whiteSpace: 'nowrap' }}>
-            {[...tickerItems, ...tickerItems].map((item, i) => (
-              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '0 24px', fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,0.65)', borderRight: '1px solid rgba(255,255,255,0.06)', height: '36px' }}>
-                {item.score > 0 && (
-                  <span style={{ color: item.score >= 85 ? 'var(--gold)' : item.score >= 75 ? '#34D399' : 'rgba(255,255,255,0.4)', fontWeight: 700, fontSize: '10px' }}>
-                    {item.score}/100
-                  </span>
-                )}
-                <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>{item.artist}</span>
-                <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
-                <span>{item.title}</span>
-                <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
-                <span style={{ color: 'rgba(255,255,255,0.5)' }}>{item.house}</span>
-                {item.est && (
-                  <>
-                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
-                    <span style={{ color: 'rgba(255,255,255,0.5)' }}>Est. {item.est}</span>
-                  </>
-                )}
-              </span>
-            ))}
+      {tickerItems.length > 0 && (
+        <div style={{ background: 'var(--bg-deep, #0C1622)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0', overflow: 'hidden', height: '36px', display: 'flex', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, padding: '0 14px', height: '100%', background: 'rgba(198,168,90,0.15)', borderRight: '1px solid rgba(198,168,90,0.2)' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34D399', marginRight: '6px', animation: 'pulseDot 2s infinite' }} />
+            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', whiteSpace: 'nowrap' }}>LIVE</span>
+          </div>
+          <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+            <div className="ticker-inner" style={{ display: 'flex', gap: '0', whiteSpace: 'nowrap' }}>
+              {[...tickerItems, ...tickerItems].map((item, i) => (
+                <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '0 24px', fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,0.65)', borderRight: '1px solid rgba(255,255,255,0.06)', height: '36px' }}>
+                  {item.score > 0 && (
+                    <span style={{ color: item.score >= 85 ? 'var(--gold)' : item.score >= 75 ? '#34D399' : 'rgba(255,255,255,0.4)', fontWeight: 700, fontSize: '10px' }}>
+                      {item.score}/100
+                    </span>
+                  )}
+                  <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>{item.artist}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
+                  <span>{item.title}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
+                  <span style={{ color: 'rgba(255,255,255,0.5)' }}>{item.house}</span>
+                  {item.est && (
+                    <>
+                      <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
+                      <span style={{ color: 'rgba(255,255,255,0.5)' }}>Est. {item.est}</span>
+                    </>
+                  )}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── HERO ── */}
       <section className="landing-hero" style={{ padding: '80px 120px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'center', background: 'white' }}>
@@ -371,25 +383,6 @@ export default function Landing() {
           <p style={{ fontSize: '16px', color: 'var(--text-2)', lineHeight: 1.7, marginBottom: '28px', maxWidth: '480px' }}>
             {t('landing.heroSub')}
           </p>
-
-          {/* Social proof */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
-            <div style={{ display: 'flex' }}>
-              {['P', 'S', 'T', 'C', 'M'].map((initial, i) => (
-                <div key={i} style={{ width: '28px', height: '28px', borderRadius: '50%', background: ['#0A1628', '#2D4A6E', '#C6A85A', '#1A2A44', '#4A5568'][i], border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: i > 0 ? '-8px' : 0, zIndex: 5 - i }}>
-                  <span style={{ fontSize: '11px', color: 'white', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>{initial}</span>
-                </div>
-              ))}
-            </div>
-            <div>
-              <div style={{ display: 'flex', gap: '2px', marginBottom: '2px' }}>
-                {[...Array(5)].map((_, i) => <span key={i} style={{ color: '#C6A85A', fontSize: '11px' }}>★</span>)}
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-                {t('landing.trustedBy')}
-              </div>
-            </div>
-          </div>
 
           <div style={{ width: '40px', height: '2px', background: '#C6A85A', marginBottom: '28px' }} />
 
@@ -424,12 +417,6 @@ export default function Landing() {
             <div style={{ fontSize: '9px', color: 'var(--text-3)', marginTop: '2px' }}>lots analyzed</div>
           </div>
 
-          {/* Floating badge — bottom left */}
-          <div style={{ position: 'absolute', bottom: '40px', left: '-24px', background: 'var(--navy)', borderRadius: '10px', padding: '10px 14px', boxShadow: '0 8px 32px rgba(10,22,40,0.25)', minWidth: '110px' }}>
-            <div style={{ fontSize: '8px', fontWeight: 700, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '4px' }}>AVG UPSIDE</div>
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700, color: '#C6A85A', lineHeight: 1 }}>+34%</div>
-            <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.45)', marginTop: '2px' }}>score 75+ lots</div>
-          </div>
         </div>
       </section>
 
@@ -651,14 +638,13 @@ export default function Landing() {
         </h2>
         <div className="landing-features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '48px' }}>
           {[
-            { titleKey: 'landing.edgeEarlyDetect', body: 'Identify undervalued works 2–4 weeks before market adjustment through pattern recognition across 10+ global sources.', metric: '24 days avg. lead time', frBody: "Repérez les œuvres sous-évaluées avant leur revalorisation, grâce à l'analyse croisée de données globales et de signaux faibles.", frMetric: '→ Entrez avant la hausse' },
-            { titleKey: 'landing.edgePriceVal',     body: 'Every lot benchmarked against historical sales, artist market data, and real-time comparable transactions.',                metric: '4.2M transactions analyzed',  frBody: "Chaque lot est confronté aux ventes historiques, à la dynamique de l'artiste et à des comparables en temps réel.",                   frMetric: '→ Achetez au bon prix, systématiquement' },
-            { titleKey: 'landing.edgeConviction',   body: 'Our AI assigns a 0–100 conviction score to every opportunity. Only what matters rises to the top.',                      metric: 'Score ≥ 65 = strong signal',  frBody: "Un score de conviction identifie les opportunités à fort potentiel et élimine le bruit du marché.",                                    frMetric: '→ Investissez uniquement quand le risque est maîtrisé' },
-          ].map(({ titleKey, body, metric, frBody, frMetric }) => (
+            { titleKey: 'landing.edgeEarlyDetect', body: 'Identify undervalued works 2–4 weeks before market adjustment through pattern recognition across 10+ global sources.', frBody: "Repérez les œuvres sous-évaluées avant leur revalorisation, grâce à l'analyse croisée de données globales et de signaux faibles." },
+            { titleKey: 'landing.edgePriceVal',     body: 'Every lot benchmarked against historical sales, artist market data, and real-time comparable transactions.',                frBody: "Chaque lot est confronté aux ventes historiques, à la dynamique de l'artiste et à des comparables en temps réel." },
+            { titleKey: 'landing.edgeConviction',   body: 'Our AI assigns a 0–100 conviction score to every opportunity. Only what matters rises to the top.',                      frBody: "Un score de conviction identifie les opportunités à fort potentiel et élimine le bruit du marché." },
+          ].map(({ titleKey, body, frBody }) => (
             <div key={titleKey}>
               <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 600, color: 'var(--text)', marginBottom: '12px' }}>{t(titleKey as any)}</h3>
-              <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.7, marginBottom: '16px' }}>{isFr ? frBody : body}</p>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold-dim)', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>{isFr ? frMetric : metric}</div>
+              <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.7 }}>{isFr ? frBody : body}</p>
             </div>
           ))}
         </div>
@@ -676,18 +662,15 @@ export default function Landing() {
         </div>
         <div className="landing-gated-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '40px' }}>
           {[
-            { entry: '€52K', target: '€72K', upside: 28, score: 82, frDecision: 'Décision : opportunité solide' },
-            { entry: '€38K', target: '€62K', upside: 42, score: 91, frDecision: 'Décision : signal fort' },
-            { entry: '€64K', target: '€98K', upside: 35, score: 76, frDecision: 'Décision : à surveiller' },
+            { frDecision: 'Décision : opportunité solide' },
+            { frDecision: 'Décision : signal fort' },
+            { frDecision: 'Décision : à surveiller' },
           ].map((opp, i) => (
             <div key={i} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', position: 'relative', cursor: 'pointer', minHeight: '200px' }} onClick={() => navigate('/app/signup')}>
               {isFr ? (
                 <div style={{ padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '16px', fontWeight: 700, color: 'var(--text)' }}>
-                    {opp.entry} → {opp.target}
-                  </div>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--electric)', fontFamily: 'var(--font-mono)' }}>
-                    +{opp.upside}% potentiel · Score {opp.score}
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em' }}>
+                    Prix observé → Fourchette de valeur estimée
                   </div>
                   <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>
                     {opp.frDecision}
@@ -700,10 +683,9 @@ export default function Landing() {
                     <div style={{ padding: '4px 12px', background: 'var(--navy)', borderRadius: '4px' }}>
                       <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>{t('landing.gatedMembersOnly')}</span>
                     </div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
-                      {opp.entry} → {opp.target}
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em' }}>
+                      Entry price → Estimated value range
                     </div>
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--electric)', fontFamily: 'var(--font-mono)' }}>+{opp.upside}% upside · Score {opp.score}</div>
                   </div>
                 </>
               )}
@@ -743,18 +725,14 @@ export default function Landing() {
           </p>
           <div className="landing-momentum-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
             {[
-              { name: 'Georges Mathieu', movement: 'Lyrical Abstraction', growth: 18, frQualifier: 'Début d\'accélération' },
-              { name: 'Pierre Soulages', movement: 'Abstract Expressionism', growth: 24, frQualifier: 'Tendance confirmée' },
-              { name: 'Hans Hartung',    movement: 'Post-War European',      growth: 15, frQualifier: 'À surveiller' },
-              { name: 'Zao Wou-Ki',      movement: 'Abstract Painting',      growth: 32, frQualifier: 'Momentum fort' },
+              { name: 'Georges Mathieu', movement: 'Lyrical Abstraction' },
+              { name: 'Pierre Soulages', movement: 'Abstract Expressionism' },
+              { name: 'Hans Hartung',    movement: 'Post-War European' },
+              { name: 'Zao Wou-Ki',      movement: 'Abstract Painting' },
             ].map((artist, i) => (
               <div key={i} style={{ padding: '0 32px', borderRight: i < 3 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
                 <div style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 600, color: 'white', marginBottom: '6px' }}>{artist.name}</div>
-                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginBottom: '16px' }}>{artist.movement}</div>
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--gold)', lineHeight: 1.1 }}>
-                  +{artist.growth}%
-                  {isFr && <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono)', fontWeight: 400, marginLeft: '8px' }}>· {artist.frQualifier}</span>}
-                </div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>{artist.movement}</div>
               </div>
             ))}
           </div>
@@ -762,184 +740,6 @@ export default function Landing() {
             <div style={{ marginTop: '40px', fontSize: '14px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-serif)', fontStyle: 'italic', textAlign: 'center' }}>
               Le momentum précède les prix. Anticipez les prochains mouvements.
             </div>
-          )}
-        </div>
-      </section>
-
-      {/* ═══ TESTIMONIALS ═══ */}
-      <section style={{ padding: '96px 0', background: isFr ? '#FAFAF8' : 'white' }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 40px' }}>
-          {isFr ? (
-            <>
-              {/* FR — Block 0: Title */}
-              <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '38px', fontWeight: 600, color: '#1A2A44', margin: '0 0 64px', lineHeight: 1.2 }}>
-                La performance, sans interprétation.
-              </h2>
-
-              {/* FR — Block 1: Main testimonial */}
-              <div style={{ background: '#0A1628', borderRadius: '2px', padding: '56px', marginBottom: '64px', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: '16px', left: '40px', fontSize: '120px', color: '#B8922A', opacity: 0.3, fontFamily: 'Georgia, serif', lineHeight: 1, userSelect: 'none' }}>"</div>
-                <div style={{ position: 'relative' }}>
-                  <p style={{ fontFamily: 'Georgia, serif', fontSize: '22px', color: 'white', lineHeight: 1.7, marginBottom: '36px', fontStyle: 'italic', maxWidth: '680px' }}>
-                    "12 400 € investis sur une lithographie de Zao Wou-Ki identifiée par Nautilus. Revente 17 500 € huit mois plus tard."
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(184,146,42,0.2)', border: '2px solid rgba(184,146,42,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ fontFamily: 'Georgia, serif', fontSize: '18px', color: '#B8922A' }}>T</span>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '14px', fontWeight: 700, color: 'white', marginBottom: '2px' }}>Théodore M.</div>
-                      <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono)' }}>Family office · Paris</div>
-                    </div>
-                    <div style={{ marginLeft: 'auto', padding: '6px 18px', background: 'rgba(184,146,42,0.15)', border: '1px solid rgba(184,146,42,0.35)', borderRadius: '2px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#B8922A', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>+41% sur un seul lot</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* FR — Block 2: Metric rows */}
-              <div style={{ marginBottom: '64px' }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, color: '#B8922A', fontFamily: 'var(--font-mono)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '32px' }}>
-                  Ce que les investisseurs observent
-                </div>
-                {[
-                  { value: '+79%', label: 'Joan Mitchell',         desc: 'Opportunité identifiée sous le prix du marché' },
-                  { value: '+37%', label: 'Bernard Buffet',        desc: 'Décote détectée, revalorisation rapide' },
-                  { value: '71%',  label: 'Précision des signaux', desc: 'Lots score 75+' },
-                ].map(({ value, label, desc }, i) => (
-                  <div key={i} className="landing-investors-grid" style={{ display: 'flex', alignItems: 'center', gap: '32px', paddingTop: '24px', paddingBottom: '24px', borderBottom: '1px solid #E8E4DC' }}>
-                    <div style={{ fontFamily: 'Georgia, serif', fontSize: '28px', fontWeight: 700, color: '#1A2A44', minWidth: '88px' }}>{value}</div>
-                    <div style={{ fontSize: '15px', fontWeight: 500, color: '#1A2A44', minWidth: '180px' }}>{label}</div>
-                    <div style={{ fontSize: '14px', color: '#9CA3AF', fontStyle: 'italic' }}>{desc}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* FR — Block 3: Second testimonial */}
-              <div style={{ borderLeft: '3px solid #B8922A', paddingLeft: '32px', marginBottom: '64px' }}>
-                <p style={{ fontFamily: 'Georgia, serif', fontSize: '20px', color: '#1A2A44', lineHeight: 1.8, marginBottom: '20px', fontStyle: 'italic', maxWidth: '680px' }}>
-                  "Nous sommes passés de plusieurs dizaines d'heures d'analyse à quelques décisions ciblées."
-                </p>
-                <div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#1A2A44', marginBottom: '2px' }}>Christian B.</div>
-                  <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>Art fund manager · Luxembourg</div>
-                </div>
-              </div>
-
-              {/* FR — Block 4: KPI row */}
-              <div className="landing-kpi-testimonials-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '48px', textAlign: 'center' }}>
-                {[
-                  { value: '4,9 / 5', label: 'SATISFACTION' },
-                  { value: '+31%',    label: 'POTENTIEL MOYEN' },
-                  { value: '73%',     label: 'PRÉCISION DES SIGNAUX' },
-                ].map(({ value, label }) => (
-                  <div key={label}>
-                    <div style={{ fontFamily: 'Georgia, serif', fontSize: '42px', fontWeight: 700, color: '#1A2A44', lineHeight: 1 }}>{value}</div>
-                    <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: '#6B7280', letterSpacing: '0.12em', textTransform: 'uppercase', marginTop: '8px' }}>{label}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* FR — Footer */}
-              <p style={{ fontSize: 11, color: '#9CA3AF', fontStyle: 'italic', textAlign: 'center', marginTop: '48px' }}>Performances passées non garanties.</p>
-            </>
-          ) : (
-            <>
-              {/* EN — Header */}
-              <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--gold)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '16px' }}>
-                  {t('landing.testiLabel')}
-                </div>
-                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '38px', fontWeight: 600, color: 'var(--text)', margin: '0 0 16px', lineHeight: 1.2 }}>
-                  {t('landing.testiTitle')}
-                </h2>
-                <p style={{ fontSize: '16px', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto', lineHeight: 1.7 }}>
-                  {t('landing.testiSub')}
-                </p>
-              </div>
-
-              {/* EN — Featured testimonial */}
-              <div style={{ background: 'var(--navy)', borderRadius: '16px', padding: '48px 56px', marginBottom: '24px', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: '24px', left: '40px', fontSize: '120px', color: 'rgba(198,168,90,0.12)', fontFamily: 'Georgia, serif', lineHeight: 1, userSelect: 'none' }}>"</div>
-                <div className="landing-featured-testimonial" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '48px', alignItems: 'center', position: 'relative' }}>
-                  <div>
-                    <p style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: 'white', lineHeight: 1.7, marginBottom: '16px', fontStyle: 'italic' }}>
-                      "I invested €12,400 in a Zao Wou-Ki lithograph that Nautilus scored 84/100 — priced 34% below its last comparable sale at Drouot. Eight months later, it sold for €17,500 at Christie's Paris. That's a 41% return on a single lot. My subscription paid for itself 200x over."
-                    </p>
-                    <div style={{ marginBottom: '20px', padding: '6px 10px', background: 'rgba(255,255,255,0.07)', borderRadius: '4px', fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono)', display: 'inline-block' }}>
-                      Zao Wou-Ki lithograph · Bought €12,400 · Sold €17,500
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(198,168,90,0.2)', border: '2px solid rgba(198,168,90,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: 'var(--gold)' }}>T</span>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: 'white', marginBottom: '3px' }}>Théodore M.</div>
-                        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono)' }}>Family office director · €2M+ art portfolio · Paris</div>
-                      </div>
-                      <div style={{ marginLeft: 'auto', padding: '4px 14px', background: 'rgba(198,168,90,0.15)', border: '1px solid rgba(198,168,90,0.3)', borderRadius: '20px' }}>
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-mono)' }}>+41% in 8 months</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* EN — 3-column testimonials */}
-              <div className="landing-testimonials-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '56px' }}>
-                {[
-                  { initial: 'N', name: 'Nicolas R.',  role: 'Private wealth manager · Geneva · Investor plan',       result: '+79% in 14 months' as string | null,      quote: "Nautilus flagged a Joan Mitchell print at Heritage Auctions with a score of 79/100. Estimate was $8,000–12,000 but the AI analysis showed comparable prints selling at $18,000+. I bid $9,200 and won. Current market value: $16,500. Up 79% in 14 months.", detail: 'Joan Mitchell print · Bought $9,200 · Est. value $16,500' },
-                  { initial: 'M', name: 'Morgane L.',  role: 'Entrepreneur · Lyon · Collector plan',                  result: '+37% in 6 months' as string | null,        quote: "First time buying art as investment. €8,000 budget. Nautilus identified a Bernard Buffet etching at Artcurial scoring 77/100, underpriced by 28%. Bought for €3,800. Gallery offer came in at €5,200 six months later. I'm now looking at my second acquisition.", detail: 'Bernard Buffet etching · €3,800 → €5,200 offer' },
-                  { initial: 'C', name: 'Christian B.', role: 'Art fund manager · Luxembourg · Family Office plan',   result: '40h → 4h weekly research' as string | null, quote: "We run a €15M art fund. Before Nautilus, our research team spent 40 hours a week screening auction catalogues. Now we spend 4. The signal accuracy on score 75+ lots has been 71% directionally correct over 18 months. That's our alpha.", detail: '18-month track record · Score 75+ accuracy: 71%' },
-                ].map(({ initial, name, role, result, quote, detail }) => (
-                  <div key={name} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '12px', padding: '28px', display: 'flex', flexDirection: 'column', transition: 'box-shadow 0.2s, transform 0.2s' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-md)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; (e.currentTarget as HTMLDivElement).style.transform = 'none'; }}
-                  >
-                    <div style={{ display: 'flex', gap: '3px', marginBottom: '16px' }}>
-                      {[...Array(5)].map((_, i) => <span key={i} style={{ color: '#C6A85A', fontSize: '14px' }}>★</span>)}
-                    </div>
-                    <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.8, flex: 1, marginBottom: '12px', fontStyle: 'italic' }}>"{quote}"</p>
-                    <div style={{ marginBottom: '16px', padding: '6px 10px', background: 'var(--bg-subtle)', borderRadius: '4px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{detail}</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <span style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: 'white' }}>{initial}</span>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{name}</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{role}</div>
-                        </div>
-                      </div>
-                      {result && (
-                        <div style={{ padding: '3px 10px', background: 'var(--electric-subtle)', border: '1px solid var(--electric-border)', borderRadius: '20px', flexShrink: 0, marginLeft: '8px' }}>
-                          <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--electric)', fontFamily: 'var(--font-mono)' }}>{result}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* EN — Trust indicators */}
-              <div className="landing-trust-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
-                {[
-                  { value: '4.9/5',  labelKey: 'landing.testiRating',    subKey: 'landing.testiRatingSub'    },
-                  { value: '€2.4M+', labelKey: 'landing.testiPortfolio', subKey: 'landing.testiPortfolioSub' },
-                  { value: '73%',    labelKey: 'landing.testiAccuracy',  subKey: 'landing.testiAccuracySub'  },
-                  { value: '31%',    labelKey: 'landing.testiUpside',    subKey: 'landing.testiUpsideSub'    },
-                ].map(({ value, labelKey, subKey }) => (
-                  <div key={labelKey} style={{ background: 'white', padding: '28px 24px', textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: 'var(--navy)', marginBottom: '6px' }}>{value}</div>
-                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>{t(labelKey as any)}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{t(subKey as any)}</div>
-                  </div>
-                ))}
-              </div>
-
-              <p style={{ fontSize: 11, color: '#999', textAlign: 'center', marginTop: 8 }}>* Résultats illustratifs. Les performances passées ne préjugent pas des performances futures.</p>
-            </>
           )}
         </div>
       </section>
