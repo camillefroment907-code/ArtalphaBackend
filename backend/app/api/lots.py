@@ -1749,6 +1749,7 @@ async def get_public_lots(
                 Lot.hammer_price.is_(None),
                 Lot.auction_date >= datetime.utcnow(),
                 Lot.status.cast(String).in_(["upcoming", "live"]),
+                Lot.title.notilike("%efter%"),
             )
         )
         .order_by(desc(order_col))
