@@ -123,13 +123,13 @@ def _build_display_estimate(
     high_d = Decimal(str(estimate_high)) if estimate_high and estimate_high > 0 else None
 
     if native == "EUR":
-        parts = f"{_fmt_eur(low_d)}–{_fmt_eur(high_d)}" if high_d is not None else _fmt_eur(low_d)
+        parts = f"{_fmt_eur(low_d)}–{_fmt_native_amount(high_d)}" if high_d is not None else _fmt_eur(low_d)
         return f"Est. {parts}", "EUR", False
 
     if rate is not None:
         low_eur = low_d * rate
         high_eur = high_d * rate if high_d is not None else None
-        parts = f"{_fmt_eur(low_eur)}–{_fmt_eur(high_eur)}" if high_eur is not None else _fmt_eur(low_eur)
+        parts = f"{_fmt_eur(low_eur)}–{_fmt_native_amount(high_eur)}" if high_eur is not None else _fmt_eur(low_eur)
         return f"Est. {parts}", "EUR", True
 
     # Unknown currency — native display, no conversion
