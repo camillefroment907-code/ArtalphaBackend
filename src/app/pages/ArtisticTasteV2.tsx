@@ -21,7 +21,7 @@ export default function ArtisticTasteV2() {
   const valid = taste.categories.length > 0 && taste.styles.length > 0 && taste.periods.length > 0 && taste.budget.trim() !== '' && Number.isFinite(budget) && budget > 0;
   return <main style={{ minHeight: '100vh', padding: '60px 20px', background: '#F7F5F0', color: '#1A2A44', fontFamily: 'Inter,Arial,sans-serif' }}>
     <div style={{ maxWidth: 780, margin: '0 auto' }}>
-      <a href="/" style={{ color: '#1A2A44', fontSize: 13 }}>← Nautilus</a>
+      <a href="/v2" style={{ color: '#1A2A44', fontSize: 13 }}>← Nautilus</a>
       <p style={{ fontSize: 12, letterSpacing: 3, marginTop: 42 }}>VOTRE UNIVERS ARTISTIQUE</p>
       <h1 style={{ font: '400 clamp(32px,5vw,52px) Georgia,serif' }}>L’art qui vous ressemble</h1>
       <p style={{ lineHeight: 1.7 }}>Quelques choix pour dessiner votre profil. Aucune inscription nécessaire : les réponses restent dans cette page et ne sont envoyées à aucun serveur.</p>
