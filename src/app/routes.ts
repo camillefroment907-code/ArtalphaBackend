@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminRoute } from './components/AdminRoute';
 
 const Landing       = lazy(() => import('./pages/Landing'));
+const AuctionCostCalculatorV2 = lazy(() => import('./pages/AuctionCostCalculatorV2'));
 const Pricing       = lazy(() => import('./pages/Pricing'));
 const About         = lazy(() => import('./pages/About'));
 const Contact       = lazy(() => import('./pages/Contact'));
@@ -46,6 +47,10 @@ export const router = createBrowserRouter([
   {
     path: '/',
     Component: Landing,
+  },
+  {
+    path: '/outils/calculateur-encheres',
+    Component: AuctionCostCalculatorV2,
   },
   {
     path: '/waitlist',
