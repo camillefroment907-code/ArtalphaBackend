@@ -3,8 +3,8 @@ import { calculateAuctionCost } from '../../lib/auctionCostV2';
 
 export default function AuctionCostCalculatorV2() {
   const [hammer, setHammer] = useState('1000');
-  const [premium, setPremium] = useState('25');
-  const [vat, setVat] = useState('20');
+  const [premium, setPremium] = useState('');
+  const [vat, setVat] = useState('');
   const [taxes, setTaxes] = useState('0');
   const [shipping, setShipping] = useState('0');
   const [other, setOther] = useState('0');
@@ -31,7 +31,7 @@ export default function AuctionCostCalculatorV2() {
   return (
     <main style={{minHeight:'100vh',background:'#F7F5F0',color:'#1A2A44',padding:'64px 20px',fontFamily:'Inter,Arial,sans-serif'}}>
       <div style={{maxWidth:840,margin:'0 auto'}}>
-        <a href="/" style={{color:'#1A2A44',textDecoration:'none',fontSize:13}}>← Nautilus</a>
+        <a href="/v2" style={{color:'#1A2A44',textDecoration:'none',fontSize:13}}>← Nautilus</a>
         <p style={{letterSpacing:3,fontSize:12,marginTop:44}}>LES OUTILS NAUTILUS</p>
         <h1 style={{fontFamily:'Georgia,serif',fontSize:'clamp(32px,5vw,52px)',fontWeight:400}}>Le vrai coût d'une enchère</h1>
         <p style={{lineHeight:1.7,maxWidth:650}}>Le prix au marteau n'est pas le montant final. Indiquez les frais figurant dans les conditions de vente de la maison de ventes pour obtenir une estimation transparente.</p>
@@ -55,7 +55,7 @@ export default function AuctionCostCalculatorV2() {
             </div>) : <p role="alert">Saisissez des nombres valides et positifs.</p>}
           </section>
         </div>
-        <p style={{marginTop:32,fontSize:12,lineHeight:1.7,color:'#57606C'}}>Simulation indicative, non contractuelle. Les frais et taxes applicables varient selon la maison de ventes, le lot, le lieu, le statut de l'acheteur et les modalités de livraison. Vérifiez toujours les conditions officielles avant d'enchérir. Les taux préremplis sont des exemples modifiables, pas les frais d'une vente donnée. Aucun compte ni connexion au backend n'est nécessaire pour ce calcul.</p>
+        <p style={{marginTop:32,fontSize:12,lineHeight:1.7,color:'#57606C'}}>Simulation indicative, non contractuelle. Les frais et taxes applicables varient selon la maison de ventes, le lot, le lieu, le statut de l'acheteur et les modalités de livraison. Vérifiez toujours les conditions officielles avant d'enchérir. Aucun taux de commission ou de TVA n’est prérempli : renseignez ceux applicables à votre vente. Aucun compte ni connexion au backend n'est nécessaire pour ce calcul.</p>
       </div>
     </main>
   );
