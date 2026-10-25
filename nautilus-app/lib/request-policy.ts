@@ -1,0 +1,1 @@
+export function mutationAllowed(request: Request) { const origin = request.headers.get('origin'); return !!origin && origin === new URL(request.url).origin && request.headers.get('content-type')?.split(';')[0] === 'application/json' && request.headers.get('sec-fetch-site') !== 'cross-site'; }
