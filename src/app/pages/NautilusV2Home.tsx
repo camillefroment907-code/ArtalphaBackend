@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 
 const cards = [
+  { eyebrow: 'VOTRE PROCHAIN ACHAT', title: 'Un coup de cœur, un achat préparé', body: 'Sauvegardez vos envies, calculez votre plafond et suivez vos vérifications. Votre carnet reste sur cet appareil.', to: '/v2/carnet', action: 'Ouvrir mon carnet' },
   {
     eyebrow: '01 · VOTRE UNIVERS',
     title: 'L’art qui vous ressemble',

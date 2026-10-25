@@ -7,6 +7,7 @@ import { AdminRoute } from './components/AdminRoute';
 const Landing       = lazy(() => import('./pages/Landing'));
 const AuctionCostCalculatorV2 = lazy(() => import('./pages/AuctionCostCalculatorV2'));
 const ArtisticTasteV2 = lazy(() => import('./pages/ArtisticTasteV2'));
+const NautilusNotebook = lazy(() => import('./pages/NautilusNotebook'));
 const NautilusV2Home = lazy(() => import('./pages/NautilusV2Home'));
 const Pricing       = lazy(() => import('./pages/Pricing'));
 const About         = lazy(() => import('./pages/About'));
@@ -46,6 +47,7 @@ const Preferences              = lazy(() => import('./pages/Preferences'));
 const GoogleCallback           = lazy(() => import('./pages/GoogleCallback'));
 
 export const router = createBrowserRouter([
+  { path: '/v2/carnet', Component: NautilusNotebook },
   {
     path: '/',
     Component: Landing,
