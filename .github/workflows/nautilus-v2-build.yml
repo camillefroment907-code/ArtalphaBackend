@@ -22,5 +22,7 @@ jobs:
           node-version: '22'
       - name: Install frontend dependencies
         run: npm install --no-audit --no-fund --legacy-peer-deps
+      - name: Test auction fee calculations
+        run: node --experimental-strip-types --test src/lib/auctionCostV2.test.ts
       - name: Compile Vite frontend
         run: npm run build
