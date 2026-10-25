@@ -31,3 +31,5 @@ models/upside/*.pkl
 *.pgpass
 .env.*.local
 __MACOSX/
+
+dist-atelier/

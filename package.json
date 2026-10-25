@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "dev:atelier": "vite --config vite.atelier.config.ts --open /atelier.html",
+    "build:atelier": "vite build --config vite.atelier.config.ts",
+    "test": "node --experimental-strip-types --test src/lib/auctionCostV2.test.ts"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
