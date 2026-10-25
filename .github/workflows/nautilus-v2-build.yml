@@ -42,7 +42,7 @@ jobs:
           for i in $(seq 1 30); do curl -fsS http://127.0.0.1:5173/v2 >/dev/null && break || sleep 1; done
           mkdir -p preview-screenshots
           npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 1500 --full-page http://127.0.0.1:5173/v2 preview-screenshots/01-accueil-ordinateur.png
-          npx --yes playwright@1.56.1 screenshot --browser chromium --device "iPhone 13" --wait-for-timeout 1500 --full-page http://127.0.0.1:5173/v2 preview-screenshots/02-accueil-mobile.png
+          npx --yes playwright@1.56.1 screenshot --browser chromium --browser chromium --viewport-size "390,844" --wait-for-timeout 1500 --full-page http://127.0.0.1:5173/v2 preview-screenshots/02-accueil-mobile.png
           npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 1500 --full-page http://127.0.0.1:5173/outils/calculateur-encheres preview-screenshots/03-calculateur.png
           npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 1500 --full-page http://127.0.0.1:5173/decouvrir/mon-profil-artistique preview-screenshots/04-profil-artistique.png
       - name: Save private visual preview
