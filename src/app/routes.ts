@@ -6,6 +6,7 @@ import { AdminRoute } from './components/AdminRoute';
 
 const Landing       = lazy(() => import('./pages/Landing'));
 const AuctionCostCalculatorV2 = lazy(() => import('./pages/AuctionCostCalculatorV2'));
+const ArtisticTasteV2 = lazy(() => import('./pages/ArtisticTasteV2'));
 const Pricing       = lazy(() => import('./pages/Pricing'));
 const About         = lazy(() => import('./pages/About'));
 const Contact       = lazy(() => import('./pages/Contact'));
@@ -47,6 +48,10 @@ export const router = createBrowserRouter([
   {
     path: '/',
     Component: Landing,
+  },
+  {
+    path: '/decouvrir/mon-profil-artistique',
+    Component: ArtisticTasteV2,
   },
   {
     path: '/outils/calculateur-encheres',
