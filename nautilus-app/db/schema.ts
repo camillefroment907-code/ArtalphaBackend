@@ -22,3 +22,7 @@ export const offerInterests = sqliteTable('offer_interests', {
     id: text('id').primaryKey(), ownerId: text('owner_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
     offer: text('offer').notNull(), priceEuro: integer('price_euro').notNull(), createdAt: integer('created_at').notNull(),
 }, t => [index('offer_interests_owner_idx').on(t.ownerId)]);
+export const productEvents = sqliteTable('product_events', {
+    id: text('id').primaryKey(), ownerId: text('owner_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(), entityId: text('entity_id').notNull(), createdAt: integer('created_at').notNull(),
+}, t => [index('product_events_owner_date_idx').on(t.ownerId, t.createdAt)]);

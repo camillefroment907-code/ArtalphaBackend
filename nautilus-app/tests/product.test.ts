@@ -1,12 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createDraft, validProject, totalCost, maxHammer, calendarEvent, isPrepared, validPreferences } from '../lib/product.ts';
+import { createDraft, validProject, totalCost, maxHammer, calendarEvent, isPrepared, costSummary, validPreferences } from '../lib/product.ts';
 import { mutationAllowed } from '../lib/request-policy.ts';
-const p = { ...createDraft(), title: 'Fauteuil', hammer: 600, premium: 25, fixed: 80 };
+const p = { ...createDraft(), premiumConfidence: 'confirmed' as const, fixedConfidence: 'confirmed' as const, title: 'Fauteuil', hammer: 600, premium: 25, fixed: 80 };
 test('cost, ceiling and budget overrun use all user fees', () => { assert.equal(totalCost(p), 830); assert.equal(maxHammer(p), 736); assert.equal(totalCost({ ...p, hammer: 900 }), 1205); assert.equal(maxHammer({ ...p, fixed: 1200 }), 0); });
-test('rejects unsafe links, broken drafts and unbounded costs', () => { assert.ok(validProject(p)); for (const change of [{ sourceUrl: 'javascript:alert(1)' }, { sourceUrl: 'https://user:pass@example.com' }, { budget: NaN }, { premium: 101 }, { fixed: -1 }, { checks: [true] }, { title: '' }, { budget: 1.123 }, { saleAt: 'oops' }])
-    assert.equal(validProject({ ...p, ...change }), false); });
+test('rejects unsafe links, broken drafts and unbounded costs', () => {
+    assert.ok(validProject(p));
+    for (const change of [{ sourceUrl: 'javascript:alert(1)' }, { sourceUrl: 'https://user:pass@example.com' }, { budget: NaN }, { premium: 101 }, { fixed: -1 }, { checks: [true] }, { title: '' }, { budget: 1.123 }, { saleAt: 'oops' }])
+        assert.equal(validProject({ ...p, ...change }), false);
+});
 test('activation requires useful preparation within budget', () => { assert.equal(isPrepared(p), false); assert.equal(isPrepared({ ...p, checks: [true, true, true, false, false] }), true); assert.equal(isPrepared({ ...p, hammer: 900, checks: [true, true, true, false, false] }), false); });
 test('validates explicit tastes and a positive budget', () => { assert.ok(validPreferences({ categories: ['Art & estampes'], budget: 500, experience: 'debutant' })); assert.equal(validPreferences({ categories: [], budget: 500, experience: 'debutant' }), false); });
 test('calendar exports escape user text and set an explicit reminder', () => { const ics = calendarEvent({ ...p, title: 'A\nEND:VEVENT', saleAt: '2026-12-01T14:00:00.000Z' }, 'example'); assert.ok(ics.includes('DTSTART:20261201T140000Z')); assert.ok(ics.includes('TRIGGER:-PT24H')); assert.ok(ics.includes('A\\nEND:VEVENT')); assert.throws(() => calendarEvent(p, 'x')); });
 test('rejects cross-origin and non-JSON writes', () => { const req = (origin: string, type = 'application/json') => new Request('https://nautilus.test/api/state', { method: 'POST', headers: { origin, 'content-type': type } }); assert.ok(mutationAllowed(req('https://nautilus.test'))); assert.equal(mutationAllowed(req('https://evil.test')), false); assert.equal(mutationAllowed(req('https://nautilus.test', 'text/plain')), false); assert.equal(!!mutationAllowed(new Request('https://nautilus.test')), false); });
+test('unknown costs never expose a usable total or bid ceiling, including legacy records', () => { const missing = { ...p, premiumConfidence: undefined, fixedConfidence: undefined }; assert.equal(costSummary(missing).total, null); assert.equal(costSummary(missing).ceiling, null); assert.equal(isPrepared({ ...missing, checks: [true, true, true, true, true] }), false); assert.equal(costSummary({ ...p, premiumConfidence: 'estimated' }).state, 'provisional'); assert.equal(isPrepared({ ...p, premiumConfidence: 'estimated', checks: [true, true, true, true, true] }), false); assert.equal(costSummary({ ...p, premium: 0, fixed: 0 }).state, 'confirmed'); assert.equal(validProject({ ...p, premiumConfidence: 'magic' }), false); });
+test('calendar cannot export an unconditional ceiling when fees are unknown', () => { const ics = calendarEvent({ ...p, premiumConfidence: 'unknown', saleAt: '2026-12-01T14:00:00.000Z' }, 'example'); assert.ok(ics.includes('non calculé')); });

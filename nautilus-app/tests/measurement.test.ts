@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { cohortMetrics, projectChanged } from '../lib/measurement.ts';
+import { createDraft } from '../lib/product.ts';
+const d = 86400000;
+test('cohorts use actual preparation and mature windows, not signups or declared intent', () => { const members = [{ id: 'a', createdAt: 0 }, { id: 'b', createdAt: 0 }, { id: 'c', createdAt: 0 }]; const events = [{ ownerId: 'a', kind: 'project_prepared', entityId: 'p', createdAt: 0 }, { ownerId: 'a', kind: 'project_progress', entityId: 'p', createdAt: 8 * d }, { ownerId: 'a', kind: 'project_progress', entityId: 'p', createdAt: 29 * d }, { ownerId: 'b', kind: 'project_prepared', entityId: 'q', createdAt: 30 * d }]; const r = cohortMetrics(members, events, 40 * d); assert.equal(r.registrations, 3); assert.equal(r.activated, 2); assert.equal(r.w1.eligible, 1); assert.equal(r.w1.returned, 1); assert.equal(r.w4.eligible, 1); assert.equal(r.w4.returned, 1); });
+test('immature and empty cohorts are not reported as zero-percent retention', () => { const r = cohortMetrics([{ id: 'a', createdAt: 0 }], [{ ownerId: 'a', kind: 'project_prepared', entityId: 'p', createdAt: 0 }], 3 * d); assert.equal(r.w1.rate, null); assert.equal(r.w4.rate, null); assert.equal(cohortMetrics([], [], 0).w1.rate, null); });
+test('an identical save does not count as a meaningful change', () => { const p = { ...createDraft(), title: 'Objet' }; assert.equal(projectChanged(p, { ...p }), false); assert.equal(projectChanged(p, { ...p, notes: 'Question nouvelle' }), true); assert.equal(projectChanged({ ...p, premiumConfidence: undefined }, { ...p, premiumConfidence: 'unknown' }), false); });

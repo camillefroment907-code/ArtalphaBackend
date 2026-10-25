@@ -15,6 +15,13 @@
       "when": 1792948126762,
       "tag": "0001_black_fixer",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792949427611,
+      "tag": "0002_happy_stone_men",
+      "breakpoints": true
     }
   ]
 }
