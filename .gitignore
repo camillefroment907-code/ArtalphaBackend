@@ -19,3 +19,15 @@ backend/models/upside/*.joblib
 backend/models/upside/*.pkl
 models/upside/*.joblib
 models/upside/*.pkl
+
+# Database exports and local secrets — never publish
+*.sql
+*.sql.gz
+*.dump
+*.backup
+*.sqlite
+*.sqlite3
+*.db
+*.pgpass
+.env.*.local
+__MACOSX/
