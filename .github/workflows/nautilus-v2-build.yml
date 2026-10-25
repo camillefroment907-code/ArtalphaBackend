@@ -26,3 +26,11 @@ jobs:
         run: node --experimental-strip-types --test src/lib/auctionCostV2.test.ts
       - name: Compile Vite frontend
         run: npm run build
+
+      - name: Save compiled frontend for isolated review (not deployed)
+        uses: actions/upload-artifact@v4
+        with:
+          name: nautilus-v2-static-build
+          path: dist/
+          if-no-files-found: error
+          retention-days: 3
