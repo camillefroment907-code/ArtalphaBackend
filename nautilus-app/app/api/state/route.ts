@@ -1,3 +1,4 @@
+import { validSearch } from '../../../lib/searches';
 import { env } from 'cloudflare:workers';
 import { getChatGPTUser } from '../../chatgpt-auth';
 import { repository } from '../../../lib/repository';
@@ -5,13 +6,17 @@ import { validPreferences, validProject } from '../../../lib/product';
 import { mutationAllowed } from '../../../lib/request-policy';
 export const dynamic = 'force-dynamic';
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store, private', 'X-Content-Type-Options': 'nosniff' } });
-export async function GET() { const user = await getChatGPTUser(); if (!user)
-    return json({ signedIn: false, member: false, projects: [] }); try {
-    return json({ signedIn: true, ...await repository(env.DB, user.userId).state() });
+export async function GET() {
+    const user = await getChatGPTUser();
+    if (!user)
+        return json({ signedIn: false, member: false, projects: [] });
+    try {
+        return json({ signedIn: true, ...await repository(env.DB, user.userId).state() });
+    }
+    catch {
+        return json({ error: 'Votre espace est temporairement indisponible. Réessayez dans un instant.' }, 503);
+    }
 }
-catch {
-    return json({ error: 'Votre espace est temporairement indisponible. Réessayez dans un instant.' }, 503);
-} }
 export async function POST(request: Request) {
     const user = await getChatGPTUser();
     if (!user)
@@ -45,6 +50,27 @@ export async function POST(request: Request) {
         if (!state.member)
             return json({ error: 'Activez votre espace pour continuer.' }, 403);
         switch (body.action) {
+            case 'createSearch':
+                if (!validSearch(body.search))
+                    return json({ error: 'Renseignez votre recherche et un budget valide.' }, 400);
+                await repo.createSearch(body.search);
+                break;
+            case 'updateSearch':
+                if (!validSearch(body.search) || typeof body.id !== 'string' || !Number.isInteger(body.version) || body.version < 1)
+                    return json({ error: 'Recherche invalide.' }, 400);
+                if (!await repo.updateSearch(body.id, body.version, body.search))
+                    return json({ error: 'Cette recherche a changé dans un autre onglet. Rechargez avant de réessayer.' }, 409);
+                break;
+            case 'removeSearch':
+                if (typeof body.id !== 'string')
+                    return json({ error: 'Recherche invalide.' }, 400);
+                await repo.removeSearch(body.id);
+                break;
+            case 'interest':
+                if (!['monthly_9', 'project_29'].includes(body.offer) || typeof body.interested !== 'boolean')
+                    return json({ error: 'Choix invalide.' }, 400);
+                await repo.interest(body.offer, body.interested);
+                break;
             case 'profile':
                 if (!validPreferences(body.preferences))
                     return json({ error: 'Profil invalide.' }, 400);
@@ -81,6 +107,6 @@ export async function POST(request: Request) {
         return json({ ...await repo.state(), signedIn: true });
     }
     catch (e) {
-        return json({ error: e instanceof Error && e.message === 'LIMIT' ? 'Votre carnet contient déjà 100 projets. Exportez puis retirez un projet pour en ajouter un.' : 'Enregistrement impossible pour le moment. Votre saisie reste affichée ; réessayez.' }, 503);
+        return json({ error: e instanceof Error && e.message === 'SEARCH_LIMIT' ? 'Votre espace contient déjà 10 recherches. Mettez à jour une recherche existante.' : e instanceof Error && e.message === 'LIMIT' ? 'Votre carnet contient déjà 100 projets. Exportez puis retirez un projet pour en ajouter un.' : 'Enregistrement impossible pour le moment. Votre saisie reste affichée ; réessayez.' }, 503);
     }
 }
