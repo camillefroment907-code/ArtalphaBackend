@@ -1,0 +1,58 @@
+name: Nautilus V2 frontend build
+on:
+  push:
+    branches:
+      - audit/nautilus-legal-v2
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'vite.config.ts'
+      - '.github/workflows/nautilus-v2-build.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install frontend dependencies
+        run: npm install --no-audit --no-fund --legacy-peer-deps
+      - name: Test auction fee calculations
+        run: node --experimental-strip-types --test src/lib/auctionCostV2.test.ts
+      - name: Compile Vite frontend
+        run: npm run build
+
+      - name: Save compiled frontend for isolated review (not deployed)
+        uses: actions/upload-artifact@v4
+        with:
+          name: nautilus-v2-static-build
+          path: dist/
+          if-no-files-found: error
+          retention-days: 3
+      - name: Install browser for private visual preview
+        run: npx --yes playwright@1.56.1 install --with-deps chromium
+      - name: Capture desktop and mobile screenshots
+        run: |
+          npm run dev -- --host 127.0.0.1 > /tmp/nautilus-vite.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:5173/v2 >/dev/null && break || sleep 1; done
+          for route in /v2 /outils/calculateur-encheres /decouvrir/mon-profil-artistique; do
+            curl --fail --silent --show-error "http://127.0.0.1:5173$route" >/dev/null
+          done
+          mkdir -p preview-screenshots
+          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 1500 --full-page http://127.0.0.1:5173/v2 preview-screenshots/01-accueil-ordinateur.png
+          npx --yes playwright@1.56.1 screenshot --browser chromium --browser chromium --viewport-size "390,844" --wait-for-timeout 1500 --full-page http://127.0.0.1:5173/v2 preview-screenshots/02-accueil-mobile.png
+          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 1500 --full-page http://127.0.0.1:5173/outils/calculateur-encheres preview-screenshots/03-calculateur.png
+          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 1500 --full-page http://127.0.0.1:5173/decouvrir/mon-profil-artistique preview-screenshots/04-profil-artistique.png
+          test "$(find preview-screenshots -name '*.png' -size +1k | wc -l)" -eq 4
+      - name: Save private visual preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: nautilus-v2-captures-ecran
+          path: preview-screenshots/
+          if-no-files-found: error
+          retention-days: 3
