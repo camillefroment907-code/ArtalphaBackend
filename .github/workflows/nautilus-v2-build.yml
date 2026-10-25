@@ -1,0 +1,26 @@
+name: Nautilus V2 frontend build
+on:
+  push:
+    branches:
+      - audit/nautilus-legal-v2
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'vite.config.ts'
+      - '.github/workflows/nautilus-v2-build.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install frontend dependencies
+        run: npm install --no-audit --no-fund --legacy-peer-deps
+      - name: Compile Vite frontend
+        run: npm run build
